@@ -6,7 +6,7 @@ import styles from './style';
 
 interface Props {
   children: ReactNode;
-  customStyle: StyleProp<ViewStyle>;
+  customStyle?: StyleProp<ViewStyle>;
 }
 
 const Card = ({ children, customStyle }: Props) => {

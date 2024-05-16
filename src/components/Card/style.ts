@@ -1,16 +1,13 @@
 import { StyleSheet } from 'react-native';
 
+import theme, { shadow } from '@shared/theme';
+
 const styles = StyleSheet.create({
   root: {
     padding: 16,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: {
-      width: 2,
-      height: 2,
-    },
-    backgroundColor: '#fff',
+    borderRadius: theme.border.radius,
+    backgroundColor: theme.colors.background.primary,
+    ...shadow,
   },
 });
 
