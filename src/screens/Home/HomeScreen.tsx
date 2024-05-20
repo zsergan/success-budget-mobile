@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { View } from 'react-native';
 
-import { BottomSheetModal as BottomModal, Button } from '@components';
+import { BottomSheetModal as BottomModal, Button, RootLayout } from '@components';
 import { TransactionType } from '@shared/enums';
 import General from './General';
 import TransactionForm from './TransactionForm';
@@ -26,14 +26,14 @@ const HomeScreen = () => {
         <TransactionForm transactionType={TransactionType.INCOME} />
       </BottomModal>
 
-      <View style={styles.container}>
+      <RootLayout style={styles.container}>
         <General />
 
         <View style={styles.buttonsContainer}>
           <Button title="Expense" onPress={handlePresentExpenseModalPress} style={styles.button} />
           <Button title="Income" onPress={handlePresentIncomeModalPress} style={styles.button} />
         </View>
-      </View>
+      </RootLayout>
     </>
   );
 };

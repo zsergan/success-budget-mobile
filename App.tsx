@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import RootNavigator from '@navigation/RootNavigator';
 import { Provider } from 'react-redux';
 import { useFonts } from 'expo-font';

@@ -21,10 +21,10 @@ const General = () => {
   ];
 
   return (
-    <Card customStyle={styles.root}>
+    <Card>
       {data.map((item, index) => (
         <Fragment key={item.title}>
-          <View style={styles.container}>
+          <View style={styles.infoContainer}>
             <Text style={styles.title}>{item.title}</Text>
 
             <Text style={styles.amount}>{item.amount}</Text>

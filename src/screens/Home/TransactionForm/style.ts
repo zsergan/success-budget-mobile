@@ -11,12 +11,13 @@ const styles = StyleSheet.create({
   container: {
     marginHorizontal: 24,
     rowGap: 32,
+    paddingBottom: 114,
   },
   mb8: {
     marginBottom: 8,
   },
   amount: {
-    marginBottom: 32,
+    marginBottom: 24,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -39,10 +40,10 @@ const styles = StyleSheet.create({
     color: theme.colors.text.primary,
   },
   buttonContainer: {
-    marginHorizontal: 24,
-    marginBottom: 48,
-    flex: 1,
-    justifyContent: 'flex-end',
+    position: 'absolute',
+    bottom: 48,
+    left: 24,
+    right: 24,
   },
 });
 
