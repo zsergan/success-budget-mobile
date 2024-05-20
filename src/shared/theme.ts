@@ -1,14 +1,21 @@
+const palette = {
+  green: '#58DA8C',
+  red: '#FF5C5C',
+};
+
 const theme = {
   colors: {
     background: {
       primary: '#FCFCFC',
       secondary: '#EFEFF1',
       dark: '#1E1E1E',
-      highlight: '#58DA8C',
+      highlight: palette.green,
     },
     text: {
       primary: '#67677A',
       secondary: '#303048',
+      success: palette.green,
+      error: palette.red,
     },
   },
   fonts: {

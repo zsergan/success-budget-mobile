@@ -6,4 +6,5 @@ export { default as Divider } from './Divider/Divider';
 export { default as RadioButton } from './RadioButton/RadioButton';
 export type { RadioButtonProps } from './RadioButton/RadioButton';
 export { default as RadioButtonGroup } from './RadioButtonGroup/RadioButtonGroup';
+export { default as RootLayout } from './RootLayout/RootLayout';
 export { default as TextArea } from './TextArea/TextArea';

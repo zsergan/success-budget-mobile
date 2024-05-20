@@ -7,7 +7,7 @@ export interface Transaction {
   holding_id: number;
   category_id: number;
   transaction_type: TransactionType;
-  amount: number;
+  amount: string;
   timestamp: Date;
   description: string;
   holding: Holding;
