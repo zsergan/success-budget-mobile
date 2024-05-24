@@ -6,11 +6,11 @@ import styles from './style';
 
 interface Props {
   children: ReactNode;
-  customStyle?: StyleProp<ViewStyle>;
+  style?: StyleProp<ViewStyle>;
 }
 
-const Card = ({ children, customStyle }: Props) => {
-  return <View style={[styles.root, customStyle]}>{children}</View>;
+const Card = ({ children, style }: Props) => {
+  return <View style={[styles.root, style]}>{children}</View>;
 };
 
 export default Card;

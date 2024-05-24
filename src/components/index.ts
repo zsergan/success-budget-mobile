@@ -3,8 +3,12 @@ export { default as BottomSheetModal } from './BottomSheetModal/BottomSheetModal
 export { default as Card } from './Card/Card';
 export { default as DateTimePicker } from './DateTimePicker/DateTimePicker';
 export { default as Divider } from './Divider/Divider';
+export { default as Input } from './Input/Input';
+export { default as ConfirmModal } from './ConfirmModal/ConfirmModal';
 export { default as RadioButton } from './RadioButton/RadioButton';
 export type { RadioButtonProps } from './RadioButton/RadioButton';
 export { default as RadioButtonGroup } from './RadioButtonGroup/RadioButtonGroup';
 export { default as RootLayout } from './RootLayout/RootLayout';
+export { default as SectionTitle } from './SectionTitle/SectionTitle';
+export { default as SwipeOptions } from './SwipeOptions/SwipeOptions';
 export { default as TextArea } from './TextArea/TextArea';

@@ -1,12 +1,12 @@
-import type { GetHoldingsResponse } from '@api/dto';
+import type { GetWalletsResponse } from '@api/dto';
 
 interface InitialState {
-  holdings: GetHoldingsResponse[];
+  wallets: GetWalletsResponse[];
   isLoading: boolean;
 }
 
 const initialState: InitialState = {
-  holdings: [],
+  wallets: [],
   isLoading: false,
 };
 

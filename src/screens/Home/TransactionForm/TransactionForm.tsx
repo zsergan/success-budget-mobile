@@ -5,7 +5,7 @@ import { Button, DateTimePicker, RadioButtonGroup, TextArea } from '@components'
 import { useAppSelector } from '@redux/hooks';
 import { selectCategory } from '@redux/state/category/selectors';
 import { selectProfile } from '@redux/state/profile/selectors';
-import { selectHolding } from '@redux/state/holding/selectors';
+import { selectWallet } from '@redux/state/wallet/selectors';
 import { selectTransaction } from '@redux/state/transaction/selectors';
 import { TransactionType } from '@shared/enums';
 import { useTransactionForm } from './hooks';
@@ -20,7 +20,7 @@ const TransactionForm = ({ transactionType = TransactionType.EXPENSE }: Props) =
   const amountRef = useRef<TextInput>(null);
   const { isCreating } = useAppSelector(selectTransaction);
   const { baseCurrency } = useAppSelector(selectProfile);
-  const { holdings } = useAppSelector(selectHolding);
+  const { wallets } = useAppSelector(selectWallet);
   const { expenses, incomes } = useAppSelector(selectCategory);
 
   const {
@@ -33,7 +33,7 @@ const TransactionForm = ({ transactionType = TransactionType.EXPENSE }: Props) =
     onChangeDate,
     onChangeNotes: setNotes,
     onSubmit,
-  } = useTransactionForm({ holdings, transactionType });
+  } = useTransactionForm({ wallets, transactionType });
 
   useEffect(() => {
     amountRef.current?.focus();

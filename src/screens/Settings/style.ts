@@ -1,14 +1,11 @@
 import { StyleSheet } from 'react-native';
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  profile: {
+    rowGap: 32,
   },
-  container: {
-    width: '100%',
-    paddingHorizontal: '25%',
+  button: {
+    paddingHorizontal: 11,
   },
 });
 

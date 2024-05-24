@@ -3,8 +3,8 @@ import { ApiClient } from './instance';
 
 const api = ApiClient();
 
-export const getTransactions = async (holdingId: number) => {
-  const response = await api.get<Transaction[]>(`/transactions?holdingId=${holdingId}`);
+export const getTransactions = async () => {
+  const response = await api.get<Transaction[]>('/transactions');
 
   return response.data;
 };

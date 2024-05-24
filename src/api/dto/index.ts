@@ -1,5 +1,5 @@
 export * from './authDto';
 export * from './categoryDto';
-export * from './holdingDto';
+export * from './walletDto';
 export * from './profileDto';
 export * from './transactionDto';
