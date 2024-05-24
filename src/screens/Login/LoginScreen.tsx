@@ -1,8 +1,9 @@
-import { TextInput, View } from 'react-native';
+import { View } from 'react-native';
 import { useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useAppDispatch } from '@redux/hooks';
-import { Button } from '@components';
+import { Button, Input } from '@components';
 import { loginMe } from '@redux/state/auth/thunks';
 
 import styles from './style';
@@ -16,17 +17,12 @@ const LoginScreen = () => {
 
   return (
     <View style={styles.root}>
+      <LinearGradient colors={['#DDE1E4', '#95A1AC']} style={styles.background} />
+
       <View style={styles.inputsContainer}>
-        <TextInput
-          style={styles.input}
-          value={email}
-          placeholder="Email"
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        <TextInput
-          style={styles.input}
+        <Input value={email} placeholder="Email" onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} />
+
+        <Input
           value={password}
           placeholder="Password"
           onChangeText={setPassword}

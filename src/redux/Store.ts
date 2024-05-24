@@ -4,7 +4,7 @@ import authReducer from './state/auth/slice';
 import categoryReducer from './state/category/slice';
 import profileReducer from './state/profile/slice';
 import transactionReducer from './state/transaction/slice';
-import holdingReducer from './state/holding/slice';
+import walletReducer from './state/wallet/slice';
 
 const store = configureStore({
   reducer: {
@@ -12,7 +12,7 @@ const store = configureStore({
     category: categoryReducer,
     profile: profileReducer,
     transaction: transactionReducer,
-    holding: holdingReducer,
+    wallet: walletReducer,
   },
 });
 

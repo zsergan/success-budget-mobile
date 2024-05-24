@@ -31,11 +31,13 @@ const theme = {
 
 export const shadow: Record<string, unknown> = {
   shadowColor: theme.colors.background.dark,
-  shadowOpacity: 0.1,
+  shadowOpacity: 0.25,
   shadowOffset: {
-    width: 2,
+    width: 0,
     height: 2,
   },
+  shadowRadius: 4,
+  elevation: 5,
 };
 
 export default theme;

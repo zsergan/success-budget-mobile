@@ -3,21 +3,21 @@ import { Text, View } from 'react-native';
 
 import { Card, Divider } from '@components';
 import { useAppSelector } from '@redux/hooks';
-import { selectHolding } from '@redux/state/holding/selectors';
+import { selectWallet } from '@redux/state/wallet/selectors';
 import { selectProfile } from '@redux/state/profile/selectors';
 import { formatNumber } from '@shared/utils';
 
 import styles from './style';
 
 const General = () => {
-  const { holdings } = useAppSelector(selectHolding);
-  const { holding, totalIncome, totalSpend } = holdings?.[0] || {};
+  const { wallets } = useAppSelector(selectWallet);
+  const { wallet, totalIncome, totalSpend } = wallets?.[0] || {};
   const { baseCurrency } = useAppSelector(selectProfile);
 
   const data = [
     { title: 'Spend', amount: `${formatNumber(totalSpend || 0)} ${baseCurrency?.code}` },
     { title: 'Received', amount: `${formatNumber(totalIncome || 0)} ${baseCurrency?.code}` },
-    { title: 'Balance', amount: `${formatNumber(Number(holding?.balance || 0))} ${holding?.currency.code}` },
+    { title: 'Balance', amount: `${formatNumber(Number(wallet?.balance || 0))} ${wallet?.currency.code}` },
   ];
 
   return (

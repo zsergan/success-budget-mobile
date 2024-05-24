@@ -2,18 +2,18 @@ import { useState } from 'react';
 import { Keyboard } from 'react-native';
 import { useBottomSheet } from '@gorhom/bottom-sheet';
 
-import type { CreateTransactionRequest, GetHoldingsResponse } from '@api/dto';
+import type { CreateTransactionRequest, GetWalletsResponse } from '@api/dto';
 import type { TransactionType } from '@shared/enums';
 import { useAppDispatch } from '@redux/hooks';
 import { addTransaction } from '@redux/state/transaction/thunks';
 import { addCurrentTime } from '@shared/utils';
 
 interface UseTransactionFormProps {
-  holdings: GetHoldingsResponse[];
+  wallets: GetWalletsResponse[];
   transactionType: TransactionType;
 }
 
-const useTransactionForm = ({ holdings, transactionType }: UseTransactionFormProps) => {
+const useTransactionForm = ({ wallets, transactionType }: UseTransactionFormProps) => {
   const dispatch = useAppDispatch();
   const { close } = useBottomSheet();
 
@@ -39,7 +39,7 @@ const useTransactionForm = ({ holdings, transactionType }: UseTransactionFormPro
 
     const payload: CreateTransactionRequest = {
       amount: amount.replace(',', '.'),
-      holding_id: holdings[0].holding.id,
+      wallet_id: wallets[0].wallet.id,
       category_id: selectedCategory,
       timestamp: addCurrentTime(date),
       transaction_type: transactionType,

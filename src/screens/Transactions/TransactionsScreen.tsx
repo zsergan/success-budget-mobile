@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import { Text, View } from 'react-native';
+import { Fontisto } from '@expo/vector-icons';
 
 import { Card, Divider, RootLayout } from '@components';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { fetchTransactions } from '@redux/state/transaction/thunks';
 import { selectTransaction } from '@redux/state/transaction/selectors';
-import { selectHolding } from '@redux/state/holding/selectors';
+import { selectWallet } from '@redux/state/wallet/selectors';
 import { compareDays, formatDateDDMMYYYY, formatAmount } from '@shared/utils';
 import { TransactionType } from '@shared/enums';
 
@@ -13,14 +14,12 @@ import styles from './style';
 
 const TransactionsScreen = () => {
   const dispatch = useAppDispatch();
-  const { holdings } = useAppSelector(selectHolding);
+  const { wallets } = useAppSelector(selectWallet);
   const { transactions } = useAppSelector(selectTransaction);
 
   useEffect(() => {
-    if (holdings[0]?.holding.id) {
-      dispatch(fetchTransactions(holdings[0].holding.id));
-    }
-  }, [dispatch, holdings]);
+    dispatch(fetchTransactions());
+  }, [dispatch]);
 
   return (
     <RootLayout style={styles.root} scrollable>
@@ -31,9 +30,19 @@ const TransactionsScreen = () => {
               <Text style={[styles.date, index !== 0 && styles.mt16]}>{formatDateDDMMYYYY(transaction.timestamp)}</Text>
             )}
 
-            <Card customStyle={styles.card}>
+            <Card style={styles.card}>
               <View style={styles.row}>
-                <Text style={styles.name}>{transaction.category?.name}</Text>
+                <View style={styles.transactionAndWallet}>
+                  <Text style={styles.name}>{transaction.category?.name}</Text>
+
+                  <View style={styles.walletContainer}>
+                    <Fontisto name="wallet" size={16} color="black" />
+
+                    <Text style={[styles.wallet, !transaction.wallet && styles.expense]}>
+                      {transaction.wallet ? transaction.wallet.wallet_name : 'Deleted wallet'}
+                    </Text>
+                  </View>
+                </View>
 
                 <Text
                   style={[
@@ -41,7 +50,7 @@ const TransactionsScreen = () => {
                     transaction.transaction_type === TransactionType.INCOME ? styles.income : styles.expense,
                   ]}
                 >
-                  {formatAmount(transaction.amount, transaction.transaction_type, holdings[0].holding.currency.code)}
+                  {formatAmount(transaction.amount, transaction.transaction_type, wallets[0].wallet.currency.code)}
                 </Text>
               </View>
 

@@ -25,7 +25,20 @@ const styles = StyleSheet.create({
   mt16: {
     marginTop: 16,
   },
+  transactionAndWallet: {
+    rowGap: 8,
+  },
+  walletContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: 8,
+  },
   name: {
+    fontFamily: theme.fonts.bold,
+    fontSize: 16,
+    color: theme.colors.text.secondary,
+  },
+  wallet: {
     fontFamily: theme.fonts.bold,
     fontSize: 16,
     color: theme.colors.text.primary,

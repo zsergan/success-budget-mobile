@@ -2,9 +2,8 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Text } from 'react-native';
 
-import { LoginScreen } from '@screens';
+import { CreateWalletScreen, LoginScreen, LoadingScreen } from '@screens';
 import { useAuth, useLoadInitData } from '@hooks';
 import MainNavigator from './MainNavigator';
 
@@ -14,7 +13,7 @@ const RootNavigator = () => {
   const { isSignedIn, isLoading } = useAuth();
   const { isLoading: isDataLoading } = useLoadInitData({ isSignedIn });
 
-  if (isLoading || isDataLoading) return <Text>Loading</Text>;
+  const isAppLoading = isLoading || isDataLoading;
 
   return (
     <GestureHandlerRootView>
@@ -25,10 +24,15 @@ const RootNavigator = () => {
               animation: isSignedIn ? 'slide_from_right' : 'slide_from_left',
             }}
           >
-            {isSignedIn ? (
-              <Stack.Screen name="MainNavigator" component={MainNavigator} options={{ headerShown: false }} />
+            {isAppLoading && <Stack.Screen name="Loading" component={LoadingScreen} options={{ headerShown: false }} />}
+
+            {!isAppLoading && isSignedIn ? (
+              <>
+                <Stack.Screen name="Home screen" component={MainNavigator} options={{ headerShown: false }} />
+                <Stack.Screen name="New wallet" component={CreateWalletScreen} />
+              </>
             ) : (
-              <Stack.Screen name="LoginScreen" component={LoginScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
             )}
           </Stack.Navigator>
         </NavigationContainer>
