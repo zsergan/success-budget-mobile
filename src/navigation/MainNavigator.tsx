@@ -2,6 +2,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Entypo, FontAwesome6, Ionicons } from '@expo/vector-icons';
 
 import { HomeScreen, SettingsScreen, TransactionsScreen } from '@screens';
+import { palette } from '@shared/theme';
+import { ScreenNames } from '@shared/enums';
 
 const Tab = createBottomTabNavigator();
 
@@ -18,12 +20,31 @@ const SettingsIcon = ({ color, size }: IconProps) => <Ionicons name="settings-sh
 
 const MainNavigator = () => {
   return (
-    <Tab.Navigator>
-      <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarIcon: HomeIcon }} />
+    <Tab.Navigator
+      sceneContainerStyle={{ backgroundColor: palette.greyLight }}
+      screenOptions={{
+        tabBarStyle: { backgroundColor: palette.greyLight },
+        tabBarActiveTintColor: palette.black,
+        tabBarInactiveTintColor: palette.greyDark,
+      }}
+    >
+      <Tab.Screen
+        name={ScreenNames.HOME_TAB}
+        component={HomeScreen}
+        options={{ tabBarIcon: HomeIcon, headerShown: false }}
+      />
 
-      <Tab.Screen name="Transactions" component={TransactionsScreen} options={{ tabBarIcon: TransactionsIcon }} />
+      <Tab.Screen
+        name={ScreenNames.TRANSACTIONS_TAB}
+        component={TransactionsScreen}
+        options={{ tabBarIcon: TransactionsIcon, headerShown: false }}
+      />
 
-      <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarIcon: SettingsIcon }} />
+      <Tab.Screen
+        name={ScreenNames.SETTINGS_TAB}
+        component={SettingsScreen}
+        options={{ tabBarIcon: SettingsIcon, headerShown: false }}
+      />
     </Tab.Navigator>
   );
 };

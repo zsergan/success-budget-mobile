@@ -7,9 +7,9 @@ import store from '@redux/Store';
 
 const App = () => {
   useFonts({
-    'DMSans-Bold': require('./assets/fonts/DMSans-Bold.ttf'),
-    'DMSans-Medium': require('./assets/fonts/DMSans-Medium.ttf'),
-    'DMSans-Regular': require('./assets/fonts/DMSans-Regular.ttf'),
+    'Poppins-Bold': require('./assets/fonts/Poppins-Bold.ttf'),
+    'Poppins-Medium': require('./assets/fonts/Poppins-Medium.ttf'),
+    'Poppins-Regular': require('./assets/fonts/Poppins-Regular.ttf'),
   });
 
   return (

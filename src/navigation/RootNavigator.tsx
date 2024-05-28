@@ -3,8 +3,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import { CreateWalletScreen, LoginScreen, LoadingScreen } from '@screens';
+import { CreateWalletScreen, SignInScreen, SignUpScreen, LoadingScreen } from '@screens';
 import { useAuth, useLoadInitData } from '@hooks';
+import { ScreenNames } from '@shared/enums';
 import MainNavigator from './MainNavigator';
 
 const Stack = createNativeStackNavigator();
@@ -19,20 +20,41 @@ const RootNavigator = () => {
     <GestureHandlerRootView>
       <BottomSheetModalProvider>
         <NavigationContainer>
-          <Stack.Navigator
-            screenOptions={{
-              animation: isSignedIn ? 'slide_from_right' : 'slide_from_left',
-            }}
-          >
-            {isAppLoading && <Stack.Screen name="Loading" component={LoadingScreen} options={{ headerShown: false }} />}
+          <Stack.Navigator screenOptions={{ animation: isSignedIn ? 'slide_from_right' : 'slide_from_left' }}>
+            {isAppLoading && (
+              <Stack.Screen
+                name={ScreenNames.LOADING_SCREEN}
+                component={LoadingScreen}
+                options={{ headerShown: false }}
+              />
+            )}
 
             {!isAppLoading && isSignedIn ? (
               <>
-                <Stack.Screen name="Home screen" component={MainNavigator} options={{ headerShown: false }} />
-                <Stack.Screen name="New wallet" component={CreateWalletScreen} />
+                <Stack.Screen
+                  name={ScreenNames.HOME_SCREEN}
+                  component={MainNavigator}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name={ScreenNames.ADD_WALLET_SCREEN}
+                  component={CreateWalletScreen}
+                  options={{ headerShown: false }}
+                />
               </>
             ) : (
-              <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+              <>
+                <Stack.Screen
+                  name={ScreenNames.SIGN_IN_SCREEN}
+                  component={SignInScreen}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name={ScreenNames.SIGN_UP_SCREEN}
+                  component={SignUpScreen}
+                  options={{ headerShown: false }}
+                />
+              </>
             )}
           </Stack.Navigator>
         </NavigationContainer>

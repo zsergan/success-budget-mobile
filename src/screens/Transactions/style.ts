@@ -3,61 +3,18 @@ import { StyleSheet } from 'react-native';
 import theme from '@shared/theme';
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
   transactionsContainer: {
-    rowGap: 8,
-  },
-  card: {
-    rowGap: 12,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    rowGap: theme.spacing.sm,
+    marginBottom: theme.spacing.xxl,
   },
   date: {
-    marginBottom: 8,
-    fontFamily: theme.fonts.bold,
-    color: theme.colors.text.primary,
-  },
-  mt16: {
-    marginTop: 16,
-  },
-  transactionAndWallet: {
-    rowGap: 8,
-  },
-  walletContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    columnGap: 8,
-  },
-  name: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 16,
+    marginBottom: theme.spacing.sm,
+    fontFamily: theme.fonts.medium,
+    fontSize: theme.fontSizes.xs,
     color: theme.colors.text.secondary,
   },
-  wallet: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 16,
-    color: theme.colors.text.primary,
-  },
-  amount: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 20,
-    color: theme.colors.text.secondary,
-  },
-  expense: {
-    color: theme.colors.text.error,
-  },
-  income: {
-    color: theme.colors.text.success,
-  },
-  description: {
-    alignSelf: 'flex-end',
-    fontFamily: theme.fonts.bold,
-    color: theme.colors.text.primary,
+  mt24: {
+    marginTop: theme.spacing.xxl,
   },
 });
 

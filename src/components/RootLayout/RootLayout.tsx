@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { Fragment } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View, ScrollView, SafeAreaView } from 'react-native';
 
 import styles from './style';
 
@@ -11,17 +10,25 @@ interface Props {
   style?: StyleProp<ViewStyle>;
 }
 
-const ScrollViewContainer = ({ children }: Pick<Props, 'children'>) => (
-  <ScrollView showsVerticalScrollIndicator={false}>{children}</ScrollView>
+type ContainerProps = Pick<Props, 'children' | 'style'>;
+
+const ScrollViewContainer = ({ children, style }: ContainerProps) => (
+  <ScrollView showsVerticalScrollIndicator={false} style={[styles.container, style]}>
+    {children}
+  </ScrollView>
+);
+
+const ViewContainer = ({ children, style }: ContainerProps) => (
+  <View style={[styles.container, style]}>{children}</View>
 );
 
 const RootLayout = ({ children, scrollable, style }: Props) => {
-  const Container = scrollable ? ScrollViewContainer : Fragment;
+  const Container = scrollable ? ScrollViewContainer : ViewContainer;
 
   return (
-    <Container>
-      <View style={[styles.root, style]}>{children}</View>
-    </Container>
+    <SafeAreaView style={styles.root}>
+      <Container style={style}>{children}</Container>
+    </SafeAreaView>
   );
 };
 
