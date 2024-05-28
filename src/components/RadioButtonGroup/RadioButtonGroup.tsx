@@ -1,28 +1,42 @@
-import { View } from 'react-native';
+import { useState } from 'react';
+import { ScrollView, View, Dimensions } from 'react-native';
 
 import type { RadioButtonProps } from '@components';
 import RadioButton from '../RadioButton/RadioButton';
 
 import styles from './style';
 
-interface Props {
-  buttons: Omit<RadioButtonProps, 'onPress'>[];
-  onPress: (value: number) => void;
+interface Props<T> {
+  buttons: Omit<RadioButtonProps<T>, 'onPress'>[];
+  onPress: RadioButtonProps<T>['onPress'];
 }
 
-const RadioButtonGroup = ({ buttons, onPress }: Props) => {
+const RadioButtonGroup = <T extends number | string>({ buttons, onPress }: Props<T>) => {
+  const screenWidth = Dimensions.get('window').width;
+  const [maxWidth, setMaxWidth] = useState<number | undefined>(undefined);
+
+  const handleContentSizeChange = (contentWidth: number) => {
+    if (contentWidth > screenWidth && !maxWidth) {
+      const rowsAmount = contentWidth / 3 < screenWidth ? 2 : 3;
+      // 80 is sum of margins and paddings
+      setMaxWidth(contentWidth / rowsAmount + 80);
+    }
+  };
+
   return (
-    <View style={styles.root}>
-      {buttons.map((button) => (
-        <RadioButton
-          key={button.value}
-          label={button.label}
-          value={button.value}
-          selected={button.selected}
-          onPress={onPress}
-        />
-      ))}
-    </View>
+    <ScrollView
+      horizontal
+      scrollEnabled={maxWidth !== undefined}
+      style={styles.root}
+      showsHorizontalScrollIndicator={false}
+      onContentSizeChange={handleContentSizeChange}
+    >
+      <View style={[styles.container, maxWidth ? { maxWidth } : {}]}>
+        {buttons.map((button) => (
+          <RadioButton key={button.value} {...button} onPress={onPress} />
+        ))}
+      </View>
+    </ScrollView>
   );
 };
 

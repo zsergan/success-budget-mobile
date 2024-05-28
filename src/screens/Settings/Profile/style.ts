@@ -5,21 +5,20 @@ import theme from '@shared/theme';
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    alignItems: 'center',
+    rowGap: theme.spacing.sm,
   },
-  row: {
-    flex: 1,
-    flexDirection: 'row',
-    alignSelf: 'stretch',
-  },
-  cell: {
-    flex: 1,
-    alignSelf: 'stretch',
-    fontFamily: theme.fonts.bold,
+  profile: {
+    alignItems: 'center',
   },
   name: {
+    fontFamily: theme.fonts.bold,
+    fontSize: theme.fontSizes.sm,
     color: theme.colors.text.primary,
   },
-  value: {
+  email: {
+    fontFamily: theme.fonts.medium,
+    fontSize: theme.fontSizes.xs,
     color: theme.colors.text.secondary,
   },
 });

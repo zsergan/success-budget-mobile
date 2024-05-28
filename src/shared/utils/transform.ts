@@ -30,3 +30,12 @@ export const formatDateDDMMYYYY = (d: Date | string) => {
 
   return `${day < 10 ? `0${day}` : day}.${month < 10 ? `0${month}` : month}.${year}`;
 };
+
+export const formatDateHHMM = (d: Date | string) => {
+  const date = new Date(d);
+
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+
+  return `${hours < 10 ? `0${hours}` : hours}:${minutes < 10 ? `0${minutes}` : minutes}`;
+};

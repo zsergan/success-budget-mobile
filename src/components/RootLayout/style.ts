@@ -1,9 +1,14 @@
 import { StyleSheet } from 'react-native';
 
+import theme from '@shared/theme';
+
 const styles = StyleSheet.create({
   root: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    flex: 1,
+  },
+  container: {
+    paddingTop: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xl,
   },
 });
 

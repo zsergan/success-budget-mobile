@@ -1,8 +1,4 @@
-export interface Currency {
-  id: number;
-  code: string;
-  name: string;
-}
+import type { Currency } from './currencyDto';
 
 export interface ProfileResponse {
   id: string;

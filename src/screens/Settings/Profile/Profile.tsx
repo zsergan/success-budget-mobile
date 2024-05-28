@@ -1,28 +1,23 @@
 import { Text, View } from 'react-native';
 
+import { CircleIcon } from '@components';
 import { useAppSelector } from '@redux/hooks';
 import { selectProfile } from '@redux/state/profile/selectors';
 
 import styles from './style';
 
 const Profile = () => {
-  const { name, email, baseCurrency } = useAppSelector(selectProfile);
-
-  const data = [
-    { field: 'Name', value: name },
-    { field: 'Email', value: email },
-    { field: 'Base currency', value: `${baseCurrency?.name} (${baseCurrency?.code})` },
-  ];
+  const { name, email } = useAppSelector(selectProfile);
 
   return (
     <View style={styles.root}>
-      {data.map(({ field, value }) => (
-        <View key={field} style={styles.row}>
-          <Text style={[styles.cell, styles.name]}>{field}</Text>
+      <CircleIcon icon="person" size="xl" border />
 
-          <Text style={[styles.cell, styles.value]}>{value}</Text>
-        </View>
-      ))}
+      <View style={styles.profile}>
+        <Text style={styles.name}>{name}</Text>
+
+        <Text style={styles.email}>{email}</Text>
+      </View>
     </View>
   );
 };
