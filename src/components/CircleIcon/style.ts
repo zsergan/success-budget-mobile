@@ -18,16 +18,16 @@ const styles = StyleSheet.create({
     height: 16,
   },
   mdCircle: {
+    width: 24,
+    height: 24,
+  },
+  lgCircle: {
     width: 32,
     height: 32,
   },
-  lgCircle: {
+  xlCircle: {
     width: 48,
     height: 48,
-  },
-  xlCircle: {
-    width: 60,
-    height: 60,
   },
   icon: {
     transform: [{ translateX: 0.25 }, { translateY: 0.5 }],

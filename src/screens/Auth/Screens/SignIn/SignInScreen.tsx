@@ -1,44 +1,81 @@
-import { View } from 'react-native';
-import { useState } from 'react';
+import { useEffect } from 'react';
+import { View, Text } from 'react-native';
+import { Controller } from 'react-hook-form';
 
-import { useAppDispatch } from '@redux/hooks';
-import { Button, Input, PasswordInput } from '@components';
-import { loginMe } from '@redux/state/auth/thunks';
+import { Button, H, Input, PasswordInput } from '@components';
 import type { ScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
+import { useAppSelector } from '@redux/hooks';
+import { selectAuth } from '@redux/state/auth/selectors';
+import { useAlert } from '@hooks';
 import AuthLayout from '../../AuthLayout';
+import useSignInForm from './useSignInForm';
 
 import styles from '../style';
 
 interface Props extends ScreenProps<ScreenNames.SIGN_IN_SCREEN> {}
 
 const SignInScreen = ({ navigation }: Props) => {
-  const dispatch = useAppDispatch();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { error } = useAppSelector(selectAuth);
+  const { control, onSubmit, isSubmitting } = useSignInForm();
+  const { addAlert } = useAlert();
 
-  const handleLogin = () => dispatch(loginMe({ email, password }));
+  useEffect(() => {
+    const errorMessage = typeof error?.message === 'string' ? error.message : error?.message[0].error;
+
+    if (errorMessage) {
+      addAlert(errorMessage, 'error');
+    }
+  }, [error, addAlert]);
 
   return (
-    <AuthLayout header="Sign in">
-      <View style={styles.inputsContainer}>
-        <Input
-          iconLeft="email"
-          value={email}
-          placeholder="E-mail"
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          autoCorrect={false}
-          withShadow
-        />
+    <AuthLayout>
+      <View style={styles.root}>
+        <H>Sign in</H>
 
-        <PasswordInput iconLeft="lock" value={password} placeholder="Password" onChangeText={setPassword} withShadow />
+        <View style={styles.container}>
+          <Controller
+            name="email"
+            control={control}
+            render={({ field: { onChange, value }, formState: { errors } }) => (
+              <Input
+                iconLeft="email"
+                value={value}
+                placeholder="E-mail"
+                onChangeText={onChange}
+                autoCapitalize="none"
+                autoCorrect={false}
+                withShadow
+                error={errors.email?.message}
+              />
+            )}
+          />
+
+          <Controller
+            name="password"
+            control={control}
+            render={({ field: { onChange, value }, formState: { errors } }) => (
+              <PasswordInput
+                iconLeft="lock"
+                value={value}
+                placeholder="Password"
+                onChangeText={onChange}
+                withShadow
+                error={errors.password?.message}
+              />
+            )}
+          />
+        </View>
+
+        <View style={styles.container}>
+          <Button title="Sign in" onPress={onSubmit} disabled={isSubmitting} />
+
+          <Button title="Reset password" onPress={() => {}} variant="tertiary" />
+        </View>
       </View>
 
-      <Button title="Reset password" style={styles.resetPasswordButton} onPress={() => {}} variant="tertiary" />
-
-      <View style={styles.buttonsContainer}>
-        <Button title="Sign in" onPress={handleLogin} />
+      <View style={styles.bottomContainer}>
+        <Text style={styles.bottomText}>Don't have an account?</Text>
 
         <Button title="Sign up" onPress={() => navigation.navigate(ScreenNames.SIGN_UP_SCREEN)} variant="tertiary" />
       </View>

@@ -18,8 +18,8 @@ const RadioButtonGroup = <T extends number | string>({ buttons, onPress }: Props
   const handleContentSizeChange = (contentWidth: number) => {
     if (contentWidth > screenWidth && !maxWidth) {
       const rowsAmount = contentWidth / 3 < screenWidth ? 2 : 3;
-      // 80 is sum of margins and paddings
-      setMaxWidth(contentWidth / rowsAmount + 80);
+      // 100 is sum of margins and paddings
+      setMaxWidth(contentWidth / rowsAmount + 100);
     }
   };
 

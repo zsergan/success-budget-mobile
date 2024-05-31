@@ -3,12 +3,13 @@ import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import { CreateWalletScreen, SignInScreen, SignUpScreen, LoadingScreen } from '@screens';
+import { CreateWalletScreen, SignInScreen, SignUpScreen, VerifyEmailScreen, LoadingScreen } from '@screens';
+import type { RootStackParamList } from '@shared/types';
 import { useAuth, useLoadInitData } from '@hooks';
 import { ScreenNames } from '@shared/enums';
 import MainNavigator from './MainNavigator';
 
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const RootNavigator = () => {
   const { isSignedIn, isLoading } = useAuth();
@@ -52,6 +53,11 @@ const RootNavigator = () => {
                 <Stack.Screen
                   name={ScreenNames.SIGN_UP_SCREEN}
                   component={SignUpScreen}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name={ScreenNames.VERIFY_EMAIL_SCREEN}
+                  component={VerifyEmailScreen}
                   options={{ headerShown: false }}
                 />
               </>

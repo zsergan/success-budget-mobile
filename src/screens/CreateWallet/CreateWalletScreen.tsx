@@ -1,4 +1,5 @@
 import { TouchableOpacity, View } from 'react-native';
+import { Controller } from 'react-hook-form';
 
 import { Input, RootLayout, Button, SectionTitle, GradientBackground, WalletCard, InputPicker } from '@components';
 import type { ScreenProps } from '@shared/types';
@@ -11,19 +12,14 @@ import styles from './style';
 interface Props extends ScreenProps<ScreenNames.ADD_WALLET_SCREEN> {}
 
 const CreateWalletScreen = ({ navigation, route }: Props) => {
-  const {
-    currencies,
-    isNewWallet,
-    walletName,
-    setWalletName,
-    initialBalance,
-    setInitialBalance,
-    currency,
-    setCurrency,
-    design,
-    setDesign,
-    onSubmit,
-  } = useCreateWalletForm({ navigation, route });
+  const { currencies, isNewWallet, control, onSubmit, watch, isSubmitSuccessful } = useCreateWalletForm({
+    navigation,
+    route,
+  });
+
+  const selectedWalletName = watch('walletName');
+  const selectedCurrency = watch('currency');
+  const selectedDesign = watch('design');
 
   return (
     <>
@@ -36,35 +32,47 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
             />
 
             <View style={styles.formContainer}>
-              <Input
-                label="Wallet Name"
-                placeholder="My Wallet"
-                value={walletName}
-                onChangeText={setWalletName}
-                withShadow
+              <Controller
+                name="walletName"
+                control={control}
+                render={({ field: { onChange, value } }) => (
+                  <Input label="Wallet Name" placeholder="My Wallet" value={value} onChangeText={onChange} withShadow />
+                )}
               />
 
               <View style={styles.rowInputs}>
-                <InputPicker
-                  items={currencies}
-                  selectedValue={currency}
-                  onValueChange={(v) => setCurrency(v as number)}
-                  label="Currency"
-                  withShadow
-                  containerStyle={styles.currency}
-                  disabled={!isNewWallet}
+                <Controller
+                  name="currency"
+                  control={control}
+                  render={({ field: { onChange, value } }) => (
+                    <InputPicker
+                      items={currencies}
+                      selectedValue={value}
+                      onValueChange={(v) => onChange(v as number)}
+                      label="Currency"
+                      withShadow
+                      containerStyle={styles.currency}
+                      disabled={!isNewWallet}
+                    />
+                  )}
                 />
 
-                <Input
-                  containerStyle={styles.balance}
-                  label="Balance"
-                  placeholder="0"
-                  value={initialBalance}
-                  onChangeText={setInitialBalance}
-                  keyboardType="numeric"
-                  returnKeyType="done"
-                  editable={isNewWallet}
-                  withShadow
+                <Controller
+                  name="initialBalance"
+                  control={control}
+                  render={({ field: { onChange, value } }) => (
+                    <Input
+                      containerStyle={styles.balance}
+                      label="Balance"
+                      placeholder="0"
+                      value={value}
+                      onChangeText={onChange}
+                      keyboardType="numeric"
+                      returnKeyType="done"
+                      editable={isNewWallet}
+                      withShadow
+                    />
+                  )}
                 />
               </View>
             </View>
@@ -73,37 +81,43 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
           <View>
             <SectionTitle title="Design" />
 
-            <View style={styles.designsContainer}>
-              {Object.keys(gradients).map((key) => (
-                <TouchableOpacity key={key} onPress={() => setDesign(key as WalletDesign)} activeOpacity={0.5}>
-                  <View style={[styles.designCircle, key === design && styles.selectedCircle]}>
-                    <GradientBackground
-                      colors={gradients[key as WalletDesign]}
-                      style={styles.gradient}
-                      start={{ x: 0, y: 0.0 }}
-                      end={{ x: 1.0, y: 1.0 }}
-                    />
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <Controller
+              name="design"
+              control={control}
+              render={({ field: { onChange, value } }) => (
+                <View style={styles.designsContainer}>
+                  {Object.keys(gradients).map((key) => (
+                    <TouchableOpacity key={key} onPress={() => onChange(key as WalletDesign)} activeOpacity={0.5}>
+                      <View style={[styles.designCircle, key === value && styles.selectedCircle]}>
+                        <GradientBackground
+                          colors={gradients[key as WalletDesign]}
+                          style={styles.gradient}
+                          start={{ x: 0, y: 0.0 }}
+                          end={{ x: 1.0, y: 1.0 }}
+                        />
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            />
           </View>
 
           <View>
             <SectionTitle title="Preview" />
 
             <WalletCard
-              walletName="Wallet name"
+              walletName={selectedWalletName || 'Wallet name'}
               balance="999999999999"
-              currencyCode={currencies.find((c) => c.value === Number(currency))?.label || ''}
+              currencyCode={currencies.find((c) => c.value === Number(selectedCurrency))?.label || ''}
               totalIncome={9999999999}
               totalSpend={999999999}
-              design={design}
+              design={selectedDesign}
             />
           </View>
         </View>
 
-        <Button title={isNewWallet ? 'Create' : 'Save changes'} onPress={onSubmit} />
+        <Button title={isNewWallet ? 'Create' : 'Save changes'} onPress={onSubmit} disabled={isSubmitSuccessful} />
       </RootLayout>
     </>
   );

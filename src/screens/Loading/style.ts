@@ -6,11 +6,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: theme.colors.background.primary,
   },
   text: {
     fontFamily: theme.fonts.bold,
-    fontSize: 36,
-    color: theme.colors.text.secondary,
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.text.primary,
   },
 });
 

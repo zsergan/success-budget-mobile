@@ -12,12 +12,22 @@ interface Props {
   selectedValue: number | string;
   onValueChange: (itemValue: number | string, itemIndex: number) => void;
   label?: string;
+  placeholder?: string;
   disabled?: boolean;
   withShadow?: boolean;
   containerStyle?: StyleProp<ViewStyle>;
 }
 
-const InputPicker = ({ items, selectedValue, onValueChange, label, disabled, withShadow, containerStyle }: Props) => {
+const InputPicker = ({
+  items,
+  selectedValue,
+  onValueChange,
+  label,
+  placeholder,
+  disabled,
+  withShadow,
+  containerStyle,
+}: Props) => {
   const [isPickerVisible, setIsPickerVisible] = useState(false);
 
   const selectedLabel = items.find((item) => item.value === Number(selectedValue))?.label || '';
@@ -47,7 +57,9 @@ const InputPicker = ({ items, selectedValue, onValueChange, label, disabled, wit
           activeOpacity={0.5}
           disabled={disabled}
         >
-          <Text style={styles.input}>{selectedLabel}</Text>
+          <Text style={[styles.input, !selectedLabel && styles.placeholder]} numberOfLines={1}>
+            {selectedLabel || placeholder}
+          </Text>
         </TouchableOpacity>
       </View>
     </>

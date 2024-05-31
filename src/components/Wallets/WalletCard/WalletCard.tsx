@@ -45,7 +45,7 @@ const WalletCard = ({
 
     <View style={styles.bottomInfo}>
       <View style={styles.totalBlock}>
-        <CircleIcon icon="arrow-downward" size="md" color={palette.green} />
+        <CircleIcon icon="arrow-downward" size="lg" color={palette.green} />
 
         <View>
           <Text style={styles.name}>Income</Text>
@@ -55,7 +55,7 @@ const WalletCard = ({
       </View>
 
       <View style={styles.totalBlock}>
-        <CircleIcon icon="arrow-outward" size="md" color={palette.red} />
+        <CircleIcon icon="arrow-outward" size="lg" color={palette.red} />
 
         <View>
           <Text style={styles.name}>Expense</Text>

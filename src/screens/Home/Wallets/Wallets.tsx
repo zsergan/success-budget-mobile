@@ -18,9 +18,10 @@ const renderBottomModalContent = (walletName: string, currencyCode: string, desi
 
 interface Props {
   navigation: NavigationType<ScreenNames.HOME_TAB>;
+  onScrollEnd: (index: number) => void;
 }
 
-const Wallets = ({ navigation }: Props) => {
+const Wallets = ({ navigation, onScrollEnd }: Props) => {
   const {
     wallets,
     selectedWallet,
@@ -75,6 +76,7 @@ const Wallets = ({ navigation }: Props) => {
         itemsLength={wallets.length}
         items={wallets}
         itemScale={0.88}
+        onScrollEnd={onScrollEnd}
         renderItem={(item, walletWidth) => (
           <TouchableOpacity key={item?.wallet.id} onLongPress={() => onWalletLongPress(item)} activeOpacity={0.7}>
             <WalletCard

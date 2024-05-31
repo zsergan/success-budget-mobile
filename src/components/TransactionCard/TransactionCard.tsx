@@ -14,7 +14,7 @@ interface Props {
 const TransactionCard = ({ transaction }: Props) => (
   <View style={styles.root}>
     <View style={styles.categoryNameTime}>
-      <CircleIcon icon="attach-money" size="lg" border />
+      <CircleIcon icon="attach-money" size="xl" border />
 
       <View>
         <Text style={styles.category}>{transaction.category.name}</Text>

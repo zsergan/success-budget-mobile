@@ -11,11 +11,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     borderRadius: theme.radius.sm,
     backgroundColor: palette.white,
+    minHeight: 46,
   },
   input: {
     textAlign: 'center',
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.md,
+  },
+  placeholder: {
+    color: theme.colors.text.secondary,
   },
   inputWithShadow: { ...shadow },
   label: {

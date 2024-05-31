@@ -14,6 +14,10 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.sm,
     backgroundColor: palette.white,
   },
+  withError: {
+    borderColor: palette.red,
+    borderWidth: 1,
+  },
   inputWithLeftIcon: {
     paddingLeft: theme.spacing.lg + 32 + theme.spacing.md,
   },
@@ -39,6 +43,11 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.sm,
     color: theme.colors.text.primary,
+  },
+  error: {
+    fontFamily: theme.fonts.medium,
+    fontSize: theme.fontSizes.sm,
+    color: palette.red,
   },
 });
 

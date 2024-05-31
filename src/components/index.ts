@@ -1,3 +1,4 @@
+export * from './Alert';
 export * from './Buttons';
 export { default as Carousel } from './Carousel/Carousel';
 export { default as Chip } from './Chip/Chip';

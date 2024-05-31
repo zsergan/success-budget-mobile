@@ -1,48 +1,115 @@
-import { useState } from 'react';
 import { Text, View } from 'react-native';
+import { Controller } from 'react-hook-form';
 
-import { Button, Input, PasswordInput } from '@components';
+import { Button, H, Input, InputPicker, PasswordInput } from '@components';
 import type { ScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import AuthLayout from '../../AuthLayout';
+import useSignUpForm from './useSignUpForm';
 
 import styles from '../style';
 
 interface Props extends ScreenProps<ScreenNames.SIGN_UP_SCREEN> {}
 
 const SignUpScreen = ({ navigation }: Props) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [passwordConfirm, setPasswordConfirm] = useState('');
+  const { currencies, control, onSubmit, isSubmitting } = useSignUpForm({ navigation });
 
   return (
-    <AuthLayout header="Sign Up">
-      <View style={[styles.inputsContainer, styles.pb40]}>
-        <Input
-          iconLeft="email"
-          value={email}
-          placeholder="E-mail"
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          autoCorrect={false}
-          withShadow
-        />
+    <AuthLayout>
+      <View style={styles.root}>
+        <H>Sign up</H>
 
-        <PasswordInput iconLeft="lock" value={password} placeholder="Password" onChangeText={setPassword} withShadow />
+        <View style={styles.container}>
+          <View style={styles.rowInputs}>
+            <Controller
+              name="name"
+              control={control}
+              render={({ field: { onChange, value }, formState: { errors } }) => (
+                <Input
+                  iconLeft="person"
+                  value={value}
+                  placeholder="Name"
+                  onChangeText={onChange}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  containerStyle={styles.name}
+                  withShadow
+                  error={errors.name?.message}
+                />
+              )}
+            />
 
-        <Text style={styles.infoText}>Must be at least 8 characters</Text>
+            <Controller
+              name="currency"
+              control={control}
+              render={({ field: { onChange, value } }) => (
+                <InputPicker
+                  items={currencies}
+                  selectedValue={value}
+                  onValueChange={(v) => onChange(v as number)}
+                  withShadow
+                  placeholder="Currency"
+                  containerStyle={styles.currency}
+                />
+              )}
+            />
+          </View>
 
-        <PasswordInput
-          iconLeft="lock"
-          value={passwordConfirm}
-          placeholder="Confirm Password"
-          onChangeText={setPasswordConfirm}
-          withShadow
-        />
+          <Controller
+            name="email"
+            control={control}
+            render={({ field: { onChange, value }, formState: { errors } }) => (
+              <Input
+                iconLeft="email"
+                value={value}
+                placeholder="E-mail"
+                onChangeText={onChange}
+                autoCapitalize="none"
+                autoCorrect={false}
+                withShadow
+                error={errors.email?.message}
+              />
+            )}
+          />
+
+          <Controller
+            name="password"
+            control={control}
+            render={({ field: { onChange, value }, formState: { errors } }) => (
+              <PasswordInput
+                iconLeft="lock"
+                value={value}
+                placeholder="Password"
+                onChangeText={onChange}
+                withShadow
+                error={errors.password?.message}
+              />
+            )}
+          />
+
+          <Controller
+            name="passwordConfirm"
+            control={control}
+            render={({ field: { onChange, value }, formState: { errors } }) => (
+              <PasswordInput
+                iconLeft="lock"
+                value={value}
+                placeholder="Confirm Password"
+                onChangeText={onChange}
+                withShadow
+                error={errors.passwordConfirm?.message}
+              />
+            )}
+          />
+        </View>
+
+        <View style={styles.container}>
+          <Button title="Sign up" onPress={onSubmit} disabled={isSubmitting} />
+        </View>
       </View>
 
-      <View style={styles.buttonsContainer}>
-        <Button title="Sign up" onPress={() => {}} />
+      <View style={styles.bottomContainer}>
+        <Text style={styles.bottomText}>Already have an account?</Text>
 
         <Button title="Sign in" onPress={() => navigation.navigate(ScreenNames.SIGN_IN_SCREEN)} variant="tertiary" />
       </View>

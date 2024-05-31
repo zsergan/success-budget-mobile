@@ -13,7 +13,7 @@ type AddWalletParams =
       design: WalletDesign;
     };
 
-type RootStackParamList = {
+export type RootStackParamList = {
   [ScreenNames.HOME_TAB]: undefined;
   [ScreenNames.HOME_SCREEN]: undefined;
   [ScreenNames.ADD_WALLET_SCREEN]: AddWalletParams;
@@ -22,6 +22,7 @@ type RootStackParamList = {
   [ScreenNames.LOADING_SCREEN]: undefined;
   [ScreenNames.SIGN_IN_SCREEN]: undefined;
   [ScreenNames.SIGN_UP_SCREEN]: undefined;
+  [ScreenNames.VERIFY_EMAIL_SCREEN]: undefined;
 };
 
 export interface ScreenProps<T extends ScreenNames> extends NativeStackScreenProps<RootStackParamList, T> {}
@@ -30,11 +31,17 @@ export type NavigationType<T extends ScreenNames> = NativeStackNavigationProp<Ro
 export type IconType =
   | 'add'
   | 'edit'
+  | 'lock'
+  | 'email'
+  | 'close'
+  | 'error'
   | 'person'
   | 'delete'
   | 'store'
   | 'logout'
+  | 'visibility'
   | 'arrow-back'
-  | 'arrow-downward'
+  | 'attach-money'
   | 'arrow-outward'
-  | 'attach-money';
+  | 'arrow-downward'
+  | 'visibility-off';
