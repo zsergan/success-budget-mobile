@@ -23,8 +23,14 @@ export const ApiClient = () => {
 
   const post = <T, U = unknown>(url: string, data: U) => api.post<T>(url, data);
 
+  const put = <T, U = unknown>(url: string, data: U) => api.put<T>(url, data);
+
+  const deleteRequest = <T>(url: string) => api.delete<T>(url);
+
   return {
     get,
     post,
+    put,
+    deleteRequest,
   };
 };

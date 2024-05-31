@@ -10,9 +10,10 @@ interface Props<T> {
   items: T[];
   renderItem: (item: T, itemWidth: number) => ReactNode;
   itemScale: number;
+  onScrollEnd?: (index: number) => void;
 }
 
-const Carousel = <T,>({ itemsLength, items, renderItem, itemScale }: Props<T>) => {
+const Carousel = <T,>({ itemsLength, items, renderItem, itemScale, onScrollEnd }: Props<T>) => {
   const screenPadding = theme.spacing.xl;
   const { width: screenWidth } = Dimensions.get('window');
   const itemWidth =
@@ -29,6 +30,12 @@ const Carousel = <T,>({ itemsLength, items, renderItem, itemScale }: Props<T>) =
         horizontal
         scrollEnabled={itemsLength > 1}
         showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={(event) => {
+          const scrollPosition = event.nativeEvent.contentOffset.x;
+          const index = Math.round(scrollPosition / (itemWidth + screenPadding));
+
+          onScrollEnd?.(index);
+        }}
       >
         <View style={styles.scrollContainer}>{items.map((item: T) => renderItem(item, itemWidth))}</View>
       </ScrollView>

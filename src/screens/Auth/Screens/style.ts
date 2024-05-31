@@ -3,25 +3,42 @@ import { StyleSheet } from 'react-native';
 import theme from '@shared/theme';
 
 const styles = StyleSheet.create({
-  resetPasswordButton: {
-    paddingBottom: 40,
-    alignSelf: 'flex-end',
+  root: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    rowGap: 32,
   },
-  inputsContainer: {
+  container: {
     width: '100%',
     rowGap: theme.spacing.lg,
   },
-  buttonsContainer: {
-    width: '100%',
+  rowInputs: {
+    flexDirection: 'row',
+    columnGap: theme.spacing.xl,
   },
-  infoText: {
-    transform: [{ translateY: -theme.spacing.sm }],
+  currency: {
+    flex: 1,
+    textAlign: 'center',
+    height: '100%',
+  },
+  name: {
+    flex: 2,
+  },
+  bottomContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomText: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.xs,
-    paddingHorizontal: theme.spacing.lg,
-  },
-  pb40: {
-    paddingBottom: 40,
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.text.secondary,
   },
 });
 

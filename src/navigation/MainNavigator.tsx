@@ -1,22 +1,21 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Entypo, FontAwesome6, Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 
 import { HomeScreen, SettingsScreen, TransactionsScreen } from '@screens';
 import { palette } from '@shared/theme';
 import { ScreenNames } from '@shared/enums';
+import type { RootStackParamList } from '@shared/types';
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<RootStackParamList>();
 
 interface IconProps {
   color: string;
   size: number;
 }
 
-const HomeIcon = ({ color, size }: IconProps) => <Entypo name="home" size={size} color={color} />;
-const TransactionsIcon = ({ color, size }: IconProps) => (
-  <FontAwesome6 name="money-bill-transfer" size={size} color={color} />
-);
-const SettingsIcon = ({ color, size }: IconProps) => <Ionicons name="settings-sharp" size={size} color={color} />;
+const HomeIcon = ({ color, size }: IconProps) => <MaterialIcons name="home" size={size} color={color} />;
+const TransactionsIcon = ({ color, size }: IconProps) => <MaterialIcons name="payments" size={size} color={color} />;
+const SettingsIcon = ({ color, size }: IconProps) => <MaterialIcons name="settings" size={size} color={color} />;
 
 const MainNavigator = () => {
   return (

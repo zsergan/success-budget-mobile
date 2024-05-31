@@ -1,3 +1,5 @@
+export const horizontalScreenPadding = 20;
+
 export const palette = {
   black: '#222831',
   white: '#FEFEFE',

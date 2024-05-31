@@ -9,10 +9,16 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.sm,
     flexDirection: 'row',
     columnGap: theme.spacing.xs,
+    alignItems: 'center',
   },
   title: {
     fontFamily: theme.fonts.medium,
+  },
+  smTitle: {
     fontSize: theme.fontSizes.xs,
+  },
+  mdTitle: {
+    fontSize: theme.fontSizes.md,
   },
 });
 

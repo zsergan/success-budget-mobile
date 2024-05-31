@@ -8,7 +8,7 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: theme.spacing.xl,
     justifyContent: 'flex-end',
-    marginBottom: 28,
+    marginBottom: 34,
   },
   contentContainer: {
     backgroundColor: palette.white,

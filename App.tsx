@@ -3,6 +3,7 @@ import RootNavigator from '@navigation/RootNavigator';
 import { Provider } from 'react-redux';
 import { useFonts } from 'expo-font';
 
+import { AlertProvider } from '@components';
 import store from '@redux/Store';
 
 const App = () => {
@@ -14,7 +15,9 @@ const App = () => {
 
   return (
     <Provider store={store}>
-      <RootNavigator />
+      <AlertProvider>
+        <RootNavigator />
+      </AlertProvider>
     </Provider>
   );
 };

@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { View } from 'react-native';
 
@@ -13,6 +13,8 @@ import styles from './style';
 interface Props extends ScreenProps<ScreenNames.HOME_TAB> {}
 
 const HomeScreen = ({ navigation }: Props) => {
+  const [currentWalletIndex, setCurrentWalletIndex] = useState<number>(0);
+
   const expenseBottomSheetRef = useRef<BottomSheetModal>(null);
   const incomeBottomSheetRef = useRef<BottomSheetModal>(null);
 
@@ -22,11 +24,11 @@ const HomeScreen = ({ navigation }: Props) => {
   return (
     <>
       <BottomModal ref={expenseBottomSheetRef}>
-        <TransactionForm />
+        <TransactionForm initialWalletIndex={currentWalletIndex} />
       </BottomModal>
 
       <BottomModal ref={incomeBottomSheetRef}>
-        <TransactionForm transactionType={TransactionType.INCOME} />
+        <TransactionForm initialWalletIndex={currentWalletIndex} transactionType={TransactionType.INCOME} />
       </BottomModal>
 
       <RootLayout style={styles.container}>
@@ -41,7 +43,7 @@ const HomeScreen = ({ navigation }: Props) => {
           }
         />
 
-        <Wallets navigation={navigation} />
+        <Wallets navigation={navigation} onScrollEnd={(index: number) => setCurrentWalletIndex(index)} />
 
         <View style={styles.buttonsContainer}>
           <Button title="Expense" onPress={handlePresentExpenseModalPress} style={styles.button} withShadow />

@@ -1,4 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import * as yup from 'yup';
+import type { FieldError } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectProfile } from '@redux/state/profile/selectors';
@@ -8,6 +12,25 @@ import { WalletDesign } from '@shared/enums';
 import { addWallet, editWallet } from '@redux/state/wallet/thunks';
 import { fetchCurrencies } from '@redux/state/currency/thunks';
 import { selectCurrency } from '@redux/state/currency/selectors';
+import { useAlert } from '@hooks';
+
+interface CreateWalletFormData {
+  walletName: string;
+  initialBalance: string;
+  currency: number;
+  design: WalletDesign;
+}
+
+type ValidationError = {
+  [K in keyof CreateWalletFormData]?: FieldError;
+};
+
+const schema = yup.object().shape({
+  walletName: yup.string().required(),
+  initialBalance: yup.string().required(),
+  currency: yup.number().required(),
+  design: yup.mixed<WalletDesign>().oneOf(Object.values(WalletDesign)).required(),
+});
 
 interface UseCreateWalletFormProps extends ScreenProps<ScreenNames.ADD_WALLET_SCREEN> {}
 
@@ -17,32 +40,44 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
   const { baseCurrency } = useAppSelector(selectProfile);
   const { currencies } = useAppSelector(selectCurrency);
   const dispatch = useAppDispatch();
-  const [walletName, setWalletName] = useState(isNewWallet ? '' : route.params.walletName);
-  const [initialBalance, setInitialBalance] = useState(isNewWallet ? '' : route.params.balance);
-  const [currency, setCurrency] = useState(isNewWallet ? baseCurrency?.id || 1 : route.params.currencyId);
-  const [design, setDesign] = useState(isNewWallet ? WalletDesign.GREEN : route.params.design);
+  const { addAlert } = useAlert();
+
+  const {
+    control,
+    handleSubmit,
+    watch,
+    formState: { isSubmitSuccessful },
+  } = useForm({
+    resolver: yupResolver(schema),
+    defaultValues: {
+      walletName: isNewWallet ? '' : route.params.walletName,
+      initialBalance: isNewWallet ? '' : route.params.balance,
+      currency: isNewWallet ? baseCurrency?.id || 1 : route.params.currencyId,
+      design: isNewWallet ? WalletDesign.GREEN : route.params.design,
+    },
+  });
 
   useEffect(() => {
     dispatch(fetchCurrencies());
   }, [dispatch]);
 
-  const onSubmit = () => {
+  const onSubmit = (formData: CreateWalletFormData) => {
     const endPointCall = () =>
       isNewWallet
         ? dispatch(
             addWallet({
-              wallet_name: walletName,
-              balance: Number(initialBalance),
-              currency_id: Number(currency),
-              design,
+              wallet_name: formData.walletName,
+              balance: Number(formData.initialBalance),
+              currency_id: Number(formData.currency),
+              design: formData.design,
             }),
           )
         : dispatch(
             editWallet({
               walletId: route.params.id,
               walletData: {
-                wallet_name: walletName,
-                design,
+                wallet_name: formData.walletName,
+                design: formData.design,
               },
             }),
           );
@@ -50,18 +85,24 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
     endPointCall().then(() => navigation.goBack());
   };
 
+  const onInvalid = (errors: ValidationError) => {
+    const errorMessage = [
+      errors.walletName && 'Enter a wallet name',
+      errors.initialBalance && 'Enter an initial balance',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    addAlert(errorMessage, 'error');
+  };
+
   return {
     currencies: currencies.map((c) => ({ label: c.code, value: c.id })),
     isNewWallet,
-    walletName,
-    setWalletName,
-    initialBalance,
-    setInitialBalance,
-    currency,
-    setCurrency,
-    design,
-    setDesign,
-    onSubmit,
+    control,
+    onSubmit: handleSubmit(onSubmit, onInvalid),
+    watch,
+    isSubmitSuccessful,
   };
 };
 

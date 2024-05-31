@@ -8,9 +8,9 @@ import styles from './style';
 
 const iconSize = {
   sm: 12,
-  md: 24,
-  lg: 32,
-  xl: 48,
+  md: 18,
+  lg: 24,
+  xl: 36,
 };
 
 interface Props {

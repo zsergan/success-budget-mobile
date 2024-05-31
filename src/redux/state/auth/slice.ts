@@ -1,12 +1,15 @@
 import { createSlice } from '@reduxjs/toolkit';
 
+import type { ErrorResponse } from '@api/dto';
 import initialState from './initialState';
-import { checkAuth, loginMe, logoutMe } from './thunks';
+import { checkAuth, registerMe, loginMe, logoutMe, verifyEmailMe } from './thunks';
 
 const login = (state: typeof initialState, action: string) => {
   state.isSignedIn = true;
   state.isLoading = false;
   state.userToken = action;
+  state.userEmail = null;
+  state.error = undefined;
 };
 
 const logout = (state: typeof initialState) => {
@@ -20,7 +23,27 @@ const authSlice = createSlice({
   initialState,
   reducers: {},
   extraReducers: (builder) => {
-    builder.addCase(loginMe.fulfilled, (state, action) => login(state, action.payload.accessToken));
+    builder.addCase(registerMe.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.userEmail = action.payload.email;
+      state.error = undefined;
+    });
+
+    builder.addCase(registerMe.rejected, (state, action) => {
+      state.error = action.payload as ErrorResponse;
+    });
+
+    builder.addCase(verifyEmailMe.fulfilled, (state, action) => login(state, action.payload));
+
+    builder.addCase(verifyEmailMe.rejected, (state, action) => {
+      state.error = action.payload as ErrorResponse;
+    });
+
+    builder.addCase(loginMe.fulfilled, (state, action) => login(state, action.payload));
+
+    builder.addCase(loginMe.rejected, (state, action) => {
+      state.error = action.payload as ErrorResponse;
+    });
 
     builder.addCase(logoutMe.fulfilled, (state) => logout(state));
 

@@ -7,17 +7,18 @@ import CircleIcon from '../CircleIcon/CircleIcon';
 import styles from './style';
 
 export interface ChipProps {
+  size?: 'sm' | 'md';
   title?: string;
   icon?: IconType;
   color?: string;
   style?: StyleProp<ViewStyle>;
 }
 
-const Chip = ({ title, icon, color, style }: ChipProps) => (
+const Chip = ({ size = 'sm', title, icon, color, style }: ChipProps) => (
   <View style={[styles.chip, style]}>
-    {icon && <CircleIcon icon={icon} color={color} />}
+    {icon && <CircleIcon icon={icon} color={color} size={size} />}
 
-    {title && <Text style={styles.title}>{title}</Text>}
+    {title && <Text style={[styles.title, styles[`${size}Title`]]}>{title}</Text>}
   </View>
 );
 
