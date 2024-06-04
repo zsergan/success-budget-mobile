@@ -11,6 +11,9 @@ const styles = StyleSheet.create({
     columnGap: theme.spacing.xs,
     alignItems: 'center',
   },
+  selected: {
+    backgroundColor: palette.green,
+  },
   title: {
     fontFamily: theme.fonts.medium,
   },

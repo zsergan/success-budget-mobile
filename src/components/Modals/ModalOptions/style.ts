@@ -8,7 +8,6 @@ const styles = StyleSheet.create({
     marginHorizontal: theme.spacing.xl,
     backgroundColor: palette.grey,
     borderRadius: theme.radius.sm,
-    alignSelf: 'flex-end',
     ...shadow,
   },
   option: {

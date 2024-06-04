@@ -1,24 +1,22 @@
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { ScreenNames, WalletDesign } from '@shared/enums';
+import type { ScreenNames, TransactionType, WalletDesign } from '@shared/enums';
 
 type AddWalletParams =
-  | {
-      id: 'new';
-    }
-  | {
-      id: number;
-      walletName: string;
-      balance: string;
-      currencyId: number;
-      design: WalletDesign;
-    };
+  | { id: 'new' }
+  | { id: number; walletName: string; balance: string; currencyId: number; design: WalletDesign };
+
+type AddCategoryParams =
+  | { id: 'new' }
+  | { id: number; name: string; icon: string; color: string; transaction_type: TransactionType };
 
 export type RootStackParamList = {
   [ScreenNames.HOME_TAB]: undefined;
   [ScreenNames.HOME_SCREEN]: undefined;
   [ScreenNames.ADD_WALLET_SCREEN]: AddWalletParams;
+  [ScreenNames.ADD_CATEGORY_SCREEN]: AddCategoryParams;
   [ScreenNames.TRANSACTIONS_TAB]: undefined;
   [ScreenNames.SETTINGS_TAB]: undefined;
+  [ScreenNames.CATEGORIES_SCREEN]: undefined;
   [ScreenNames.LOADING_SCREEN]: undefined;
   [ScreenNames.SIGN_IN_SCREEN]: undefined;
   [ScreenNames.SIGN_UP_SCREEN]: undefined;
@@ -29,6 +27,8 @@ export interface ScreenProps<T extends ScreenNames> extends NativeStackScreenPro
 export type NavigationType<T extends ScreenNames> = NativeStackNavigationProp<RootStackParamList, T>;
 
 export type IconType =
+  | CategoryIconType
+  | TransactionTypeIconType
   | 'add'
   | 'edit'
   | 'lock'
@@ -37,11 +37,32 @@ export type IconType =
   | 'error'
   | 'person'
   | 'delete'
-  | 'store'
   | 'logout'
+  | 'data-usage'
   | 'visibility'
   | 'arrow-back'
   | 'attach-money'
-  | 'arrow-outward'
-  | 'arrow-downward'
-  | 'visibility-off';
+  | 'visibility-off'
+  | 'keyboard-arrow-right';
+
+export type TransactionTypeIconType = 'arrow-outward' | 'arrow-downward';
+
+export type CategoryIconType =
+  | 'paid'
+  | 'home'
+  | 'pets'
+  | 'store'
+  | 'money'
+  | 'flight'
+  | 'cable'
+  | 'school'
+  | 'healing'
+  | 'category'
+  | 'fastfood'
+  | 'checkroom'
+  | 'water-drop'
+  | 'directions-bus'
+  | 'directions-car'
+  | 'sports-esports'
+  | 'shopping-basket'
+  | 'card-giftcard';

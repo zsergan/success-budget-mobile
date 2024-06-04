@@ -93,7 +93,7 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
       .filter(Boolean)
       .join('\n');
 
-    addAlert(errorMessage, 'error');
+    addAlert(errorMessage);
   };
 
   return {

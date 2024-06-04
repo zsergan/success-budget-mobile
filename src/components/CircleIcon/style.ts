@@ -7,7 +7,6 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: palette.white,
   },
   circleWithBorder: {
     borderWidth: 0.5,

@@ -1,15 +1,12 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { horizontalScreenPadding } from '@shared/theme';
-
 const styles = StyleSheet.create({
   provider: {
     position: 'absolute',
-    top: '10%',
-    left: horizontalScreenPadding,
-    right: horizontalScreenPadding,
+    bottom: 0,
+    left: 0,
+    right: 0,
     zIndex: 10000,
-    rowGap: theme.spacing.xs,
   },
 });
 

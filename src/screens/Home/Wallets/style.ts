@@ -12,6 +12,9 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.xs,
     color: palette.black,
   },
+  longPressedItem: {
+    width: '100%',
+  },
 });
 
 export default styles;

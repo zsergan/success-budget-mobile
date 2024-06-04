@@ -3,7 +3,15 @@ import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import { CreateWalletScreen, SignInScreen, SignUpScreen, VerifyEmailScreen, LoadingScreen } from '@screens';
+import {
+  CategoriesScreen,
+  CreateWalletScreen,
+  CreateCategoryScreen,
+  SignInScreen,
+  SignUpScreen,
+  VerifyEmailScreen,
+  LoadingScreen,
+} from '@screens';
 import type { RootStackParamList } from '@shared/types';
 import { useAuth, useLoadInitData } from '@hooks';
 import { ScreenNames } from '@shared/enums';
@@ -40,6 +48,16 @@ const RootNavigator = () => {
                 <Stack.Screen
                   name={ScreenNames.ADD_WALLET_SCREEN}
                   component={CreateWalletScreen}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name={ScreenNames.CATEGORIES_SCREEN}
+                  component={CategoriesScreen}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name={ScreenNames.ADD_CATEGORY_SCREEN}
+                  component={CreateCategoryScreen}
                   options={{ headerShown: false }}
                 />
               </>
