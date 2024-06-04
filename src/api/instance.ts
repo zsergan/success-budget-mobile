@@ -1,10 +1,10 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-import { BASE_API_URL_DEV, AUTH_TOKEN_KEY } from '@/shared/constants';
+import { BASE_API_URL_DEV, BASE_API_URL_LOCAL, AUTH_TOKEN_KEY } from '@/shared/constants';
 
 export const ApiClient = () => {
-  const api = axios.create({ baseURL: BASE_API_URL_DEV });
+  const api = axios.create({ baseURL: BASE_API_URL_LOCAL });
 
   api.interceptors.request.use(
     async (config) => {

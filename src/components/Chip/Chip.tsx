@@ -11,14 +11,21 @@ export interface ChipProps {
   title?: string;
   icon?: IconType;
   color?: string;
+  circleColor?: string;
+  showCircle?: boolean;
+  selected?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
-const Chip = ({ size = 'sm', title, icon, color, style }: ChipProps) => (
-  <View style={[styles.chip, style]}>
-    {icon && <CircleIcon icon={icon} color={color} size={size} />}
+const Chip = ({ size = 'sm', title, icon, color, circleColor, showCircle, selected, style }: ChipProps) => (
+  <View style={[styles.chip, selected && styles.selected, style]}>
+    {(icon || showCircle) && <CircleIcon icon={icon} color={color} circleColor={circleColor} size={size} />}
 
-    {title && <Text style={[styles.title, styles[`${size}Title`]]}>{title}</Text>}
+    {title && (
+      <Text style={[styles.title, styles[`${size}Title`]]} numberOfLines={1}>
+        {title}
+      </Text>
+    )}
   </View>
 );
 

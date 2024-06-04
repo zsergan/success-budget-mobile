@@ -4,7 +4,6 @@ import theme from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
-    flex: 1,
     alignItems: 'center',
     rowGap: theme.spacing.sm,
   },

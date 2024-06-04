@@ -14,15 +14,29 @@ const iconSize = {
 };
 
 interface Props {
-  icon: IconType;
+  icon?: IconType;
   color?: string;
+  circleColor?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   border?: boolean;
 }
 
-const CircleIcon = ({ icon, color = palette.black, size = 'sm', border = false }: Props) => (
-  <View style={[styles.circle, styles[`${size}Circle`], border && styles.circleWithBorder]}>
-    <MaterialIcons style={styles.icon} name={icon} size={iconSize[size]} color={color} />
+const CircleIcon = ({
+  icon,
+  color = palette.black,
+  circleColor = palette.white,
+  size = 'sm',
+  border = false,
+}: Props) => (
+  <View
+    style={[
+      styles.circle,
+      styles[`${size}Circle`],
+      border && styles.circleWithBorder,
+      { backgroundColor: circleColor },
+    ]}
+  >
+    {icon && <MaterialIcons style={styles.icon} name={icon} size={iconSize[size]} color={color} />}
   </View>
 );
 

@@ -4,7 +4,7 @@ import { Controller } from 'react-hook-form';
 
 import { Button, DateTimePicker, RadioButtonGroup, SectionTitle, TextArea, TinyWallet } from '@components';
 import { useAppSelector } from '@redux/hooks';
-import { selectCategory } from '@redux/state/category/selectors';
+import { selectActiveCategories } from '@redux/state/category/selectors';
 import { selectWallet } from '@redux/state/wallet/selectors';
 import { TransactionType } from '@shared/enums';
 import type { IconType } from '@shared/types';
@@ -24,7 +24,7 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
   const amountRef = useRef<TextInput>(null);
   const walletsRef = useRef<ScrollView>(null);
   const { wallets } = useAppSelector(selectWallet);
-  const { expenses, incomes } = useAppSelector(selectCategory);
+  const { expenses, incomes } = useAppSelector(selectActiveCategories);
 
   const { control, watch, onSubmit, isSubmitSuccessful } = useTransactionForm({
     transactionType,
@@ -43,7 +43,8 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
     title: expense.name,
     value: expense.id,
     selected: selectedCategory === expense.id,
-    icon: 'store' as IconType,
+    icon: expense.icon,
+    color: expense.color,
     size: 'md' as 'sm' | 'md',
   }));
 

@@ -7,6 +7,7 @@ export { default as DateTimePicker } from './DateTimePicker/DateTimePicker';
 export { default as Divider } from './Divider/Divider';
 export * from './Form';
 export { default as GradientBackground } from './GradientBackground/GradientBackground';
+export { default as MenuItem } from './MenuItem/MenuItem';
 export * from './Modals';
 export { default as RadioButton } from './RadioButton/RadioButton';
 export type { RadioButtonProps } from './RadioButton/RadioButton';

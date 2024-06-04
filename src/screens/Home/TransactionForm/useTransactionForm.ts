@@ -78,7 +78,7 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
       .filter(Boolean)
       .join('\n');
 
-    addAlert(errorMessage, 'error');
+    addAlert(errorMessage);
   };
 
   return {

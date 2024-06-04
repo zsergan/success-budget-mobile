@@ -1,6 +1,7 @@
 import { Text, TouchableOpacity, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
-import { WalletCard, WalletModal, BottomModal, TinyWallet, Carousel } from '@components';
+import { WalletCard, LongPressedModal, BottomModal, TinyWallet, Carousel } from '@components';
 import type { WalletDesign } from '@shared/enums';
 import type { NavigationType } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
@@ -36,7 +37,8 @@ const Wallets = ({ navigation, onScrollEnd }: Props) => {
 
   return (
     <>
-      <WalletModal
+      <LongPressedModal
+        longPressedItemStyle={styles.longPressedItem}
         isVisible={isModalVisible}
         onClose={onDeleteCancel}
         onEdit={() => {
@@ -52,13 +54,21 @@ const Wallets = ({ navigation, onScrollEnd }: Props) => {
 
           onDeleteCancel();
         }}
+        longPressedItem={
+          selectedWallet ? (
+            <WalletCard
+              walletName={selectedWallet.wallet.wallet_name}
+              balance={selectedWallet.wallet.balance}
+              currencyCode={selectedWallet.wallet.currency.code}
+              totalIncome={selectedWallet.totalIncome}
+              totalSpend={selectedWallet.totalSpend}
+              design={selectedWallet.wallet.design}
+            />
+          ) : (
+            <></>
+          )
+        }
         onDelete={onDeletePress}
-        walletName={selectedWallet?.wallet.wallet_name || ''}
-        balance={selectedWallet?.wallet.balance || ''}
-        currencyCode={selectedWallet?.wallet.currency.code || ''}
-        totalIncome={selectedWallet?.totalIncome || 0}
-        totalSpend={selectedWallet?.totalSpend || 0}
-        design={selectedWallet?.wallet.design}
       />
 
       <BottomModal
@@ -78,7 +88,11 @@ const Wallets = ({ navigation, onScrollEnd }: Props) => {
         itemScale={0.88}
         onScrollEnd={onScrollEnd}
         renderItem={(item, walletWidth) => (
-          <TouchableOpacity key={item?.wallet.id} onLongPress={() => onWalletLongPress(item)} activeOpacity={0.7}>
+          <TouchableOpacity
+            key={item?.wallet.id}
+            onLongPress={() => Haptics.impactAsync().then(() => onWalletLongPress(item))}
+            activeOpacity={0.7}
+          >
             <WalletCard
               style={{ width: walletWidth }}
               walletName={item?.wallet.wallet_name}

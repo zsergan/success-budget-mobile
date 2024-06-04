@@ -24,7 +24,7 @@ const SignInScreen = ({ navigation }: Props) => {
     const errorMessage = typeof error?.message === 'string' ? error.message : error?.message[0].error;
 
     if (errorMessage) {
-      addAlert(errorMessage, 'error');
+      addAlert(errorMessage);
     }
   }, [error, addAlert]);
 
