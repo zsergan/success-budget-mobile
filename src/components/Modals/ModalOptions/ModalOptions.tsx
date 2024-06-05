@@ -10,7 +10,7 @@ import styles from './style';
 
 interface Option {
   text: string;
-  icon: IconType;
+  icon?: IconType;
   onPress?: () => void;
   color?: string;
 }
@@ -25,25 +25,22 @@ const renderOption = ({ text, icon, onPress, color = palette.black }: Option) =>
   </TouchableOpacity>
 );
 
-const optionsContent: Record<string, Option> = {
-  onEdit: { text: 'Edit', icon: 'edit' },
-  onDelete: { text: 'Delete', icon: 'delete', color: palette.red },
-};
-
 export interface ModalOptionsProps {
   onEdit?: () => void;
   onDelete?: () => void;
+  customOptions?: Option[];
 }
 
-const ModalOptions = ({ onEdit, onDelete }: ModalOptionsProps) => {
-  const options = [
-    { fn: onEdit, type: 'onEdit' },
-    { fn: onDelete, type: 'onDelete' },
+const ModalOptions = ({ onEdit, onDelete, customOptions = [] }: ModalOptionsProps) => {
+  const options: Option[] = [
+    { onPress: onEdit, text: 'Edit', icon: 'edit' },
+    ...customOptions,
+    { onPress: onDelete, text: 'Delete', icon: 'delete', color: palette.red },
   ];
 
-  const optionsToRender = options.reduce((acc: Option[], { fn, type }) => {
-    if (fn) {
-      acc.push({ ...optionsContent[type], onPress: fn });
+  const optionsToRender = options.reduce((acc: Option[], option) => {
+    if (option.onPress) {
+      acc.push(option);
     }
 
     return acc;

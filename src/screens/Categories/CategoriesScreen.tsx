@@ -44,6 +44,7 @@ const CategoriesScreen = ({ navigation }: Props) => {
     incomes,
     expenses,
     handleUpdate,
+    handleMoveForward,
     longPressedCategory,
     onCategoryLongPress,
     isModalVisible,
@@ -80,6 +81,7 @@ const CategoriesScreen = ({ navigation }: Props) => {
         }
         onClose={onLongPressCancel}
         onEdit={handleOnEdit}
+        customOptions={[{ onPress: () => handleMoveForward(longPressedCategory?.id || 0), text: 'Move forward' }]}
       />
 
       <RootLayout style={styles.root}>

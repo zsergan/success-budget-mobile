@@ -16,7 +16,13 @@ type Props = ModalOptionsProps & {
   longPressedItemStyle?: StyleProp<ViewStyle>;
 };
 
-const LongPressedModal = ({ isVisible, longPressedItem, onClose, onEdit, onDelete, longPressedItemStyle }: Props) => {
+const LongPressedModal = ({
+  isVisible,
+  longPressedItem,
+  onClose,
+  longPressedItemStyle,
+  ...modalOptionsProps
+}: Props) => {
   const containerScale = useRef(new Animated.Value(0.3)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -62,7 +68,7 @@ const LongPressedModal = ({ isVisible, longPressedItem, onClose, onEdit, onDelet
 
       <TouchableWithoutFeedback>
         <Animated.View style={[styles.options, { transform: [{ scale: containerScale }], opacity }]}>
-          <ModalOptions onEdit={onEdit} onDelete={onDelete} />
+          <ModalOptions {...modalOptionsProps} />
         </Animated.View>
       </TouchableWithoutFeedback>
     </ModalContainer>
