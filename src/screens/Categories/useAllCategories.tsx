@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { Category } from '@api/dto';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectCategory } from '@redux/state/category/selectors';
-import { editCategory } from '@redux/state/category/thunks';
+import { editCategory, sortCategoryForward } from '@redux/state/category/thunks';
 import { useAlert } from '@hooks';
 
 const useAllCategories = () => {
@@ -31,10 +31,16 @@ const useAllCategories = () => {
     setIsModalVisible(false);
   };
 
+  const handleMoveForward = (categoryId: number) => {
+    dispatch(sortCategoryForward(categoryId));
+    setIsModalVisible(false);
+  };
+
   return {
     incomes: incomes || [],
     expenses: expenses || [],
     handleUpdate,
+    handleMoveForward,
     longPressedCategory,
     onCategoryLongPress,
     onLongPressCancel,

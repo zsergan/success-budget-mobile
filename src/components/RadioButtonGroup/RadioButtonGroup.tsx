@@ -21,7 +21,7 @@ const RadioButtonGroup = <T extends number | string>({
   radioButtonGroupContainerStyle,
 }: Props<T>) => {
   const screenWidth = Dimensions.get('window').width;
-  const [maxWidth, setMaxWidth] = useState<number | '100%' | undefined>(limitRows ? undefined : '100%');
+  const [maxWidth, setMaxWidth] = useState<number | undefined>(limitRows ? undefined : screenWidth);
 
   const handleContentSizeChange = (contentWidth: number) => {
     if (contentWidth > screenWidth && !maxWidth) {

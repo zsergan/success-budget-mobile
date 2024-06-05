@@ -20,3 +20,9 @@ export const createCategory = async (data: CreateCategoryRequest) => {
 
   return response.data;
 };
+
+export const moveCategoryForward = async (categoryId: number) => {
+  const response = await api.put<void>(`/categories/move-forward/${categoryId}`);
+
+  return response.data;
+};
