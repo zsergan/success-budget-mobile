@@ -3,6 +3,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { CreateTransactionRequest } from '@api/dto';
 import { getTransactions, createTransaction } from '@api/transaction.api';
 
+import { fetchLimits } from '../limit/thunks';
 import { fetchWallets } from '../wallet/thunks';
 
 export const fetchTransactions = createAsyncThunk('transaction/fetchTransactions', async () => {
@@ -15,6 +16,7 @@ export const addTransaction = createAsyncThunk(
     return await createTransaction(payload).then(() => {
       thunkAPI.dispatch(fetchTransactions());
       thunkAPI.dispatch(fetchWallets());
+      thunkAPI.dispatch(fetchLimits());
     });
   },
 );

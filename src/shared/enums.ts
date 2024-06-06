@@ -11,10 +11,17 @@ export enum WalletDesign {
   PINK = 'pink',
 }
 
+export enum LimitType {
+  CATEGORY = 'category',
+  OTHERS = 'others',
+}
+
 export enum ScreenNames {
   HOME_TAB = 'Home',
+  LIMITS_TAB = 'Limits',
   HOME_SCREEN = 'HomeScreen',
   ADD_WALLET_SCREEN = 'AddWalletScreen',
+  ADD_LIMIT_SCREEN = 'AddLimitScreen',
   ADD_CATEGORY_SCREEN = 'AddCategoryScreen',
   TRANSACTIONS_TAB = 'Transactions',
   SETTINGS_TAB = 'Settings',

@@ -5,6 +5,7 @@ import theme from '@shared/theme';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    rowGap: theme.spacing.lg,
   },
   item: {
     marginVertical: 8,

@@ -73,7 +73,6 @@ const CreateCategoryScreen = ({ navigation, route }: Props) => {
           <SectionTitle
             title={isNewCategory ? 'Add Category' : 'Edit Category'}
             onBackButtonPress={() => navigation.goBack()}
-            style={styles.pageTitle}
           />
 
           <Controller
@@ -84,7 +83,7 @@ const CreateCategoryScreen = ({ navigation, route }: Props) => {
             )}
           />
 
-          <View>
+          <View style={styles.section}>
             <SectionTitle title="Type" />
 
             <View style={styles.alignCenter}>
@@ -98,7 +97,7 @@ const CreateCategoryScreen = ({ navigation, route }: Props) => {
             </View>
           </View>
 
-          <View>
+          <View style={styles.section}>
             <SectionTitle title="Icon" />
 
             <Controller
@@ -121,7 +120,7 @@ const CreateCategoryScreen = ({ navigation, route }: Props) => {
             />
           </View>
 
-          <View>
+          <View style={styles.section}>
             <SectionTitle title="Color" />
 
             <View style={styles.alignCenter}>

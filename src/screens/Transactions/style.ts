@@ -4,6 +4,7 @@ import theme from '@shared/theme';
 
 const styles = StyleSheet.create({
   transactionsContainer: {
+    paddingTop: theme.spacing.lg,
     rowGap: theme.spacing.sm,
     marginBottom: theme.spacing.xxl,
   },

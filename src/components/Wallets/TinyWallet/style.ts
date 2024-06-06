@@ -9,9 +9,7 @@ const styles = StyleSheet.create({
     rowGap: theme.spacing.xl,
     width: 110,
   },
-  border: {
-    borderWidth: 2,
-    padding: theme.spacing.sm - 2,
+  grey: {
     backgroundColor: palette.grey,
   },
   gradient: {

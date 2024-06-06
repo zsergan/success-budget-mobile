@@ -24,11 +24,15 @@ const HomeScreen = ({ navigation }: Props) => {
   return (
     <>
       <BottomModal ref={expenseBottomSheetRef}>
-        <TransactionForm initialWalletIndex={currentWalletIndex} />
+        <TransactionForm navigation={navigation} initialWalletIndex={currentWalletIndex} />
       </BottomModal>
 
       <BottomModal ref={incomeBottomSheetRef}>
-        <TransactionForm initialWalletIndex={currentWalletIndex} transactionType={TransactionType.INCOME} />
+        <TransactionForm
+          navigation={navigation}
+          initialWalletIndex={currentWalletIndex}
+          transactionType={TransactionType.INCOME}
+        />
       </BottomModal>
 
       <RootLayout style={styles.container}>

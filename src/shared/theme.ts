@@ -84,7 +84,7 @@ export const shadow: Record<string, unknown> = {
     width: 0,
     height: 0,
   },
-  shadowRadius: 20,
+  shadowRadius: 10,
 };
 
 export default theme;

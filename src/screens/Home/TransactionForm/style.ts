@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
     columnGap: theme.spacing.sm,
   },
   section: {
-    paddingBottom: theme.spacing.sm,
+    rowGap: theme.spacing.md,
   },
   buttonContainer: {
     position: 'absolute',

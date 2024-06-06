@@ -7,7 +7,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: theme.spacing.lg,
   },
   titleContainer: {
     flexDirection: 'row',
