@@ -6,8 +6,8 @@ const styles = StyleSheet.create({
   root: {
     rowGap: theme.spacing.xl,
   },
-  pageTitle: {
-    paddingBottom: 0,
+  section: {
+    rowGap: theme.spacing.md,
   },
   buttonContainer: {
     position: 'absolute',

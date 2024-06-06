@@ -31,6 +31,14 @@ export const formatDateDDMMYYYY = (d: Date | string) => {
   return `${day < 10 ? `0${day}` : day}.${month < 10 ? `0${month}` : month}.${year}`;
 };
 
+export const formatDateMM = (d: Date | string) => {
+  const date = new Date(d);
+
+  const month = date.toLocaleString('default', { month: 'long' });
+
+  return `${month}`;
+};
+
 export const formatDateHHMM = (d: Date | string) => {
   const date = new Date(d);
 

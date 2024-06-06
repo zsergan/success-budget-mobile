@@ -2,12 +2,12 @@ import { useEffect, useRef } from 'react';
 import { Text, TextInput, ScrollView, View, TouchableOpacity } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import { Button, DateTimePicker, RadioButtonGroup, SectionTitle, TextArea, TinyWallet } from '@components';
+import { Button, DateTimePicker, RadioButtonGroup, SectionTitle, TextArea, TinyButton, TinyWallet } from '@components';
 import { useAppSelector } from '@redux/hooks';
 import { selectActiveCategories } from '@redux/state/category/selectors';
 import { selectWallet } from '@redux/state/wallet/selectors';
-import { TransactionType } from '@shared/enums';
-import type { IconType } from '@shared/types';
+import { ScreenNames, TransactionType } from '@shared/enums';
+import type { IconType, ScreenProps } from '@shared/types';
 import { palette } from '@shared/theme';
 import useTransactionForm from './useTransactionForm';
 
@@ -16,17 +16,18 @@ import styles from './style';
 const TINY_WALLET_WIDTH_WITH_GAP = 118;
 
 interface Props {
+  navigation: ScreenProps<ScreenNames.HOME_TAB>['navigation'];
   initialWalletIndex: number;
   transactionType?: TransactionType;
 }
 
-const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType.EXPENSE }: Props) => {
+const TransactionForm = ({ navigation, initialWalletIndex, transactionType = TransactionType.EXPENSE }: Props) => {
   const amountRef = useRef<TextInput>(null);
   const walletsRef = useRef<ScrollView>(null);
   const { wallets } = useAppSelector(selectWallet);
   const { expenses, incomes } = useAppSelector(selectActiveCategories);
 
-  const { control, watch, onSubmit, isSubmitSuccessful } = useTransactionForm({
+  const { control, watch, onSubmit, isSubmitSuccessful, closeBottomSheet } = useTransactionForm({
     transactionType,
     initialWalletId: wallets[initialWalletIndex].wallet.id,
   });
@@ -93,8 +94,8 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
 
       <ScrollView automaticallyAdjustKeyboardInsets showsVerticalScrollIndicator={false}>
         <View style={styles.container}>
-          <View>
-            <SectionTitle title="Wallet" style={styles.section} />
+          <View style={styles.section}>
+            <SectionTitle title="Wallet" />
 
             <Controller
               name="wallet_id"
@@ -119,7 +120,7 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
                           walletName={wallet_name}
                           currencyCode={currency.code}
                           design={design}
-                          backgroundStyle={value === id ? 'gradient' : 'border'}
+                          backgroundStyle={value === id ? 'gradient' : 'grey'}
                         />
                       </TouchableOpacity>
                     ))}
@@ -129,8 +130,8 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
             />
           </View>
 
-          <View>
-            <SectionTitle title="Transaction type" style={styles.section} />
+          <View style={styles.section}>
+            <SectionTitle title="Transaction type" />
 
             <Controller
               name="transaction_type"
@@ -139,8 +140,21 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
             />
           </View>
 
-          <View>
-            <SectionTitle title="Category" style={styles.section} />
+          <View style={styles.section}>
+            <SectionTitle
+              title="Category"
+              button={
+                <TinyButton
+                  selected
+                  title="Add Category"
+                  icon="add"
+                  onPress={() => {
+                    closeBottomSheet();
+                    navigation.navigate(ScreenNames.ADD_CATEGORY_SCREEN, { id: 'new' });
+                  }}
+                />
+              }
+            />
 
             <Controller
               name="category_id"
@@ -166,8 +180,8 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
             }
           />
 
-          <View>
-            <SectionTitle title="Notes" style={styles.section} />
+          <View style={styles.section}>
+            <SectionTitle title="Notes" />
 
             <Controller
               name="notes"

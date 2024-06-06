@@ -24,61 +24,59 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
   return (
     <>
       <RootLayout style={styles.root}>
-        <View style={styles.blocksContainer}>
-          <View>
-            <SectionTitle
-              title={isNewWallet ? 'Add Wallet' : 'Edit Wallet'}
-              onBackButtonPress={() => navigation.goBack()}
+        <View style={styles.sectionsContainer}>
+          <SectionTitle
+            title={isNewWallet ? 'Add Wallet' : 'Edit Wallet'}
+            onBackButtonPress={() => navigation.goBack()}
+          />
+
+          <View style={styles.formContainer}>
+            <Controller
+              name="walletName"
+              control={control}
+              render={({ field: { onChange, value } }) => (
+                <Input label="Wallet Name" placeholder="My Wallet" value={value} onChangeText={onChange} withShadow />
+              )}
             />
 
-            <View style={styles.formContainer}>
+            <View style={styles.rowInputs}>
               <Controller
-                name="walletName"
+                name="currency"
                 control={control}
                 render={({ field: { onChange, value } }) => (
-                  <Input label="Wallet Name" placeholder="My Wallet" value={value} onChangeText={onChange} withShadow />
+                  <InputPicker
+                    items={currencies}
+                    selectedValue={value}
+                    onValueChange={(v) => onChange(v as number)}
+                    label="Currency"
+                    withShadow
+                    containerStyle={styles.currency}
+                    disabled={!isNewWallet}
+                  />
                 )}
               />
 
-              <View style={styles.rowInputs}>
-                <Controller
-                  name="currency"
-                  control={control}
-                  render={({ field: { onChange, value } }) => (
-                    <InputPicker
-                      items={currencies}
-                      selectedValue={value}
-                      onValueChange={(v) => onChange(v as number)}
-                      label="Currency"
-                      withShadow
-                      containerStyle={styles.currency}
-                      disabled={!isNewWallet}
-                    />
-                  )}
-                />
-
-                <Controller
-                  name="initialBalance"
-                  control={control}
-                  render={({ field: { onChange, value } }) => (
-                    <Input
-                      containerStyle={styles.balance}
-                      label="Balance"
-                      placeholder="0"
-                      value={value}
-                      onChangeText={onChange}
-                      keyboardType="numeric"
-                      returnKeyType="done"
-                      editable={isNewWallet}
-                      withShadow
-                    />
-                  )}
-                />
-              </View>
+              <Controller
+                name="initialBalance"
+                control={control}
+                render={({ field: { onChange, value } }) => (
+                  <Input
+                    containerStyle={styles.balance}
+                    label="Balance"
+                    placeholder="0"
+                    value={value}
+                    onChangeText={onChange}
+                    keyboardType="numeric"
+                    returnKeyType="done"
+                    editable={isNewWallet}
+                    withShadow
+                  />
+                )}
+              />
             </View>
           </View>
 
-          <View>
+          <View style={styles.section}>
             <SectionTitle title="Design" />
 
             <Controller
@@ -103,7 +101,7 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
             />
           </View>
 
-          <View>
+          <View style={styles.section}>
             <SectionTitle title="Preview" />
 
             <WalletCard

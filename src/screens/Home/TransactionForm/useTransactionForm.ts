@@ -86,6 +86,7 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
     watch,
     onSubmit: handleSubmit(onSubmit, onInvalid),
     isSubmitSuccessful,
+    closeBottomSheet: close,
   };
 };
 

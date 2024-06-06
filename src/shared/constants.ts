@@ -12,3 +12,5 @@ export const gradients: Record<WalletDesign, [string, string]> = {
   [WalletDesign.RED]: [palette.redLight, palette.red],
   [WalletDesign.PINK]: [palette.pinkLight, palette.pink],
 };
+
+export const ALL_OTHERS_CATEGORIES_ID = 9999999;

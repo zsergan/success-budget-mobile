@@ -5,6 +5,7 @@ import CircleIcon from '../CircleIcon/CircleIcon';
 import { formatDateHHMM } from '@shared/utils';
 import { TransactionType } from '@shared/enums';
 
+import { palette } from '@shared/theme';
 import styles from './style';
 
 interface Props {
@@ -14,7 +15,12 @@ interface Props {
 const TransactionCard = ({ transaction }: Props) => (
   <View style={styles.root}>
     <View style={styles.categoryNameTime}>
-      <CircleIcon icon={transaction.category.icon} size="xl" border color={transaction.category.color} />
+      <CircleIcon
+        icon={transaction.category.icon}
+        size="xl"
+        color={transaction.category.color}
+        circleColor={palette.greyLight}
+      />
 
       <View>
         <Text style={styles.category}>{transaction.category.name}</Text>

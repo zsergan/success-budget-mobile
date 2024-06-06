@@ -14,11 +14,12 @@ export interface ChipProps {
   circleColor?: string;
   showCircle?: boolean;
   selected?: boolean;
+  disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
-const Chip = ({ size = 'sm', title, icon, color, circleColor, showCircle, selected, style }: ChipProps) => (
-  <View style={[styles.chip, selected && styles.selected, style]}>
+const Chip = ({ size = 'sm', title, icon, color, circleColor, showCircle, disabled, selected, style }: ChipProps) => (
+  <View style={[styles.chip, selected && styles.selected, disabled && styles.disabled, style]}>
     {(icon || showCircle) && <CircleIcon icon={icon} color={color} circleColor={circleColor} size={size} />}
 
     {title && (

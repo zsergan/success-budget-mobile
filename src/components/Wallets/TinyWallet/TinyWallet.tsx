@@ -10,17 +10,11 @@ interface Props {
   walletName: string;
   currencyCode: string;
   design?: WalletDesign;
-  backgroundStyle?: 'gradient' | 'border';
+  backgroundStyle?: 'gradient' | 'grey';
 }
 
 const TinyWallet = ({ walletName, currencyCode, design = WalletDesign.GREEN, backgroundStyle = 'gradient' }: Props) => (
-  <View
-    style={[
-      styles.root,
-      backgroundStyle === 'border' && styles.border,
-      backgroundStyle === 'border' && { borderColor: gradients[design][1] },
-    ]}
-  >
+  <View style={[styles.root, backgroundStyle === 'grey' && styles.grey]}>
     {backgroundStyle === 'gradient' && (
       <GradientBackground
         style={styles.gradient}

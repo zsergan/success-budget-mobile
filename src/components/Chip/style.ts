@@ -14,6 +14,9 @@ const styles = StyleSheet.create({
   selected: {
     backgroundColor: palette.green,
   },
+  disabled: {
+    opacity: 0.3,
+  },
   title: {
     fontFamily: theme.fonts.medium,
   },
@@ -21,7 +24,7 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.xs,
   },
   mdTitle: {
-    fontSize: theme.fontSizes.md,
+    fontSize: theme.fontSizes.sm,
   },
 });
 

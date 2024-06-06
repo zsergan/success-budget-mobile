@@ -16,7 +16,7 @@ const renderBlock = (
   onPress: (categoryId: number, categoryName: string, isActive: number) => void,
   onCategoryLongPress: (category: Category) => void,
 ) => (
-  <View>
+  <View style={styles.section}>
     <SectionTitle title={title} />
 
     <RadioButtonGroup
@@ -86,7 +86,6 @@ const CategoriesScreen = ({ navigation }: Props) => {
 
       <RootLayout style={styles.root}>
         <SectionTitle
-          style={styles.pageTitle}
           title="Your Categories"
           onBackButtonPress={() => navigation.goBack()}
           button={
