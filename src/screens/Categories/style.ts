@@ -6,9 +6,6 @@ const styles = StyleSheet.create({
   root: {
     rowGap: theme.spacing.xl,
   },
-  section: {
-    rowGap: theme.spacing.md,
-  },
   selectedCategory: {
     ...shadow,
   },

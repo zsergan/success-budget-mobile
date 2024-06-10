@@ -1,8 +1,9 @@
 import { View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import { Button, Input, RadioButtonGroup, RootLayout, SectionTitle } from '@components';
-import type { CategoryIconType, IconType, ScreenProps } from '@shared/types';
+import type { RadioButtons } from '@components';
+import { Button, Input, RadioGroup, RootLayout, SectionTitle } from '@components';
+import type { CategoryIconType, ScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
 import { TransactionType } from '@shared/enums';
 import { palette } from '@shared/theme';
@@ -32,6 +33,14 @@ const icons: CategoryIconType[] = [
   'card-giftcard',
 ];
 
+const getIconRadioButtons = (selectedColor: string): RadioButtons<string>[] =>
+  icons.map((icon) => ({
+    value: icon,
+    color: selectedColor,
+    icon,
+    size: 'md',
+  }));
+
 const colors: string[] = [
   palette.black,
   palette.yellow,
@@ -41,30 +50,36 @@ const colors: string[] = [
   palette.pinkLight,
 ];
 
+const getColorRadioButtons = (): RadioButtons<string>[] =>
+  colors.map((color) => ({
+    circleColor: color,
+    showCircle: true,
+    value: color,
+    size: 'md',
+  }));
+
+const transactionTypes: RadioButtons<string>[] = [
+  {
+    title: 'Expense',
+    value: TransactionType.EXPENSE,
+    icon: 'arrow-outward',
+    color: palette.red,
+    size: 'md',
+  },
+  {
+    title: 'Income',
+    value: TransactionType.INCOME,
+    icon: 'arrow-downward',
+    color: palette.green,
+    size: 'md',
+  },
+];
+
 interface Props extends ScreenProps<ScreenNames.ADD_CATEGORY_SCREEN> {}
 
 const CreateCategoryScreen = ({ navigation, route }: Props) => {
   const { isNewCategory, control, watch, onSubmit, isSubmitSuccessful } = useCreateCategoryForm({ navigation, route });
-  const { transactionType: selectedTransactionType, color: selectedColor } = watch();
-
-  const transactionTypes = [
-    {
-      title: 'Expense',
-      value: TransactionType.EXPENSE,
-      selected: selectedTransactionType === TransactionType.EXPENSE,
-      icon: 'arrow-outward' as IconType,
-      color: palette.red,
-      size: 'md' as 'sm' | 'md',
-    },
-    {
-      title: 'Income',
-      value: TransactionType.INCOME,
-      selected: selectedTransactionType === TransactionType.INCOME,
-      icon: 'arrow-downward' as IconType,
-      color: palette.green,
-      size: 'md' as 'sm' | 'md',
-    },
-  ];
+  const selectedColor = watch('color');
 
   return (
     <>
@@ -90,8 +105,8 @@ const CreateCategoryScreen = ({ navigation, route }: Props) => {
               <Controller
                 name="transactionType"
                 control={control}
-                render={({ field: { onChange } }) => (
-                  <RadioButtonGroup limitRows={false} buttons={transactionTypes} onPress={onChange} />
+                render={({ field: { onChange, value } }) => (
+                  <RadioGroup value={value} limitRows={false} buttons={transactionTypes} onPress={onChange} />
                 )}
               />
             </View>
@@ -104,16 +119,11 @@ const CreateCategoryScreen = ({ navigation, route }: Props) => {
               name="icon"
               control={control}
               render={({ field: { onChange, value } }) => (
-                <RadioButtonGroup
-                  radioButtonGroupContainerStyle={styles.justifyCenter}
+                <RadioGroup
+                  value={value}
+                  radioGroupContainerStyle={styles.justifyCenter}
                   limitRows={false}
-                  buttons={icons.map((icon) => ({
-                    value: icon,
-                    selected: value === icon,
-                    color: selectedColor,
-                    icon,
-                    size: 'md',
-                  }))}
+                  buttons={getIconRadioButtons(selectedColor)}
                   onPress={onChange}
                 />
               )}
@@ -128,17 +138,7 @@ const CreateCategoryScreen = ({ navigation, route }: Props) => {
                 name="color"
                 control={control}
                 render={({ field: { onChange, value } }) => (
-                  <RadioButtonGroup
-                    limitRows={false}
-                    buttons={colors.map((color) => ({
-                      circleColor: color,
-                      showCircle: true,
-                      value: color,
-                      selected: value === color,
-                      size: 'md',
-                    }))}
-                    onPress={onChange}
-                  />
+                  <RadioGroup value={value} limitRows={false} buttons={getColorRadioButtons()} onPress={onChange} />
                 )}
               />
             </View>

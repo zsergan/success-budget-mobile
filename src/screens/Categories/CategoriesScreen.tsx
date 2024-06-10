@@ -1,69 +1,26 @@
-import { View } from 'react-native';
-import * as Haptics from 'expo-haptics';
-
-import { RadioButtonGroup, RootLayout, SectionTitle, TinyButton, LongPressedModal } from '@components';
+import { RootLayout, SectionTitle, TinyButton, LongPressedModal } from '@components';
 import type { ScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
-import type { Category } from '@api/dto';
 
+import CategoriesBlock from './CategoriesBlock';
 import useAllCategories from './useAllCategories';
 
 import styles from './style';
 
-const renderBlock = (
-  title: string,
-  categories: Category[],
-  onPress: (categoryId: number, categoryName: string, isActive: number) => void,
-  onCategoryLongPress: (category: Category) => void,
-) => (
-  <View style={styles.section}>
-    <SectionTitle title={title} />
-
-    <RadioButtonGroup
-      limitRows={false}
-      buttons={categories.map((category) => ({
-        ...category,
-        title: category.name,
-        value: category.id,
-        selected: category.is_active === 1,
-        size: 'md',
-        onLongPress: () => Haptics.impactAsync().then(() => onCategoryLongPress(category)),
-      }))}
-      onPress={(id) => {
-        const category = categories.find((item) => item.id === id);
-        onPress(id, category?.name || '', category?.is_active === 1 ? 0 : 1);
-      }}
-    />
-  </View>
-);
-
 interface Props extends ScreenProps<ScreenNames.CATEGORIES_SCREEN> {}
 
-const CategoriesScreen = ({ navigation }: Props) => {
+const CategoriesScreen = ({ navigation, route }: Props) => {
   const {
+    isModalVisible,
     incomes,
     expenses,
-    handleUpdate,
-    handleMoveForward,
     longPressedCategory,
+    onEdit,
+    onUpdate,
+    onMoveForward,
     onCategoryLongPress,
-    isModalVisible,
     onLongPressCancel,
-  } = useAllCategories();
-
-  const handleOnEdit = () => {
-    if (longPressedCategory) {
-      navigation.navigate(ScreenNames.ADD_CATEGORY_SCREEN, {
-        id: longPressedCategory.id,
-        name: longPressedCategory.name,
-        icon: longPressedCategory.icon,
-        color: longPressedCategory.color,
-        transaction_type: longPressedCategory.transaction_type,
-      });
-    }
-
-    onLongPressCancel();
-  };
+  } = useAllCategories({ navigation, route });
 
   return (
     <>
@@ -80,8 +37,8 @@ const CategoriesScreen = ({ navigation }: Props) => {
           />
         }
         onClose={onLongPressCancel}
-        onEdit={handleOnEdit}
-        customOptions={[{ onPress: () => handleMoveForward(longPressedCategory?.id || 0), text: 'Move forward' }]}
+        onEdit={onEdit}
+        customOptions={[{ onPress: onMoveForward, text: 'Move forward' }]}
       />
 
       <RootLayout style={styles.root}>
@@ -97,9 +54,19 @@ const CategoriesScreen = ({ navigation }: Props) => {
           }
         />
 
-        {renderBlock('Income', incomes, handleUpdate, onCategoryLongPress)}
+        <CategoriesBlock
+          title="Income"
+          categories={incomes}
+          onPress={onUpdate}
+          onCategoryLongPress={onCategoryLongPress}
+        />
 
-        {renderBlock('Expense', expenses, handleUpdate, onCategoryLongPress)}
+        <CategoriesBlock
+          title="Expense"
+          categories={expenses}
+          onPress={onUpdate}
+          onCategoryLongPress={onCategoryLongPress}
+        />
       </RootLayout>
     </>
   );
