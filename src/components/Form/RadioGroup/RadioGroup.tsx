@@ -2,23 +2,29 @@ import { useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { ScrollView, View, Dimensions } from 'react-native';
 
-import type { RadioButtonProps } from '@components';
-import RadioButton from '../RadioButton/RadioButton';
+import type { TinyButtonProps } from '../../Buttons/TinyButton/TinyButton';
+import TinyButton from '../../Buttons/TinyButton/TinyButton';
 
 import styles from './style';
 
+export type RadioButtons<T> = Omit<TinyButtonProps, 'onPress'> & {
+  value: T;
+};
+
 interface Props<T> {
-  buttons: Omit<RadioButtonProps<T>, 'onPress'>[];
-  onPress: RadioButtonProps<T>['onPress'];
+  buttons: RadioButtons<T>[];
+  onPress: (value: T) => void;
+  value?: T;
   limitRows?: boolean;
-  radioButtonGroupContainerStyle?: StyleProp<ViewStyle>;
+  radioGroupContainerStyle?: StyleProp<ViewStyle>;
 }
 
-const RadioButtonGroup = <T extends number | string>({
+const RadioGroup = <T extends number | string>({
   buttons,
   onPress,
+  value,
   limitRows = true,
-  radioButtonGroupContainerStyle,
+  radioGroupContainerStyle,
 }: Props<T>) => {
   const screenWidth = Dimensions.get('window').width;
   const [maxWidth, setMaxWidth] = useState<number | undefined>(limitRows ? undefined : screenWidth);
@@ -39,13 +45,18 @@ const RadioButtonGroup = <T extends number | string>({
       showsHorizontalScrollIndicator={false}
       onContentSizeChange={limitRows ? handleContentSizeChange : undefined}
     >
-      <View style={[styles.container, maxWidth ? { maxWidth } : {}, radioButtonGroupContainerStyle]}>
-        {buttons.map((button) => (
-          <RadioButton key={button.value} {...button} onPress={onPress} />
+      <View style={[styles.container, maxWidth ? { maxWidth } : {}, radioGroupContainerStyle]}>
+        {buttons.map(({ value: buttonValue, selected, ...button }) => (
+          <TinyButton
+            key={buttonValue}
+            selected={selected ? selected : buttonValue === value}
+            onPress={() => onPress(buttonValue)}
+            {...button}
+          />
         ))}
       </View>
     </ScrollView>
   );
 };
 
-export default RadioButtonGroup;
+export default RadioGroup;

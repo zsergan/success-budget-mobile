@@ -2,18 +2,46 @@ import { useEffect, useRef } from 'react';
 import { Text, TextInput, ScrollView, View, TouchableOpacity } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import { Button, DateTimePicker, RadioButtonGroup, SectionTitle, TextArea, TinyButton, TinyWallet } from '@components';
+import type { RadioButtons } from '@components';
+import { Button, DateTimePicker, RadioGroup, SectionTitle, TextArea, TinyButton, TinyWallet } from '@components';
+import type { Category } from '@api/dto';
 import { useAppSelector } from '@redux/hooks';
 import { selectActiveCategories } from '@redux/state/category/selectors';
 import { selectWallet } from '@redux/state/wallet/selectors';
 import { ScreenNames, TransactionType } from '@shared/enums';
-import type { IconType, ScreenProps } from '@shared/types';
-import { palette } from '@shared/theme';
+import type { ScreenProps } from '@shared/types';
 import useTransactionForm from './useTransactionForm';
 
+import { palette } from '@shared/theme';
 import styles from './style';
 
 const TINY_WALLET_WIDTH_WITH_GAP = 118;
+
+const transactionTypes: RadioButtons<string>[] = [
+  {
+    title: 'Expense',
+    value: TransactionType.EXPENSE,
+    icon: 'arrow-outward',
+    color: palette.red,
+    size: 'md',
+  },
+  {
+    title: 'Income',
+    value: TransactionType.INCOME,
+    icon: 'arrow-downward',
+    color: palette.green,
+    size: 'md',
+  },
+];
+
+const getCategoryRadioButtons = (categories: Category[]): RadioButtons<number>[] =>
+  categories.map((expense) => ({
+    title: expense.name,
+    value: expense.id,
+    icon: expense.icon,
+    color: expense.color,
+    size: 'md',
+  }));
 
 interface Props {
   navigation: ScreenProps<ScreenNames.HOME_TAB>['navigation'];
@@ -34,39 +62,10 @@ const TransactionForm = ({ navigation, initialWalletIndex, transactionType = Tra
 
   const selectedWallet = watch('wallet_id');
   const selectedTransactionType = watch('transaction_type');
-  const selectedCategory = watch('category_id');
 
   useEffect(() => {
     amountRef.current?.focus();
   }, []);
-
-  const categories = (selectedTransactionType === TransactionType.EXPENSE ? expenses : incomes).map((expense) => ({
-    title: expense.name,
-    value: expense.id,
-    selected: selectedCategory === expense.id,
-    icon: expense.icon,
-    color: expense.color,
-    size: 'md' as 'sm' | 'md',
-  }));
-
-  const transactionTypes = [
-    {
-      title: 'Expense',
-      value: TransactionType.EXPENSE,
-      selected: selectedTransactionType === TransactionType.EXPENSE,
-      icon: 'arrow-outward' as IconType,
-      color: palette.red,
-      size: 'md' as 'sm' | 'md',
-    },
-    {
-      title: 'Income',
-      value: TransactionType.INCOME,
-      selected: selectedTransactionType === TransactionType.INCOME,
-      icon: 'arrow-downward' as IconType,
-      color: palette.green,
-      size: 'md' as 'sm' | 'md',
-    },
-  ];
 
   return (
     <View style={styles.root}>
@@ -136,7 +135,9 @@ const TransactionForm = ({ navigation, initialWalletIndex, transactionType = Tra
             <Controller
               name="transaction_type"
               control={control}
-              render={({ field: { onChange } }) => <RadioButtonGroup buttons={transactionTypes} onPress={onChange} />}
+              render={({ field: { onChange, value } }) => (
+                <RadioGroup value={value} buttons={transactionTypes} onPress={onChange} />
+              )}
             />
           </View>
 
@@ -159,7 +160,15 @@ const TransactionForm = ({ navigation, initialWalletIndex, transactionType = Tra
             <Controller
               name="category_id"
               control={control}
-              render={({ field: { onChange } }) => <RadioButtonGroup buttons={categories} onPress={onChange} />}
+              render={({ field: { onChange, value } }) => (
+                <RadioGroup
+                  value={value}
+                  buttons={getCategoryRadioButtons(
+                    selectedTransactionType === TransactionType.EXPENSE ? expenses : incomes,
+                  )}
+                  onPress={onChange}
+                />
+              )}
             />
           </View>
 

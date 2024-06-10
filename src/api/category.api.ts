@@ -10,7 +10,7 @@ export const getCategories = async () => {
 };
 
 export const updateCategory = async (categoryId: number, data: UpdateCategoryRequest) => {
-  const response = await api.put(`/categories/${categoryId}`, data);
+  const response = await api.put<Category>(`/categories/${categoryId}`, data);
 
   return response.data;
 };

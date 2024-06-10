@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 import theme, { palette } from '@shared/theme';
 
 const styles = StyleSheet.create({
-  chip: {
+  button: {
     padding: theme.spacing.sm,
     backgroundColor: palette.grey,
     borderRadius: theme.radius.sm,

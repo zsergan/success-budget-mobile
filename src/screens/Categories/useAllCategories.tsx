@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 import type { Category } from '@api/dto';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectCategory } from '@redux/state/category/selectors';
 import { editCategory, sortCategoryForward } from '@redux/state/category/thunks';
+import type { ScreenProps } from '@shared/types';
+import { ScreenNames } from '@shared/enums';
 import { useAlert } from '@hooks';
 
-const useAllCategories = () => {
+interface UseAllCategoriesProps extends ScreenProps<ScreenNames.CATEGORIES_SCREEN> {}
+
+const useAllCategories = ({ navigation }: UseAllCategoriesProps) => {
   const [longPressedCategory, setLongPressedCategory] = useState<Category | undefined>(undefined);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
@@ -14,37 +18,63 @@ const useAllCategories = () => {
   const { incomes, expenses } = useAppSelector(selectCategory);
   const { addAlert } = useAlert();
 
-  const handleUpdate = (categoryId: number, categoryName: string, isActive: number) =>
-    dispatch(editCategory({ categoryId, categoryData: { is_active: isActive } })).then(() => {
-      const message = isActive
-        ? `${categoryName} will be in the transaction creation list`
-        : `${categoryName} will no longer be in the transaction creation list`;
-      addAlert(message);
-    });
+  const onUpdate = useCallback(
+    (categoryId: number) => {
+      const category = [...incomes, ...expenses].find((item) => item.id === categoryId);
 
-  const onCategoryLongPress = (category: Category) => {
+      dispatch(editCategory({ categoryId, categoryData: { is_active: category?.is_active === 1 ? 0 : 1 } }))
+        .unwrap()
+        .then((response) => {
+          const { name, is_active } = response;
+
+          const message = is_active
+            ? `${name} will be in the transaction creation list`
+            : `${name} will no longer be in the transaction creation list`;
+
+          addAlert(message);
+        });
+    },
+    [incomes, expenses, addAlert, dispatch],
+  );
+
+  const onCategoryLongPress = useCallback((category: Category) => {
     setLongPressedCategory(category);
     setIsModalVisible(true);
-  };
+  }, []);
 
-  const onLongPressCancel = () => {
+  const onLongPressCancel = useCallback(() => {
     setIsModalVisible(false);
-  };
+  }, []);
 
-  const handleMoveForward = (categoryId: number) => {
-    dispatch(sortCategoryForward(categoryId));
+  const onMoveForward = useCallback(() => {
+    dispatch(sortCategoryForward(longPressedCategory?.id || 0));
     setIsModalVisible(false);
-  };
+  }, [longPressedCategory, dispatch]);
+
+  const onEdit = useCallback(() => {
+    if (longPressedCategory) {
+      navigation.navigate(ScreenNames.ADD_CATEGORY_SCREEN, {
+        id: longPressedCategory.id,
+        name: longPressedCategory.name,
+        icon: longPressedCategory.icon,
+        color: longPressedCategory.color,
+        transaction_type: longPressedCategory.transaction_type,
+      });
+    }
+
+    onLongPressCancel();
+  }, [longPressedCategory, navigation, onLongPressCancel]);
 
   return {
+    isModalVisible,
     incomes: incomes || [],
     expenses: expenses || [],
-    handleUpdate,
-    handleMoveForward,
     longPressedCategory,
+    onEdit,
+    onUpdate,
+    onMoveForward,
     onCategoryLongPress,
     onLongPressCancel,
-    isModalVisible,
   };
 };
 
