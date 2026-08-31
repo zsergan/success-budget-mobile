@@ -26,6 +26,7 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(({ children, onDismiss }, 
       ref={ref}
       index={0}
       snapPoints={['85%']}
+      enableDynamicSizing={false}
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.background}
       handleComponent={null}
