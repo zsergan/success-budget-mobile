@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 
+import { logoutMe } from '../auth/thunks';
 import initialState from './initialState';
 import { fetchProfile } from './thunks';
 
@@ -8,6 +9,8 @@ const profileSlice = createSlice({
   initialState,
   reducers: {},
   extraReducers: (builder) => {
+    builder.addCase(logoutMe.fulfilled, () => initialState);
+
     builder.addCase(fetchProfile.pending, (state) => {
       state.isLoading = true;
     });

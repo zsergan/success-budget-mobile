@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 
+import { logoutMe } from '../auth/thunks';
 import initialState from './initialState';
 import { fetchCategories } from './thunks';
 
@@ -8,6 +9,8 @@ const categorySlice = createSlice({
   initialState,
   reducers: {},
   extraReducers: (builder) => {
+    builder.addCase(logoutMe.fulfilled, () => initialState);
+
     builder.addCase(fetchCategories.pending, (state) => {
       state.isLoading = true;
     });
