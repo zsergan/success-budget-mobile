@@ -60,8 +60,8 @@ const Wallets = ({ navigation, onScrollEnd }: Props) => {
               walletName={selectedWallet.wallet.wallet_name}
               balance={selectedWallet.wallet.balance}
               currencyCode={selectedWallet.wallet.currency.code}
-              totalIncome={selectedWallet.totalIncome}
-              totalSpend={selectedWallet.totalSpend}
+              totalIncome={selectedWallet.total_income}
+              totalSpend={selectedWallet.total_spend}
               design={selectedWallet.wallet.design}
             />
           ) : (
@@ -98,8 +98,8 @@ const Wallets = ({ navigation, onScrollEnd }: Props) => {
               walletName={item?.wallet.wallet_name}
               balance={item?.wallet.balance}
               currencyCode={item?.wallet.currency.code}
-              totalIncome={item.totalIncome}
-              totalSpend={item.totalSpend}
+              totalIncome={item.total_income}
+              totalSpend={item.total_spend}
               design={item?.wallet.design}
             />
           </TouchableOpacity>

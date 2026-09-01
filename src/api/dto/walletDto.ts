@@ -11,8 +11,8 @@ export interface Wallet {
 
 export interface GetWalletsResponse {
   wallet: Wallet;
-  totalSpend: number;
-  totalIncome: number;
+  total_spend: number;
+  total_income: number;
 }
 
 export interface CreateWalletRequest {
