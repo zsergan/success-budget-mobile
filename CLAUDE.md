@@ -61,7 +61,7 @@ exists or is up to date without checking.
   commit message that accurately describes just that commit's diff.
 - **Commit messages**: concise, imperative subject line describing the
   actual change (not "fix stuff" / "updates"); add a short body only when
-  the *why* isn't obvious from the diff. Follow the style of existing
+  the _why_ isn't obvious from the diff. Follow the style of existing
   commit history in this repo.
 - **Never commit or push without an explicit, in-the-moment request from
   the user.** Implementing or fixing something is not by itself
@@ -72,6 +72,12 @@ exists or is up to date without checking.
   identifiers, comments, commit messages, PR/MR descriptions, and any
   Markdown docs committed to the repo. Conversation with the user can be
   in whatever language they use.
+- **Never put a Claude Code session link (`claude.ai/code/session_...`) in
+  anything pushed to this repository** — not in commit messages, PR/MR
+  descriptions, code, or docs. This repo may go public; nothing should let
+  a reader jump into a private conversation transcript. A plain
+  `Co-Authored-By: Claude ...` attribution line without a session URL is
+  fine.
 - Prefer staged, reviewable changes over large sweeping rewrites — when a
   task is naturally a multi-step refactor, do it in ordered, separately
   committable steps rather than touching everything at once.

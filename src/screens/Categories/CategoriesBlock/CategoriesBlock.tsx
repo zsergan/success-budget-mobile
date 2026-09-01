@@ -28,12 +28,14 @@ interface Props {
   onCategoryLongPress: (category: Category) => void;
 }
 
-const CategoriesBlock = memo(({ title, categories, onPress, onCategoryLongPress }: Props) => (
-  <View style={styles.section}>
-    <SectionTitle title={title} />
+const CategoriesBlock = memo(function CategoriesBlock({ title, categories, onPress, onCategoryLongPress }: Props) {
+  return (
+    <View style={styles.section}>
+      <SectionTitle title={title} />
 
-    <RadioGroup limitRows={false} buttons={getRadioButtons(categories, onCategoryLongPress)} onPress={onPress} />
-  </View>
-));
+      <RadioGroup limitRows={false} buttons={getRadioButtons(categories, onCategoryLongPress)} onPress={onPress} />
+    </View>
+  );
+});
 
 export default CategoriesBlock;

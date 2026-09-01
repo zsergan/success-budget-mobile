@@ -13,7 +13,7 @@ import useSignInForm from './useSignInForm';
 
 import styles from '../style';
 
-interface Props extends ScreenProps<ScreenNames.SIGN_IN_SCREEN> { }
+interface Props extends ScreenProps<ScreenNames.SIGN_IN_SCREEN> {}
 
 const SignInScreen = ({ navigation }: Props) => {
   const { error } = useAppSelector(selectAuth);
@@ -70,12 +70,12 @@ const SignInScreen = ({ navigation }: Props) => {
         <View style={styles.container}>
           <Button title="Sign in" onPress={onSubmit} disabled={isSubmitting} />
 
-          <Button title="Reset password" onPress={() => { }} variant="tertiary" />
+          <Button title="Reset password" onPress={() => {}} variant="tertiary" />
         </View>
       </View>
 
       <View style={styles.bottomContainer}>
-        <Text style={styles.bottomText}>Don't have an account?</Text>
+        <Text style={styles.bottomText}>Don&apos;t have an account?</Text>
 
         <Button title="Sign up" onPress={() => navigation.navigate(ScreenNames.SIGN_UP_SCREEN)} variant="tertiary" />
       </View>

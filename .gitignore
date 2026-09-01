@@ -40,3 +40,6 @@ yarn-error.*
 
 # private local notes (refactor plan, scratch docs) - never pushed to any remote
 .private/
+
+# husky internals
+.husky/_
