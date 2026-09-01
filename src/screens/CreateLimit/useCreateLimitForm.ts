@@ -9,6 +9,7 @@ import type { ScreenNames } from '@shared/enums';
 import type { ScreenProps } from '@shared/types';
 import { useAlert } from '@hooks';
 import { ALL_OTHERS_CATEGORIES_ID } from '@shared/constants';
+import { getErrorMessage } from '@shared/utils';
 
 interface CreateLimitFormData {
   category_id?: number;
@@ -45,7 +46,7 @@ const useCreateLimitForm = ({ navigation, route }: UseCreateLimitFormProps) => {
     },
   });
 
-  const onSubmit = (formData: CreateLimitFormData) => {
+  const onSubmit = async (formData: CreateLimitFormData) => {
     const payload = {
       category_id: formData.category_id === ALL_OTHERS_CATEGORIES_ID ? undefined : formData.category_id,
       amount: formData.amount,
@@ -54,7 +55,13 @@ const useCreateLimitForm = ({ navigation, route }: UseCreateLimitFormProps) => {
     const endPointCall = () =>
       isNewLimit ? dispatch(addLimit(payload)) : dispatch(editLimit({ limitId: route.params.id, limitData: payload }));
 
-    endPointCall().then(() => navigation.goBack());
+    try {
+      await endPointCall().unwrap();
+      navigation.goBack();
+    } catch (error) {
+      addAlert(getErrorMessage(error));
+      throw error;
+    }
   };
 
   const onInvalid = (errors: ValidationError) => {
@@ -65,11 +72,13 @@ const useCreateLimitForm = ({ navigation, route }: UseCreateLimitFormProps) => {
     addAlert(errorMessage);
   };
 
+  const submitForm = handleSubmit(onSubmit, onInvalid);
+
   return {
     isNewLimit,
     prevLimit: isNewLimit ? undefined : route.params,
     control,
-    onSubmit: handleSubmit(onSubmit, onInvalid),
+    onSubmit: () => submitForm().catch(() => undefined),
     watch,
     isSubmitSuccessful,
   };

@@ -1,6 +1,7 @@
+import type { AxiosError } from 'axios';
 import { createAsyncThunk } from '@reduxjs/toolkit';
 
-import type { CreateWalletRequest, UpdateWalletRequest } from '@api/dto';
+import type { CreateWalletRequest, ErrorResponse, UpdateWalletRequest } from '@api/dto';
 import { getWallets, createWallet, updateWallet, deleteWallet } from '@api/wallet.api';
 
 export const fetchWallets = createAsyncThunk('wallet/fetchWallets', async () => {
@@ -8,17 +9,29 @@ export const fetchWallets = createAsyncThunk('wallet/fetchWallets', async () => 
 });
 
 export const addWallet = createAsyncThunk('wallet/addWallet', async (data: CreateWalletRequest, thunkAPI) => {
-  return await createWallet(data).then(() => {
+  try {
+    const response = await createWallet(data);
+
     thunkAPI.dispatch(fetchWallets());
-  });
+
+    return response;
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue((error as AxiosError<ErrorResponse>).response?.data);
+  }
 });
 
 export const editWallet = createAsyncThunk(
   'wallet/editWallet',
   async (data: { walletId: number; walletData: UpdateWalletRequest }, thunkAPI) => {
-    return await updateWallet(data.walletId, data.walletData).then(() => {
+    try {
+      const response = await updateWallet(data.walletId, data.walletData);
+
       thunkAPI.dispatch(fetchWallets());
-    });
+
+      return response;
+    } catch (error: unknown) {
+      return thunkAPI.rejectWithValue((error as AxiosError<ErrorResponse>).response?.data);
+    }
   },
 );
 

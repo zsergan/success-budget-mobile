@@ -8,7 +8,7 @@ import type { CreateTransactionRequest } from '@api/dto';
 import { TransactionType } from '@shared/enums';
 import { useAppDispatch } from '@redux/hooks';
 import { addTransaction } from '@redux/state/transaction/thunks';
-import { addCurrentTime } from '@shared/utils';
+import { addCurrentTime, getErrorMessage } from '@shared/utils';
 import { useAlert } from '@hooks';
 
 interface TransactionFormData {
@@ -60,7 +60,7 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
     },
   });
 
-  const onSubmit = (formData: TransactionFormData) => {
+  const onSubmit = async (formData: TransactionFormData) => {
     const payload: CreateTransactionRequest = {
       amount: formData.amount.replace(',', '.'),
       wallet_id: formData.wallet_id,
@@ -70,7 +70,13 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
       description: formData.notes,
     };
 
-    dispatch(addTransaction(payload)).then(() => close());
+    try {
+      await dispatch(addTransaction(payload)).unwrap();
+      close();
+    } catch (error) {
+      addAlert(getErrorMessage(error));
+      throw error;
+    }
   };
 
   const onInvalid = (errors: ValidationError) => {
@@ -81,10 +87,12 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
     addAlert(errorMessage);
   };
 
+  const submitForm = handleSubmit(onSubmit, onInvalid);
+
   return {
     control,
     watch,
-    onSubmit: handleSubmit(onSubmit, onInvalid),
+    onSubmit: () => submitForm().catch(() => undefined),
     isSubmitSuccessful,
     closeBottomSheet: close,
   };

@@ -1,6 +1,7 @@
+import type { AxiosError } from 'axios';
 import { createAsyncThunk } from '@reduxjs/toolkit';
 
-import type { CreateTransactionRequest } from '@api/dto';
+import type { CreateTransactionRequest, ErrorResponse } from '@api/dto';
 import { getTransactions, createTransaction } from '@api/transaction.api';
 
 import { fetchLimits } from '../limit/thunks';
@@ -13,10 +14,16 @@ export const fetchTransactions = createAsyncThunk('transaction/fetchTransactions
 export const addTransaction = createAsyncThunk(
   'transaction/addTransaction',
   async (payload: CreateTransactionRequest, thunkAPI) => {
-    return await createTransaction(payload).then(() => {
+    try {
+      const response = await createTransaction(payload);
+
       thunkAPI.dispatch(fetchTransactions());
       thunkAPI.dispatch(fetchWallets());
       thunkAPI.dispatch(fetchLimits());
-    });
+
+      return response;
+    } catch (error: unknown) {
+      return thunkAPI.rejectWithValue((error as AxiosError<ErrorResponse>).response?.data);
+    }
   },
 );

@@ -10,6 +10,7 @@ import { TransactionType } from '@shared/enums';
 import type { ScreenProps } from '@shared/types';
 import { useAlert } from '@hooks';
 import { palette } from '@shared/theme';
+import { getErrorMessage } from '@shared/utils';
 
 interface CreateCategoryFormData {
   name: string;
@@ -52,7 +53,7 @@ const useCreateCategoryForm = ({ navigation, route }: UseCreateCategoryFormProps
     },
   });
 
-  const onSubmit = (formData: CreateCategoryFormData) => {
+  const onSubmit = async (formData: CreateCategoryFormData) => {
     const payload = {
       name: formData.name,
       transaction_type: formData.transactionType,
@@ -65,7 +66,13 @@ const useCreateCategoryForm = ({ navigation, route }: UseCreateCategoryFormProps
         ? dispatch(addCategory(payload))
         : dispatch(editCategory({ categoryId: route.params.id, categoryData: payload }));
 
-    endPointCall().then(() => navigation.goBack());
+    try {
+      await endPointCall().unwrap();
+      navigation.goBack();
+    } catch (error) {
+      addAlert(getErrorMessage(error));
+      throw error;
+    }
   };
 
   const onInvalid = (errors: ValidationError) => {
@@ -74,10 +81,12 @@ const useCreateCategoryForm = ({ navigation, route }: UseCreateCategoryFormProps
     addAlert(errorMessage);
   };
 
+  const submitForm = handleSubmit(onSubmit, onInvalid);
+
   return {
     isNewCategory,
     control,
-    onSubmit: handleSubmit(onSubmit, onInvalid),
+    onSubmit: () => submitForm().catch(() => undefined),
     watch,
     isSubmitSuccessful,
   };
