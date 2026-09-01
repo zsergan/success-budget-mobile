@@ -57,7 +57,7 @@ const TransactionForm = ({ navigation, initialWalletIndex, transactionType = Tra
 
   const { control, watch, onSubmit, isSubmitSuccessful, closeBottomSheet } = useTransactionForm({
     transactionType,
-    initialWalletId: wallets[initialWalletIndex].wallet.id,
+    initialWalletId: wallets[initialWalletIndex]?.wallet.id ?? -1,
   });
 
   const selectedWallet = watch('wallet_id');
@@ -66,6 +66,14 @@ const TransactionForm = ({ navigation, initialWalletIndex, transactionType = Tra
   useEffect(() => {
     amountRef.current?.focus();
   }, []);
+
+  if (wallets.length === 0) {
+    return (
+      <View style={[styles.root, styles.container]}>
+        <Text style={styles.input}>Add a wallet first to record a transaction.</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>

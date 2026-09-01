@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 
+import { logoutMe } from '../auth/thunks';
 import initialState from './initialState';
 import { addTransaction, fetchTransactions } from './thunks';
 
@@ -8,6 +9,8 @@ const transactionSlice = createSlice({
   initialState,
   reducers: {},
   extraReducers: (builder) => {
+    builder.addCase(logoutMe.fulfilled, () => initialState);
+
     builder.addCase(fetchTransactions.pending, (state) => {
       state.isLoading = true;
     });

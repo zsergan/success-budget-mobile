@@ -13,6 +13,7 @@ import { addWallet, editWallet } from '@redux/state/wallet/thunks';
 import { fetchCurrencies } from '@redux/state/currency/thunks';
 import { selectCurrency } from '@redux/state/currency/selectors';
 import { useAlert } from '@hooks';
+import { getErrorMessage } from '@shared/utils';
 
 interface CreateWalletFormData {
   walletName: string;
@@ -61,7 +62,7 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
     dispatch(fetchCurrencies());
   }, [dispatch]);
 
-  const onSubmit = (formData: CreateWalletFormData) => {
+  const onSubmit = async (formData: CreateWalletFormData) => {
     const endPointCall = () =>
       isNewWallet
         ? dispatch(
@@ -82,7 +83,13 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
             }),
           );
 
-    endPointCall().then(() => navigation.goBack());
+    try {
+      await endPointCall().unwrap();
+      navigation.goBack();
+    } catch (error) {
+      addAlert(getErrorMessage(error));
+      throw error;
+    }
   };
 
   const onInvalid = (errors: ValidationError) => {
@@ -96,11 +103,13 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
     addAlert(errorMessage);
   };
 
+  const submitForm = handleSubmit(onSubmit, onInvalid);
+
   return {
     currencies: currencies.map((c) => ({ label: c.code, value: c.id })),
     isNewWallet,
     control,
-    onSubmit: handleSubmit(onSubmit, onInvalid),
+    onSubmit: () => submitForm().catch(() => undefined),
     watch,
     isSubmitSuccessful,
   };
