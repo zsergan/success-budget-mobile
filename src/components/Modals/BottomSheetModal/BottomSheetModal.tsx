@@ -13,7 +13,7 @@ interface Props {
   onDismiss?: () => void;
 }
 
-const CustomBottomSheetModal = forwardRef<Ref, Props>(({ children, onDismiss }, ref) => {
+const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheetModal({ children, onDismiss }, ref) {
   const renderBackdrop = useCallback(
     (backdropProps: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop {...backdropProps} appearsOnIndex={0} disappearsOnIndex={-1} />

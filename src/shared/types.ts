@@ -2,12 +2,10 @@ import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-n
 import type { ScreenNames, TransactionType, WalletDesign } from '@shared/enums';
 
 type AddWalletParams =
-  | { id: 'new' }
-  | { id: number; walletName: string; balance: string; currencyId: number; design: WalletDesign };
+  { id: 'new' } | { id: number; walletName: string; balance: string; currencyId: number; design: WalletDesign };
 
 type AddCategoryParams =
-  | { id: 'new' }
-  | { id: number; name: string; icon: string; color: string; transaction_type: TransactionType };
+  { id: 'new' } | { id: number; name: string; icon: string; color: string; transaction_type: TransactionType };
 
 type AddLimitParams = { id: 'new' } | { id: number; amount: string; category_id?: number };
 

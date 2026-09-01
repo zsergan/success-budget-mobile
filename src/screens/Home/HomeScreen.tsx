@@ -9,18 +9,8 @@ import Wallets from './Wallets';
 import TransactionForm from './TransactionForm';
 
 import styles from './style';
-import { Slice, VictoryBar, VictoryChart, VictoryPie, VictoryTheme } from 'victory-native';
+import { VictoryPie } from 'victory-native';
 import { palette } from '@shared/theme';
-
-const data = [
-  { quarter: 1, earnings: 13000 },
-  { quarter: 2, earnings: 16500 },
-  { quarter: 3, earnings: 14250 },
-  { quarter: 4, earnings: 19000 },
-  { quarter: 5, earnings: 19100 },
-  { quarter: 6, earnings: 19200 },
-  { quarter: 7, earnings: 19300 },
-];
 
 interface Props extends ScreenProps<ScreenNames.HOME_TAB> {}
 

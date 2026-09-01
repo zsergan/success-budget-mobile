@@ -2,7 +2,7 @@ import type { Swipeable } from 'react-native-gesture-handler';
 import { useRef } from 'react';
 
 const useSwipe = () => {
-  const row: Array<Swipeable | null> = [];
+  const row: (Swipeable | null)[] = [];
   const prevOpenedRow = useRef<Swipeable | null>(null);
 
   const closeRows = (index: number) => {
