@@ -9,6 +9,7 @@
     "web": "expo start --web",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
     "react-devtools": "react-devtools",
     "prepare": "husky"
   },
