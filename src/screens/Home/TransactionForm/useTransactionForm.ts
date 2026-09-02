@@ -1,5 +1,4 @@
 import * as yup from 'yup';
-import type { FieldError } from 'react-hook-form';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useBottomSheet } from '@gorhom/bottom-sheet';
@@ -8,8 +7,8 @@ import type { CreateTransactionRequest } from '@api/dto';
 import { TransactionType } from '@shared/enums';
 import { useAppDispatch } from '@redux/hooks';
 import { addTransaction } from '@redux/state/transaction/thunks';
-import { addCurrentTime, getErrorMessage } from '@shared/utils';
-import { useAlert } from '@hooks';
+import { addCurrentTime, amountSchema } from '@shared/utils';
+import { useFormSubmitHandler } from '@hooks';
 
 interface TransactionFormData {
   amount: string;
@@ -20,12 +19,8 @@ interface TransactionFormData {
   notes?: string;
 }
 
-type ValidationError = {
-  [K in keyof TransactionFormData]?: FieldError;
-};
-
 const schema = yup.object().shape({
-  amount: yup.string().required(),
+  amount: amountSchema,
   wallet_id: yup.number().required(),
   transaction_type: yup.mixed<TransactionType>().oneOf([TransactionType.EXPENSE, TransactionType.INCOME]).required(),
   category_id: yup.number().required(),
@@ -41,7 +36,6 @@ interface UseTransactionFormProps {
 const useTransactionForm = ({ transactionType, initialWalletId }: UseTransactionFormProps) => {
   const dispatch = useAppDispatch();
   const { close } = useBottomSheet();
-  const { addAlert } = useAlert();
 
   const {
     control,
@@ -60,39 +54,29 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
     },
   });
 
-  const onSubmit = async (formData: TransactionFormData) => {
-    const payload: CreateTransactionRequest = {
-      amount: formData.amount.replace(',', '.'),
-      wallet_id: formData.wallet_id,
-      category_id: formData.category_id,
-      timestamp: addCurrentTime(formData.date),
-      transaction_type: formData.transaction_type,
-      description: formData.notes,
-    };
+  const { onSubmit } = useFormSubmitHandler<TransactionFormData>({
+    handleSubmit,
+    onSubmit: (formData) => {
+      const payload: CreateTransactionRequest = {
+        amount: formData.amount,
+        wallet_id: formData.wallet_id,
+        category_id: formData.category_id,
+        timestamp: addCurrentTime(formData.date),
+        transaction_type: formData.transaction_type,
+        description: formData.notes,
+      };
 
-    try {
-      await dispatch(addTransaction(payload)).unwrap();
-      close();
-    } catch (error) {
-      addAlert(getErrorMessage(error));
-      throw error;
-    }
-  };
-
-  const onInvalid = (errors: ValidationError) => {
-    const errorMessage = [errors.amount && 'Enter an amount', errors.category_id && 'Select a category']
-      .filter(Boolean)
-      .join('\n');
-
-    addAlert(errorMessage);
-  };
-
-  const submitForm = handleSubmit(onSubmit, onInvalid);
+      return dispatch(addTransaction(payload)).unwrap();
+    },
+    onSuccess: () => close(),
+    getInvalidMessage: (errors) =>
+      [errors.amount && 'Enter an amount', errors.category_id && 'Select a category'].filter(Boolean).join('\n'),
+  });
 
   return {
     control,
     watch,
-    onSubmit: () => submitForm().catch(() => undefined),
+    onSubmit,
     isSubmitSuccessful,
     closeBottomSheet: close,
   };

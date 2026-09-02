@@ -1,5 +1,4 @@
 import * as yup from 'yup';
-import type { FieldError } from 'react-hook-form';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
@@ -8,9 +7,8 @@ import { useAppDispatch } from '@redux/hooks';
 import type { ScreenNames } from '@shared/enums';
 import { TransactionType } from '@shared/enums';
 import type { ScreenProps } from '@shared/types';
-import { useAlert } from '@hooks';
+import { useFormSubmitHandler } from '@hooks';
 import { palette } from '@shared/theme';
-import { getErrorMessage } from '@shared/utils';
 
 interface CreateCategoryFormData {
   name: string;
@@ -18,10 +16,6 @@ interface CreateCategoryFormData {
   icon: string;
   color: string;
 }
-
-type ValidationError = {
-  [K in keyof CreateCategoryFormData]?: FieldError;
-};
 
 const schema = yup.object().shape({
   name: yup.string().required(),
@@ -36,7 +30,6 @@ const useCreateCategoryForm = ({ navigation, route }: UseCreateCategoryFormProps
   const isNewCategory = route.params.id === 'new';
 
   const dispatch = useAppDispatch();
-  const { addAlert } = useAlert();
 
   const {
     control,
@@ -47,46 +40,34 @@ const useCreateCategoryForm = ({ navigation, route }: UseCreateCategoryFormProps
     resolver: yupResolver(schema),
     defaultValues: {
       name: isNewCategory ? '' : route.params.name,
-      transactionType: isNewCategory ? TransactionType.EXPENSE : route.params.transaction_type,
+      transactionType: isNewCategory ? TransactionType.EXPENSE : route.params.transactionType,
       icon: isNewCategory ? 'paid' : route.params.icon,
       color: isNewCategory ? palette.black : route.params.color,
     },
   });
 
-  const onSubmit = async (formData: CreateCategoryFormData) => {
-    const payload = {
-      name: formData.name,
-      transaction_type: formData.transactionType,
-      icon: formData.icon,
-      color: formData.color,
-    };
+  const { onSubmit } = useFormSubmitHandler<CreateCategoryFormData>({
+    handleSubmit,
+    onSubmit: (formData) => {
+      const payload = {
+        name: formData.name,
+        transaction_type: formData.transactionType,
+        icon: formData.icon,
+        color: formData.color,
+      };
 
-    const endPointCall = () =>
-      isNewCategory
-        ? dispatch(addCategory(payload))
-        : dispatch(editCategory({ categoryId: route.params.id, categoryData: payload }));
-
-    try {
-      await endPointCall().unwrap();
-      navigation.goBack();
-    } catch (error) {
-      addAlert(getErrorMessage(error));
-      throw error;
-    }
-  };
-
-  const onInvalid = (errors: ValidationError) => {
-    const errorMessage = [errors.name && 'Enter a category name'].filter(Boolean).join('\n');
-
-    addAlert(errorMessage);
-  };
-
-  const submitForm = handleSubmit(onSubmit, onInvalid);
+      return isNewCategory
+        ? dispatch(addCategory(payload)).unwrap()
+        : dispatch(editCategory({ categoryId: route.params.id, categoryData: payload })).unwrap();
+    },
+    onSuccess: () => navigation.goBack(),
+    getInvalidMessage: (errors) => [errors.name && 'Enter a category name'].filter(Boolean).join('\n'),
+  });
 
   return {
     isNewCategory,
     control,
-    onSubmit: () => submitForm().catch(() => undefined),
+    onSubmit,
     watch,
     isSubmitSuccessful,
   };
