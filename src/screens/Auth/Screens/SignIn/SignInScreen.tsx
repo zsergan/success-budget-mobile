@@ -8,6 +8,7 @@ import { ScreenNames } from '@shared/enums';
 import { useAppSelector } from '@redux/hooks';
 import { selectAuth } from '@redux/state/auth/selectors';
 import { useAlert } from '@hooks';
+import { getErrorMessage } from '@shared/utils';
 import AuthLayout from '../../AuthLayout';
 import useSignInForm from './useSignInForm';
 
@@ -21,10 +22,8 @@ const SignInScreen = ({ navigation }: Props) => {
   const { addAlert } = useAlert();
 
   useEffect(() => {
-    const errorMessage = typeof error?.message === 'string' ? error.message : error?.message[0].error;
-
-    if (errorMessage) {
-      addAlert(errorMessage);
+    if (error) {
+      addAlert(getErrorMessage(error));
     }
   }, [error, addAlert]);
 

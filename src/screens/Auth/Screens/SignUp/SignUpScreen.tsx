@@ -1,9 +1,14 @@
+import { useEffect } from 'react';
 import { Text, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
 import { Button, H, Input, InputPicker, PasswordInput } from '@components';
 import type { ScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
+import { useAppSelector } from '@redux/hooks';
+import { selectAuth } from '@redux/state/auth/selectors';
+import { useAlert } from '@hooks';
+import { getErrorMessage } from '@shared/utils';
 import AuthLayout from '../../AuthLayout';
 import useSignUpForm from './useSignUpForm';
 
@@ -12,7 +17,15 @@ import styles from '../style';
 interface Props extends ScreenProps<ScreenNames.SIGN_UP_SCREEN> {}
 
 const SignUpScreen = ({ navigation }: Props) => {
+  const { error } = useAppSelector(selectAuth);
   const { currencies, control, onSubmit, isSubmitting } = useSignUpForm({ navigation });
+  const { addAlert } = useAlert();
+
+  useEffect(() => {
+    if (error) {
+      addAlert(getErrorMessage(error));
+    }
+  }, [error, addAlert]);
 
   return (
     <AuthLayout>

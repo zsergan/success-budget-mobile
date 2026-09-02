@@ -7,7 +7,10 @@ import { verifyEmailMe } from '@redux/state/auth/thunks';
 import { selectAuth } from '@redux/state/auth/selectors';
 
 const schema = yup.object().shape({
-  code: yup.string().required(),
+  code: yup
+    .string()
+    .required()
+    .matches(/^\d{6}$/, 'Enter the 6-digit code'),
 });
 
 interface FormData {
