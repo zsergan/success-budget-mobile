@@ -89,3 +89,11 @@ exists or is up to date without checking.
 - Prefer staged, reviewable changes over large sweeping rewrites — when a
   task is naturally a multi-step refactor, do it in ordered, separately
   committable steps rather than touching everything at once.
+- **Comments: default to none.** Add one only when the WHY is genuinely
+  non-obvious from the code itself (a hidden constraint, a workaround for
+  a specific bug, behavior that would surprise a reader) — never to
+  restate what the code already says. When a comment is warranted, keep
+  it to one line, two at the absolute most; if the reasoning needs more
+  space than that, it belongs in the commit message or PR description,
+  not inline. A routine `try/catch` around a call that can fail does not
+  need a comment explaining that calls can fail.

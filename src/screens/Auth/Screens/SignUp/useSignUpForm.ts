@@ -67,7 +67,7 @@ const useSignInForm = ({ navigation }: UseSignInFormProps) => {
   }, [navigation, userEmail]);
 
   const onSubmit = (formData: FormData) => {
-    dispatch(
+    return dispatch(
       registerMe({
         email: formData.email,
         password: formData.password,

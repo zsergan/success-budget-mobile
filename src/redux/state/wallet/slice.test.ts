@@ -64,9 +64,7 @@ describe('wallet slice', () => {
   });
 
   it('does not clear existing wallets just because removeWallet is pending', () => {
-    // removeWallet has no dedicated pending/fulfilled case of its own -- it
-    // relies on the follow-up fetchWallets it dispatches to refresh the
-    // list, so its own pending/rejected only need to touch `error`.
+    // removeWallet has no dedicated case; it relies on its own fetchWallets refetch instead.
     const withWallets = { ...initialState, wallets: [wallet] };
 
     const state = walletReducer(withWallets, removeWallet.pending('req-4', 1));

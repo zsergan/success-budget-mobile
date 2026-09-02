@@ -35,7 +35,7 @@ const useCreateCategoryForm = ({ navigation, route }: UseCreateCategoryFormProps
     control,
     handleSubmit,
     watch,
-    formState: { isSubmitSuccessful },
+    formState: { isSubmitting, isSubmitSuccessful },
   } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -46,8 +46,9 @@ const useCreateCategoryForm = ({ navigation, route }: UseCreateCategoryFormProps
     },
   });
 
-  const { onSubmit } = useFormSubmitHandler<CreateCategoryFormData>({
+  const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<CreateCategoryFormData>({
     handleSubmit,
+    formState: { isSubmitting, isSubmitSuccessful },
     onSubmit: (formData) => {
       const payload = {
         name: formData.name,
@@ -69,7 +70,7 @@ const useCreateCategoryForm = ({ navigation, route }: UseCreateCategoryFormProps
     control,
     onSubmit,
     watch,
-    isSubmitSuccessful,
+    isSubmitDisabled,
   };
 };
 

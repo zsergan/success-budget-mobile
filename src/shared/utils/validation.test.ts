@@ -14,15 +14,16 @@ describe('amountSchema', () => {
   });
 
   it('rejects input with more than one decimal separator', async () => {
-    // The old code sent .replace(',', '.') straight to the request with no
-    // validation at all, so malformed input like this reached the backend
-    // as-is. amountSchema now catches it client-side regardless of which
-    // separator produced the second dot.
     await expect(amountSchema.validate('1,234,56')).rejects.toThrow('Enter a valid number');
   });
 
   it('rejects non-numeric input instead of letting it become NaN', async () => {
     await expect(amountSchema.validate('abc')).rejects.toThrow('Enter a valid number');
+  });
+
+  it('rejects "Infinity" -- Number.isNaN alone would have let this through', async () => {
+    await expect(amountSchema.validate('Infinity')).rejects.toThrow('Enter a valid number');
+    await expect(amountSchema.validate('-Infinity')).rejects.toThrow('Enter a valid number');
   });
 
   it('rejects an empty string', async () => {

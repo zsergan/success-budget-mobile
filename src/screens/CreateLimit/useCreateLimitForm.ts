@@ -31,7 +31,7 @@ const useCreateLimitForm = ({ navigation, route }: UseCreateLimitFormProps) => {
     control,
     handleSubmit,
     watch,
-    formState: { isSubmitSuccessful },
+    formState: { isSubmitting, isSubmitSuccessful },
   } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -40,8 +40,9 @@ const useCreateLimitForm = ({ navigation, route }: UseCreateLimitFormProps) => {
     },
   });
 
-  const { onSubmit } = useFormSubmitHandler<CreateLimitFormData>({
+  const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<CreateLimitFormData>({
     handleSubmit,
+    formState: { isSubmitting, isSubmitSuccessful },
     onSubmit: (formData) => {
       const payload = {
         category_id: formData.category_id === ALL_OTHERS_CATEGORIES_ID ? undefined : formData.category_id,
@@ -63,7 +64,7 @@ const useCreateLimitForm = ({ navigation, route }: UseCreateLimitFormProps) => {
     control,
     onSubmit,
     watch,
-    isSubmitSuccessful,
+    isSubmitDisabled,
   };
 };
 

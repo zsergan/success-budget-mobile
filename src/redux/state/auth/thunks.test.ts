@@ -4,7 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import { login, register, verifyEmail } from '@api/auth.api';
 import { AUTH_TOKEN_KEY } from '@shared/constants';
 import authReducer from './slice';
-import { loginMe, registerMe, verifyEmailMe } from './thunks';
+import { checkAuth, loginMe, logoutMe, registerMe, verifyEmailMe } from './thunks';
 
 jest.mock('@api/auth.api');
 jest.mock('expo-secure-store');
@@ -13,6 +13,8 @@ const mockedLogin = jest.mocked(login);
 const mockedRegister = jest.mocked(register);
 const mockedVerifyEmail = jest.mocked(verifyEmail);
 const mockedSetItemAsync = jest.mocked(SecureStore.setItemAsync);
+const mockedGetItemAsync = jest.mocked(SecureStore.getItemAsync);
+const mockedDeleteItemAsync = jest.mocked(SecureStore.deleteItemAsync);
 
 const createTestStore = () => configureStore({ reducer: { auth: authReducer } });
 
@@ -124,5 +126,46 @@ describe('verifyEmailMe', () => {
     expect(action.payload).toEqual(invalidCodeError);
     expect(store.getState().auth.isSignedIn).toBe(false);
     expect(store.getState().auth.error).toEqual(invalidCodeError);
+  });
+});
+
+describe('checkAuth', () => {
+  it('signs the user in when a token is already stored', async () => {
+    mockedGetItemAsync.mockResolvedValue('a-token');
+
+    const store = createTestStore();
+    const action = await store.dispatch(checkAuth());
+
+    expect(action.type).toBe('auth/checkAuth/fulfilled');
+    expect(store.getState().auth.isSignedIn).toBe(true);
+  });
+
+  it('does not get stuck loading if SecureStore throws -- resolves as if there were no token', async () => {
+    mockedGetItemAsync.mockRejectedValue(new Error('Keystore is corrupted'));
+
+    const store = createTestStore();
+    const action = await store.dispatch(checkAuth());
+
+    expect(action.type).toBe('auth/checkAuth/fulfilled');
+    expect(action.payload).toBeNull();
+    expect(store.getState().auth.isSignedIn).toBe(false);
+    expect(store.getState().auth.isLoading).toBe(false);
+  });
+});
+
+describe('logoutMe', () => {
+  it('clears the session even if SecureStore fails to delete the token', async () => {
+    mockedDeleteItemAsync.mockRejectedValue(new Error('Keystore is corrupted'));
+
+    const store = configureStore({
+      reducer: { auth: authReducer },
+      preloadedState: { auth: { isLoading: false, isSignedIn: true, userToken: 'a-token', userEmail: null } },
+    });
+
+    const action = await store.dispatch(logoutMe());
+
+    expect(action.type).toBe('auth/logoutMe/fulfilled');
+    expect(store.getState().auth.isSignedIn).toBe(false);
+    expect(store.getState().auth.userToken).toBeNull();
   });
 });

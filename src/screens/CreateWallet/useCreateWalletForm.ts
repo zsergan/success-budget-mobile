@@ -41,7 +41,7 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
     control,
     handleSubmit,
     watch,
-    formState: { isSubmitSuccessful },
+    formState: { isSubmitting, isSubmitSuccessful },
   } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -56,8 +56,9 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
     dispatch(fetchCurrencies());
   }, [dispatch]);
 
-  const { onSubmit } = useFormSubmitHandler<CreateWalletFormData>({
+  const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<CreateWalletFormData>({
     handleSubmit,
+    formState: { isSubmitting, isSubmitSuccessful },
     onSubmit: (formData) =>
       isNewWallet
         ? dispatch(
@@ -90,7 +91,7 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
     control,
     onSubmit,
     watch,
-    isSubmitSuccessful,
+    isSubmitDisabled,
   };
 };
 

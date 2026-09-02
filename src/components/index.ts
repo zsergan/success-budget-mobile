@@ -3,6 +3,7 @@ export * from './Buttons';
 export { default as Carousel } from './Carousel/Carousel';
 export { default as CircleIcon } from './CircleIcon/CircleIcon';
 export { default as Divider } from './Divider/Divider';
+export { default as ErrorBoundary } from './ErrorBoundary/ErrorBoundary';
 export * from './Form';
 export { default as GradientBackground } from './GradientBackground/GradientBackground';
 export { default as LimitItem } from './LimitItem/LimitItem';

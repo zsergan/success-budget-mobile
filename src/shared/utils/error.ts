@@ -4,11 +4,8 @@ const NETWORK_ERROR_MESSAGE = 'Could not reach the server. Check your connection
 const SERVER_ERROR_MESSAGE = 'Something went wrong on our end. Please try again later.';
 const FALLBACK_ERROR_MESSAGE = 'Something went wrong. Please try again.';
 
-// A thunk rejects with the ErrorResponse body (see createAppAsyncThunk),
-// or with undefined when the request never got a response at all (offline,
-// timeout, DNS failure). Map both of those to a friendly message instead of
-// showing a raw 5xx body or nothing; a 4xx validation message is meant for
-// the user, so it is passed through as-is.
+// 4xx messages are written for the user and passed through as-is; network
+// failures and 5xx get a friendly message instead of a raw body or nothing.
 export const getErrorMessage = (error: unknown): string => {
   const response = error as Partial<ErrorResponse> | undefined;
 

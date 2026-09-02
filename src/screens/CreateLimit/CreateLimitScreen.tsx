@@ -53,7 +53,7 @@ const CreateLimitScreen = ({ navigation, route }: Props) => {
   const { limits } = useAppSelector(selectLimit);
   const { baseCurrency } = useAppSelector(selectProfile);
   const { expenses } = useAppSelector(selectCategory);
-  const { isNewLimit, prevLimit, control, onSubmit, isSubmitSuccessful } = useCreateLimitForm({
+  const { isNewLimit, prevLimit, control, onSubmit, isSubmitDisabled } = useCreateLimitForm({
     navigation,
     route,
   });
@@ -100,7 +100,7 @@ const CreateLimitScreen = ({ navigation, route }: Props) => {
         <Button
           title={isNewLimit ? 'Create' : 'Save changes'}
           onPress={onSubmit}
-          disabled={isSubmitSuccessful}
+          disabled={isSubmitDisabled}
           withShadow
         />
       </View>
