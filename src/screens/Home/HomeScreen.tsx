@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { BottomSheetModal as BottomModal, Button, RootLayout, SectionTitle, TinyButton } from '@components';
 import { ScreenNames, TransactionType } from '@shared/enums';
@@ -9,8 +9,6 @@ import Wallets from './Wallets';
 import TransactionForm from './TransactionForm';
 
 import styles from './style';
-import { VictoryPie } from 'victory-native';
-import { palette } from '@shared/theme';
 
 interface Props extends ScreenProps<ScreenNames.HOME_TAB> {}
 
@@ -60,25 +58,6 @@ const HomeScreen = ({ navigation }: Props) => {
             style={styles.button}
             variant="secondary"
             withShadow
-          />
-        </View>
-
-        <View>
-          <VictoryPie
-            labelPlacement="perpendicular"
-            labelRadius={150}
-            labelIndicator={<Text>EXample</Text>}
-            padAngle={3}
-            innerRadius={110}
-            colorScale={[palette.redLight, palette.green, palette.blue, palette.greyDark]}
-            width={390}
-            cornerRadius={12}
-            data={[
-              { x: 'Grocery', y: 140000 },
-              { x: 'Car', y: 100000 },
-              { x: 'Housing', y: 250000 },
-              { x: 'Other', y: 50000 },
-            ]}
           />
         </View>
       </RootLayout>
