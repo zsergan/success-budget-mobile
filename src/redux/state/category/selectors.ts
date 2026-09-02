@@ -4,7 +4,7 @@ import type { RootState } from '@redux/Store';
 
 const baseSelect = (state: RootState) => state.category;
 
-export const selectCategory = createSelector(baseSelect, (state) => ({ ...state }));
+export const selectCategory = baseSelect;
 
 export const selectActiveCategories = createSelector(baseSelect, (state) => {
   const activeIncomes = state.incomes.filter((income) => income.is_active);
