@@ -45,15 +45,24 @@ export const loginMe = createAppAsyncThunk('auth/loginMe', async (payload: Login
 });
 
 export const logoutMe = createAppAsyncThunk('auth/logoutMe', async () => {
-  await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
+  try {
+    await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
+  } catch {
+    // Logout must still clear the session even if the storage delete fails.
+  }
 });
 
 export const checkAuth = createAppAsyncThunk('auth/checkAuth', async () => {
-  const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+  try {
+    const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
 
-  if (!token) {
+    if (!token) {
+      return null;
+    }
+
+    return token;
+  } catch {
+    // Treat a SecureStore failure as "no token" instead of hanging on LoadingScreen forever.
     return null;
   }
-
-  return token;
 });
