@@ -11,12 +11,19 @@ import type { ScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { selectAuth } from '@redux/state/auth/selectors';
 
+const passwordSchema = yup
+  .string()
+  .required()
+  .min(8, 'Password must be at least 8 characters')
+  .matches(/[a-zA-Z]/, 'Password must contain a letter')
+  .matches(/\d/, 'Password must contain a number');
+
 const schema = yup.object().shape({
   name: yup.string().required(),
   currency: yup.number().required(),
   email: yup.string().email().required(),
-  password: yup.string().required().min(6),
-  passwordConfirm: yup.string().required().min(6),
+  password: passwordSchema,
+  passwordConfirm: passwordSchema.oneOf([yup.ref('password')], 'Passwords must match'),
 });
 
 interface FormData {
