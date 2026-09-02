@@ -41,5 +41,17 @@ jobs:
 
       - run: npm run typecheck
 
-  # No test runner is wired up yet (see CLAUDE.md). Add a `test` job here once
-  # jest + @testing-library/react-native land and a `test` script exists.
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test -- --ci

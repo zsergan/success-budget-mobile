@@ -38,6 +38,9 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# jest
+coverage/
+
 # private local notes (refactor plan, scratch docs) - never pushed to any remote
 .private/
 
