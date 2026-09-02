@@ -1,9 +1,10 @@
 import type { MutableRefObject, ReactNode } from 'react';
-import { useCallback, useState, createContext, useRef } from 'react';
+import { useCallback, useEffect, useState, createContext, useRef } from 'react';
 import { Animated, Dimensions, Easing } from 'react-native';
 
 import type { AlertItem } from '../Alert/Alert';
 import Alert from '../Alert/Alert';
+import { registerGlobalAlertHandler } from './globalAlert';
 
 import styles from './style';
 
@@ -74,6 +75,12 @@ const AlertProvider = ({ children }: AlertProviderProps) => {
       hideAlert();
     }
   }, [hideAlert]);
+
+  useEffect(() => {
+    registerGlobalAlertHandler(addAlert);
+
+    return () => registerGlobalAlertHandler(null);
+  }, [addAlert]);
 
   return (
     <AlertContext.Provider value={{ addAlert, dismissAlert }}>
