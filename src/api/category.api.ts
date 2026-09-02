@@ -1,4 +1,5 @@
 import type { CreateCategoryRequest, GetCategoriesResponse, UpdateCategoryRequest, Category } from './dto';
+import { mapCategory } from './models';
 import { ApiClient } from './instance';
 
 const api = ApiClient();
@@ -6,19 +7,22 @@ const api = ApiClient();
 export const getCategories = async () => {
   const response = await api.get<GetCategoriesResponse>('/categories');
 
-  return response.data;
+  return {
+    incomes: response.data.incomes.map(mapCategory),
+    expenses: response.data.expenses.map(mapCategory),
+  };
 };
 
 export const updateCategory = async (categoryId: number, data: UpdateCategoryRequest) => {
   const response = await api.put<Category>(`/categories/${categoryId}`, data);
 
-  return response.data;
+  return mapCategory(response.data);
 };
 
 export const createCategory = async (data: CreateCategoryRequest) => {
   const response = await api.post<Category>('/categories', data);
 
-  return response.data;
+  return mapCategory(response.data);
 };
 
 export const moveCategoryForward = async (categoryId: number) => {

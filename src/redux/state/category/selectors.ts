@@ -7,8 +7,8 @@ const baseSelect = (state: RootState) => state.category;
 export const selectCategory = baseSelect;
 
 export const selectActiveCategories = createSelector(baseSelect, (state) => {
-  const activeIncomes = state.incomes.filter((income) => income.is_active);
-  const activeExpenses = state.expenses.filter((expense) => expense.is_active);
+  const activeIncomes = state.incomes.filter((income) => income.isActive);
+  const activeExpenses = state.expenses.filter((expense) => expense.isActive);
 
   return { incomes: activeIncomes, expenses: activeExpenses, isLoading: state.isLoading };
 });

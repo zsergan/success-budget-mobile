@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 
-import type { Category } from '@api/dto';
+import type { CategoryModel } from '@api/models';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectCategory } from '@redux/state/category/selectors';
 import { editCategory, sortCategoryForward } from '@redux/state/category/thunks';
@@ -11,7 +11,7 @@ import { useAlert } from '@hooks';
 interface UseAllCategoriesProps extends ScreenProps<ScreenNames.CATEGORIES_SCREEN> {}
 
 const useAllCategories = ({ navigation }: UseAllCategoriesProps) => {
-  const [longPressedCategory, setLongPressedCategory] = useState<Category | undefined>(undefined);
+  const [longPressedCategory, setLongPressedCategory] = useState<CategoryModel | undefined>(undefined);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const dispatch = useAppDispatch();
@@ -22,12 +22,12 @@ const useAllCategories = ({ navigation }: UseAllCategoriesProps) => {
     (categoryId: number) => {
       const category = [...incomes, ...expenses].find((item) => item.id === categoryId);
 
-      dispatch(editCategory({ categoryId, categoryData: { is_active: category?.is_active === 1 ? 0 : 1 } }))
+      dispatch(editCategory({ categoryId, categoryData: { is_active: category?.isActive ? 0 : 1 } }))
         .unwrap()
         .then((response) => {
-          const { name, is_active } = response;
+          const { name, isActive } = response;
 
-          const message = is_active
+          const message = isActive
             ? `${name} will be in the transaction creation list`
             : `${name} will no longer be in the transaction creation list`;
 
@@ -37,7 +37,7 @@ const useAllCategories = ({ navigation }: UseAllCategoriesProps) => {
     [incomes, expenses, addAlert, dispatch],
   );
 
-  const onCategoryLongPress = useCallback((category: Category) => {
+  const onCategoryLongPress = useCallback((category: CategoryModel) => {
     setLongPressedCategory(category);
     setIsModalVisible(true);
   }, []);
@@ -58,7 +58,7 @@ const useAllCategories = ({ navigation }: UseAllCategoriesProps) => {
         name: longPressedCategory.name,
         icon: longPressedCategory.icon,
         color: longPressedCategory.color,
-        transaction_type: longPressedCategory.transaction_type,
+        transactionType: longPressedCategory.transactionType,
       });
     }
 

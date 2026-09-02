@@ -32,7 +32,7 @@ const CategoriesScreen = ({ navigation, route }: Props) => {
             icon={longPressedCategory?.icon}
             color={longPressedCategory?.color}
             size="md"
-            selected={longPressedCategory?.is_active === 1}
+            selected={longPressedCategory?.isActive}
             style={styles.selectedCategory}
           />
         }

@@ -5,7 +5,7 @@ type AddWalletParams =
   { id: 'new' } | { id: number; walletName: string; balance: string; currencyId: number; design: WalletDesign };
 
 type AddCategoryParams =
-  { id: 'new' } | { id: number; name: string; icon: string; color: string; transaction_type: TransactionType };
+  { id: 'new' } | { id: number; name: string; icon: string; color: string; transactionType: TransactionType };
 
 type AddLimitParams = { id: 'new' } | { id: number; amount: string; category_id?: number };
 

@@ -1,4 +1,5 @@
 import type { CreateTransactionRequest, Transaction } from '@api/dto';
+import { mapTransaction } from '@api/models';
 import { ApiClient } from './instance';
 
 const api = ApiClient();
@@ -6,11 +7,11 @@ const api = ApiClient();
 export const getTransactions = async () => {
   const response = await api.get<Transaction[]>('/transactions');
 
-  return response.data;
+  return response.data.map(mapTransaction);
 };
 
 export const createTransaction = async (payload: CreateTransactionRequest) => {
   const response = await api.post<Transaction>('/transactions', payload);
 
-  return response.data;
+  return mapTransaction(response.data);
 };
