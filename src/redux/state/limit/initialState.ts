@@ -1,7 +1,8 @@
-import type { GetLimitsResponse } from '@api/dto';
+import type { ErrorResponse, GetLimitsResponse } from '@api/dto';
 
 interface InitialState extends GetLimitsResponse {
   isLoading: boolean;
+  error?: ErrorResponse;
 }
 
 const initialState: InitialState = {

@@ -1,12 +1,16 @@
-import type { AxiosError } from 'axios';
-import { createAsyncThunk } from '@reduxjs/toolkit';
-
-import type { CreateCategoryRequest, ErrorResponse, UpdateCategoryRequest } from '@api/dto';
+import type { CreateCategoryRequest, UpdateCategoryRequest } from '@api/dto';
 import { getCategories, updateCategory, createCategory, moveCategoryForward } from '@api/category.api';
+import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
-export const fetchCategories = createAsyncThunk('category/fetchCategories', async () => await getCategories());
+export const fetchCategories = createAppAsyncThunk('category/fetchCategories', async (_: void, thunkAPI) => {
+  try {
+    return await getCategories();
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getRejectValue(error));
+  }
+});
 
-export const editCategory = createAsyncThunk(
+export const editCategory = createAppAsyncThunk(
   'category/updateCategory',
   async (data: { categoryId: number; categoryData: UpdateCategoryRequest }, thunkAPI) => {
     try {
@@ -16,19 +20,35 @@ export const editCategory = createAsyncThunk(
 
       return response;
     } catch (error: unknown) {
-      return thunkAPI.rejectWithValue((error as AxiosError<ErrorResponse>).response?.data);
+      return thunkAPI.rejectWithValue(getRejectValue(error));
     }
   },
 );
 
-export const addCategory = createAsyncThunk(
+export const addCategory = createAppAsyncThunk(
   'category/createCategory',
-  async (data: CreateCategoryRequest, thunkAPI) =>
-    await createCategory(data).then(() => thunkAPI.dispatch(fetchCategories())),
+  async (data: CreateCategoryRequest, thunkAPI) => {
+    try {
+      const response = await createCategory(data);
+
+      thunkAPI.dispatch(fetchCategories());
+
+      return response;
+    } catch (error: unknown) {
+      return thunkAPI.rejectWithValue(getRejectValue(error));
+    }
+  },
 );
 
-export const sortCategoryForward = createAsyncThunk(
+export const sortCategoryForward = createAppAsyncThunk(
   'category/sortCategoryForward',
-  async (categoryId: number, thunkAPI) =>
-    await moveCategoryForward(categoryId).then(() => thunkAPI.dispatch(fetchCategories())),
+  async (categoryId: number, thunkAPI) => {
+    try {
+      await moveCategoryForward(categoryId);
+
+      thunkAPI.dispatch(fetchCategories());
+    } catch (error: unknown) {
+      return thunkAPI.rejectWithValue(getRejectValue(error));
+    }
+  },
 );

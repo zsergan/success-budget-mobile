@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, isPending, isRejected } from '@reduxjs/toolkit';
 
 import { logoutMe } from '../auth/thunks';
 import initialState from './initialState';
@@ -34,6 +34,14 @@ const transactionSlice = createSlice({
 
     builder.addCase(addTransaction.fulfilled, (state) => {
       state.isCreating = false;
+    });
+
+    builder.addMatcher(isPending(fetchTransactions, addTransaction), (state) => {
+      state.error = undefined;
+    });
+
+    builder.addMatcher(isRejected(fetchTransactions, addTransaction), (state, action) => {
+      state.error = action.payload;
     });
   },
 });

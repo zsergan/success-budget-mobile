@@ -13,10 +13,12 @@ const currencySlice = createSlice({
 
     builder.addCase(fetchCurrencies.pending, (state) => {
       state.isLoading = true;
+      state.error = undefined;
     });
 
-    builder.addCase(fetchCurrencies.rejected, (state) => {
+    builder.addCase(fetchCurrencies.rejected, (state, action) => {
       state.isLoading = false;
+      state.error = action.payload;
     });
 
     builder.addCase(fetchCurrencies.fulfilled, (state, action) => {

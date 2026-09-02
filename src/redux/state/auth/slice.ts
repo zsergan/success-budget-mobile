@@ -1,6 +1,5 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, isRejected } from '@reduxjs/toolkit';
 
-import type { ErrorResponse } from '@api/dto';
 import initialState from './initialState';
 import { checkAuth, registerMe, loginMe, logoutMe, verifyEmailMe } from './thunks';
 
@@ -29,21 +28,9 @@ const authSlice = createSlice({
       state.error = undefined;
     });
 
-    builder.addCase(registerMe.rejected, (state, action) => {
-      state.error = action.payload as ErrorResponse;
-    });
-
     builder.addCase(verifyEmailMe.fulfilled, (state, action) => login(state, action.payload));
 
-    builder.addCase(verifyEmailMe.rejected, (state, action) => {
-      state.error = action.payload as ErrorResponse;
-    });
-
     builder.addCase(loginMe.fulfilled, (state, action) => login(state, action.payload));
-
-    builder.addCase(loginMe.rejected, (state, action) => {
-      state.error = action.payload as ErrorResponse;
-    });
 
     builder.addCase(logoutMe.fulfilled, (state) => logout(state));
 
@@ -53,6 +40,10 @@ const authSlice = createSlice({
       } else {
         logout(state);
       }
+    });
+
+    builder.addMatcher(isRejected(registerMe, verifyEmailMe, loginMe), (state, action) => {
+      state.error = action.payload;
     });
   },
 });

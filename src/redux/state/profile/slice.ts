@@ -13,10 +13,12 @@ const profileSlice = createSlice({
 
     builder.addCase(fetchProfile.pending, (state) => {
       state.isLoading = true;
+      state.error = undefined;
     });
 
-    builder.addCase(fetchProfile.rejected, (state) => {
+    builder.addCase(fetchProfile.rejected, (state, action) => {
       state.isLoading = false;
+      state.error = action.payload;
     });
 
     builder.addCase(fetchProfile.fulfilled, (state, action) => {

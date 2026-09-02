@@ -1,8 +1,8 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, isPending, isRejected } from '@reduxjs/toolkit';
 
 import { logoutMe } from '../auth/thunks';
 import initialState from './initialState';
-import { fetchCategories } from './thunks';
+import { addCategory, editCategory, fetchCategories, sortCategoryForward } from './thunks';
 
 const categorySlice = createSlice({
   name: 'category',
@@ -23,6 +23,14 @@ const categorySlice = createSlice({
       state.incomes = action.payload.incomes;
       state.expenses = action.payload.expenses;
       state.isLoading = false;
+    });
+
+    builder.addMatcher(isPending(fetchCategories, editCategory, addCategory, sortCategoryForward), (state) => {
+      state.error = undefined;
+    });
+
+    builder.addMatcher(isRejected(fetchCategories, editCategory, addCategory, sortCategoryForward), (state, action) => {
+      state.error = action.payload;
     });
   },
 });

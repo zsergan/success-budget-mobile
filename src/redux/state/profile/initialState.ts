@@ -1,7 +1,8 @@
-import type { ProfileResponse } from '@api/dto';
+import type { ErrorResponse, ProfileResponse } from '@api/dto';
 
 interface InitialState extends Partial<ProfileResponse> {
   isLoading: boolean;
+  error?: ErrorResponse;
 }
 
 const initialState: InitialState = {
