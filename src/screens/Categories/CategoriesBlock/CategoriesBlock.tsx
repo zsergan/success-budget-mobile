@@ -2,30 +2,30 @@ import { memo } from 'react';
 import { View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-import type { Category } from '@api/dto';
+import type { CategoryModel } from '@api/models';
 import type { RadioButtons } from '@components';
 import { RadioGroup, SectionTitle } from '@components';
 
 import styles from './style';
 
 const getRadioButtons = (
-  categories: Category[],
-  onCategoryLongPress: (category: Category) => void,
+  categories: CategoryModel[],
+  onCategoryLongPress: (category: CategoryModel) => void,
 ): RadioButtons<number>[] =>
   categories.map((category) => ({
     ...category,
     title: category.name,
     value: category.id,
-    selected: category.is_active === 1,
+    selected: category.isActive,
     size: 'md',
     onLongPress: () => Haptics.impactAsync().then(() => onCategoryLongPress(category)),
   }));
 
 interface Props {
   title: string;
-  categories: Category[];
+  categories: CategoryModel[];
   onPress: (categoryId: number) => void;
-  onCategoryLongPress: (category: Category) => void;
+  onCategoryLongPress: (category: CategoryModel) => void;
 }
 
 const CategoriesBlock = memo(function CategoriesBlock({ title, categories, onPress, onCategoryLongPress }: Props) {

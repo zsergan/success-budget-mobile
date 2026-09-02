@@ -1,7 +1,8 @@
-import type { ErrorResponse, Transaction } from '@api/dto';
+import type { ErrorResponse } from '@api/dto';
+import type { TransactionModel } from '@api/models';
 
 interface InitialState {
-  transactions: Transaction[];
+  transactions: TransactionModel[];
   isLoading: boolean;
   isCreating: boolean;
   error?: ErrorResponse;

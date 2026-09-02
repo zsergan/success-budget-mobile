@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import * as yup from 'yup';
-import type { FieldError } from 'react-hook-form';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
@@ -12,8 +11,8 @@ import { WalletDesign } from '@shared/enums';
 import { addWallet, editWallet } from '@redux/state/wallet/thunks';
 import { fetchCurrencies } from '@redux/state/currency/thunks';
 import { selectCurrency } from '@redux/state/currency/selectors';
-import { useAlert } from '@hooks';
-import { getErrorMessage } from '@shared/utils';
+import { useFormSubmitHandler } from '@hooks';
+import { amountSchema } from '@shared/utils';
 
 interface CreateWalletFormData {
   walletName: string;
@@ -22,13 +21,9 @@ interface CreateWalletFormData {
   design: WalletDesign;
 }
 
-type ValidationError = {
-  [K in keyof CreateWalletFormData]?: FieldError;
-};
-
 const schema = yup.object().shape({
   walletName: yup.string().required(),
-  initialBalance: yup.string().required(),
+  initialBalance: amountSchema,
   currency: yup.number().required(),
   design: yup.mixed<WalletDesign>().oneOf(Object.values(WalletDesign)).required(),
 });
@@ -41,7 +36,6 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
   const { baseCurrency } = useAppSelector(selectProfile);
   const { currencies } = useAppSelector(selectCurrency);
   const dispatch = useAppDispatch();
-  const { addAlert } = useAlert();
 
   const {
     control,
@@ -62,8 +56,9 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
     dispatch(fetchCurrencies());
   }, [dispatch]);
 
-  const onSubmit = async (formData: CreateWalletFormData) => {
-    const endPointCall = () =>
+  const { onSubmit } = useFormSubmitHandler<CreateWalletFormData>({
+    handleSubmit,
+    onSubmit: (formData) =>
       isNewWallet
         ? dispatch(
             addWallet({
@@ -72,7 +67,7 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
               currency_id: Number(formData.currency),
               design: formData.design,
             }),
-          )
+          ).unwrap()
         : dispatch(
             editWallet({
               walletId: route.params.id,
@@ -81,35 +76,19 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
                 design: formData.design,
               },
             }),
-          );
-
-    try {
-      await endPointCall().unwrap();
-      navigation.goBack();
-    } catch (error) {
-      addAlert(getErrorMessage(error));
-      throw error;
-    }
-  };
-
-  const onInvalid = (errors: ValidationError) => {
-    const errorMessage = [
-      errors.walletName && 'Enter a wallet name',
-      errors.initialBalance && 'Enter an initial balance',
-    ]
-      .filter(Boolean)
-      .join('\n');
-
-    addAlert(errorMessage);
-  };
-
-  const submitForm = handleSubmit(onSubmit, onInvalid);
+          ).unwrap(),
+    onSuccess: () => navigation.goBack(),
+    getInvalidMessage: (errors) =>
+      [errors.walletName && 'Enter a wallet name', errors.initialBalance && 'Enter an initial balance']
+        .filter(Boolean)
+        .join('\n'),
+  });
 
   return {
     currencies: currencies.map((c) => ({ label: c.code, value: c.id })),
     isNewWallet,
     control,
-    onSubmit: () => submitForm().catch(() => undefined),
+    onSubmit,
     watch,
     isSubmitSuccessful,
   };

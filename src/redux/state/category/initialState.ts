@@ -1,6 +1,9 @@
-import type { ErrorResponse, GetCategoriesResponse } from '@api/dto';
+import type { ErrorResponse } from '@api/dto';
+import type { CategoryModel } from '@api/models';
 
-interface InitialState extends GetCategoriesResponse {
+interface InitialState {
+  incomes: CategoryModel[];
+  expenses: CategoryModel[];
   isLoading: boolean;
   error?: ErrorResponse;
 }

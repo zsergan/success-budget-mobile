@@ -4,7 +4,7 @@ import { Controller } from 'react-hook-form';
 
 import type { RadioButtons } from '@components';
 import { Button, DateTimePicker, RadioGroup, SectionTitle, TextArea, TinyButton, TinyWallet } from '@components';
-import type { Category } from '@api/dto';
+import type { CategoryModel } from '@api/models';
 import { useAppSelector } from '@redux/hooks';
 import { selectActiveCategories } from '@redux/state/category/selectors';
 import { selectWallet } from '@redux/state/wallet/selectors';
@@ -34,7 +34,7 @@ const transactionTypes: RadioButtons<string>[] = [
   },
 ];
 
-const getCategoryRadioButtons = (categories: Category[]): RadioButtons<number>[] =>
+const getCategoryRadioButtons = (categories: CategoryModel[]): RadioButtons<number>[] =>
   categories.map((expense) => ({
     title: expense.name,
     value: expense.id,

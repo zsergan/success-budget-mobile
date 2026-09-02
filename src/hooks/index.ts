@@ -1,4 +1,5 @@
 export { default as useAlert } from './useAlert';
 export { default as useAuth } from './useAuth';
+export { default as useFormSubmitHandler } from './useFormSubmitHandler';
 export { default as useLoadInitData } from './useLoadInitData';
 export { default as useSwipe } from './useSwipe';

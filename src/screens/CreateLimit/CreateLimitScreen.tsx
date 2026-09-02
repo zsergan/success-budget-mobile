@@ -1,7 +1,8 @@
 import { Dimensions, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import type { Category, Limit } from '@api/dto';
+import type { Limit } from '@api/dto';
+import type { CategoryModel } from '@api/models';
 import type { RadioButtons } from '@components';
 import { Button, Input, RadioGroup, RootLayout, SectionTitle } from '@components';
 import type { IconType, ScreenProps } from '@shared/types';
@@ -17,13 +18,13 @@ import { horizontalScreenPadding } from '@shared/theme';
 import styles from './style';
 
 const getCategoryRadioButtons = (
-  expenses: Category[],
+  expenses: CategoryModel[],
   limits: Limit[],
   screenWidth: number,
   prevCategoryId?: number,
 ): RadioButtons<number>[] => {
   const limitCategoryIds = limits.map((limit) => (limit.category ? limit.category.id : ALL_OTHERS_CATEGORIES_ID));
-  const availableCategories = expenses.filter((category) => category.is_active === 1);
+  const availableCategories = expenses.filter((category) => category.isActive);
 
   const allOthersCategoriesButton: RadioButtons<number> = {
     value: ALL_OTHERS_CATEGORIES_ID,

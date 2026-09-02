@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native';
 
-import type { Transaction } from '@api/dto';
+import type { TransactionModel } from '@api/models';
 import CircleIcon from '../CircleIcon/CircleIcon';
 import { formatDateHHMM } from '@shared/utils';
 import { TransactionType } from '@shared/enums';
@@ -9,7 +9,7 @@ import { palette } from '@shared/theme';
 import styles from './style';
 
 interface Props {
-  transaction: Transaction;
+  transaction: TransactionModel;
 }
 
 const TransactionCard = ({ transaction }: Props) => (
@@ -31,12 +31,9 @@ const TransactionCard = ({ transaction }: Props) => (
 
     <View style={styles.amountWallet}>
       <Text
-        style={[
-          styles.amount,
-          transaction.transaction_type === TransactionType.INCOME ? styles.income : styles.expense,
-        ]}
+        style={[styles.amount, transaction.transactionType === TransactionType.INCOME ? styles.income : styles.expense]}
       >
-        {transaction.transaction_type === TransactionType.INCOME
+        {transaction.transactionType === TransactionType.INCOME
           ? `${transaction.amount} ${transaction.currency.code}`
           : `- ${transaction.amount} ${transaction.currency.code}`}
       </Text>

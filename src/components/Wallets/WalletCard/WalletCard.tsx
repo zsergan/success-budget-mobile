@@ -2,11 +2,10 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { Text, View } from 'react-native';
 
 import CircleIcon from '../../CircleIcon/CircleIcon';
-import GradientBackground from '../../GradientBackground/GradientBackground';
+import WalletGradientBackground from '../WalletGradientBackground/WalletGradientBackground';
 import { palette } from '@shared/theme';
 import { formatNumber } from '@shared/utils';
 import { WalletDesign } from '@shared/enums';
-import { gradients } from '@shared/constants';
 
 import styles from './style';
 
@@ -30,12 +29,7 @@ const WalletCard = ({
   style,
 }: WalletCardProps) => (
   <View style={[styles.root, style]}>
-    <GradientBackground
-      style={styles.gradient}
-      colors={gradients[design]}
-      start={{ x: 0.3, y: 0.0 }}
-      end={{ x: 0.7, y: 1.0 }}
-    />
+    <WalletGradientBackground style={styles.gradient} design={design} />
 
     <View>
       <Text style={styles.name}>{`${walletName} Balance`}</Text>
