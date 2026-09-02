@@ -1,7 +1,6 @@
 import { View, Text } from 'react-native';
 
-import GradientBackground from '../../GradientBackground/GradientBackground';
-import { gradients } from '@shared/constants';
+import WalletGradientBackground from '../WalletGradientBackground/WalletGradientBackground';
 import { WalletDesign } from '@shared/enums';
 
 import styles from './style';
@@ -15,14 +14,7 @@ interface Props {
 
 const TinyWallet = ({ walletName, currencyCode, design = WalletDesign.GREEN, backgroundStyle = 'gradient' }: Props) => (
   <View style={[styles.root, backgroundStyle === 'grey' && styles.grey]}>
-    {backgroundStyle === 'gradient' && (
-      <GradientBackground
-        style={styles.gradient}
-        colors={gradients[design]}
-        start={{ x: 0.3, y: 0.0 }}
-        end={{ x: 0.7, y: 1.0 }}
-      />
-    )}
+    {backgroundStyle === 'gradient' && <WalletGradientBackground style={styles.gradient} design={design} />}
 
     <Text style={styles.walletName} numberOfLines={1}>
       {walletName}
