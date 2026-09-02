@@ -9,11 +9,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   titleContainer: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     columnGap: theme.spacing.sm,
   },
   title: {
+    flexShrink: 1,
+    minWidth: 0,
     fontFamily: theme.fonts.bold,
     fontSize: theme.fontSizes.sm,
     color: theme.colors.text.primary,
