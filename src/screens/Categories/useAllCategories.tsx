@@ -7,6 +7,7 @@ import { editCategory, sortCategoryForward } from '@redux/state/category/thunks'
 import type { ScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { useAlert } from '@hooks';
+import { getErrorMessage } from '@shared/utils';
 
 interface UseAllCategoriesProps extends ScreenProps<ScreenNames.CATEGORIES_SCREEN> {}
 
@@ -32,7 +33,8 @@ const useAllCategories = ({ navigation }: UseAllCategoriesProps) => {
             : `${name} will no longer be in the transaction creation list`;
 
           addAlert(message);
-        });
+        })
+        .catch((error) => addAlert(getErrorMessage(error)));
     },
     [incomes, expenses, addAlert, dispatch],
   );
@@ -47,9 +49,12 @@ const useAllCategories = ({ navigation }: UseAllCategoriesProps) => {
   }, []);
 
   const onMoveForward = useCallback(() => {
-    dispatch(sortCategoryForward(longPressedCategory?.id || 0));
+    dispatch(sortCategoryForward(longPressedCategory?.id || 0))
+      .unwrap()
+      .catch((error) => addAlert(getErrorMessage(error)));
+
     setIsModalVisible(false);
-  }, [longPressedCategory, dispatch]);
+  }, [longPressedCategory, dispatch, addAlert]);
 
   const onEdit = useCallback(() => {
     if (longPressedCategory) {
