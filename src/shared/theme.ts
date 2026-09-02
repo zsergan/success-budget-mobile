@@ -30,9 +30,9 @@ const theme = {
     },
   },
   fonts: {
-    regular: 'Poppins-Regular',
-    medium: 'Poppins-Medium',
-    bold: 'Poppins-Bold',
+    regular: 'PlusJakartaSans-Regular',
+    medium: 'PlusJakartaSans-Medium',
+    bold: 'PlusJakartaSans-Bold',
   },
   /**
    * Font sizes.
