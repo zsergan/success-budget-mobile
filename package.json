@@ -18,6 +18,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@expo/vector-icons": "^15.0.3",
     "@gorhom/bottom-sheet": "^5.2.14",
     "@hookform/resolvers": "^3.4.2",
