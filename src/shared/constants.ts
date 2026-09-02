@@ -5,9 +5,7 @@ const LOCAL_API_BASE_URL = 'http://localhost:3000/api/v1';
 
 const isLocalUrl = (url: string) => url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1');
 
-// EXPO_PUBLIC_* vars are inlined at build time by babel-preset-expo, so this
-// runs once per bundle -- fail fast on a misconfigured non-local URL rather
-// than silently sending credentials over plain HTTP.
+// Fail fast on a misconfigured non-local URL rather than sending credentials over plain HTTP.
 const resolveApiBaseUrl = () => {
   const configuredUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
 
