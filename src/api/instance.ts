@@ -5,7 +5,7 @@ import * as SecureStore from 'expo-secure-store';
 import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
 import store from '@redux/Store';
 import { logoutMe } from '@redux/state/auth/thunks';
-import { BASE_API_URL_LOCAL, AUTH_TOKEN_KEY } from '@/shared/constants';
+import { BASE_API_URL_LOCAL, AUTH_TOKEN_KEY } from '@shared/constants';
 
 export const ApiClient = () => {
   const api = axios.create({ baseURL: BASE_API_URL_LOCAL });

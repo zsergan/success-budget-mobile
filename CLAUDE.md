@@ -23,7 +23,15 @@ categories, spending limits, multi-currency support.
 - Screens: `src/screens/**`, usually paired with a `use<Name>Form.ts` hook
   (react-hook-form + yup) for form logic.
 - Reusable UI: `src/components/**`, grouped by concern, typically
-  `<Name>.tsx` + `style.ts` (+ barrel `index.ts` in most, not all, folders).
+  `<Name>.tsx` + `style.ts`.
+- Barrel `index.ts` rule (applies to both `screens/**` and `components/**`):
+  add one only for a folder that groups more than one thing meant to be
+  imported from outside it (e.g. `screens/Auth/` bundles three screens,
+  `components/Wallets/` bundles `TinyWallet` + `WalletCard`). A folder
+  that is just one component/screen does not get its own `index.ts` — the
+  parent barrel (`@screens`, `@components`) imports straight from its file.
+  A component used only by its siblings in the same folder (not exported
+  further) does not need to be in that folder's barrel either.
 - Shared: `src/shared/{constants,enums,theme,types}.ts` and
   `src/shared/utils/`.
 - Import aliases: `@<segment>/...` maps to `src/<segment>/...` (see
