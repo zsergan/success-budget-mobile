@@ -1,14 +1,16 @@
-import type { AxiosError } from 'axios';
-import { createAsyncThunk } from '@reduxjs/toolkit';
-
-import type { CreateWalletRequest, ErrorResponse, UpdateWalletRequest } from '@api/dto';
+import type { CreateWalletRequest, UpdateWalletRequest } from '@api/dto';
 import { getWallets, createWallet, updateWallet, deleteWallet } from '@api/wallet.api';
+import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
-export const fetchWallets = createAsyncThunk('wallet/fetchWallets', async () => {
-  return await getWallets();
+export const fetchWallets = createAppAsyncThunk('wallet/fetchWallets', async (_: void, thunkAPI) => {
+  try {
+    return await getWallets();
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getRejectValue(error));
+  }
 });
 
-export const addWallet = createAsyncThunk('wallet/addWallet', async (data: CreateWalletRequest, thunkAPI) => {
+export const addWallet = createAppAsyncThunk('wallet/addWallet', async (data: CreateWalletRequest, thunkAPI) => {
   try {
     const response = await createWallet(data);
 
@@ -16,11 +18,11 @@ export const addWallet = createAsyncThunk('wallet/addWallet', async (data: Creat
 
     return response;
   } catch (error: unknown) {
-    return thunkAPI.rejectWithValue((error as AxiosError<ErrorResponse>).response?.data);
+    return thunkAPI.rejectWithValue(getRejectValue(error));
   }
 });
 
-export const editWallet = createAsyncThunk(
+export const editWallet = createAppAsyncThunk(
   'wallet/editWallet',
   async (data: { walletId: number; walletData: UpdateWalletRequest }, thunkAPI) => {
     try {
@@ -30,13 +32,17 @@ export const editWallet = createAsyncThunk(
 
       return response;
     } catch (error: unknown) {
-      return thunkAPI.rejectWithValue((error as AxiosError<ErrorResponse>).response?.data);
+      return thunkAPI.rejectWithValue(getRejectValue(error));
     }
   },
 );
 
-export const removeWallet = createAsyncThunk('wallet/removeWallet', async (walletId: number, thunkAPI) => {
-  return await deleteWallet(walletId).then(() => {
+export const removeWallet = createAppAsyncThunk('wallet/removeWallet', async (walletId: number, thunkAPI) => {
+  try {
+    await deleteWallet(walletId);
+
     thunkAPI.dispatch(fetchWallets());
-  });
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getRejectValue(error));
+  }
 });

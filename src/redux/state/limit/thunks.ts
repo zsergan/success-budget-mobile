@@ -1,12 +1,16 @@
-import type { AxiosError } from 'axios';
-import { createAsyncThunk } from '@reduxjs/toolkit';
-
-import type { CreateLimitRequest, ErrorResponse, UpdateLimitRequest } from '@api/dto';
+import type { CreateLimitRequest, UpdateLimitRequest } from '@api/dto';
 import { getLimits, createLimit, updateLimit } from '@api/limit.api';
+import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
-export const fetchLimits = createAsyncThunk('limit/fetchLimits', async () => await getLimits());
+export const fetchLimits = createAppAsyncThunk('limit/fetchLimits', async (_: void, thunkAPI) => {
+  try {
+    return await getLimits();
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getRejectValue(error));
+  }
+});
 
-export const addLimit = createAsyncThunk('limit/addLimit', async (data: CreateLimitRequest, thunkAPI) => {
+export const addLimit = createAppAsyncThunk('limit/addLimit', async (data: CreateLimitRequest, thunkAPI) => {
   try {
     const response = await createLimit(data);
 
@@ -14,11 +18,11 @@ export const addLimit = createAsyncThunk('limit/addLimit', async (data: CreateLi
 
     return response;
   } catch (error: unknown) {
-    return thunkAPI.rejectWithValue((error as AxiosError<ErrorResponse>).response?.data);
+    return thunkAPI.rejectWithValue(getRejectValue(error));
   }
 });
 
-export const editLimit = createAsyncThunk(
+export const editLimit = createAppAsyncThunk(
   'limit/editLimit',
   async (data: { limitId: number; limitData: UpdateLimitRequest }, thunkAPI) => {
     try {
@@ -28,7 +32,7 @@ export const editLimit = createAsyncThunk(
 
       return response;
     } catch (error: unknown) {
-      return thunkAPI.rejectWithValue((error as AxiosError<ErrorResponse>).response?.data);
+      return thunkAPI.rejectWithValue(getRejectValue(error));
     }
   },
 );

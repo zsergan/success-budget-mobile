@@ -1,17 +1,19 @@
-import type { AxiosError } from 'axios';
-import { createAsyncThunk } from '@reduxjs/toolkit';
-
-import type { CreateTransactionRequest, ErrorResponse } from '@api/dto';
+import type { CreateTransactionRequest } from '@api/dto';
 import { getTransactions, createTransaction } from '@api/transaction.api';
+import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
 import { fetchLimits } from '../limit/thunks';
 import { fetchWallets } from '../wallet/thunks';
 
-export const fetchTransactions = createAsyncThunk('transaction/fetchTransactions', async () => {
-  return await getTransactions();
+export const fetchTransactions = createAppAsyncThunk('transaction/fetchTransactions', async (_: void, thunkAPI) => {
+  try {
+    return await getTransactions();
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getRejectValue(error));
+  }
 });
 
-export const addTransaction = createAsyncThunk(
+export const addTransaction = createAppAsyncThunk(
   'transaction/addTransaction',
   async (payload: CreateTransactionRequest, thunkAPI) => {
     try {
@@ -23,7 +25,7 @@ export const addTransaction = createAsyncThunk(
 
       return response;
     } catch (error: unknown) {
-      return thunkAPI.rejectWithValue((error as AxiosError<ErrorResponse>).response?.data);
+      return thunkAPI.rejectWithValue(getRejectValue(error));
     }
   },
 );

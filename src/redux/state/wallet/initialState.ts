@@ -1,8 +1,9 @@
-import type { GetWalletsResponse } from '@api/dto';
+import type { ErrorResponse, GetWalletsResponse } from '@api/dto';
 
 interface InitialState {
   wallets: GetWalletsResponse[];
   isLoading: boolean;
+  error?: ErrorResponse;
 }
 
 const initialState: InitialState = {

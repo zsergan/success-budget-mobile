@@ -1,8 +1,9 @@
-import type { Currency } from '@api/dto';
+import type { Currency, ErrorResponse } from '@api/dto';
 
 interface InitialState {
   currencies: Currency[];
   isLoading: boolean;
+  error?: ErrorResponse;
 }
 
 const initialState: InitialState = {

@@ -1,7 +1,8 @@
-import type { GetCategoriesResponse } from '@api/dto';
+import type { ErrorResponse, GetCategoriesResponse } from '@api/dto';
 
 interface InitialState extends GetCategoriesResponse {
   isLoading: boolean;
+  error?: ErrorResponse;
 }
 
 const initialState: InitialState = {

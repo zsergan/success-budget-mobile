@@ -1,7 +1,10 @@
-import { createAsyncThunk } from '@reduxjs/toolkit';
-
 import { getCurrencies } from '@api/currency.api';
+import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
-export const fetchCurrencies = createAsyncThunk('currency/fetchCurrencies', async () => {
-  return await getCurrencies();
+export const fetchCurrencies = createAppAsyncThunk('currency/fetchCurrencies', async (_: void, thunkAPI) => {
+  try {
+    return await getCurrencies();
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getRejectValue(error));
+  }
 });
