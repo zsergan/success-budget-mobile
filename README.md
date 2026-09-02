@@ -39,8 +39,9 @@ via Expo Go, or in a web browser (`npm run web`).
 | `npm run lint`      | Lint the project with ESLint      |
 | `npm run lint:fix`  | Lint and auto-fix what's fixable  |
 | `npm run typecheck` | Type-check the project with `tsc` |
+| `npm test`          | Run the test suite with Jest      |
 
-Linting and type-checking also run in CI on every push/PR to `main`
+Linting, type-checking and tests also run in CI on every push/PR to `main`
 (see [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)). A `pre-commit`
 hook (Husky + lint-staged) runs ESLint on staged files before each commit.
 
