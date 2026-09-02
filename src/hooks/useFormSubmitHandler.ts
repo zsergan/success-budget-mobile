@@ -5,19 +5,17 @@ import useAlert from './useAlert';
 
 interface UseFormSubmitHandlerOptions<TFormData extends FieldValues> {
   handleSubmit: UseFormHandleSubmit<TFormData>;
+  formState: { isSubmitting: boolean; isSubmitSuccessful: boolean };
   onSubmit: (formData: TFormData) => Promise<unknown>;
   onSuccess: () => void;
   getInvalidMessage: (errors: FieldErrors<TFormData>) => string;
 }
 
-// Shared by every create/edit form: waits for the thunk to really succeed or
-// fail (dispatch().unwrap() promises always resolve otherwise, even on a
-// rejected action) before calling onSuccess, alerts on either a server error
-// or a validation error, and keeps react-hook-form isSubmitSuccessful
-// accurate by rethrowing after alerting -- caught here so that rethrow never
-// surfaces as an unhandled promise rejection at the call site.
+// dispatch().unwrap() resolves even on a rejected action, so we await it
+// explicitly and only call onSuccess when it actually succeeds.
 const useFormSubmitHandler = <TFormData extends FieldValues>({
   handleSubmit,
+  formState,
   onSubmit,
   onSuccess,
   getInvalidMessage,
@@ -41,7 +39,9 @@ const useFormSubmitHandler = <TFormData extends FieldValues>({
   const submitForm = handleSubmit(submit, onInvalid);
 
   return {
+    // submit() rethrows after alerting so isSubmitSuccessful stays accurate; swallow it here.
     onSubmit: () => submitForm().catch(() => undefined),
+    isSubmitDisabled: formState.isSubmitting || formState.isSubmitSuccessful,
   };
 };
 

@@ -41,7 +41,7 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
     control,
     handleSubmit,
     watch,
-    formState: { isSubmitSuccessful },
+    formState: { isSubmitting, isSubmitSuccessful },
   } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -54,8 +54,9 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
     },
   });
 
-  const { onSubmit } = useFormSubmitHandler<TransactionFormData>({
+  const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<TransactionFormData>({
     handleSubmit,
+    formState: { isSubmitting, isSubmitSuccessful },
     onSubmit: (formData) => {
       const payload: CreateTransactionRequest = {
         amount: formData.amount,
@@ -77,7 +78,7 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
     control,
     watch,
     onSubmit,
-    isSubmitSuccessful,
+    isSubmitDisabled,
     closeBottomSheet: close,
   };
 };

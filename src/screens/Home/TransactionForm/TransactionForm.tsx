@@ -55,7 +55,7 @@ const TransactionForm = ({ navigation, initialWalletIndex, transactionType = Tra
   const { wallets } = useAppSelector(selectWallet);
   const { expenses, incomes } = useAppSelector(selectActiveCategories);
 
-  const { control, watch, onSubmit, isSubmitSuccessful, closeBottomSheet } = useTransactionForm({
+  const { control, watch, onSubmit, isSubmitDisabled, closeBottomSheet } = useTransactionForm({
     transactionType,
     initialWalletId: wallets[initialWalletIndex]?.wallet.id ?? -1,
   });
@@ -219,7 +219,7 @@ const TransactionForm = ({ navigation, initialWalletIndex, transactionType = Tra
       </ScrollView>
 
       <View style={styles.buttonContainer}>
-        <Button title="Save" onPress={onSubmit} disabled={isSubmitSuccessful} />
+        <Button title="Save" onPress={onSubmit} disabled={isSubmitDisabled} />
       </View>
     </View>
   );

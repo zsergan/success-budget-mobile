@@ -31,7 +31,7 @@ const useVerifyEmailForm = () => {
   });
 
   const onSubmit = (formData: FormData) => {
-    dispatch(verifyEmailMe({ email: userEmail || '', code: formData.code }));
+    return dispatch(verifyEmailMe({ email: userEmail || '', code: formData.code }));
   };
 
   return {

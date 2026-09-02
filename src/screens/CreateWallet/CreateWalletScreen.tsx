@@ -12,7 +12,7 @@ import styles from './style';
 interface Props extends ScreenProps<ScreenNames.ADD_WALLET_SCREEN> {}
 
 const CreateWalletScreen = ({ navigation, route }: Props) => {
-  const { currencies, isNewWallet, control, onSubmit, watch, isSubmitSuccessful } = useCreateWalletForm({
+  const { currencies, isNewWallet, control, onSubmit, watch, isSubmitDisabled } = useCreateWalletForm({
     navigation,
     route,
   });
@@ -115,7 +115,7 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
           </View>
         </View>
 
-        <Button title={isNewWallet ? 'Create' : 'Save changes'} onPress={onSubmit} disabled={isSubmitSuccessful} />
+        <Button title={isNewWallet ? 'Create' : 'Save changes'} onPress={onSubmit} disabled={isSubmitDisabled} />
       </RootLayout>
     </>
   );

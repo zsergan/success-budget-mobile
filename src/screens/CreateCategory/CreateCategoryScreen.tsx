@@ -78,7 +78,7 @@ const transactionTypes: RadioButtons<string>[] = [
 interface Props extends ScreenProps<ScreenNames.ADD_CATEGORY_SCREEN> {}
 
 const CreateCategoryScreen = ({ navigation, route }: Props) => {
-  const { isNewCategory, control, watch, onSubmit, isSubmitSuccessful } = useCreateCategoryForm({ navigation, route });
+  const { isNewCategory, control, watch, onSubmit, isSubmitDisabled } = useCreateCategoryForm({ navigation, route });
   const selectedColor = watch('color');
 
   return (
@@ -150,7 +150,7 @@ const CreateCategoryScreen = ({ navigation, route }: Props) => {
         <Button
           title={isNewCategory ? 'Create' : 'Save changes'}
           onPress={onSubmit}
-          disabled={isSubmitSuccessful}
+          disabled={isSubmitDisabled}
           withShadow
         />
       </View>
