@@ -30,7 +30,7 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
     }
   }, [dispatch, isSignedIn]);
 
-  return { isLoading: !isSignedIn && (isWalletLoading || isLimitsLoading || isCategoryLoading || isProfileLoading) };
+  return { isLoading: isSignedIn && (isWalletLoading || isLimitsLoading || isCategoryLoading || isProfileLoading) };
 };
 
 export default useLoadInitData;
