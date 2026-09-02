@@ -46,5 +46,8 @@ hook (Husky + lint-staged) runs ESLint on staged files before each commit.
 
 ## Backend
 
-This app talks to a separate backend project. Its API base URL is
-configured in `src/shared/constants.ts`.
+This app talks to a separate backend project. By default it points at a
+local backend (`http://localhost:3000/api/v1`). To point it at a deployed
+backend instead, copy [`.env.example`](./.env.example) to `.env.local` and
+set `EXPO_PUBLIC_API_BASE_URL` -- any non-local URL must use `https://`
+(enforced at startup, see `src/shared/constants.ts`).
