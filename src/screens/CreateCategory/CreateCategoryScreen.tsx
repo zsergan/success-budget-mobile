@@ -6,7 +6,7 @@ import { Button, Input, RadioGroup, RootLayout, SectionTitle } from '@components
 import type { CategoryIconType, ScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
 import { TransactionType } from '@shared/enums';
-import { palette } from '@shared/theme';
+import { colors, palette } from '@shared/theme';
 
 import useCreateCategoryForm from './useCreateCategoryForm';
 
@@ -41,7 +41,7 @@ const getIconRadioButtons = (selectedColor: string): RadioButtons<string>[] =>
     size: 'md',
   }));
 
-const colors: string[] = [
+const categoryColors: string[] = [
   palette.black,
   palette.yellow,
   palette.greenDark,
@@ -51,7 +51,7 @@ const colors: string[] = [
 ];
 
 const getColorRadioButtons = (): RadioButtons<string>[] =>
-  colors.map((color) => ({
+  categoryColors.map((color) => ({
     circleColor: color,
     showCircle: true,
     value: color,
@@ -63,14 +63,14 @@ const transactionTypes: RadioButtons<string>[] = [
     title: 'Expense',
     value: TransactionType.EXPENSE,
     icon: 'arrow-outward',
-    color: palette.red,
+    color: colors.danger,
     size: 'md',
   },
   {
     title: 'Income',
     value: TransactionType.INCOME,
     icon: 'arrow-downward',
-    color: palette.green,
+    color: colors.ok,
     size: 'md',
   },
 ];

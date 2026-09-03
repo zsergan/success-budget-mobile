@@ -12,7 +12,7 @@ import { ScreenNames, TransactionType } from '@shared/enums';
 import type { ScreenProps } from '@shared/types';
 import useTransactionForm from './useTransactionForm';
 
-import { palette } from '@shared/theme';
+import { colors } from '@shared/theme';
 import styles from './style';
 
 const TINY_WALLET_WIDTH_WITH_GAP = 118;
@@ -22,14 +22,14 @@ const transactionTypes: RadioButtons<string>[] = [
     title: 'Expense',
     value: TransactionType.EXPENSE,
     icon: 'arrow-outward',
-    color: palette.red,
+    color: colors.danger,
     size: 'md',
   },
   {
     title: 'Income',
     value: TransactionType.INCOME,
     icon: 'arrow-downward',
-    color: palette.green,
+    color: colors.ok,
     size: 'md',
   },
 ];

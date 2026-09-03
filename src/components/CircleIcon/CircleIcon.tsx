@@ -2,7 +2,7 @@ import { View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import type { IconType } from '@shared/types';
-import { palette } from '@shared/theme';
+import { colors } from '@shared/theme';
 
 import styles from './style';
 
@@ -23,8 +23,8 @@ interface Props {
 
 const CircleIcon = ({
   icon,
-  color = palette.black,
-  circleColor = palette.white,
+  color = colors.text,
+  circleColor = colors.elevated,
   size = 'sm',
   border = false,
 }: Props) => (

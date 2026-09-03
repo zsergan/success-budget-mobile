@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { shadow } from '@shared/theme';
+import theme, { colors, shadow } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
@@ -15,7 +15,7 @@ const styles = StyleSheet.create({
   noLimits: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.md,
-    color: theme.colors.text.secondary,
+    color: colors.muted,
   },
   button: {
     width: '50%',

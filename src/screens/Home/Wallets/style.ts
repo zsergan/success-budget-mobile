@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { palette } from '@shared/theme';
+import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   confirmContainer: {
@@ -10,7 +10,7 @@ const styles = StyleSheet.create({
   confirmText: {
     fontFamily: theme.fonts.regular,
     fontSize: theme.fontSizes.xs,
-    color: palette.black,
+    color: colors.text,
   },
   longPressedItem: {
     width: '100%',

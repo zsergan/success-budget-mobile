@@ -1,18 +1,18 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { palette } from '@shared/theme';
+import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   button: {
     padding: theme.spacing.sm,
-    backgroundColor: palette.grey,
+    backgroundColor: colors.track,
     borderRadius: theme.radius.sm,
     flexDirection: 'row',
     columnGap: theme.spacing.xs,
     alignItems: 'center',
   },
   selected: {
-    backgroundColor: palette.green,
+    backgroundColor: colors.accent,
   },
   disabled: {
     opacity: 0.3,

@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { palette } from '@shared/theme';
+import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
   },
   selectedCircle: {
     borderWidth: 2,
-    borderColor: palette.black,
+    borderColor: colors.text,
   },
   gradient: {
     borderRadius: 60,

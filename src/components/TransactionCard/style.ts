@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { palette } from '@shared/theme';
+import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
@@ -19,27 +19,27 @@ const styles = StyleSheet.create({
   category: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.primary,
+    color: colors.text,
   },
   time: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.xs,
-    color: theme.colors.text.secondary,
+    color: colors.muted,
   },
   amount: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.sm,
   },
   income: {
-    color: palette.greenDark,
+    color: colors.ok,
   },
   expense: {
-    color: palette.red,
+    color: colors.danger,
   },
   wallet: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.xs,
-    color: theme.colors.text.secondary,
+    color: colors.muted,
   },
 });
 

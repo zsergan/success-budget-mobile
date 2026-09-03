@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { palette, shadow } from '@shared/theme';
+import theme, { colors, shadow } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
@@ -10,7 +10,7 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.sm + 1,
     paddingHorizontal: theme.spacing.lg,
     borderRadius: theme.radius.sm,
-    backgroundColor: palette.white,
+    backgroundColor: colors.surface,
     minHeight: 46,
   },
   input: {
@@ -19,13 +19,13 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.md,
   },
   placeholder: {
-    color: theme.colors.text.secondary,
+    color: colors.muted,
   },
   inputWithShadow: { ...shadow },
   label: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.primary,
+    color: colors.text,
   },
   container: {
     flex: 1,
@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   contentContainer: {
-    backgroundColor: palette.greyLight,
+    backgroundColor: colors.bg,
     borderRadius: theme.radius.sm,
   },
 });

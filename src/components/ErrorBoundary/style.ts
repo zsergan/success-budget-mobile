@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import theme from '@shared/theme';
+import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
@@ -9,12 +9,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     rowGap: theme.spacing.md,
     paddingHorizontal: theme.spacing.xl,
-    backgroundColor: theme.colors.background.primary,
+    backgroundColor: colors.bg,
   },
   message: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.md,
-    color: theme.colors.text.secondary,
+    color: colors.muted,
     textAlign: 'center',
   },
   button: {

@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { palette, shadow } from '@shared/theme';
+import theme, { colors, shadow } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
@@ -12,10 +12,10 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.md,
     borderRadius: theme.radius.sm,
-    backgroundColor: palette.white,
+    backgroundColor: colors.surface,
   },
   withError: {
-    borderColor: palette.red,
+    borderColor: colors.danger,
     borderWidth: 1,
   },
   inputWithLeftIcon: {
@@ -42,12 +42,12 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.primary,
+    color: colors.text,
   },
   error: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.sm,
-    color: palette.red,
+    color: colors.danger,
   },
 });
 

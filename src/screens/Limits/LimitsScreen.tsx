@@ -10,7 +10,7 @@ import type { ScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import Overall from './Overall';
 
-import { palette } from '@shared/theme';
+import { colors } from '@shared/theme';
 import styles from './style';
 
 interface Props extends ScreenProps<ScreenNames.LIMITS_TAB> {}
@@ -38,7 +38,7 @@ const LimitsScreen = ({ navigation }: Props) => {
 
         {!limits.length ? (
           <View style={styles.noLimitsContainer}>
-            <MaterialIcons name="sentiment-neutral" size={60} color={palette.greyDark} />
+            <MaterialIcons name="sentiment-neutral" size={60} color={colors.muted} />
 
             <Text style={styles.noLimits}>No limits yet</Text>
 

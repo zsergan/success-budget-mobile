@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import theme from '@shared/theme';
+import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   limit: {
@@ -16,7 +16,7 @@ const styles = StyleSheet.create({
   text: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.primary,
+    color: colors.text,
   },
 });
 
