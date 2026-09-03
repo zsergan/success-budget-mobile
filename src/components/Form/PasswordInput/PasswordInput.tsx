@@ -13,7 +13,7 @@ const PasswordInput = ({ ...props }: Props) => {
   return (
     <Input
       {...props}
-      iconRight={hidePassword ? 'visibility' : 'visibility-off'}
+      iconRight={hidePassword ? 'eye' : 'eye-off'}
       autoCapitalize="none"
       autoCorrect={false}
       secureTextEntry={hidePassword}

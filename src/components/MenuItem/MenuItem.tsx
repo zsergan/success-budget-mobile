@@ -20,7 +20,7 @@ const MenuItem = ({ title, icon, onPress }: Props) => (
         <Text style={styles.label}>{title}</Text>
       </View>
 
-      <CircleIcon icon="keyboard-arrow-right" size="lg" />
+      <CircleIcon icon="forward" size="lg" />
     </View>
   </TouchableOpacity>
 );

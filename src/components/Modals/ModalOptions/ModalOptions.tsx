@@ -1,10 +1,10 @@
 import { Fragment } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 
 import { colors } from '@shared/theme';
 import type { IconType } from '@shared/types';
 import Divider from '../../Divider/Divider';
+import Icon from '../../Icon/Icon';
 
 import styles from './style';
 
@@ -20,7 +20,7 @@ const renderOption = ({ text, icon, onPress, color = colors.text }: Option) => (
     <View style={styles.option}>
       <Text style={[styles.text, { color }]}>{text}</Text>
 
-      <MaterialIcons name={icon} size={16} color={color} />
+      {icon && <Icon name={icon} size={16} color={color} />}
     </View>
   </TouchableOpacity>
 );
@@ -35,7 +35,7 @@ const ModalOptions = ({ onEdit, onDelete, customOptions = [] }: ModalOptionsProp
   const options: Option[] = [
     { onPress: onEdit, text: 'Edit', icon: 'edit' },
     ...customOptions,
-    { onPress: onDelete, text: 'Delete', icon: 'delete', color: colors.danger },
+    { onPress: onDelete, text: 'Delete', icon: 'trash', color: colors.danger },
   ];
 
   const optionsToRender = options.reduce((acc: Option[], option) => {

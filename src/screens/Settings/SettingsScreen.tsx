@@ -18,8 +18,8 @@ const SettingsScreen = ({ navigation }: Props) => {
   const handleLogout = () => dispatch(logoutMe());
 
   const menuItems: { title: string; icon: IconType; onPress?(): void }[] = [
-    { title: 'Categories', icon: 'category', onPress: () => navigation.navigate(ScreenNames.CATEGORIES_SCREEN) },
-    { title: 'Limitations', icon: 'data-usage' },
+    { title: 'Categories', icon: 'other', onPress: () => navigation.navigate(ScreenNames.CATEGORIES_SCREEN) },
+    { title: 'Limitations', icon: 'limit' },
   ];
 
   return (

@@ -38,7 +38,7 @@ const SignInScreen = ({ navigation }: Props) => {
             control={control}
             render={({ field: { onChange, value }, formState: { errors } }) => (
               <Input
-                iconLeft="email"
+                iconLeft="mail"
                 value={value}
                 placeholder="E-mail"
                 onChangeText={onChange}

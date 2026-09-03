@@ -1,7 +1,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { MaterialIcons } from '@expo/vector-icons';
 
 import { HomeScreen, LimitsScreen, SettingsScreen, TransactionsScreen } from '@screens';
+import { Icon } from '@components';
 import { colors } from '@shared/theme';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackParamList } from '@shared/types';
@@ -13,10 +13,10 @@ interface IconProps {
   size: number;
 }
 
-const HomeIcon = ({ color, size }: IconProps) => <MaterialIcons name="home" size={size} color={color} />;
-const LimitsIcon = ({ color, size }: IconProps) => <MaterialIcons name="data-usage" size={size} color={color} />;
-const TransactionsIcon = ({ color, size }: IconProps) => <MaterialIcons name="payments" size={size} color={color} />;
-const SettingsIcon = ({ color, size }: IconProps) => <MaterialIcons name="settings" size={size} color={color} />;
+const HomeIcon = ({ color, size }: IconProps) => <Icon name="home" size={size} color={color} />;
+const LimitsIcon = ({ color, size }: IconProps) => <Icon name="limit" size={size} color={color} />;
+const TransactionsIcon = ({ color, size }: IconProps) => <Icon name="list" size={size} color={color} />;
+const SettingsIcon = ({ color, size }: IconProps) => <Icon name="settings" size={size} color={color} />;
 
 const MainNavigator = () => {
   return (

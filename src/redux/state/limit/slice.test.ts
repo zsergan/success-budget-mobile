@@ -13,7 +13,7 @@ const limit: Limit = {
     id: 1,
     name: 'Groceries',
     transaction_type: TransactionType.EXPENSE,
-    icon: 'shopping-basket',
+    icon: 'grocery',
     color: '#000',
     is_active: 1,
   },

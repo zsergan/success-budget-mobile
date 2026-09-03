@@ -1,7 +1,6 @@
 import { Text, View } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 
-import { Button, LimitItem, RootLayout, SectionTitle, TinyButton } from '@components';
+import { Button, Icon, LimitItem, RootLayout, SectionTitle, TinyButton } from '@components';
 import { useAppSelector } from '@redux/hooks';
 import { selectLimit } from '@redux/state/limit/selectors';
 import { selectProfile } from '@redux/state/profile/selectors';
@@ -28,7 +27,7 @@ const LimitsScreen = ({ navigation }: Props) => {
             !limits.length ? undefined : (
               <TinyButton
                 title="Add Limit"
-                icon="add"
+                icon="plus"
                 onPress={() => navigation.navigate(ScreenNames.ADD_LIMIT_SCREEN, { id: 'new' })}
               />
             )
@@ -38,7 +37,7 @@ const LimitsScreen = ({ navigation }: Props) => {
 
         {!limits.length ? (
           <View style={styles.noLimitsContainer}>
-            <MaterialIcons name="sentiment-neutral" size={60} color={colors.muted} />
+            <Icon name="limit" size={60} color={colors.muted} />
 
             <Text style={styles.noLimits}>No limits yet</Text>
 

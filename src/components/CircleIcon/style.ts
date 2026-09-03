@@ -28,9 +28,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
   },
-  icon: {
-    transform: [{ translateX: 0.25 }, { translateY: 0.5 }],
-  },
 });
 
 export default styles;

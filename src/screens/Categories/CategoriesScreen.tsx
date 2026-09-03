@@ -48,7 +48,7 @@ const CategoriesScreen = ({ navigation, route }: Props) => {
           button={
             <TinyButton
               title="Add category"
-              icon="add"
+              icon="plus"
               onPress={() => navigation.navigate(ScreenNames.ADD_CATEGORY_SCREEN, { id: 'new' })}
             />
           }

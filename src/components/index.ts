@@ -6,6 +6,7 @@ export { default as Divider } from './Divider/Divider';
 export { default as ErrorBoundary } from './ErrorBoundary/ErrorBoundary';
 export * from './Form';
 export { default as GradientBackground } from './GradientBackground/GradientBackground';
+export { default as Icon } from './Icon/Icon';
 export { default as LimitItem } from './LimitItem/LimitItem';
 export { default as MenuItem } from './MenuItem/MenuItem';
 export * from './Modals';

@@ -16,7 +16,7 @@ interface Props {
 const SectionTitle = ({ title, button, onBackButtonPress, style }: Props) => (
   <View style={[styles.root, style]}>
     <View style={styles.titleContainer}>
-      {onBackButtonPress && <TinyButton icon="arrow-back" onPress={onBackButtonPress} />}
+      {onBackButtonPress && <TinyButton icon="back" onPress={onBackButtonPress} />}
 
       {title && <Text style={styles.title}>{title}</Text>}
     </View>

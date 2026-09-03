@@ -41,7 +41,7 @@ const HomeScreen = ({ navigation }: Props) => {
           button={
             <TinyButton
               title="Add Wallet"
-              icon="add"
+              icon="plus"
               onPress={() => navigation.navigate(ScreenNames.ADD_WALLET_SCREEN, { id: 'new' })}
             />
           }
