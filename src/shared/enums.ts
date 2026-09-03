@@ -4,11 +4,12 @@ export enum TransactionType {
 }
 
 export enum WalletDesign {
-  GREEN = 'green',
-  YELLOW = 'yellow',
-  BLUE = 'blue',
-  RED = 'red',
-  PINK = 'pink',
+  SLATE = 'slate',
+  AMBER = 'amber',
+  EVERGREEN = 'evergreen',
+  INDIGO = 'indigo',
+  CLAY = 'clay',
+  PLUM = 'plum',
 }
 
 export enum LimitType {

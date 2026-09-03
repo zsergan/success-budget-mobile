@@ -29,19 +29,22 @@ const styles = StyleSheet.create({
   },
   designsContainer: {
     flexDirection: 'row',
-    columnGap: theme.spacing.md,
+    columnGap: 14,
   },
   designCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 60,
+    width: 44,
+    height: 44,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   selectedCircle: {
-    borderWidth: 2,
-    borderColor: colors.text,
+    borderColor: colors.accent,
   },
   gradient: {
-    borderRadius: 60,
+    borderRadius: 15,
   },
 });
 

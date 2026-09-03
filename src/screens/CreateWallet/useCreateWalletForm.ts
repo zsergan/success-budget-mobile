@@ -48,7 +48,7 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
       walletName: isNewWallet ? '' : route.params.walletName,
       initialBalance: isNewWallet ? '' : route.params.balance,
       currency: isNewWallet ? baseCurrency?.id || 1 : route.params.currencyId,
-      design: isNewWallet ? WalletDesign.GREEN : route.params.design,
+      design: isNewWallet ? WalletDesign.SLATE : route.params.design,
     },
   });
 
