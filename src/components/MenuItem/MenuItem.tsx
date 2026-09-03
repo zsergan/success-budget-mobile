@@ -15,12 +15,12 @@ const MenuItem = ({ title, icon, onPress }: Props) => (
   <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
     <View style={styles.root}>
       <View style={styles.labelContainer}>
-        <CircleIcon icon={icon} size="lg" />
+        <CircleIcon icon={icon} size="sm" />
 
         <Text style={styles.label}>{title}</Text>
       </View>
 
-      <CircleIcon icon="forward" size="lg" />
+      <CircleIcon icon="forward" size="sm" />
     </View>
   </TouchableOpacity>
 );
