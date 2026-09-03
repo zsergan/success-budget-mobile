@@ -2,9 +2,15 @@ import type { GestureResponderEvent, StyleProp, ViewStyle } from 'react-native';
 import { TouchableOpacity, Text, View } from 'react-native';
 
 import type { IconType } from '@shared/types';
-import CircleIcon from '../../CircleIcon/CircleIcon';
+import { colors } from '@shared/theme';
+import Icon from '../../Icon/Icon';
 
 import styles from './style';
+
+const iconSize = {
+  sm: 13,
+  md: 14,
+};
 
 export interface TinyButtonProps {
   onPress?: () => void;
@@ -34,8 +40,14 @@ const TinyButton = ({
   style,
 }: TinyButtonProps) => (
   <TouchableOpacity disabled={disabled} onPress={onPress} onLongPress={onLongPress} activeOpacity={0.5}>
-    <View style={[styles.button, selected && styles.selected, disabled && styles.disabled, style]}>
-      {(icon || showCircle) && <CircleIcon icon={icon} color={color} circleColor={circleColor} size={size} />}
+    <View
+      style={[styles.button, styles[`${size}Button`], selected && styles.selected, disabled && styles.disabled, style]}
+    >
+      {(icon || showCircle) && (
+        <View style={[styles.circle, styles[`${size}Circle`], { backgroundColor: circleColor || colors.elevated }]}>
+          {icon && <Icon name={icon} size={iconSize[size]} color={color} />}
+        </View>
+      )}
 
       {title && <Text style={styles[`${size}Title`]}>{title}</Text>}
     </View>
