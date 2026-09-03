@@ -22,6 +22,7 @@ const resolveApiBaseUrl = () => {
 
 export const BASE_API_URL = resolveApiBaseUrl();
 export const AUTH_TOKEN_KEY = 'sbm-AUTH_TOKEN_KEY';
+export const BALANCE_HIDDEN_KEY = 'sbm-BALANCE_HIDDEN';
 
 /**
  * Wallet-card gradient presets (design stage 6, Home Stage 2.dc.html) —
