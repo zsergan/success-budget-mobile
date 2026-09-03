@@ -1,8 +1,8 @@
 import { View } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 
 import type { IconType } from '@shared/types';
 import { colors } from '@shared/theme';
+import Icon from '../Icon/Icon';
 
 import styles from './style';
 
@@ -36,7 +36,7 @@ const CircleIcon = ({
       { backgroundColor: circleColor },
     ]}
   >
-    {icon && <MaterialIcons style={styles.icon} name={icon} size={iconSize[size]} color={color} />}
+    {icon && <Icon name={icon} size={iconSize[size]} color={color} />}
   </View>
 );
 

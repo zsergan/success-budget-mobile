@@ -41,7 +41,7 @@ const useCreateCategoryForm = ({ navigation, route }: UseCreateCategoryFormProps
     defaultValues: {
       name: isNewCategory ? '' : route.params.name,
       transactionType: isNewCategory ? TransactionType.EXPENSE : route.params.transactionType,
-      icon: isNewCategory ? 'paid' : route.params.icon,
+      icon: isNewCategory ? 'salary' : route.params.icon,
       color: isNewCategory ? palette.black : route.params.color,
     },
   });

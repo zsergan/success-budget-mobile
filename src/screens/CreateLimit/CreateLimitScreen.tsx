@@ -28,7 +28,7 @@ const getCategoryRadioButtons = (
 
   const allOthersCategoriesButton: RadioButtons<number> = {
     value: ALL_OTHERS_CATEGORIES_ID,
-    icon: 'interests' as IconType,
+    icon: 'other' as IconType,
     title: 'All not limited categories',
     size: 'md',
     disabled: limitCategoryIds.includes(ALL_OTHERS_CATEGORIES_ID) && ALL_OTHERS_CATEGORIES_ID !== prevCategoryId,

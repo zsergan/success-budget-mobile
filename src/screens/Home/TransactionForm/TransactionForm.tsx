@@ -21,14 +21,14 @@ const transactionTypes: RadioButtons<string>[] = [
   {
     title: 'Expense',
     value: TransactionType.EXPENSE,
-    icon: 'arrow-outward',
+    icon: 'expense',
     color: colors.danger,
     size: 'md',
   },
   {
     title: 'Income',
     value: TransactionType.INCOME,
-    icon: 'arrow-downward',
+    icon: 'income',
     color: colors.ok,
     size: 'md',
   },
@@ -156,7 +156,7 @@ const TransactionForm = ({ navigation, initialWalletIndex, transactionType = Tra
                 <TinyButton
                   selected
                   title="Add Category"
-                  icon="add"
+                  icon="plus"
                   onPress={() => {
                     closeBottomSheet();
                     navigation.navigate(ScreenNames.ADD_CATEGORY_SCREEN, { id: 'new' });
