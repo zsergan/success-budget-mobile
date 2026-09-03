@@ -7,17 +7,23 @@ const styles = StyleSheet.create({
     rowGap: theme.spacing.xs,
   },
   input: {
-    paddingVertical: theme.spacing.sm,
+    height: 52,
     paddingHorizontal: theme.spacing.lg,
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.bodyLg,
     lineHeight: theme.lineHeights.bodyLg,
-    borderRadius: theme.radius.sm,
+    borderRadius: theme.radius.md,
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  focused: {
+    borderWidth: 1.5,
+    borderColor: colors.accent,
   },
   withError: {
+    borderWidth: 1.5,
     borderColor: colors.danger,
-    borderWidth: 1,
   },
   inputWithLeftIcon: {
     paddingLeft: theme.spacing.lg + 32 + theme.spacing.md,

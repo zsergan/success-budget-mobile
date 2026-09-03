@@ -7,11 +7,11 @@ const styles = StyleSheet.create({
     rowGap: theme.spacing.xs,
   },
   inputContainer: {
-    paddingVertical: theme.spacing.sm + 1,
+    height: 52,
+    justifyContent: 'center',
     paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.radius.sm,
+    borderRadius: theme.radius.md,
     backgroundColor: colors.surface,
-    minHeight: 46,
   },
   input: {
     textAlign: 'center',
