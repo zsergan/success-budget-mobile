@@ -144,6 +144,7 @@ const theme = {
   },
 };
 
+// Elevation 1 (card), per Foundation.dc.html.
 export const shadow: Record<string, unknown> = {
   shadowColor: colors.text,
   shadowOpacity: 0.15,
@@ -152,6 +153,20 @@ export const shadow: Record<string, unknown> = {
     height: 0,
   },
   shadowRadius: 10,
+};
+
+// Elevation 2 (modal), per Foundation.dc.html — design stage 5. Not wired
+// up anywhere yet: nothing that uses ProgressBar today sits inside a
+// modal, but the token exists so a future modal host doesn't have to
+// invent one.
+export const shadowModal: Record<string, unknown> = {
+  shadowColor: colors.text,
+  shadowOpacity: 0.28,
+  shadowOffset: {
+    width: 0,
+    height: 8,
+  },
+  shadowRadius: 24,
 };
 
 export default theme;
