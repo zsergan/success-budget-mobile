@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import CircleIcon from '../../CircleIcon/CircleIcon';
 import WalletGradientBackground from '../WalletGradientBackground/WalletGradientBackground';
 import { palette } from '@shared/theme';
+import { resolveWalletDesign, walletTextColors } from '@shared/constants';
 import { formatNumber } from '@shared/utils';
 import { WalletDesign } from '@shared/enums';
 
@@ -25,40 +26,44 @@ const WalletCard = ({
   currencyCode,
   totalIncome,
   totalSpend,
-  design = WalletDesign.GREEN,
+  design = WalletDesign.SLATE,
   style,
-}: WalletCardProps) => (
-  <View style={[styles.root, style]}>
-    <WalletGradientBackground style={styles.gradient} design={design} />
+}: WalletCardProps) => {
+  const { fg, dim } = walletTextColors[resolveWalletDesign(design)];
 
-    <View>
-      <Text style={styles.name}>{`${walletName} Balance`}</Text>
+  return (
+    <View style={[styles.root, style]}>
+      <WalletGradientBackground style={styles.gradient} design={design} />
 
-      <Text style={styles.balance}>{`${formatNumber(Number(balance))} ${currencyCode}`}</Text>
-    </View>
+      <View>
+        <Text style={[styles.name, { color: dim }]}>{`${walletName} Balance`}</Text>
 
-    <View style={styles.bottomInfo}>
-      <View style={styles.totalBlock}>
-        <CircleIcon icon="income" size="sm" color={palette.green} />
-
-        <View>
-          <Text style={styles.name}>Income</Text>
-
-          <Text style={styles.total}>{`${formatNumber(totalIncome || 0)} ${currencyCode}`}</Text>
-        </View>
+        <Text style={[styles.balance, { color: fg }]}>{`${formatNumber(Number(balance))} ${currencyCode}`}</Text>
       </View>
 
-      <View style={styles.totalBlock}>
-        <CircleIcon icon="expense" size="sm" color={palette.red} />
+      <View style={styles.bottomInfo}>
+        <View style={styles.totalBlock}>
+          <CircleIcon icon="income" size="sm" color={palette.green} />
 
-        <View>
-          <Text style={styles.name}>Expense</Text>
+          <View>
+            <Text style={[styles.name, { color: dim }]}>Income</Text>
 
-          <Text style={styles.total}>{`${formatNumber(totalSpend || 0)} ${currencyCode}`}</Text>
+            <Text style={[styles.total, { color: fg }]}>{`${formatNumber(totalIncome || 0)} ${currencyCode}`}</Text>
+          </View>
+        </View>
+
+        <View style={styles.totalBlock}>
+          <CircleIcon icon="expense" size="sm" color={palette.red} />
+
+          <View>
+            <Text style={[styles.name, { color: dim }]}>Expense</Text>
+
+            <Text style={[styles.total, { color: fg }]}>{`${formatNumber(totalSpend || 0)} ${currencyCode}`}</Text>
+          </View>
         </View>
       </View>
     </View>
-  </View>
-);
+  );
+};
 
 export default WalletCard;

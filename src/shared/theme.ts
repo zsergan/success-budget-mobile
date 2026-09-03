@@ -42,30 +42,26 @@ const colorTokens = {
 } as const;
 
 // Hardcoded until design stage 8 adds an actual switcher (system
-// Appearance / user setting) and makes this dynamic.
-const colorScheme: keyof typeof colorTokens = 'light';
+// Appearance / user setting) and makes this dynamic. Exported so other
+// light/dark-paired token sets (e.g. the wallet gradients in
+// constants.ts) can resolve against the same active scheme.
+export const colorScheme: keyof typeof colorTokens = 'light';
 
 export const colors = colorTokens[colorScheme];
 
 /**
- * Wallet-card gradient colors (`WalletDesign`) — old design, kept exactly
- * as-is on purpose. Design stage 6 replaces this whole system with 6
- * curated presets (slate/amber/evergreen/indigo/clay/plum), each with its
- * own light/dark pair; recoloring these now would be throwaway work.
+ * Colors used by the category color picker (CreateCategoryScreen) and a
+ * couple of one-off surfaces (ModalContainer's scrim, the income/expense
+ * arrow icons on WalletCard) — unrelated to the wallet gradient presets,
+ * which live in constants.ts.
  */
 export const palette = {
   yellow: '#FFC55A',
-  yellowLight: '#FFD78D',
   greenDark: '#57C84D',
   green: '#5BDA8C',
   blue: '#5078F2',
-  blueLight: '#EFE9F4',
   red: '#FC4100',
-  redLight: '#FF7878',
-  pink: '#C86FC9',
   pinkLight: '#F79AD3',
-  // Also used outside the wallet-gradient system, by the (unrelated)
-  // category color picker — see CreateCategoryScreen.tsx.
   black: '#1D2430',
 };
 

@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { colors } from '@shared/theme';
+import theme from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
@@ -16,24 +16,25 @@ const styles = StyleSheet.create({
   gradient: {
     borderRadius: theme.radius.sm,
   },
+  // Color comes from the wallet's own gradient preset (`walletTextColors`
+  // in constants.ts), not `theme.colors` — every preset is a dark card
+  // that needs near-white text regardless of the app's own light/dark
+  // theme, so it's applied inline in WalletCard.tsx instead of here.
   name: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.caption,
     lineHeight: theme.lineHeights.caption,
-    color: colors.text,
   },
   balance: {
     fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.titleLg,
     lineHeight: theme.lineHeights.titleLg,
     letterSpacing: theme.letterSpacing.titleLg,
-    color: colors.text,
   },
   total: {
     fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.bodyLg,
     lineHeight: theme.lineHeights.bodyLg,
-    color: colors.text,
   },
   totalBlock: {
     flexDirection: 'row',

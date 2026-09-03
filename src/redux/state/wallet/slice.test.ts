@@ -11,7 +11,7 @@ const wallet: GetWalletsResponse = {
     wallet_name: 'Cash',
     balance: '100',
     currency: { id: 1, code: 'USD', name: 'Dollar' },
-    design: WalletDesign.GREEN,
+    design: WalletDesign.SLATE,
   },
   total_spend: 0,
   total_income: 0,

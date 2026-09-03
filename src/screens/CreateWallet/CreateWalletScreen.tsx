@@ -1,10 +1,19 @@
 import { TouchableOpacity, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import { Input, RootLayout, Button, SectionTitle, GradientBackground, WalletCard, InputPicker } from '@components';
+import {
+  Input,
+  RootLayout,
+  Button,
+  SectionTitle,
+  GradientBackground,
+  WalletCard,
+  InputPicker,
+  Icon,
+} from '@components';
 import type { ScreenProps } from '@shared/types';
 import type { ScreenNames, WalletDesign } from '@shared/enums';
-import { gradients } from '@shared/constants';
+import { gradients, walletTextColors } from '@shared/constants';
 import useCreateWalletForm from './useCreateWalletForm';
 
 import styles from './style';
@@ -84,18 +93,25 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
               control={control}
               render={({ field: { onChange, value } }) => (
                 <View style={styles.designsContainer}>
-                  {Object.keys(gradients).map((key) => (
-                    <TouchableOpacity key={key} onPress={() => onChange(key as WalletDesign)} activeOpacity={0.5}>
-                      <View style={[styles.designCircle, key === value && styles.selectedCircle]}>
-                        <GradientBackground
-                          colors={gradients[key as WalletDesign]}
-                          style={styles.gradient}
-                          start={{ x: 0, y: 0.0 }}
-                          end={{ x: 1.0, y: 1.0 }}
-                        />
-                      </View>
-                    </TouchableOpacity>
-                  ))}
+                  {Object.keys(gradients).map((key) => {
+                    const design = key as WalletDesign;
+                    const isSelected = design === value;
+
+                    return (
+                      <TouchableOpacity key={key} onPress={() => onChange(design)} activeOpacity={0.5}>
+                        <View style={[styles.designCircle, isSelected && styles.selectedCircle]}>
+                          <GradientBackground
+                            colors={gradients[design]}
+                            style={styles.gradient}
+                            start={{ x: 0, y: 0.0 }}
+                            end={{ x: 1.0, y: 1.0 }}
+                          />
+
+                          {isSelected && <Icon name="check" size={17} color={walletTextColors[design].fg} />}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               )}
             />
