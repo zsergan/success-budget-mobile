@@ -5,7 +5,6 @@ import theme, { colors } from '@shared/theme';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    rowGap: theme.spacing.lg,
   },
   hero: {
     rowGap: 5,
@@ -35,6 +34,18 @@ const styles = StyleSheet.create({
     lineHeight: theme.lineHeights.caption,
     color: colors.muted,
   },
+  walletsTitle: {
+    marginTop: 26,
+  },
+  walletsSection: {
+    marginTop: 14,
+  },
+  activityTitle: {
+    marginTop: 26,
+  },
+  activitySection: {
+    marginTop: 8,
+  },
   activity: {
     rowGap: theme.spacing.md,
   },
@@ -54,10 +65,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.caption,
     lineHeight: theme.lineHeights.caption,
-    color: colors.ok,
-  },
-  groupTotalNegative: {
-    color: colors.danger,
+    color: colors.muted,
   },
   groupItems: {
     rowGap: theme.spacing.sm,

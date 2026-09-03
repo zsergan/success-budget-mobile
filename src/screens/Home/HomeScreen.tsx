@@ -88,54 +88,68 @@ const HomeScreen = ({ navigation }: Props) => {
         </View>
 
         <SectionTitle
+          style={styles.walletsTitle}
           title="Your wallets"
           button={
             <TinyButton
               title="Add Wallet"
               icon="plus"
+              iconWrap={false}
+              strokeWidth={2.2}
               onPress={() => navigation.navigate(ScreenNames.ADD_WALLET_SCREEN, { id: 'new' })}
             />
           }
         />
 
-        <Wallets navigation={navigation} onScrollEnd={(index: number) => setCurrentWalletIndex(index)} />
+        <View style={styles.walletsSection}>
+          <Wallets navigation={navigation} onScrollEnd={(index: number) => setCurrentWalletIndex(index)} />
+        </View>
 
         <SectionTitle
+          style={styles.activityTitle}
           title="Recent activity"
-          button={<TinyButton title="See all" onPress={() => navigation.navigate(ScreenNames.TRANSACTIONS_TAB)} />}
+          button={
+            <TinyButton
+              title="See all"
+              variant="plain"
+              onPress={() => navigation.navigate(ScreenNames.TRANSACTIONS_TAB)}
+            />
+          }
         />
 
-        {transactions.length === 0 ? (
-          <EmptyState
-            icon="list"
-            title="No transactions yet"
-            description="Your income and expenses will show up here."
-          />
-        ) : (
-          <View style={styles.activity}>
-            {recentGroups.map((group) => (
-              <View key={group.label}>
-                <View style={styles.groupHeader}>
-                  <Text style={styles.groupLabel}>{group.label}</Text>
+        <View style={styles.activitySection}>
+          {transactions.length === 0 ? (
+            <EmptyState
+              icon="list"
+              title="No transactions yet"
+              description="Your income and expenses will show up here."
+            />
+          ) : (
+            <View style={styles.activity}>
+              {recentGroups.map((group) => (
+                <View key={group.label}>
+                  <View style={styles.groupHeader}>
+                    <Text style={styles.groupLabel}>{group.label}</Text>
 
-                  {group.total !== undefined && (
-                    <Text style={[styles.groupTotal, group.total < 0 && styles.groupTotalNegative]}>
-                      {`${group.total >= 0 ? '+' : '-'}${formatNumber(Math.abs(group.total))}${
-                        group.currencyCode ? ` ${group.currencyCode}` : ''
-                      }`}
-                    </Text>
-                  )}
-                </View>
+                    {group.total !== undefined && (
+                      <Text style={styles.groupTotal}>
+                        {`${group.total >= 0 ? '+' : '-'}${formatNumber(Math.abs(group.total))}${
+                          group.currencyCode ? ` ${group.currencyCode}` : ''
+                        }`}
+                      </Text>
+                    )}
+                  </View>
 
-                <View style={styles.groupItems}>
-                  {group.items.map((transaction) => (
-                    <TransactionCard key={transaction.id} transaction={transaction} />
-                  ))}
+                  <View style={styles.groupItems}>
+                    {group.items.map((transaction) => (
+                      <TransactionCard key={transaction.id} transaction={transaction} />
+                    ))}
+                  </View>
                 </View>
-              </View>
-            ))}
-          </View>
-        )}
+              ))}
+            </View>
+          )}
+        </View>
       </RootLayout>
 
       <Fab onExpense={handlePresentExpenseModalPress} onIncome={handlePresentIncomeModalPress} />
