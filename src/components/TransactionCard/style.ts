@@ -13,6 +13,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     columnGap: theme.spacing.sm,
   },
+  iconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconBoxIncome: {
+    backgroundColor: `${colors.ok}26`,
+  },
+  iconBoxExpense: {
+    backgroundColor: colors.track,
+  },
   amountWallet: {
     alignItems: 'flex-end',
   },
@@ -32,12 +45,10 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.bodyLg,
     lineHeight: theme.lineHeights.bodyLg,
+    color: colors.text,
   },
   income: {
     color: colors.ok,
-  },
-  expense: {
-    color: colors.danger,
   },
   wallet: {
     fontFamily: theme.fonts.medium,

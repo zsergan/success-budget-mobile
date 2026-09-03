@@ -1,27 +1,29 @@
 import { StyleSheet } from 'react-native';
 
-import theme from '@shared/theme';
+import theme, { shadow } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
-    paddingVertical: theme.spacing.xl,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radius.sm,
+    height: 176,
+    padding: theme.spacing.xl,
+    borderRadius: theme.radius.lg,
     justifyContent: 'space-between',
-    rowGap: theme.spacing.xxl,
+    ...shadow,
   },
-  bottomInfo: {
-    rowGap: theme.spacing.xs,
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
   },
   gradient: {
-    borderRadius: theme.radius.sm,
+    borderRadius: theme.radius.lg,
   },
   // Color comes from the wallet's own gradient preset (`walletTextColors`
   // in constants.ts), not `theme.colors` — every preset is a dark card
   // that needs near-white text regardless of the app's own light/dark
   // theme, so it's applied inline in WalletCard.tsx instead of here.
   name: {
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.caption,
     lineHeight: theme.lineHeights.caption,
   },
@@ -36,10 +38,15 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.bodyLg,
     lineHeight: theme.lineHeights.bodyLg,
   },
-  totalBlock: {
+  bottomInfo: {
     flexDirection: 'row',
-    alignItems: 'center',
     columnGap: theme.spacing.sm,
+  },
+  totalBlock: {
+    flex: 1,
+    borderRadius: theme.spacing.md,
+    padding: theme.spacing.sm + 2,
+    rowGap: 3,
   },
 });
 

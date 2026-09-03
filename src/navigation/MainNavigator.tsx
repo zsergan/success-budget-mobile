@@ -35,21 +35,21 @@ const MainNavigator = () => {
       />
 
       <Tab.Screen
+        name={ScreenNames.TRANSACTIONS_TAB}
+        component={TransactionsScreen}
+        options={{ tabBarIcon: TransactionsIcon, tabBarLabel: 'History', headerShown: false }}
+      />
+
+      <Tab.Screen
         name={ScreenNames.LIMITS_TAB}
         component={LimitsScreen}
         options={{ tabBarIcon: LimitsIcon, headerShown: false }}
       />
 
       <Tab.Screen
-        name={ScreenNames.TRANSACTIONS_TAB}
-        component={TransactionsScreen}
-        options={{ tabBarIcon: TransactionsIcon, headerShown: false }}
-      />
-
-      <Tab.Screen
         name={ScreenNames.SETTINGS_TAB}
         component={SettingsScreen}
-        options={{ tabBarIcon: SettingsIcon, headerShown: false }}
+        options={{ tabBarIcon: SettingsIcon, tabBarLabel: 'Profile', headerShown: false }}
       />
     </Tab.Navigator>
   );
