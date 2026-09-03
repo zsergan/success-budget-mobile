@@ -17,14 +17,15 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.3,
   },
-  title: {
-    fontFamily: theme.fonts.medium,
-  },
   smTitle: {
-    fontSize: theme.fontSizes.xs,
+    fontFamily: theme.fonts.medium,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
   },
   mdTitle: {
-    fontSize: theme.fontSizes.sm,
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.label,
+    lineHeight: theme.lineHeights.label,
   },
 });
 

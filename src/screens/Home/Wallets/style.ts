@@ -9,7 +9,8 @@ const styles = StyleSheet.create({
   },
   confirmText: {
     fontFamily: theme.fonts.regular,
-    fontSize: theme.fontSizes.xs,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
     color: colors.text,
   },
   longPressedItem: {

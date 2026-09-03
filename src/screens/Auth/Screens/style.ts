@@ -37,7 +37,8 @@ const styles = StyleSheet.create({
   },
   bottomText: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.sm,
+    fontSize: theme.fontSizes.bodyLg,
+    lineHeight: theme.lineHeights.bodyLg,
     color: colors.muted,
   },
 });

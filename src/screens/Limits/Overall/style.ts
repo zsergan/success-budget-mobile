@@ -12,13 +12,16 @@ const styles = StyleSheet.create({
     ...shadow,
   },
   spent: {
-    fontFamily: theme.fonts.bold,
-    fontSize: theme.fontSizes.md,
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.titleMd,
+    lineHeight: theme.lineHeights.titleMd,
+    letterSpacing: theme.letterSpacing.titleMd,
     color: colors.text,
   },
   note: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.xs,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
     color: colors.muted,
   },
 });

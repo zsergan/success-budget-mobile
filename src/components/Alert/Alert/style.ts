@@ -18,7 +18,8 @@ const styles = StyleSheet.create({
   text: {
     maxWidth: '80%',
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.sm,
+    fontSize: theme.fontSizes.bodyLg,
+    lineHeight: theme.lineHeights.bodyLg,
     color: colors.onSecondary,
   },
 });

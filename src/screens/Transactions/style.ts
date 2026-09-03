@@ -10,8 +10,10 @@ const styles = StyleSheet.create({
   },
   date: {
     marginBottom: theme.spacing.sm,
-    fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.xs,
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.micro,
+    lineHeight: theme.lineHeights.micro,
+    letterSpacing: theme.letterSpacing.micro,
     color: colors.muted,
   },
   mt24: {

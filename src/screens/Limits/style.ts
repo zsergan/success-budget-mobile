@@ -13,8 +13,10 @@ const styles = StyleSheet.create({
     rowGap: theme.spacing.md,
   },
   noLimits: {
-    fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.md,
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.titleSm,
+    lineHeight: theme.lineHeights.titleSm,
+    letterSpacing: theme.letterSpacing.titleSm,
     color: colors.muted,
   },
   button: {

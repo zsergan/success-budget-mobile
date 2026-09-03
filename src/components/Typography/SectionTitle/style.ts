@@ -20,8 +20,9 @@ const styles = StyleSheet.create({
   title: {
     flexShrink: 1,
     minWidth: 0,
-    fontFamily: theme.fonts.bold,
-    fontSize: theme.fontSizes.sm,
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.label,
+    lineHeight: theme.lineHeights.label,
     color: colors.text,
   },
 });

@@ -16,7 +16,8 @@ const styles = StyleSheet.create({
   input: {
     textAlign: 'center',
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.md,
+    fontSize: theme.fontSizes.bodyLg,
+    lineHeight: theme.lineHeights.bodyLg,
   },
   placeholder: {
     color: colors.muted,
@@ -24,7 +25,8 @@ const styles = StyleSheet.create({
   inputWithShadow: { ...shadow },
   label: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.sm,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
     color: colors.text,
   },
   container: {

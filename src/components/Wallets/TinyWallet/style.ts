@@ -17,7 +17,8 @@ const styles = StyleSheet.create({
   },
   walletName: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.xs,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
     color: colors.text,
   },
   currencyCode: {

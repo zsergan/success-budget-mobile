@@ -20,7 +20,8 @@ const styles = StyleSheet.create({
   },
   text: {
     fontFamily: theme.fonts.regular,
-    fontSize: theme.fontSizes.sm,
+    fontSize: theme.fontSizes.bodyLg,
+    lineHeight: theme.lineHeights.bodyLg,
     color: colors.text,
   },
   divider: {

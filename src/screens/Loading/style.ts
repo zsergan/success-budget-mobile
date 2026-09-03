@@ -9,8 +9,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   text: {
-    fontFamily: theme.fonts.bold,
-    fontSize: theme.fontSizes.lg,
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.titleLg,
+    lineHeight: theme.lineHeights.titleLg,
+    letterSpacing: theme.letterSpacing.titleLg,
     color: colors.text,
   },
 });

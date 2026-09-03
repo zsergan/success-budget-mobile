@@ -73,22 +73,46 @@ const theme = {
   fonts: {
     regular: 'PlusJakartaSans-Regular',
     medium: 'PlusJakartaSans-Medium',
-    bold: 'PlusJakartaSans-Bold',
+    semiBold: 'PlusJakartaSans-SemiBold',
   },
   /**
-   * Font sizes.
-   * @property xs - 12
-   * @property sm - 16
-   * @property md - 20
-   * @property lg - 28
-   * @property xl - 48
+   * Typographic scale (9 steps, Foundation.dc.html — design stage 4).
+   * `fontSizes`/`lineHeights`/`letterSpacing` are parallel maps keyed by
+   * the same token names; font weight is chosen per usage via
+   * `theme.fonts`, independently of the size step.
    */
   fontSizes: {
-    xs: 12,
-    sm: 16,
-    md: 20,
-    lg: 28,
-    xl: 48,
+    display: 38,
+    titleLg: 28,
+    titleMd: 22,
+    titleSm: 20,
+    bodyLg: 16,
+    label: 14,
+    bodySm: 13,
+    caption: 12,
+    micro: 11,
+  },
+  lineHeights: {
+    display: 40,
+    titleLg: 34,
+    titleMd: 28,
+    titleSm: 26,
+    bodyLg: 22,
+    label: 20,
+    bodySm: 19,
+    caption: 16,
+    micro: 14,
+  },
+  /**
+   * Only the steps the design gives non-zero tracking for; the rest use
+   * the platform default (0), so most usages simply omit this.
+   */
+  letterSpacing: {
+    display: -1.2,
+    titleLg: -0.6,
+    titleMd: -0.3,
+    titleSm: -0.2,
+    micro: 0.6,
   },
   /**
    * Radius sizes.
