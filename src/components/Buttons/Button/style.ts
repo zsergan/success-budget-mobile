@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { palette, shadow } from '@shared/theme';
+import theme, { colors, shadow } from '@shared/theme';
 
 const styles = StyleSheet.create({
   button: {
@@ -10,10 +10,10 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.sm + 5,
   },
   primaryButton: {
-    backgroundColor: palette.yellow,
+    backgroundColor: colors.accent,
   },
   secondaryButton: {
-    backgroundColor: palette.greyDark,
+    backgroundColor: colors.secondary,
   },
   tertiaryButton: {
     backgroundColor: 'transparent',
@@ -23,13 +23,13 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.sm,
   },
   primaryButtonText: {
-    color: theme.colors.text.primary,
+    color: colors.onAccent,
   },
   secondaryButtonText: {
-    color: palette.white,
+    color: colors.onSecondary,
   },
   tertiaryButtonText: {
-    color: theme.colors.text.primary,
+    color: colors.text,
   },
   withShadow: { ...shadow },
   disabled: {

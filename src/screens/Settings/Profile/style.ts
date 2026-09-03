@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import theme from '@shared/theme';
+import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
@@ -13,12 +13,12 @@ const styles = StyleSheet.create({
   name: {
     fontFamily: theme.fonts.bold,
     fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.primary,
+    color: colors.text,
   },
   email: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.xs,
-    color: theme.colors.text.secondary,
+    color: colors.muted,
   },
 });
 

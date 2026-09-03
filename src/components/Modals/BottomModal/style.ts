@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { palette } from '@shared/theme';
+import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   container: {
@@ -11,7 +11,7 @@ const styles = StyleSheet.create({
     marginBottom: 34,
   },
   contentContainer: {
-    backgroundColor: palette.white,
+    backgroundColor: colors.elevated,
     borderRadius: theme.radius.sm,
     justifyContent: 'center',
     alignItems: 'center',
@@ -22,7 +22,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 0.5,
-    backgroundColor: palette.grey,
+    backgroundColor: colors.track,
   },
   action: {
     width: '100%',

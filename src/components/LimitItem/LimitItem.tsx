@@ -6,7 +6,7 @@ import CircleIcon from '../CircleIcon/CircleIcon';
 import ProgressBar from '../ProgressBar/ProgressBar';
 import TinyButton from '../Buttons/TinyButton/TinyButton';
 
-import { palette } from '@shared/theme';
+import { colors } from '@shared/theme';
 import styles from './style';
 
 interface Props {
@@ -23,10 +23,10 @@ const LimitItem = ({ limit, currencyCode, onEdit }: Props) => {
       <View style={styles.limit}>
         <View style={styles.section}>
           <CircleIcon
-            circleColor={palette.greyLight}
+            circleColor={colors.bg}
             size="xl"
             icon={category ? category.icon : 'interests'}
-            color={category ? category.color : palette.black}
+            color={category ? category.color : colors.text}
           />
 
           <Text style={styles.text}>{category ? category.name : 'All others'}</Text>

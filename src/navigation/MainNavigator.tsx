@@ -2,7 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { HomeScreen, LimitsScreen, SettingsScreen, TransactionsScreen } from '@screens';
-import { palette } from '@shared/theme';
+import { colors } from '@shared/theme';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackParamList } from '@shared/types';
 
@@ -21,11 +21,11 @@ const SettingsIcon = ({ color, size }: IconProps) => <MaterialIcons name="settin
 const MainNavigator = () => {
   return (
     <Tab.Navigator
-      sceneContainerStyle={{ backgroundColor: palette.greyLight }}
+      sceneContainerStyle={{ backgroundColor: colors.bg }}
       screenOptions={{
-        tabBarStyle: { backgroundColor: palette.greyLight },
-        tabBarActiveTintColor: palette.black,
-        tabBarInactiveTintColor: palette.greyDark,
+        tabBarStyle: { backgroundColor: colors.bg },
+        tabBarActiveTintColor: colors.text,
+        tabBarInactiveTintColor: colors.muted,
       }}
     >
       <Tab.Screen

@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import theme from '@shared/theme';
+import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
@@ -18,7 +18,7 @@ const styles = StyleSheet.create({
   input: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.lg,
-    color: theme.colors.text.primary,
+    color: colors.text,
   },
   container: {
     marginHorizontal: theme.spacing.xl,

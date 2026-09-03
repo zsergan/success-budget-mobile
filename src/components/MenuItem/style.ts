@@ -1,12 +1,12 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { shadow } from '@shared/theme';
+import theme, { colors, shadow } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
     padding: theme.spacing.md,
     borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.background.overlay,
+    backgroundColor: colors.surface,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -20,7 +20,7 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.primary,
+    color: colors.text,
   },
 });
 

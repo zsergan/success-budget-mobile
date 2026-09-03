@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { palette } from '@shared/theme';
+import { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   circle: {
@@ -10,7 +10,7 @@ const styles = StyleSheet.create({
   },
   circleWithBorder: {
     borderWidth: 0.5,
-    borderColor: palette.black,
+    borderColor: colors.hairline,
   },
   smCircle: {
     width: 16,

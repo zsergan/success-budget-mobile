@@ -1,12 +1,12 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { palette, shadow } from '@shared/theme';
+import theme, { colors, shadow } from '@shared/theme';
 
 const styles = StyleSheet.create({
   options: {
     marginTop: theme.spacing.sm,
     marginHorizontal: theme.spacing.xl,
-    backgroundColor: palette.grey,
+    backgroundColor: colors.elevated,
     borderRadius: theme.radius.sm,
     ...shadow,
   },
@@ -21,11 +21,11 @@ const styles = StyleSheet.create({
   text: {
     fontFamily: theme.fonts.regular,
     fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.primary,
+    color: colors.text,
   },
   divider: {
     height: 0.5,
-    backgroundColor: palette.greyDark,
+    backgroundColor: colors.muted,
   },
 });
 

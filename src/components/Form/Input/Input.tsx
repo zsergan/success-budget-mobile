@@ -2,7 +2,7 @@ import type { TextInputProps, StyleProp, ViewStyle } from 'react-native';
 import { Text, TextInput, View, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
-import { palette } from '@shared/theme';
+import { colors } from '@shared/theme';
 import type { IconType } from '@shared/types';
 
 import styles from './style';
@@ -33,7 +33,7 @@ const Input = ({
     <View>
       {iconLeft && (
         <View style={[styles.icon, styles.iconLeft]}>
-          <MaterialIcons name={iconLeft} size={32} color={palette.greyDark} />
+          <MaterialIcons name={iconLeft} size={32} color={colors.muted} />
         </View>
       )}
 
@@ -54,7 +54,7 @@ const Input = ({
             <MaterialIcons
               name={iconRight ? iconRight : 'error'}
               size={32}
-              color={error && !iconRight ? palette.red : palette.black}
+              color={error && !iconRight ? colors.danger : colors.text}
             />
           </TouchableOpacity>
         </View>

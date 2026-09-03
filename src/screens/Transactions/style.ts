@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import theme from '@shared/theme';
+import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   transactionsContainer: {
@@ -12,7 +12,7 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.sm,
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.xs,
-    color: theme.colors.text.secondary,
+    color: colors.muted,
   },
   mt24: {
     marginTop: theme.spacing.xxl,
