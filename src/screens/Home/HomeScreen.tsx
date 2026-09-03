@@ -1,23 +1,37 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import { BottomSheetModal as BottomModal, Button, Icon, RootLayout, SectionTitle, TinyButton } from '@components';
-import { useAppSelector } from '@redux/hooks';
+import {
+  BottomSheetModal as BottomModal,
+  Button,
+  EmptyState,
+  Icon,
+  RootLayout,
+  SectionTitle,
+  TinyButton,
+  TransactionCard,
+} from '@components';
+import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectTotalBalance } from '@redux/state/wallet/selectors';
+import { selectTransaction } from '@redux/state/transaction/selectors';
+import { fetchTransactions } from '@redux/state/transaction/thunks';
 import { useBalanceVisibility } from '@hooks';
 import { ScreenNames, TransactionType } from '@shared/enums';
 import type { ScreenProps } from '@shared/types';
 import { colors } from '@shared/theme';
-import { formatNumber } from '@shared/utils';
+import { formatNumber, groupTransactionsByDay } from '@shared/utils';
 import Wallets from './Wallets';
 import TransactionForm from './TransactionForm';
 
 import styles from './style';
 
+const RECENT_TRANSACTIONS_LIMIT = 5;
+
 interface Props extends ScreenProps<ScreenNames.HOME_TAB> {}
 
 const HomeScreen = ({ navigation }: Props) => {
+  const dispatch = useAppDispatch();
   const [currentWalletIndex, setCurrentWalletIndex] = useState<number>(0);
 
   const expenseBottomSheetRef = useRef<BottomSheetModal>(null);
@@ -27,7 +41,14 @@ const HomeScreen = ({ navigation }: Props) => {
   const handlePresentIncomeModalPress = () => incomeBottomSheetRef.current?.present();
 
   const { total, currencyCode, walletsCount } = useAppSelector(selectTotalBalance);
+  const { transactions } = useAppSelector(selectTransaction);
   const { isHidden, toggle } = useBalanceVisibility();
+
+  useEffect(() => {
+    dispatch(fetchTransactions());
+  }, [dispatch]);
+
+  const recentGroups = groupTransactionsByDay(transactions.slice(0, RECENT_TRANSACTIONS_LIMIT), currencyCode);
 
   return (
     <>
@@ -78,6 +99,43 @@ const HomeScreen = ({ navigation }: Props) => {
         />
 
         <Wallets navigation={navigation} onScrollEnd={(index: number) => setCurrentWalletIndex(index)} />
+
+        <SectionTitle
+          title="Recent activity"
+          button={<TinyButton title="See all" onPress={() => navigation.navigate(ScreenNames.TRANSACTIONS_TAB)} />}
+        />
+
+        {transactions.length === 0 ? (
+          <EmptyState
+            icon="list"
+            title="No transactions yet"
+            description="Your income and expenses will show up here."
+          />
+        ) : (
+          <View style={styles.activity}>
+            {recentGroups.map((group) => (
+              <View key={group.label}>
+                <View style={styles.groupHeader}>
+                  <Text style={styles.groupLabel}>{group.label}</Text>
+
+                  {group.total !== undefined && (
+                    <Text style={[styles.groupTotal, group.total < 0 && styles.groupTotalNegative]}>
+                      {`${group.total >= 0 ? '+' : '-'}${formatNumber(Math.abs(group.total))}${
+                        group.currencyCode ? ` ${group.currencyCode}` : ''
+                      }`}
+                    </Text>
+                  )}
+                </View>
+
+                <View style={styles.groupItems}>
+                  {group.items.map((transaction) => (
+                    <TransactionCard key={transaction.id} transaction={transaction} />
+                  ))}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
 
         <View style={styles.buttonsContainer}>
           <Button title="Expense" onPress={handlePresentExpenseModalPress} style={styles.button} withShadow />

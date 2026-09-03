@@ -35,6 +35,33 @@ const styles = StyleSheet.create({
     lineHeight: theme.lineHeights.caption,
     color: colors.muted,
   },
+  activity: {
+    rowGap: theme.spacing.md,
+  },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.sm,
+  },
+  groupLabel: {
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    color: colors.muted,
+  },
+  groupTotal: {
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    color: colors.ok,
+  },
+  groupTotalNegative: {
+    color: colors.danger,
+  },
+  groupItems: {
+    rowGap: theme.spacing.sm,
+  },
   item: {
     marginVertical: 8,
     marginHorizontal: 8,
