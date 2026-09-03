@@ -4,18 +4,37 @@ import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   button: {
-    padding: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
     backgroundColor: colors.track,
-    borderRadius: theme.radius.sm,
+    borderRadius: 11,
     flexDirection: 'row',
     columnGap: theme.spacing.xs,
     alignItems: 'center',
+  },
+  smButton: {
+    height: 34,
+  },
+  mdButton: {
+    height: 40,
   },
   selected: {
     backgroundColor: colors.accent,
   },
   disabled: {
     opacity: 0.3,
+  },
+  circle: {
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  smCircle: {
+    width: 16,
+    height: 16,
+  },
+  mdCircle: {
+    width: 24,
+    height: 24,
   },
   smTitle: {
     fontFamily: theme.fonts.medium,

@@ -12,21 +12,25 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: colors.hairline,
   },
+  xsCircle: {
+    width: 28,
+    height: 28,
+  },
   smCircle: {
-    width: 16,
-    height: 16,
+    width: 34,
+    height: 34,
   },
   mdCircle: {
-    width: 24,
-    height: 24,
+    width: 40,
+    height: 40,
   },
   lgCircle: {
-    width: 32,
-    height: 32,
-  },
-  xlCircle: {
     width: 48,
     height: 48,
+  },
+  xlCircle: {
+    width: 56,
+    height: 56,
   },
 });
 

@@ -7,17 +7,18 @@ import Icon from '../Icon/Icon';
 import styles from './style';
 
 const iconSize = {
-  sm: 12,
-  md: 18,
-  lg: 24,
-  xl: 36,
+  xs: 14,
+  sm: 17,
+  md: 20,
+  lg: 23,
+  xl: 26,
 };
 
 interface Props {
   icon?: IconType;
   color?: string;
   circleColor?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   border?: boolean;
 }
 

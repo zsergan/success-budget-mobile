@@ -24,7 +24,7 @@ const LimitItem = ({ limit, currencyCode, onEdit }: Props) => {
         <View style={styles.section}>
           <CircleIcon
             circleColor={colors.bg}
-            size="xl"
+            size="lg"
             icon={category ? category.icon : 'other'}
             color={category ? category.color : colors.text}
           />

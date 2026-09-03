@@ -17,7 +17,7 @@ const TransactionCard = ({ transaction }: Props) => (
     <View style={styles.categoryNameTime}>
       <CircleIcon
         icon={transaction.category.icon}
-        size="xl"
+        size="lg"
         color={transaction.category.color}
         circleColor={colors.bg}
       />

@@ -10,14 +10,14 @@ const styles = StyleSheet.create({
     flexDirection: 'column-reverse',
   },
   bar: {
-    height: 5,
+    height: 6,
     width: '100%',
-    borderRadius: theme.radius.sm,
+    borderRadius: 3,
     backgroundColor: colors.track,
   },
   progress: {
-    height: 5,
-    borderRadius: theme.radius.sm,
+    height: 6,
+    borderRadius: 3,
   },
   progressGreen: {
     backgroundColor: colors.ok,
