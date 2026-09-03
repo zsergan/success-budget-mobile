@@ -14,23 +14,37 @@ interface Props {
   style?: StyleProp<ViewStyle>;
 }
 
-const Button = ({ title, icon, variant = 'primary', onPress, withShadow, disabled, style }: Props) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={[
-      styles.button,
-      styles[`${variant}Button`],
-      withShadow && styles.withShadow,
-      disabled && styles.disabled,
-      style,
-    ]}
-    disabled={disabled}
-    activeOpacity={0.5}
-  >
-    {icon && icon}
+const Button = ({ title, icon, variant = 'primary', onPress, withShadow, disabled, style }: Props) => {
+  const isPrimaryDisabled = disabled && variant === 'primary';
 
-    {title && <Text style={[styles.buttonText, styles[`${variant}ButtonText`]]}>{title}</Text>}
-  </TouchableOpacity>
-);
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[
+        styles.button,
+        styles[`${variant}Button`],
+        withShadow && styles.withShadow,
+        disabled && (isPrimaryDisabled ? styles.primaryButtonDisabled : styles.disabled),
+        style,
+      ]}
+      disabled={disabled}
+      activeOpacity={0.8}
+    >
+      {icon && icon}
+
+      {title && (
+        <Text
+          style={[
+            styles.buttonText,
+            styles[`${variant}ButtonText`],
+            isPrimaryDisabled && styles.primaryButtonTextDisabled,
+          ]}
+        >
+          {title}
+        </Text>
+      )}
+    </TouchableOpacity>
+  );
+};
 
 export default Button;

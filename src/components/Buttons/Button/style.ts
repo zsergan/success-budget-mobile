@@ -4,10 +4,11 @@ import theme, { colors, shadow } from '@shared/theme';
 
 const styles = StyleSheet.create({
   button: {
+    height: 52,
+    justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: theme.radius.sm,
+    borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm + 5,
   },
   primaryButton: {
     backgroundColor: colors.accent,
@@ -17,6 +18,9 @@ const styles = StyleSheet.create({
   },
   tertiaryButton: {
     backgroundColor: 'transparent',
+  },
+  primaryButtonDisabled: {
+    backgroundColor: colors.track,
   },
   buttonText: {
     fontFamily: theme.fonts.medium,
@@ -31,6 +35,9 @@ const styles = StyleSheet.create({
   },
   tertiaryButtonText: {
     color: colors.text,
+  },
+  primaryButtonTextDisabled: {
+    color: colors.muted,
   },
   withShadow: { ...shadow },
   disabled: {

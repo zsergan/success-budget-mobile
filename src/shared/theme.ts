@@ -117,10 +117,12 @@ const theme = {
   /**
    * Radius sizes.
    * @property sm - 12
+   * @property md - 14 (Button/Input, Foundation.dc.html — design stage 5)
    * @property lg - 20
    */
   radius: {
     sm: 12,
+    md: 14,
     lg: 20,
   },
   /**
