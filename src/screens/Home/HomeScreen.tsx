@@ -4,7 +4,6 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import {
   BottomSheetModal as BottomModal,
-  Button,
   EmptyState,
   Icon,
   RootLayout,
@@ -23,6 +22,7 @@ import { colors } from '@shared/theme';
 import { formatNumber, groupTransactionsByDay } from '@shared/utils';
 import Wallets from './Wallets';
 import TransactionForm from './TransactionForm';
+import Fab from './Fab/Fab';
 
 import styles from './style';
 
@@ -136,19 +136,9 @@ const HomeScreen = ({ navigation }: Props) => {
             ))}
           </View>
         )}
-
-        <View style={styles.buttonsContainer}>
-          <Button title="Expense" onPress={handlePresentExpenseModalPress} style={styles.button} withShadow />
-
-          <Button
-            title="Income"
-            onPress={handlePresentIncomeModalPress}
-            style={styles.button}
-            variant="secondary"
-            withShadow
-          />
-        </View>
       </RootLayout>
+
+      <Fab onExpense={handlePresentExpenseModalPress} onIncome={handlePresentIncomeModalPress} />
     </>
   );
 };
