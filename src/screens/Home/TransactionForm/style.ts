@@ -16,8 +16,10 @@ const styles = StyleSheet.create({
     columnGap: theme.spacing.sm,
   },
   input: {
-    fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.lg,
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.display,
+    lineHeight: theme.lineHeights.display,
+    letterSpacing: theme.letterSpacing.display,
     color: colors.text,
   },
   container: {

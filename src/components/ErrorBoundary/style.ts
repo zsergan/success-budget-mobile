@@ -12,8 +12,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   message: {
-    fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.md,
+    width: '100%',
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.titleSm,
+    lineHeight: theme.lineHeights.titleSm,
+    letterSpacing: theme.letterSpacing.titleSm,
     color: colors.muted,
     textAlign: 'center',
   },

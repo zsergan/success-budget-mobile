@@ -37,7 +37,7 @@ const TinyButton = ({
     <View style={[styles.button, selected && styles.selected, disabled && styles.disabled, style]}>
       {(icon || showCircle) && <CircleIcon icon={icon} color={color} circleColor={circleColor} size={size} />}
 
-      {title && <Text style={[styles.title, styles[`${size}Title`]]}>{title}</Text>}
+      {title && <Text style={styles[`${size}Title`]}>{title}</Text>}
     </View>
   </TouchableOpacity>
 );

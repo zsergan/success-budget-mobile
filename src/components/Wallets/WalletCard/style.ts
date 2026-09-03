@@ -18,17 +18,21 @@ const styles = StyleSheet.create({
   },
   name: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.xs,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
     color: colors.text,
   },
   balance: {
-    fontFamily: theme.fonts.bold,
-    fontSize: theme.fontSizes.lg,
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.titleLg,
+    lineHeight: theme.lineHeights.titleLg,
+    letterSpacing: theme.letterSpacing.titleLg,
     color: colors.text,
   },
   total: {
-    fontFamily: theme.fonts.bold,
-    fontSize: theme.fontSizes.sm,
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.bodyLg,
+    lineHeight: theme.lineHeights.bodyLg,
     color: colors.text,
   },
   totalBlock: {

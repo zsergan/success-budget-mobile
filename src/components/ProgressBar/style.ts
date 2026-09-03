@@ -35,7 +35,8 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.xs,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
     color: colors.text,
   },
 });

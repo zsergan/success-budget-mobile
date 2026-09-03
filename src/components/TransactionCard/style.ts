@@ -18,17 +18,20 @@ const styles = StyleSheet.create({
   },
   category: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.sm,
+    fontSize: theme.fontSizes.bodyLg,
+    lineHeight: theme.lineHeights.bodyLg,
     color: colors.text,
   },
   time: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.xs,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
     color: colors.muted,
   },
   amount: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.sm,
+    fontSize: theme.fontSizes.bodyLg,
+    lineHeight: theme.lineHeights.bodyLg,
   },
   income: {
     color: colors.ok,
@@ -38,7 +41,8 @@ const styles = StyleSheet.create({
   },
   wallet: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.xs,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
     color: colors.muted,
   },
 });

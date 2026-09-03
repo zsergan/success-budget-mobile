@@ -20,7 +20,8 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.sm,
+    fontSize: theme.fontSizes.bodyLg,
+    lineHeight: theme.lineHeights.bodyLg,
   },
   primaryButtonText: {
     color: colors.onAccent,

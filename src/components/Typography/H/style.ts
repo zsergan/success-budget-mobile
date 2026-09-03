@@ -4,8 +4,10 @@ import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   h: {
-    fontFamily: theme.fonts.bold,
-    fontSize: theme.fontSizes.xl,
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.titleLg,
+    lineHeight: theme.lineHeights.titleLg,
+    letterSpacing: theme.letterSpacing.titleLg,
     color: colors.text,
   },
 });

@@ -10,7 +10,8 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.lg,
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.md,
+    fontSize: theme.fontSizes.bodyLg,
+    lineHeight: theme.lineHeights.bodyLg,
     borderRadius: theme.radius.sm,
     backgroundColor: colors.surface,
   },
@@ -41,12 +42,14 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.sm,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
     color: colors.text,
   },
   error: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.sm,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
     color: colors.danger,
   },
 });

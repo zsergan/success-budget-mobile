@@ -5,7 +5,7 @@ import { useFonts } from 'expo-font';
 import {
   PlusJakartaSans_400Regular,
   PlusJakartaSans_500Medium,
-  PlusJakartaSans_700Bold,
+  PlusJakartaSans_600SemiBold,
 } from '@expo-google-fonts/plus-jakarta-sans';
 
 import { AlertProvider, ErrorBoundary } from '@components';
@@ -15,7 +15,7 @@ const App = () => {
   useFonts({
     'PlusJakartaSans-Regular': PlusJakartaSans_400Regular,
     'PlusJakartaSans-Medium': PlusJakartaSans_500Medium,
-    'PlusJakartaSans-Bold': PlusJakartaSans_700Bold,
+    'PlusJakartaSans-SemiBold': PlusJakartaSans_600SemiBold,
   });
 
   return (

@@ -11,13 +11,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   name: {
-    fontFamily: theme.fonts.bold,
-    fontSize: theme.fontSizes.sm,
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.bodyLg,
+    lineHeight: theme.lineHeights.bodyLg,
     color: colors.text,
   },
   email: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.xs,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
     color: colors.muted,
   },
 });
