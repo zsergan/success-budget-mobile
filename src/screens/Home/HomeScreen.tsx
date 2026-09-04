@@ -5,11 +5,13 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import {
   BottomSheetModal as BottomModal,
   EmptyState,
+  Fab,
   Icon,
   RootLayout,
   SectionTitle,
   TinyButton,
   TransactionCard,
+  TransactionForm,
 } from '@components';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectTotalBalance } from '@redux/state/wallet/selectors';
@@ -21,8 +23,6 @@ import type { ScreenProps } from '@shared/types';
 import { colors } from '@shared/theme';
 import { formatNumber, groupTransactionsByDay } from '@shared/utils';
 import Wallets from './Wallets';
-import TransactionForm from './TransactionForm';
-import Fab from './Fab/Fab';
 
 import styles from './style';
 

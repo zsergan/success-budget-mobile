@@ -1,4 +1,4 @@
-import type { AxiosError } from 'axios';
+import type { AxiosError, AxiosRequestConfig } from 'axios';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
@@ -43,7 +43,7 @@ export const ApiClient = () => {
     },
   );
 
-  const get = <T>(url: string) => api.get<T>(url);
+  const get = <T>(url: string, config?: AxiosRequestConfig) => api.get<T>(url, config);
 
   const post = <T, U = unknown>(url: string, data: U) => api.post<T>(url, data);
 

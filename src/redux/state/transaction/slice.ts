@@ -2,7 +2,7 @@ import { createSlice, isPending, isRejected } from '@reduxjs/toolkit';
 
 import { logoutMe } from '../auth/thunks';
 import initialState from './initialState';
-import { addTransaction, fetchTransactions } from './thunks';
+import { addTransaction, fetchLatestTransaction, fetchTransactions, fetchTransactionsInRange } from './thunks';
 
 const transactionSlice = createSlice({
   name: 'transaction',
@@ -24,6 +24,34 @@ const transactionSlice = createSlice({
       state.isLoading = false;
     });
 
+    builder.addCase(fetchTransactionsInRange.pending, (state) => {
+      state.isLoadingRange = true;
+    });
+
+    builder.addCase(fetchTransactionsInRange.rejected, (state) => {
+      state.isLoadingRange = false;
+    });
+
+    builder.addCase(fetchTransactionsInRange.fulfilled, (state, action) => {
+      state.rangeTransactions = action.payload;
+      state.isLoadingRange = false;
+    });
+
+    builder.addCase(fetchLatestTransaction.pending, (state) => {
+      state.isLoadingLatest = true;
+    });
+
+    builder.addCase(fetchLatestTransaction.rejected, (state) => {
+      // A failed lookup isn't proof the account has no transactions —
+      // leave `latest` as-is rather than guessing.
+      state.isLoadingLatest = false;
+    });
+
+    builder.addCase(fetchLatestTransaction.fulfilled, (state, action) => {
+      state.latest = action.payload;
+      state.isLoadingLatest = false;
+    });
+
     builder.addCase(addTransaction.pending, (state) => {
       state.isCreating = true;
     });
@@ -36,13 +64,19 @@ const transactionSlice = createSlice({
       state.isCreating = false;
     });
 
-    builder.addMatcher(isPending(fetchTransactions, addTransaction), (state) => {
-      state.error = undefined;
-    });
+    builder.addMatcher(
+      isPending(fetchTransactions, fetchTransactionsInRange, fetchLatestTransaction, addTransaction),
+      (state) => {
+        state.error = undefined;
+      },
+    );
 
-    builder.addMatcher(isRejected(fetchTransactions, addTransaction), (state, action) => {
-      state.error = action.payload;
-    });
+    builder.addMatcher(
+      isRejected(fetchTransactions, fetchTransactionsInRange, fetchLatestTransaction, addTransaction),
+      (state, action) => {
+        state.error = action.payload;
+      },
+    );
   },
 });
 
