@@ -7,7 +7,7 @@ import type { CreateTransactionRequest } from '@api/dto';
 import { TransactionType } from '@shared/enums';
 import { useAppDispatch } from '@redux/hooks';
 import { addTransaction } from '@redux/state/transaction/thunks';
-import { addCurrentTime, amountSchema } from '@shared/utils';
+import { amountSchema } from '@shared/utils';
 import { useFormSubmitHandler } from '@hooks';
 
 interface TransactionFormData {
@@ -62,7 +62,7 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
         amount: formData.amount,
         wallet_id: formData.wallet_id,
         category_id: formData.category_id,
-        timestamp: addCurrentTime(formData.date),
+        timestamp: formData.date,
         transaction_type: formData.transaction_type,
         description: formData.notes,
       };
