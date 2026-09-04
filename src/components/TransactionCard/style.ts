@@ -5,10 +5,12 @@ import theme, { colors } from '@shared/theme';
 const styles = StyleSheet.create({
   root: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    columnGap: theme.spacing.sm,
   },
   categoryNameTime: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     columnGap: theme.spacing.sm,
@@ -26,35 +28,31 @@ const styles = StyleSheet.create({
   iconBoxExpense: {
     backgroundColor: colors.track,
   },
-  amountWallet: {
-    alignItems: 'flex-end',
+  textColumn: {
+    flex: 1,
+    minWidth: 0,
+    rowGap: 3,
   },
   category: {
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.bodyLg,
     lineHeight: theme.lineHeights.bodyLg,
     color: colors.text,
   },
-  time: {
+  meta: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.caption,
     lineHeight: theme.lineHeights.caption,
     color: colors.muted,
   },
   amount: {
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.bodyLg,
     lineHeight: theme.lineHeights.bodyLg,
     color: colors.text,
   },
   income: {
     color: colors.ok,
-  },
-  wallet: {
-    fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.caption,
-    lineHeight: theme.lineHeights.caption,
-    color: colors.muted,
   },
 });
 

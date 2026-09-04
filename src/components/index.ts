@@ -5,6 +5,7 @@ export { default as CircleIcon } from './CircleIcon/CircleIcon';
 export { default as Divider } from './Divider/Divider';
 export { default as EmptyState } from './EmptyState/EmptyState';
 export { default as ErrorBoundary } from './ErrorBoundary/ErrorBoundary';
+export { default as Fab } from './Fab/Fab';
 export * from './Form';
 export { default as GradientBackground } from './GradientBackground/GradientBackground';
 export { default as Icon } from './Icon/Icon';

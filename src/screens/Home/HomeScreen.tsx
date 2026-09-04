@@ -5,6 +5,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import {
   BottomSheetModal as BottomModal,
   EmptyState,
+  Fab,
   Icon,
   RootLayout,
   SectionTitle,
@@ -22,7 +23,6 @@ import { colors } from '@shared/theme';
 import { formatNumber, groupTransactionsByDay } from '@shared/utils';
 import Wallets from './Wallets';
 import TransactionForm from './TransactionForm';
-import Fab from './Fab/Fab';
 
 import styles from './style';
 
