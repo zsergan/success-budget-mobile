@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheetScrollView, useBottomSheet } from '@gorhom/bottom-sheet';
 
 import { Icon } from '@components';
-import { colors } from '@shared/theme';
+import theme, { colors } from '@shared/theme';
 import type { DateRange, PeriodPreset } from '@shared/utils';
 import {
   addMonths,
@@ -35,6 +36,7 @@ interface Props {
 
 const RangePickerSheet = ({ activeRange, onApply }: Props) => {
   const { close } = useBottomSheet();
+  const insets = useSafeAreaInsets();
 
   const [tentativeFrom, setTentativeFrom] = useState(activeRange.from);
   const [tentativeTo, setTentativeTo] = useState(activeRange.to);
@@ -105,6 +107,8 @@ const RangePickerSheet = ({ activeRange, onApply }: Props) => {
 
   return (
     <BottomSheetScrollView contentContainerStyle={styles.root} showsVerticalScrollIndicator={false}>
+      <View style={styles.handle} />
+
       <View style={styles.header}>
         <Text style={styles.title}>Select period</Text>
 
@@ -159,7 +163,11 @@ const RangePickerSheet = ({ activeRange, onApply }: Props) => {
 
       <Text style={styles.summary}>{daysInRange({ from: tentativeFrom, to: tentativeTo })} days selected</Text>
 
-      <TouchableOpacity style={styles.applyButton} onPress={handleApply} activeOpacity={0.85}>
+      <TouchableOpacity
+        style={[styles.applyButton, { marginBottom: theme.spacing.xl + insets.bottom }]}
+        onPress={handleApply}
+        activeOpacity={0.85}
+      >
         <Text style={styles.applyButtonText}>Apply period</Text>
       </TouchableOpacity>
     </BottomSheetScrollView>

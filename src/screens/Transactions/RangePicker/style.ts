@@ -6,11 +6,24 @@ const styles = StyleSheet.create({
   // No flex: 1 — this ScrollView sits inside a dynamically-sized sheet that
   // measures its content's natural height; flex: 1 would tell it to fill
   // whatever space the sheet gives it instead, which is backwards here.
+  // paddingTop clears the sheet's rounded top corner above the drag handle,
+  // matching TransactionForm's topBlock.
   root: {
     paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.lg,
+  },
+  // Same handle bar as TransactionForm — this sheet draws its own instead
+  // of BottomSheetModal's built-in one (disabled app-wide via
+  // handleComponent={null} so every sheet can match the design exactly).
+  handle: {
+    width: 44,
+    height: 5,
+    borderRadius: 3,
+    alignSelf: 'center',
+    backgroundColor: colors.track,
   },
   header: {
-    marginTop: theme.spacing.md,
+    marginTop: theme.spacing.md + 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
