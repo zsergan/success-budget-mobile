@@ -33,6 +33,10 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: theme.spacing.md,
   },
+  emptyContainer: {
+    marginTop: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xl,
+  },
   container: {
     paddingHorizontal: theme.spacing.xl,
     paddingBottom: theme.spacing.xxl,
