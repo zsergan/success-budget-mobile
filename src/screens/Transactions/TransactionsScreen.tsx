@@ -27,6 +27,7 @@ import {
   groupTransactionsByDay,
 } from '@shared/utils';
 import FilterBar from './FilterBar/FilterBar';
+import RangePickerSheet from './RangePicker/RangePickerSheet';
 import TransactionsSkeleton from './Skeleton/TransactionsSkeleton';
 
 import styles from './style';
@@ -37,9 +38,11 @@ const TransactionsScreen = () => {
 
   const expenseBottomSheetRef = useRef<BottomSheetModal>(null);
   const incomeBottomSheetRef = useRef<BottomSheetModal>(null);
+  const rangePickerRef = useRef<BottomSheetModal>(null);
 
   const handlePresentExpenseModalPress = () => expenseBottomSheetRef.current?.present();
   const handlePresentIncomeModalPress = () => incomeBottomSheetRef.current?.present();
+  const handleOpenPicker = () => rangePickerRef.current?.present();
 
   const rangeTransactions = useAppSelector(selectRangeTransactions);
   const isLoadingRange = useAppSelector(selectIsLoadingRange);
@@ -94,6 +97,10 @@ const TransactionsScreen = () => {
         <TransactionForm initialWalletIndex={0} transactionType={TransactionType.INCOME} />
       </BottomModal>
 
+      <BottomModal ref={rangePickerRef}>
+        <RangePickerSheet activeRange={activeRange} onApply={setActiveRange} />
+      </BottomModal>
+
       <SafeAreaView style={styles.root}>
         <View style={styles.header}>
           <Text style={styles.title}>Transactions</Text>
@@ -109,7 +116,7 @@ const TransactionsScreen = () => {
           expense={expense}
           currencyCode={currencyCode}
           onPresetPress={handlePresetPress}
-          onOpenPicker={() => {}}
+          onOpenPicker={handleOpenPicker}
           onReset={handleReset}
         />
 
