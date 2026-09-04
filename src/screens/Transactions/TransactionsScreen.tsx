@@ -5,21 +5,26 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomSheetModal as BottomModal, Fab, Icon, TransactionCard, TransactionForm } from '@components';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
-import { selectRangeTransactions } from '@redux/state/transaction/selectors';
+import { selectPeriodTotals, selectRangeTransactions } from '@redux/state/transaction/selectors';
 import { fetchLatestTransaction, fetchTransactionsInRange } from '@redux/state/transaction/thunks';
 import { selectProfile } from '@redux/state/profile/selectors';
 import { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
 import type { DateRange } from '@shared/utils';
-import { formatNumber, getCurrentMonthRange, groupTransactionsByDay } from '@shared/utils';
+import {
+  formatNumber,
+  getCurrentMonthRange,
+  getCurrentWeekRange,
+  getCurrentYearRange,
+  groupTransactionsByDay,
+} from '@shared/utils';
+import FilterBar from './FilterBar/FilterBar';
 
 import styles from './style';
 
 const TransactionsScreen = () => {
   const dispatch = useAppDispatch();
-  // Static "this month" for now — the filter bar and range picker that let
-  // this change land in later steps of this redesign.
-  const [activeRange] = useState<DateRange>(() => getCurrentMonthRange());
+  const [activeRange, setActiveRange] = useState<DateRange>(() => getCurrentMonthRange());
 
   const expenseBottomSheetRef = useRef<BottomSheetModal>(null);
   const incomeBottomSheetRef = useRef<BottomSheetModal>(null);
@@ -28,9 +33,18 @@ const TransactionsScreen = () => {
   const handlePresentIncomeModalPress = () => incomeBottomSheetRef.current?.present();
 
   const rangeTransactions = useAppSelector(selectRangeTransactions);
+  const { income, expense, currencyCode } = useAppSelector(selectPeriodTotals);
   const { baseCurrency } = useAppSelector(selectProfile);
 
   const refreshRange = () => dispatch(fetchTransactionsInRange({ from: activeRange.from, to: activeRange.to }));
+
+  const handlePresetPress = (preset: 'week' | 'month' | 'year') => {
+    if (preset === 'week') setActiveRange(getCurrentWeekRange());
+    else if (preset === 'month') setActiveRange(getCurrentMonthRange());
+    else setActiveRange(getCurrentYearRange());
+  };
+
+  const handleReset = () => setActiveRange(getCurrentMonthRange());
 
   useEffect(() => {
     refreshRange();
@@ -61,6 +75,16 @@ const TransactionsScreen = () => {
             <Icon name="search" size={18} color={colors.text} />
           </TouchableOpacity>
         </View>
+
+        <FilterBar
+          range={activeRange}
+          income={income}
+          expense={expense}
+          currencyCode={currencyCode}
+          onPresetPress={handlePresetPress}
+          onOpenPicker={() => {}}
+          onReset={handleReset}
+        />
 
         <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
           <View style={styles.container}>

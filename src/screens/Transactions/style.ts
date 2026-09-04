@@ -31,6 +31,7 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
+    marginTop: theme.spacing.md,
   },
   container: {
     paddingHorizontal: theme.spacing.xl,
