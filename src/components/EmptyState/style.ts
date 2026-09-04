@@ -57,6 +57,15 @@ const styles = StyleSheet.create({
   action: {
     alignSelf: 'stretch',
   },
+  solidRoot: {
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: colors.hairline,
+  },
+  secondaryActionBorder: {
+    borderWidth: 1,
+    borderColor: colors.hairline,
+  },
 });
 
 export default styles;
