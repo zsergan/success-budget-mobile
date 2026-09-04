@@ -40,9 +40,16 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
       handleComponent={null}
       onDismiss={onDismiss}
     >
-      <BottomSheetView style={dynamicSizing ? styles.contentContainerDynamic : styles.contentContainer}>
-        {children}
-      </BottomSheetView>
+      {dynamicSizing ? (
+        // A dynamically-sized sheet's content must itself be the measured
+        // root (typically a BottomSheetScrollView, which reports its own
+        // content height) — wrapping it in another BottomSheetView here
+        // would give the library two competing height sources instead of
+        // one.
+        children
+      ) : (
+        <BottomSheetView style={styles.contentContainer}>{children}</BottomSheetView>
+      )}
     </BottomSheetModal>
   );
 });

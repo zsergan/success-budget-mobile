@@ -104,7 +104,7 @@ const RangePickerSheet = ({ activeRange, onApply }: Props) => {
   };
 
   return (
-    <BottomSheetScrollView style={styles.root} showsVerticalScrollIndicator={false}>
+    <BottomSheetScrollView contentContainerStyle={styles.root} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Text style={styles.title}>Select period</Text>
 
