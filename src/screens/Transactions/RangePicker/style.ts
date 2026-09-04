@@ -3,8 +3,10 @@ import { StyleSheet } from 'react-native';
 import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
+  // No flex: 1 — this ScrollView sits inside a dynamically-sized sheet that
+  // measures its content's natural height; flex: 1 would tell it to fill
+  // whatever space the sheet gives it instead, which is backwards here.
   root: {
-    flex: 1,
     paddingHorizontal: theme.spacing.xl,
   },
   header: {

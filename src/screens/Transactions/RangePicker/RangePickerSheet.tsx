@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { useBottomSheet } from '@gorhom/bottom-sheet';
+import { Text, TouchableOpacity, View } from 'react-native';
+import { BottomSheetScrollView, useBottomSheet } from '@gorhom/bottom-sheet';
 
 import { Icon } from '@components';
 import { colors } from '@shared/theme';
@@ -104,7 +104,7 @@ const RangePickerSheet = ({ activeRange, onApply }: Props) => {
   };
 
   return (
-    <ScrollView style={styles.root} showsVerticalScrollIndicator={false}>
+    <BottomSheetScrollView style={styles.root} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Text style={styles.title}>Select period</Text>
 
@@ -162,7 +162,7 @@ const RangePickerSheet = ({ activeRange, onApply }: Props) => {
       <TouchableOpacity style={styles.applyButton} onPress={handleApply} activeOpacity={0.85}>
         <Text style={styles.applyButtonText}>Apply period</Text>
       </TouchableOpacity>
-    </ScrollView>
+    </BottomSheetScrollView>
   );
 };
 

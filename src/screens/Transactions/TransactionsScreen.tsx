@@ -97,7 +97,7 @@ const TransactionsScreen = () => {
         <TransactionForm initialWalletIndex={0} transactionType={TransactionType.INCOME} />
       </BottomModal>
 
-      <BottomModal ref={rangePickerRef}>
+      <BottomModal ref={rangePickerRef} dynamicSizing>
         <RangePickerSheet activeRange={activeRange} onApply={setActiveRange} />
       </BottomModal>
 
