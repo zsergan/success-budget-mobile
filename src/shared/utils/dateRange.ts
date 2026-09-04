@@ -20,12 +20,7 @@ export const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getM
 export const endOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
 const monthShort = (date: Date) => date.toLocaleString('en-US', { month: 'short' });
 
-/**
- * Month boundaries for whatever month `reference` falls in — no preset
- * opinion attached. Building block for `getCurrentMonthRange` and for
- * "jump to the month of this date" (e.g. the Transactions screen's
- * filtered-empty "Jump to [last transaction's date]" action).
- */
+/** Month boundaries for whatever month `reference` falls in, no preset attached. */
 export const getMonthRange = (reference: Date): { from: Date; to: Date } => ({
   from: new Date(reference.getFullYear(), reference.getMonth(), 1, 0, 0, 0, 0),
   // Day 0 of next month = the last day of this month.
@@ -78,10 +73,7 @@ export const daysInRange = (range: Pick<DateRange, 'from' | 'to'>): number => {
   return Math.round((end.getTime() - start.getTime()) / msPerDay) + 1;
 };
 
-// Only ever used for calendar month-navigation (the picker's `visibleMonth`),
-// so this normalizes to day 1 rather than doing general date arithmetic —
-// naive `setMonth` shifting on a day like the 31st can overflow into the
-// following month.
+// Normalizes to day 1 — naive setMonth() on e.g. the 31st can overflow into the following month.
 export const addMonths = (date: Date, delta: number): Date => new Date(date.getFullYear(), date.getMonth() + delta, 1);
 
 /**

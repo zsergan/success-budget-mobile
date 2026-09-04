@@ -47,11 +47,8 @@ const CalendarGrid = ({ month, range, onSelectDay, onNavigate }: Props) => {
         <View key={rowIndex} style={styles.weekRow}>
           {row.map((day) => {
             const isEdge = day.isRangeStart || day.isRangeEnd;
-            // The design's continuous pill band (achieved with a CSS gradient
-            // at the range edges) is approximated here with a flat tinted
-            // rectangle on the days strictly between the edges, plus a solid
-            // circle on the edges themselves — seamless within a row, and a
-            // reasonable simplification across a row wrap.
+            // Approximates the design's gradient-edged pill band with a flat
+            // tint between the edges plus a solid circle on the edges.
             const showBand = day.isInRange && !isEdge;
 
             return (

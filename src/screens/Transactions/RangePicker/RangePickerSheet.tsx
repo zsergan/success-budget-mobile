@@ -44,12 +44,8 @@ const RangePickerSheet = ({ activeRange, onApply }: Props) => {
   const [editingField, setEditingField] = useState<'from' | 'to'>('from');
   const [visibleMonth, setVisibleMonth] = useState(activeRange.from);
 
-  // `activeRange` only changes right after a committed Apply/preset/reset,
-  // so resetting the tentative state here (React's "adjusting state when a
-  // prop changes" pattern, run during render rather than in an effect)
-  // means the next time this sheet is presented, its tentative state
-  // already matches the last committed value — with no remount needed
-  // (which would also break the parent's imperative present()/dismiss() ref).
+  // Resets the tentative fields whenever the committed activeRange changes
+  // (React's "adjusting state during render" pattern — no effect needed).
   const [syncedRange, setSyncedRange] = useState(activeRange);
 
   if (syncedRange !== activeRange) {
@@ -87,9 +83,7 @@ const RangePickerSheet = ({ activeRange, onApply }: Props) => {
 
     const picked = endOfDay(date);
 
-    // Tapping a "to" date earlier than the current "from" would produce an
-    // inverted range — not specified by the design, but swapping is the
-    // only sane behavior.
+    // Swap rather than allow an inverted range if "to" lands before "from".
     if (picked.getTime() < tentativeFrom.getTime()) {
       setTentativeTo(endOfDay(tentativeFrom));
       setTentativeFrom(startOfDay(date));

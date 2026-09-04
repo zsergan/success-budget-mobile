@@ -77,11 +77,8 @@ const TransactionsScreen = () => {
 
   const groups = groupTransactionsByDay(rangeTransactions, baseCurrency?.code);
 
-  // `latest` starts `undefined` (not fetched yet) and only settles to `null`
-  // once we know for certain the account has never recorded a transaction —
-  // gating on that (rather than just isLoadingRange) avoids flashing the
-  // wrong empty-state variant for a frame on cold start, while both
-  // requests are still in flight.
+  // latest === undefined means "not fetched yet" — treat that as still
+  // loading too, or the wrong empty-state variant flashes on cold start.
   const showSkeleton = isLoadingRange || (rangeTransactions.length === 0 && latest === undefined);
   const showTrueEmpty = !showSkeleton && latest === null;
   const showFilteredEmpty = !showSkeleton && latest !== null && rangeTransactions.length === 0;

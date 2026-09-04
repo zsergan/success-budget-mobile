@@ -3,18 +3,12 @@ import { StyleSheet } from 'react-native';
 import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
-  // No flex: 1 — this ScrollView sits inside a dynamically-sized sheet that
-  // measures its content's natural height; flex: 1 would tell it to fill
-  // whatever space the sheet gives it instead, which is backwards here.
-  // paddingTop clears the sheet's rounded top corner above the drag handle,
-  // matching TransactionForm's topBlock.
+  // No flex: 1 — a dynamically-sized sheet measures this ScrollView's
+  // natural content height, which flex: 1 would override.
   root: {
     paddingHorizontal: theme.spacing.xl,
     paddingTop: theme.spacing.lg,
   },
-  // Same handle bar as TransactionForm — this sheet draws its own instead
-  // of BottomSheetModal's built-in one (disabled app-wide via
-  // handleComponent={null} so every sheet can match the design exactly).
   handle: {
     width: 44,
     height: 5,
