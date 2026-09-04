@@ -2,6 +2,7 @@ import 'react-native-gesture-handler';
 import RootNavigator from '@navigation/RootNavigator';
 import { Provider } from 'react-redux';
 import { useFonts } from 'expo-font';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   PlusJakartaSans_400Regular,
   PlusJakartaSans_500Medium,
@@ -20,11 +21,13 @@ const App = () => {
 
   return (
     <ErrorBoundary>
-      <Provider store={store}>
-        <AlertProvider>
-          <RootNavigator />
-        </AlertProvider>
-      </Provider>
+      <SafeAreaProvider>
+        <Provider store={store}>
+          <AlertProvider>
+            <RootNavigator />
+          </AlertProvider>
+        </Provider>
+      </SafeAreaProvider>
     </ErrorBoundary>
   );
 };

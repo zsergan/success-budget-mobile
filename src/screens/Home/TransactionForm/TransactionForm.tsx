@@ -1,57 +1,94 @@
-import { useEffect, useRef } from 'react';
-import { Text, TextInput, ScrollView, View, TouchableOpacity } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Platform, Text, TextInput, ScrollView, View, TouchableOpacity } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import type { RadioButtons } from '@components';
-import { Button, DateTimePicker, RadioGroup, SectionTitle, TextArea, TinyButton, TinyWallet } from '@components';
-import type { CategoryModel } from '@api/models';
+import { DateTimePicker, Icon } from '@components';
 import { useAppSelector } from '@redux/hooks';
 import { selectActiveCategories } from '@redux/state/category/selectors';
 import { selectWallet } from '@redux/state/wallet/selectors';
-import { ScreenNames, TransactionType } from '@shared/enums';
-import type { ScreenProps } from '@shared/types';
+import { TransactionType } from '@shared/enums';
+import type { IconType } from '@shared/types';
+import { gradients, resolveWalletDesign } from '@shared/constants';
+import { formatDateHHMM, formatGroupLabel } from '@shared/utils';
 import useTransactionForm from './useTransactionForm';
 
 import { colors } from '@shared/theme';
 import styles from './style';
 
-const TINY_WALLET_WIDTH_WITH_GAP = 118;
+const SAVE_READY_TEXT_COLOR = '#FFFDFA';
 
-const transactionTypes: RadioButtons<string>[] = [
-  {
-    title: 'Expense',
-    value: TransactionType.EXPENSE,
-    icon: 'expense',
-    color: colors.danger,
-    size: 'md',
-  },
-  {
-    title: 'Income',
-    value: TransactionType.INCOME,
-    icon: 'income',
-    color: colors.ok,
-    size: 'md',
-  },
-];
+const hexToRgba = (hex: string, alpha: number) => {
+  const value = hex.replace('#', '');
+  const r = parseInt(value.substring(0, 2), 16);
+  const g = parseInt(value.substring(2, 4), 16);
+  const b = parseInt(value.substring(4, 6), 16);
 
-const getCategoryRadioButtons = (categories: CategoryModel[]): RadioButtons<number>[] =>
-  categories.map((expense) => ({
-    title: expense.name,
-    value: expense.id,
-    icon: expense.icon,
-    color: expense.color,
-    size: 'md',
-  }));
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const isValidAmount = (value?: string) => {
+  if (!value) return false;
+
+  const normalized = Number(value.replace(',', '.'));
+
+  return Number.isFinite(normalized) && normalized > 0;
+};
+
+interface DateFieldProps {
+  icon?: IconType;
+  label: string;
+  mode: 'date' | 'time';
+  value: Date;
+  onPick: (date: Date) => void;
+}
+
+// iOS's 'compact' picker (set in the DateTimePicker wrapper) is already a
+// self-contained tappable pill that opens a floating popover — it replaces
+// our own label outright, so it's the only thing in the box there.
+// Android has no such trigger style: the native control has to be
+// conditionally mounted on tap (it pops as a dialog immediately once
+// mounted), so that platform keeps our own styled label as the trigger.
+const DateField = ({ icon, label, mode, value, onPick }: DateFieldProps) => {
+  const [open, setOpen] = useState(false);
+
+  if (Platform.OS === 'ios') {
+    return (
+      <View style={styles.pickerBox}>
+        {icon && <Icon name={icon} size={16} color={colors.muted} strokeWidth={1.8} />}
+        <DateTimePicker mode={mode} value={value} onChange={onPick} />
+      </View>
+    );
+  }
+
+  return (
+    <>
+      <TouchableOpacity style={styles.pickerBox} onPress={() => setOpen(true)} activeOpacity={0.6}>
+        {icon && <Icon name={icon} size={16} color={colors.muted} strokeWidth={1.8} />}
+        <Text style={styles.pickerText}>{label}</Text>
+      </TouchableOpacity>
+
+      {open && (
+        <DateTimePicker
+          mode={mode}
+          value={value}
+          onChange={(picked) => {
+            setOpen(false);
+            onPick(picked);
+          }}
+          onDismiss={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+};
 
 interface Props {
-  navigation: ScreenProps<ScreenNames.HOME_TAB>['navigation'];
   initialWalletIndex: number;
   transactionType?: TransactionType;
 }
 
-const TransactionForm = ({ navigation, initialWalletIndex, transactionType = TransactionType.EXPENSE }: Props) => {
+const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType.EXPENSE }: Props) => {
   const amountRef = useRef<TextInput>(null);
-  const walletsRef = useRef<ScrollView>(null);
   const { wallets } = useAppSelector(selectWallet);
   const { expenses, incomes } = useAppSelector(selectActiveCategories);
 
@@ -60,8 +97,10 @@ const TransactionForm = ({ navigation, initialWalletIndex, transactionType = Tra
     initialWalletId: wallets[initialWalletIndex]?.wallet.id ?? -1,
   });
 
-  const selectedWallet = watch('wallet_id');
+  const selectedWalletId = watch('wallet_id');
   const selectedTransactionType = watch('transaction_type');
+  const selectedCategoryId = watch('category_id');
+  const amount = watch('amount');
 
   useEffect(() => {
     amountRef.current?.focus();
@@ -69,148 +108,273 @@ const TransactionForm = ({ navigation, initialWalletIndex, transactionType = Tra
 
   if (wallets.length === 0) {
     return (
-      <View style={[styles.root, styles.container]}>
-        <Text style={styles.input}>Add a wallet first to record a transaction.</Text>
+      <View style={styles.root}>
+        <Text style={styles.emptyText}>Add a wallet first to record a transaction.</Text>
       </View>
     );
   }
 
+  const isIncome = selectedTransactionType === TransactionType.INCOME;
+  const typeColor = isIncome ? colors.ok : colors.danger;
+  const categories = isIncome ? incomes : expenses;
+  const selectedWallet = wallets.find(({ wallet: { id } }) => id === selectedWalletId)?.wallet;
+
+  const readyAmount = isValidAmount(amount);
+  const readyCategory = selectedCategoryId !== undefined;
+  const ready = readyAmount && readyCategory;
+
+  const helperText = !readyCategory ? 'Pick a category to save' : !readyAmount ? 'Enter an amount to save' : undefined;
+
   return (
     <View style={styles.root}>
-      <View style={styles.amount}>
+      <View style={styles.topBlock}>
+        <View style={styles.handle} />
+
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>New transaction</Text>
+
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => closeBottomSheet()}
+            activeOpacity={0.6}
+            hitSlop={8}
+          >
+            <Icon name="close" size={14} color={colors.text} strokeWidth={2.1} />
+          </TouchableOpacity>
+        </View>
+
         <Controller
-          name="amount"
+          name="transaction_type"
           control={control}
           render={({ field: { onChange, value } }) => (
-            <TextInput
-              ref={amountRef}
-              value={value}
-              onChangeText={onChange}
-              placeholder="0"
-              inputMode="decimal"
-              style={styles.input}
-              returnKeyType="done"
-            />
+            <View style={styles.typeSwitch}>
+              <TouchableOpacity
+                style={[styles.typeTab, value === TransactionType.INCOME && styles.typeTabActive]}
+                onPress={() => onChange(TransactionType.INCOME)}
+                activeOpacity={0.7}
+              >
+                <Icon
+                  name="income"
+                  size={15}
+                  color={value === TransactionType.INCOME ? colors.ok : colors.muted}
+                  strokeWidth={2.3}
+                />
+                <Text
+                  style={[styles.typeTabText, { color: value === TransactionType.INCOME ? colors.ok : colors.muted }]}
+                >
+                  Income
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.typeTab, value === TransactionType.EXPENSE && styles.typeTabActive]}
+                onPress={() => onChange(TransactionType.EXPENSE)}
+                activeOpacity={0.7}
+              >
+                <Icon
+                  name="expense"
+                  size={15}
+                  color={value === TransactionType.EXPENSE ? colors.danger : colors.muted}
+                  strokeWidth={2.3}
+                />
+                <Text
+                  style={[
+                    styles.typeTabText,
+                    { color: value === TransactionType.EXPENSE ? colors.danger : colors.muted },
+                  ]}
+                >
+                  Expense
+                </Text>
+              </TouchableOpacity>
+            </View>
           )}
         />
 
-        <Text style={styles.input}>
-          {wallets.find(({ wallet: { id } }) => id === selectedWallet)?.wallet.currency.code}
-        </Text>
+        <View style={[styles.hero, { backgroundColor: hexToRgba(typeColor, 0.07) }]}>
+          <Text style={[styles.heroLabel, { color: typeColor }]}>{isIncome ? 'Income amount' : 'Expense amount'}</Text>
+
+          <View style={styles.heroRow}>
+            <Controller
+              name="amount"
+              control={control}
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  ref={amountRef}
+                  value={value}
+                  onChangeText={onChange}
+                  placeholder="0"
+                  placeholderTextColor={hexToRgba(typeColor, 0.4)}
+                  inputMode="decimal"
+                  style={[styles.heroAmount, { color: typeColor }]}
+                  returnKeyType="done"
+                />
+              )}
+            />
+
+            {selectedWallet && (
+              <Text style={[styles.heroCurrency, { color: typeColor }]}>{selectedWallet.currency.code}</Text>
+            )}
+          </View>
+
+          {selectedWallet && (
+            <Text style={styles.heroSub}>
+              {selectedWallet.currency.code} · {isIncome ? 'added to' : 'taken from'} {selectedWallet.wallet_name}
+            </Text>
+          )}
+        </View>
       </View>
 
-      <ScrollView automaticallyAdjustKeyboardInsets showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.body}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.container}>
           <View style={styles.section}>
-            <SectionTitle title="Wallet" />
+            <Text style={styles.sectionLabel}>Wallet</Text>
 
             <Controller
               name="wallet_id"
               control={control}
               render={({ field: { onChange, value } }) => (
-                <ScrollView
-                  ref={walletsRef}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.scrollWalletsContainer}
-                  onLayout={() =>
-                    walletsRef.current?.scrollTo({
-                      x: TINY_WALLET_WIDTH_WITH_GAP * initialWalletIndex,
-                      animated: false,
-                    })
-                  }
-                >
-                  <View style={styles.walletsContainer}>
-                    {wallets.map(({ wallet: { id, wallet_name, design, currency } }) => (
-                      <TouchableOpacity key={id} onPress={() => onChange(id)} activeOpacity={0.5}>
-                        <TinyWallet
-                          walletName={wallet_name}
-                          currencyCode={currency.code}
-                          design={design}
-                          backgroundStyle={value === id ? 'gradient' : 'grey'}
-                        />
+                <View style={styles.walletsRow}>
+                  {wallets.map(({ wallet: { id, wallet_name, design } }) => {
+                    const selected = value === id;
+                    const dotColor = gradients[resolveWalletDesign(design)][0];
+
+                    return (
+                      <TouchableOpacity
+                        key={id}
+                        style={[
+                          styles.walletChip,
+                          selected && { backgroundColor: hexToRgba(typeColor, 0.09), borderColor: typeColor },
+                        ]}
+                        onPress={() => onChange(id)}
+                        activeOpacity={0.6}
+                      >
+                        <View style={[styles.walletDot, { backgroundColor: dotColor }]} />
+
+                        <Text style={[styles.walletChipText, selected && { color: typeColor }]} numberOfLines={1}>
+                          {wallet_name}
+                        </Text>
                       </TouchableOpacity>
-                    ))}
-                  </View>
-                </ScrollView>
+                    );
+                  })}
+                </View>
               )}
             />
           </View>
 
           <View style={styles.section}>
-            <SectionTitle title="Transaction type" />
+            <View style={styles.sectionLabelRow}>
+              <Text style={styles.sectionLabel}>Category</Text>
 
-            <Controller
-              name="transaction_type"
-              control={control}
-              render={({ field: { onChange, value } }) => (
-                <RadioGroup value={value} buttons={transactionTypes} onPress={onChange} />
-              )}
-            />
-          </View>
-
-          <View style={styles.section}>
-            <SectionTitle
-              title="Category"
-              button={
-                <TinyButton
-                  selected
-                  title="Add Category"
-                  icon="plus"
-                  onPress={() => {
-                    closeBottomSheet();
-                    navigation.navigate(ScreenNames.ADD_CATEGORY_SCREEN, { id: 'new' });
-                  }}
-                />
-              }
-            />
+              <Text style={[styles.sectionHint, readyCategory && { color: typeColor }]}>
+                {categories.find(({ id }) => id === selectedCategoryId)?.name ?? 'Required'}
+              </Text>
+            </View>
 
             <Controller
               name="category_id"
               control={control}
               render={({ field: { onChange, value } }) => (
-                <RadioGroup
-                  value={value}
-                  buttons={getCategoryRadioButtons(
-                    selectedTransactionType === TransactionType.EXPENSE ? expenses : incomes,
-                  )}
-                  onPress={onChange}
-                />
+                <View style={styles.categoryGrid}>
+                  {categories.map((category) => {
+                    const selected = category.id === value;
+
+                    return (
+                      <TouchableOpacity
+                        key={category.id}
+                        style={styles.categoryCell}
+                        onPress={() => onChange(category.id)}
+                        activeOpacity={0.6}
+                      >
+                        <View
+                          style={[
+                            styles.categoryIconBox,
+                            selected && { backgroundColor: hexToRgba(typeColor, 0.1), borderColor: typeColor },
+                          ]}
+                        >
+                          <Icon name={category.icon} size={22} color={selected ? typeColor : colors.text} />
+                        </View>
+
+                        <Text style={[styles.categoryName, selected && { color: typeColor }]} numberOfLines={2}>
+                          {category.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               )}
             />
           </View>
 
-          <SectionTitle
-            title="Date"
-            style={styles.section}
-            button={
+          <View style={styles.dateTimeRow}>
+            <View style={[styles.section, styles.dateBox]}>
+              <Text style={styles.sectionLabel}>Date</Text>
+
               <Controller
                 name="date"
                 control={control}
                 render={({ field: { onChange, value } }) => (
-                  <DateTimePicker
+                  <DateField
+                    icon="calendar"
+                    mode="date"
+                    label={formatGroupLabel(value)}
                     value={value}
-                    onChange={(_, v) => (v ? onChange(new Date(v)) : onChange(new Date()))}
+                    onPick={(picked) => {
+                      const next = new Date(value);
+                      next.setFullYear(picked.getFullYear(), picked.getMonth(), picked.getDate());
+                      onChange(next);
+                    }}
                   />
                 )}
               />
-            }
-          />
+            </View>
+
+            <View style={[styles.section, styles.timeBox]}>
+              <Text style={styles.sectionLabel}>Time</Text>
+
+              <Controller
+                name="date"
+                control={control}
+                render={({ field: { onChange, value } }) => (
+                  <DateField
+                    mode="time"
+                    label={formatDateHHMM(value)}
+                    value={value}
+                    onPick={(picked) => {
+                      const next = new Date(value);
+                      next.setHours(picked.getHours(), picked.getMinutes());
+                      onChange(next);
+                    }}
+                  />
+                )}
+              />
+            </View>
+          </View>
 
           <View style={styles.section}>
-            <SectionTitle title="Notes" />
+            <View style={styles.sectionLabelRow}>
+              <Text style={styles.sectionLabel}>Note</Text>
+              <Text style={styles.sectionHint}>optional</Text>
+            </View>
 
             <Controller
               name="notes"
               control={control}
               render={({ field: { onChange, value } }) => (
-                <TextArea
-                  placeholder="Your notes"
+                <TextInput
+                  style={styles.note}
                   value={value}
                   onChangeText={onChange}
-                  blurOnSubmit
+                  placeholder="Add a note…"
+                  placeholderTextColor={colors.muted}
+                  multiline
                   maxLength={160}
-                  minHeight={88}
+                  blurOnSubmit
+                  returnKeyType="done"
                 />
               )}
             />
@@ -218,8 +382,30 @@ const TransactionForm = ({ navigation, initialWalletIndex, transactionType = Tra
         </View>
       </ScrollView>
 
-      <View style={styles.buttonContainer}>
-        <Button title="Save" onPress={onSubmit} disabled={isSubmitDisabled} />
+      <View style={styles.footer}>
+        {helperText && (
+          <View style={styles.helperRow}>
+            <Icon name="info" size={13} color={colors.muted} strokeWidth={1.8} />
+            <Text style={styles.helperText}>{helperText}</Text>
+          </View>
+        )}
+
+        <TouchableOpacity
+          style={[
+            styles.saveButton,
+            ready && styles.saveButtonReady,
+            ready && { backgroundColor: typeColor, shadowColor: typeColor },
+          ]}
+          onPress={onSubmit}
+          disabled={!ready || isSubmitDisabled}
+          activeOpacity={0.8}
+        >
+          {ready && <Icon name="check" size={17} color={SAVE_READY_TEXT_COLOR} strokeWidth={2.4} />}
+
+          <Text style={[styles.saveButtonText, ready && { color: SAVE_READY_TEXT_COLOR }]}>
+            {ready ? (isIncome ? 'Save income' : 'Save expense') : 'Save'}
+          </Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
