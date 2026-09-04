@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { View, SafeAreaView } from 'react-native';
+import { View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GradientBackground } from '@components';
 import { colors } from '@shared/theme';

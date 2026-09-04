@@ -55,7 +55,7 @@ const DateField = ({ icon, label, mode, value, onPick }: DateFieldProps) => {
     return (
       <View style={styles.pickerBox}>
         {icon && <Icon name={icon} size={16} color={colors.muted} strokeWidth={1.8} />}
-        <DateTimePicker mode={mode} value={value} onChange={(_, picked) => picked && onPick(picked)} />
+        <DateTimePicker mode={mode} value={value} onChange={onPick} />
       </View>
     );
   }
@@ -71,10 +71,11 @@ const DateField = ({ icon, label, mode, value, onPick }: DateFieldProps) => {
         <DateTimePicker
           mode={mode}
           value={value}
-          onChange={(_, picked) => {
+          onChange={(picked) => {
             setOpen(false);
-            if (picked) onPick(picked);
+            onPick(picked);
           }}
+          onDismiss={() => setOpen(false)}
         />
       )}
     </>

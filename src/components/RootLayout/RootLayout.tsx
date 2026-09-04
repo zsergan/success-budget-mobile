@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { View, ScrollView, SafeAreaView } from 'react-native';
+import { View, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import styles from './style';
 

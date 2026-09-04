@@ -1,6 +1,10 @@
+import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '@redux/Store';
 
 export const selectWallet = (state: RootState) => state.wallet;
+
+const selectWallets = (state: RootState) => state.wallet.wallets;
+const selectBaseCurrency = (state: RootState) => state.profile.baseCurrency;
 
 /**
  * Hero total balance on Home (design stage 7) — sums only wallets whose
@@ -11,10 +15,7 @@ export const selectWallet = (state: RootState) => state.wallet;
  * the only option that isn't silently wrong. Excluded wallets still show
  * up in the carousel below, just don't count toward this total.
  */
-export const selectTotalBalance = (state: RootState) => {
-  const { wallets } = state.wallet;
-  const { baseCurrency } = state.profile;
-
+export const selectTotalBalance = createSelector(selectWallets, selectBaseCurrency, (wallets, baseCurrency) => {
   if (!baseCurrency) {
     return { total: 0, currencyCode: undefined, walletsCount: 0 };
   }
@@ -23,4 +24,4 @@ export const selectTotalBalance = (state: RootState) => {
   const total = baseCurrencyWallets.reduce((sum, w) => sum + Number(w.wallet.balance), 0);
 
   return { total, currencyCode: baseCurrency.code, walletsCount: baseCurrencyWallets.length };
-};
+});
