@@ -63,7 +63,7 @@ const TotalLimitCard = ({ total, currencyCode, onEdit }: Props) => {
 
         <Text style={[styles.statText, { color: dim }]}>
           {status.level === 'over'
-            ? `Since day ${new Date().getDate() - daysLeft + 1}`
+            ? `Day ${new Date().getDate()} of the month`
             : `${formatCurrencyAmount(pace, currencyCode)}/day to stay inside`}
         </Text>
       </View>

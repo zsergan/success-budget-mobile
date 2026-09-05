@@ -42,7 +42,7 @@ const LimitItem = ({ limit, currencyCode, onPress }: Props) => {
         : `${formatCurrencyAmount(amountNumber - spent, currencyCode)} left`;
   const paceText =
     status.level === 'over'
-      ? `Since day ${new Date().getDate() - daysLeft + 1}`
+      ? `Day ${new Date().getDate()} of the month`
       : `${formatCurrencyAmount(pace, currencyCode)}/day`;
 
   return (
