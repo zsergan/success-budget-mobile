@@ -11,7 +11,6 @@ import {
   SignUpScreen,
   VerifyEmailScreen,
   LoadingScreen,
-  CreateLimitScreen,
 } from '@screens';
 import type { RootStackParamList } from '@shared/types';
 import { useAuth, useLoadInitData } from '@hooks';
@@ -49,11 +48,6 @@ const RootNavigator = () => {
                 <Stack.Screen
                   name={ScreenNames.ADD_WALLET_SCREEN}
                   component={CreateWalletScreen}
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name={ScreenNames.ADD_LIMIT_SCREEN}
-                  component={CreateLimitScreen}
                   options={{ headerShown: false }}
                 />
                 <Stack.Screen
