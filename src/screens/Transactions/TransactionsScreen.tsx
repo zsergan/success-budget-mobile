@@ -67,9 +67,8 @@ const TransactionsScreen = () => {
   };
 
   useEffect(() => {
-    refreshRange();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispatch, activeRange.from.getTime(), activeRange.to.getTime()]);
+    dispatch(fetchTransactionsInRange({ from: activeRange.from, to: activeRange.to }));
+  }, [dispatch, activeRange]);
 
   useEffect(() => {
     dispatch(fetchLatestTransaction());
