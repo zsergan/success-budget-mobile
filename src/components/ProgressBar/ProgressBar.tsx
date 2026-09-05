@@ -23,11 +23,13 @@ const ProgressBar = ({ percentage, positionInfo, leftInfo, rightInfo, color }: P
         <View style={[styles.progress, color ? { backgroundColor: color } : progressColor, { width: progressWidth }]} />
       </View>
 
-      <View style={styles.info}>
-        <Text style={styles.infoText}>{leftInfo}</Text>
+      {(leftInfo || rightInfo) && (
+        <View style={styles.info}>
+          <Text style={styles.infoText}>{leftInfo}</Text>
 
-        <Text style={styles.infoText}>{rightInfo}</Text>
-      </View>
+          <Text style={styles.infoText}>{rightInfo}</Text>
+        </View>
+      )}
     </View>
   );
 };
