@@ -5,11 +5,13 @@ import { Controller } from 'react-hook-form';
 import { DateTimePicker, Icon } from '@components';
 import { useAppSelector } from '@redux/hooks';
 import { selectActiveCategories } from '@redux/state/category/selectors';
+import { findLimitForCategory, selectLimit } from '@redux/state/limit/selectors';
 import { selectWallet } from '@redux/state/wallet/selectors';
 import { TransactionType } from '@shared/enums';
 import type { IconType } from '@shared/types';
 import { gradients, resolveWalletDesign } from '@shared/constants';
 import { formatDateHHMM, formatGroupLabel, hexToRgba } from '@shared/utils';
+import LimitHint from './LimitHint/LimitHint';
 import useTransactionForm from './useTransactionForm';
 
 import { colors } from '@shared/theme';
@@ -77,6 +79,7 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
   const amountRef = useRef<TextInput>(null);
   const { wallets } = useAppSelector(selectWallet);
   const { expenses, incomes } = useAppSelector(selectActiveCategories);
+  const { categoryLimits } = useAppSelector(selectLimit);
 
   const { control, watch, resetField, onSubmit, isSubmitDisabled, closeBottomSheet } = useTransactionForm({
     transactionType,
@@ -110,6 +113,11 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
   const ready = readyAmount && readyCategory;
 
   const helperText = !readyCategory ? 'Pick a category to save' : !readyAmount ? 'Enter an amount to save' : undefined;
+
+  const matchedLimit =
+    !isIncome && selectedCategoryId !== undefined
+      ? findLimitForCategory(categoryLimits, selectedCategoryId)
+      : undefined;
 
   return (
     <View style={styles.root}>
@@ -214,6 +222,12 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
             </Text>
           )}
         </View>
+
+        {matchedLimit && (
+          <View style={styles.limitHint}>
+            <LimitHint limit={matchedLimit} amount={amount} currencyCode={selectedWallet?.currency.code} />
+          </View>
+        )}
       </View>
 
       <ScrollView
