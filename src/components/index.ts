@@ -15,6 +15,6 @@ export * from './Modals';
 export { default as ProgressBar } from './ProgressBar/ProgressBar';
 export { default as RootLayout } from './RootLayout/RootLayout';
 export { default as TransactionCard } from './TransactionCard/TransactionCard';
-export { default as TransactionForm } from './TransactionForm';
+export { default as TransactionForm } from './TransactionForm/TransactionForm';
 export * from './Typography';
 export * from './Wallets';

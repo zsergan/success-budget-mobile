@@ -76,12 +76,7 @@ export const daysInRange = (range: Pick<DateRange, 'from' | 'to'>): number => {
 // Normalizes to day 1 — naive setMonth() on e.g. the 31st can overflow into the following month.
 export const addMonths = (date: Date, delta: number): Date => new Date(date.getFullYear(), date.getMonth() + delta, 1);
 
-/**
- * A flat 42-cell (6×7) Monday-first grid for the month containing `monthDate`,
- * always the same length regardless of month so the calendar's height never
- * jumps between 5- and 6-week months. Leading/trailing cells from adjacent
- * months are included and flagged `inCurrentMonth: false`.
- */
+// Always a flat 42-cell (6×7) grid so the calendar's height never jumps between 5- and 6-week months.
 export const getCalendarMonthGrid = (monthDate: Date, range?: Pick<DateRange, 'from' | 'to'>): CalendarDay[] => {
   const firstOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
   const mondayIndex = (firstOfMonth.getDay() + 6) % 7;

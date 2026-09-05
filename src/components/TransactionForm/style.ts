@@ -7,9 +7,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
   },
-  // Groups the drag handle, title row, type switch and amount hero under one
-  // shared top inset + gap, matching the design's column layout instead of
-  // each piece carrying its own (previously inconsistent) margin.
+  // Shared top inset + gap for the handle, header, type switch and hero, instead of each carrying its own margin.
   topBlock: {
     paddingTop: theme.spacing.lg,
     rowGap: theme.spacing.md + 2,
@@ -115,10 +113,7 @@ const styles = StyleSheet.create({
     lineHeight: theme.lineHeights.caption,
     color: colors.muted,
   },
-  // Without an explicit flex the ScrollView sized itself to its content
-  // instead of the sheet's remaining height — the keyboard's automatic
-  // inset then had no real frame to measure against, so the body opened
-  // pre-scrolled and could be dragged past its own content.
+  // Without an explicit flex the ScrollView sizes to content instead of the sheet's remaining height, breaking the keyboard inset.
   body: {
     flex: 1,
     marginTop: theme.spacing.lg,

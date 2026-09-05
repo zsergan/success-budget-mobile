@@ -6,7 +6,7 @@ import { logoutMe } from '@redux/state/auth/thunks';
 import type { IconType, ScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 
-import Profile from './Profile';
+import Profile from './Profile/Profile';
 
 import styles from './style';
 

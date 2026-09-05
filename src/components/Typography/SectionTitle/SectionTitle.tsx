@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Text, View } from 'react-native';
 
-import { TinyButton } from '../../Buttons';
+import { TinyButton } from '@components';
 
 import styles from './style';
 

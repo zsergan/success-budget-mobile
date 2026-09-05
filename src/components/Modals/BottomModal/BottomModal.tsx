@@ -2,9 +2,8 @@ import type { ReactNode } from 'react';
 import { Fragment } from 'react';
 import { TouchableWithoutFeedback, View } from 'react-native';
 
-import Button from '../../Buttons/Button/Button';
+import { Button, Divider } from '@components';
 import ModalContainer from '../ModalContainer/ModalContainer';
-import Divider from '../../Divider/Divider';
 
 import styles from './style';
 

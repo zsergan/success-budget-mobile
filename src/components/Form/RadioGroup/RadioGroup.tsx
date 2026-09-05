@@ -2,8 +2,8 @@ import { useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { ScrollView, View, Dimensions } from 'react-native';
 
-import type { TinyButtonProps } from '../../Buttons/TinyButton/TinyButton';
-import TinyButton from '../../Buttons/TinyButton/TinyButton';
+import type { TinyButtonProps } from '@components';
+import { TinyButton } from '@components';
 
 import styles from './style';
 
@@ -32,7 +32,6 @@ const RadioGroup = <T extends number | string>({
   const handleContentSizeChange = (contentWidth: number) => {
     if (contentWidth > screenWidth && !maxWidth) {
       const rowsAmount = contentWidth / 3 < screenWidth ? 2 : 3;
-      // 100 is sum of margins and paddings
       setMaxWidth(contentWidth / rowsAmount + 100);
     }
   };

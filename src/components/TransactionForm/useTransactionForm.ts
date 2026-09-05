@@ -41,6 +41,7 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
     control,
     handleSubmit,
     watch,
+    resetField,
     formState: { isSubmitting, isSubmitSuccessful },
   } = useForm({
     resolver: yupResolver(schema),
@@ -77,6 +78,7 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
   return {
     control,
     watch,
+    resetField,
     onSubmit,
     isSubmitDisabled,
     closeBottomSheet: close,

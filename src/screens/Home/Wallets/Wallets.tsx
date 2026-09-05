@@ -1,7 +1,9 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
+import type { WalletCardProps } from '@components';
 import { WalletCard, LongPressedModal, BottomModal, TinyWallet, Carousel, EmptyState } from '@components';
+import type { GetWalletsResponse } from '@api/dto';
 import type { WalletDesign } from '@shared/enums';
 import type { NavigationType } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
@@ -16,6 +18,15 @@ const renderBottomModalContent = (walletName: string, currencyCode: string, desi
     <Text style={styles.confirmText}>{`Delete a ${walletName} permanently?`}</Text>
   </View>
 );
+
+const toWalletCardProps = (item: GetWalletsResponse): Omit<WalletCardProps, 'onMorePress' | 'style'> => ({
+  walletName: item.wallet.wallet_name,
+  balance: item.wallet.balance,
+  currencyCode: item.wallet.currency.code,
+  totalIncome: item.total_income,
+  totalSpend: item.total_spend,
+  design: item.wallet.design,
+});
 
 interface Props {
   navigation: NavigationType<ScreenNames.HOME_TAB>;
@@ -54,20 +65,7 @@ const Wallets = ({ navigation, onScrollEnd }: Props) => {
 
           onDeleteCancel();
         }}
-        longPressedItem={
-          selectedWallet ? (
-            <WalletCard
-              walletName={selectedWallet.wallet.wallet_name}
-              balance={selectedWallet.wallet.balance}
-              currencyCode={selectedWallet.wallet.currency.code}
-              totalIncome={selectedWallet.total_income}
-              totalSpend={selectedWallet.total_spend}
-              design={selectedWallet.wallet.design}
-            />
-          ) : (
-            <></>
-          )
-        }
+        longPressedItem={selectedWallet ? <WalletCard {...toWalletCardProps(selectedWallet)} /> : <></>}
         onDelete={onDeletePress}
       />
 
@@ -94,15 +92,7 @@ const Wallets = ({ navigation, onScrollEnd }: Props) => {
       )}
 
       {wallets.length === 1 && (
-        <WalletCard
-          walletName={wallets[0].wallet.wallet_name}
-          balance={wallets[0].wallet.balance}
-          currencyCode={wallets[0].wallet.currency.code}
-          totalIncome={wallets[0].total_income}
-          totalSpend={wallets[0].total_spend}
-          design={wallets[0].wallet.design}
-          onMorePress={() => onWalletLongPress(wallets[0])}
-        />
+        <WalletCard {...toWalletCardProps(wallets[0])} onMorePress={() => onWalletLongPress(wallets[0])} />
       )}
 
       {wallets.length > 1 && (
@@ -116,13 +106,8 @@ const Wallets = ({ navigation, onScrollEnd }: Props) => {
               activeOpacity={0.7}
             >
               <WalletCard
+                {...toWalletCardProps(item)}
                 style={{ width: walletWidth }}
-                walletName={item?.wallet.wallet_name}
-                balance={item?.wallet.balance}
-                currencyCode={item?.wallet.currency.code}
-                totalIncome={item.total_income}
-                totalSpend={item.total_spend}
-                design={item?.wallet.design}
                 onMorePress={() => onWalletLongPress(item)}
               />
             </TouchableOpacity>

@@ -10,6 +10,7 @@ import {
   addMonths,
   daysInRange,
   endOfDay,
+  formatDateLong,
   getCurrentMonthRange,
   getCurrentWeekRange,
   getCurrentYearRange,
@@ -25,9 +26,6 @@ const QUICK_PRESETS: { value: PeriodPreset; label: string }[] = [
   { value: 'year', label: 'Year' },
   { value: 'custom', label: 'Custom' },
 ];
-
-const formatChipDate = (date: Date) =>
-  date.toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 
 interface Props {
   activeRange: DateRange;
@@ -135,7 +133,7 @@ const RangePickerSheet = ({ activeRange, onApply }: Props) => {
           activeOpacity={0.7}
         >
           <Text style={styles.fromToLabel}>From</Text>
-          <Text style={styles.fromToValue}>{formatChipDate(tentativeFrom)}</Text>
+          <Text style={styles.fromToValue}>{formatDateLong(tentativeFrom)}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -144,7 +142,7 @@ const RangePickerSheet = ({ activeRange, onApply }: Props) => {
           activeOpacity={0.7}
         >
           <Text style={styles.fromToLabel}>To</Text>
-          <Text style={styles.fromToValue}>{formatChipDate(tentativeTo)}</Text>
+          <Text style={styles.fromToValue}>{formatDateLong(tentativeTo)}</Text>
         </TouchableOpacity>
       </View>
 

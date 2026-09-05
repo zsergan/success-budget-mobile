@@ -22,7 +22,7 @@ import { ScreenNames, TransactionType } from '@shared/enums';
 import type { ScreenProps } from '@shared/types';
 import { colors } from '@shared/theme';
 import { formatNumber, groupTransactionsByDay } from '@shared/utils';
-import Wallets from './Wallets';
+import Wallets from './Wallets/Wallets';
 
 import styles from './style';
 

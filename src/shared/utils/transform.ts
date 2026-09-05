@@ -2,6 +2,9 @@ import { TransactionType } from '@shared/enums';
 
 export const formatNumber = (num: number | string) => Number(num).toLocaleString('en-US').replace(/,/g, ' ');
 
+export const formatCurrencyAmount = (amount: number | string, currencyCode?: string) =>
+  currencyCode ? `${formatNumber(amount)} ${currencyCode}` : formatNumber(amount);
+
 export const formatAmount = (amount: number | string, transactionType: TransactionType, currency?: string) => {
   let formattedAmount = formatNumber(amount);
 
@@ -10,15 +13,6 @@ export const formatAmount = (amount: number | string, transactionType: Transacti
   }
 
   return transactionType === TransactionType.EXPENSE ? `-${formattedAmount}` : formattedAmount;
-};
-
-export const addCurrentTime = (date: Date) => {
-  const currentDate = new Date();
-  date.setHours(currentDate.getHours());
-  date.setMinutes(currentDate.getMinutes());
-  date.setSeconds(currentDate.getSeconds());
-
-  return date;
 };
 
 export const formatDateDDMMYYYY = (d: Date | string) => {
@@ -47,3 +41,9 @@ export const formatDateHHMM = (d: Date | string) => {
 
   return `${hours < 10 ? `0${hours}` : hours}:${minutes < 10 ? `0${minutes}` : minutes}`;
 };
+
+export const formatMonthYear = (d: Date | string) =>
+  new Date(d).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+export const formatDateLong = (d: Date | string) =>
+  new Date(d).toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });

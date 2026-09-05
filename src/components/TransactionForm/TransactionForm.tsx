@@ -42,12 +42,7 @@ interface DateFieldProps {
   onPick: (date: Date) => void;
 }
 
-// iOS's 'compact' picker (set in the DateTimePicker wrapper) is already a
-// self-contained tappable pill that opens a floating popover — it replaces
-// our own label outright, so it's the only thing in the box there.
-// Android has no such trigger style: the native control has to be
-// conditionally mounted on tap (it pops as a dialog immediately once
-// mounted), so that platform keeps our own styled label as the trigger.
+// iOS's compact picker (see DateTimePicker) is its own tappable trigger; Android needs our label to mount it on tap.
 const DateField = ({ icon, label, mode, value, onPick }: DateFieldProps) => {
   const [open, setOpen] = useState(false);
 
@@ -92,7 +87,7 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
   const { wallets } = useAppSelector(selectWallet);
   const { expenses, incomes } = useAppSelector(selectActiveCategories);
 
-  const { control, watch, onSubmit, isSubmitDisabled, closeBottomSheet } = useTransactionForm({
+  const { control, watch, resetField, onSubmit, isSubmitDisabled, closeBottomSheet } = useTransactionForm({
     transactionType,
     initialWalletId: wallets[initialWalletIndex]?.wallet.id ?? -1,
   });
@@ -120,7 +115,7 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
   const selectedWallet = wallets.find(({ wallet: { id } }) => id === selectedWalletId)?.wallet;
 
   const readyAmount = isValidAmount(amount);
-  const readyCategory = selectedCategoryId !== undefined;
+  const readyCategory = categories.some(({ id }) => id === selectedCategoryId);
   const ready = readyAmount && readyCategory;
 
   const helperText = !readyCategory ? 'Pick a category to save' : !readyAmount ? 'Enter an amount to save' : undefined;
@@ -150,7 +145,10 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
             <View style={styles.typeSwitch}>
               <TouchableOpacity
                 style={[styles.typeTab, value === TransactionType.INCOME && styles.typeTabActive]}
-                onPress={() => onChange(TransactionType.INCOME)}
+                onPress={() => {
+                  onChange(TransactionType.INCOME);
+                  resetField('category_id');
+                }}
                 activeOpacity={0.7}
               >
                 <Icon
@@ -168,7 +166,10 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
 
               <TouchableOpacity
                 style={[styles.typeTab, value === TransactionType.EXPENSE && styles.typeTabActive]}
-                onPress={() => onChange(TransactionType.EXPENSE)}
+                onPress={() => {
+                  onChange(TransactionType.EXPENSE);
+                  resetField('category_id');
+                }}
                 activeOpacity={0.7}
               >
                 <Icon

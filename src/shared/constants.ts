@@ -24,13 +24,7 @@ export const BASE_API_URL = resolveApiBaseUrl();
 export const AUTH_TOKEN_KEY = 'sbm-AUTH_TOKEN_KEY';
 export const BALANCE_HIDDEN_KEY = 'sbm-BALANCE_HIDDEN';
 
-/**
- * Wallet-card gradient presets (design stage 6, Home Stage 2.dc.html) —
- * each a dark background meant for near-white text in both app themes,
- * with its own light/dark pair (152deg, stops at 0%/78%). `gradients`
- * resolves against the same `colorScheme` as the rest of the theme, so
- * consumers keep the flat `gradients[design]` lookup they already had.
- */
+// Wallet-card gradient presets, paired per color scheme like the rest of the theme (angle/stops in WalletGradientBackground.tsx).
 const walletGradientsByScheme: Record<'light' | 'dark', Record<WalletDesign, [string, string]>> = {
   light: {
     [WalletDesign.SLATE]: ['#2f3a4b', '#1d2430'],
@@ -84,12 +78,7 @@ export const walletTextColors: Record<WalletDesign, { fg: string; dim: string; i
 
 export const DEFAULT_WALLET_DESIGN = WalletDesign.SLATE;
 
-// Wallets saved before this stage may still carry a pre-stage-6 `design`
-// value (green/yellow/blue/red/pink) from the backend — same situation
-// as the legacy category-icon aliases in shared/icons.ts. There's no
-// natural old->new color mapping worth preserving here (pre-launch data,
-// per design stage 6), so any unrecognized value just falls back to the
-// default preset instead of crashing the card that renders it.
+// Wallets saved before stage 6 may carry an old `design` value (see legacy icon aliases in shared/icons.ts); unrecognized values fall back rather than crash.
 export const resolveWalletDesign = (design?: WalletDesign): WalletDesign =>
   design && design in gradients ? design : DEFAULT_WALLET_DESIGN;
 

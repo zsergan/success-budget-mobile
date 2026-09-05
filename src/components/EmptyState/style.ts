@@ -23,18 +23,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.track,
   },
   textContainer: {
-    // alignSelf: 'stretch' so this takes root's full content width instead
-    // of shrink-wrapping — otherwise title/description's own width: '100%'
-    // resolves against an ambiguous parent and can clip the last glyph.
+    // stretch so title/description's own width: '100%' resolves against a real width, not an ambiguous shrink-wrap parent.
     alignSelf: 'stretch',
     alignItems: 'center',
     rowGap: theme.spacing.xs + 2,
   },
   title: {
-    // width: '100%' + textAlign because a Text sized by intrinsic content
-    // width inside an alignItems:'center' column can get a layout box
-    // narrower than Plus Jakarta Sans actually needs to paint, clipping
-    // the last glyph (see commit cde3346, same class of bug).
+    // Plus Jakarta Sans under-measures; see cde3346.
     width: '100%',
     textAlign: 'center',
     fontFamily: theme.fonts.semiBold,
@@ -44,9 +39,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   description: {
-    // width: '100%' because a Text inside an alignItems:'center' column
-    // can silently fail to wrap and overflow the screen instead —
-    // hit this exact bug with ErrorBoundary.message in design stage 4.
+    // Without width: '100%' this can silently fail to wrap and overflow the screen instead.
     width: '100%',
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.bodySm,

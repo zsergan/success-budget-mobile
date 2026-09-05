@@ -24,15 +24,20 @@ const transactionSlice = createSlice({
       state.isLoading = false;
     });
 
-    builder.addCase(fetchTransactionsInRange.pending, (state) => {
+    builder.addCase(fetchTransactionsInRange.pending, (state, action) => {
       state.isLoadingRange = true;
+      state.rangeRequestId = action.meta.requestId;
     });
 
-    builder.addCase(fetchTransactionsInRange.rejected, (state) => {
+    builder.addCase(fetchTransactionsInRange.rejected, (state, action) => {
+      if (action.meta.requestId !== state.rangeRequestId) return;
+
       state.isLoadingRange = false;
     });
 
     builder.addCase(fetchTransactionsInRange.fulfilled, (state, action) => {
+      if (action.meta.requestId !== state.rangeRequestId) return;
+
       state.rangeTransactions = action.payload;
       state.isLoadingRange = false;
     });

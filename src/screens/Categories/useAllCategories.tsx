@@ -72,8 +72,8 @@ const useAllCategories = ({ navigation }: UseAllCategoriesProps) => {
 
   return {
     isModalVisible,
-    incomes: incomes || [],
-    expenses: expenses || [],
+    incomes,
+    expenses,
     longPressedCategory,
     onEdit,
     onUpdate,

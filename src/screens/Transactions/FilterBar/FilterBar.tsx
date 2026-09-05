@@ -3,7 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { Icon } from '@components';
 import { colors } from '@shared/theme';
 import type { DateRange, PeriodPreset } from '@shared/utils';
-import { formatNumber, formatRangeLabel } from '@shared/utils';
+import { formatCurrencyAmount, formatRangeLabel } from '@shared/utils';
 
 import styles from './style';
 
@@ -70,10 +70,7 @@ const FilterBar = ({ range, income, expense, currencyCode, onPresetPress, onOpen
           <Text style={styles.totalLabel}>Income</Text>
         </View>
 
-        <Text style={styles.totalValue}>
-          {formatNumber(income)}
-          {currencyCode ? ` ${currencyCode}` : ''}
-        </Text>
+        <Text style={styles.totalValue}>{formatCurrencyAmount(income, currencyCode)}</Text>
       </View>
 
       <View style={styles.totalCard}>
@@ -82,10 +79,7 @@ const FilterBar = ({ range, income, expense, currencyCode, onPresetPress, onOpen
           <Text style={styles.totalLabel}>Expense</Text>
         </View>
 
-        <Text style={styles.totalValue}>
-          {formatNumber(expense)}
-          {currencyCode ? ` ${currencyCode}` : ''}
-        </Text>
+        <Text style={styles.totalValue}>{formatCurrencyAmount(expense, currencyCode)}</Text>
       </View>
     </View>
   </View>

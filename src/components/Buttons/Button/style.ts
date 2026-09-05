@@ -25,9 +25,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.track,
   },
   buttonText: {
-    // flex: 1 + textAlign so the Text's box comes from the row's layout,
-    // not from Yoga's own font-intrinsic measurement — Plus Jakarta Sans
-    // under-measures and clips the last glyph otherwise (see cde3346).
+    // Plus Jakarta Sans under-measures; see cde3346.
     flex: 1,
     textAlign: 'center',
     fontFamily: theme.fonts.medium,

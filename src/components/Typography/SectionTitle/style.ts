@@ -18,10 +18,7 @@ const styles = StyleSheet.create({
     columnGap: theme.spacing.sm,
   },
   title: {
-    // flexGrow: 1 so this Text's box comes from the row's own available-
-    // space calculation, not from Yoga's own intrinsic measurement of the
-    // string — Plus Jakarta Sans under-measures and clips the last glyph
-    // otherwise, even with plenty of free space around it (see cde3346).
+    // Plus Jakarta Sans under-measures; see cde3346.
     flexGrow: 1,
     flexShrink: 1,
     minWidth: 0,

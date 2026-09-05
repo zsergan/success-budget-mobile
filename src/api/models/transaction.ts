@@ -23,7 +23,7 @@ export const mapTransaction = (dto: Transaction): TransactionModel => ({
   categoryId: dto.category_id,
   transactionType: dto.transaction_type,
   amount: dto.amount,
-  timestamp: dto.timestamp,
+  timestamp: new Date(dto.timestamp),
   description: dto.description,
   wallet: dto.wallet,
   category: mapCategory(dto.category),

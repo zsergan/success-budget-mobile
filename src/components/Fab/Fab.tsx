@@ -36,10 +36,7 @@ const Fab = ({ onExpense, onIncome }: Props) => {
     transform: [{ rotate: `${rotation.value * 45}deg` }],
   }));
 
-  // Manually driven opacity/translateY instead of Reanimated's entering/exiting
-  // layout animations — those independently measure this View, which doesn't
-  // play well with an absolutely-positioned, shrink-to-fit ancestor. Keeping
-  // the menu always mounted (just visually hidden when closed) sidesteps it.
+  // Manually driven instead of Reanimated's layout animations, which measure this View poorly under a shrink-to-fit ancestor.
   const menuStyle = useAnimatedStyle(() => ({
     opacity: menuProgress.value,
     transform: [{ translateY: interpolate(menuProgress.value, [0, 1], [12, 0]) }],

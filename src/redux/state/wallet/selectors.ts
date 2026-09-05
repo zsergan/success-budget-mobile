@@ -6,15 +6,7 @@ export const selectWallet = (state: RootState) => state.wallet;
 const selectWallets = (state: RootState) => state.wallet.wallets;
 const selectBaseCurrency = (state: RootState) => state.profile.baseCurrency;
 
-/**
- * Hero total balance on Home (design stage 7) — sums only wallets whose
- * currency matches the user's base currency. Wallets can each have their
- * own currency (see CreateWalletScreen), and there's no exchange-rate
- * data anywhere in this app, so summing raw balances across different
- * currencies would produce a meaningless number; excluding the rest is
- * the only option that isn't silently wrong. Excluded wallets still show
- * up in the carousel below, just don't count toward this total.
- */
+// Sums only base-currency wallets — no exchange-rate data exists, so mixing currencies would be meaningless.
 export const selectTotalBalance = createSelector(selectWallets, selectBaseCurrency, (wallets, baseCurrency) => {
   if (!baseCurrency) {
     return { total: 0, currencyCode: undefined, walletsCount: 0 };

@@ -2,7 +2,7 @@ import { RootLayout, SectionTitle, TinyButton, LongPressedModal } from '@compone
 import type { ScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 
-import CategoriesBlock from './CategoriesBlock';
+import CategoriesBlock from './CategoriesBlock/CategoriesBlock';
 import useAllCategories from './useAllCategories';
 
 import styles from './style';

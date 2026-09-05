@@ -2,7 +2,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import { Icon } from '@components';
 import { colors } from '@shared/theme';
-import { getCalendarMonthGrid } from '@shared/utils';
+import { formatMonthYear, getCalendarMonthGrid } from '@shared/utils';
 
 import styles from './style';
 
@@ -15,8 +15,6 @@ interface Props {
   onNavigate: (delta: 1 | -1) => void;
 }
 
-const monthTitle = (date: Date) => date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-
 const CalendarGrid = ({ month, range, onSelectDay, onNavigate }: Props) => {
   const days = getCalendarMonthGrid(month, range);
   const rows = Array.from({ length: 6 }, (_, i) => days.slice(i * 7, i * 7 + 7));
@@ -28,7 +26,7 @@ const CalendarGrid = ({ month, range, onSelectDay, onNavigate }: Props) => {
           <Icon name="back" size={14} color={colors.text} strokeWidth={2} />
         </TouchableOpacity>
 
-        <Text style={styles.monthLabel}>{monthTitle(month)}</Text>
+        <Text style={styles.monthLabel}>{formatMonthYear(month)}</Text>
 
         <TouchableOpacity style={styles.navButton} onPress={() => onNavigate(1)} activeOpacity={0.7}>
           <Icon name="forward" size={14} color={colors.text} strokeWidth={2} />

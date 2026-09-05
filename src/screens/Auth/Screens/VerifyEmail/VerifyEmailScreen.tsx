@@ -9,7 +9,7 @@ import { useAppSelector } from '@redux/hooks';
 import { selectAuth } from '@redux/state/auth/selectors';
 import { useAlert } from '@hooks';
 import { getErrorMessage } from '@shared/utils';
-import AuthLayout from '../../AuthLayout';
+import AuthLayout from '@screens/Auth/AuthLayout/AuthLayout';
 import useVerifyEmailForm from './useVerifyEmailForm';
 
 import styles from '../style';

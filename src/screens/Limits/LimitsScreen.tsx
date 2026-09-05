@@ -7,7 +7,7 @@ import { selectProfile } from '@redux/state/profile/selectors';
 import { ALL_OTHERS_CATEGORIES_ID } from '@shared/constants';
 import type { ScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
-import Overall from './Overall';
+import Overall from './Overall/Overall';
 
 import { colors } from '@shared/theme';
 import styles from './style';
