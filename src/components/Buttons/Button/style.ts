@@ -21,6 +21,9 @@ const styles = StyleSheet.create({
   tertiaryButton: {
     backgroundColor: 'transparent',
   },
+  dangerButton: {
+    backgroundColor: colors.danger,
+  },
   primaryButtonDisabled: {
     backgroundColor: colors.track,
   },
@@ -40,6 +43,9 @@ const styles = StyleSheet.create({
   },
   tertiaryButtonText: {
     color: colors.text,
+  },
+  dangerButtonText: {
+    color: '#fffdfa',
   },
   primaryButtonTextDisabled: {
     color: colors.muted,

@@ -22,7 +22,6 @@ export enum ScreenNames {
   LIMITS_TAB = 'Limits',
   HOME_SCREEN = 'HomeScreen',
   ADD_WALLET_SCREEN = 'AddWalletScreen',
-  ADD_LIMIT_SCREEN = 'AddLimitScreen',
   ADD_CATEGORY_SCREEN = 'AddCategoryScreen',
   TRANSACTIONS_TAB = 'Transactions',
   SETTINGS_TAB = 'Settings',
