@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native';
 
 import type { LimitModel } from '@api/models';
-import { Icon } from '@components';
+import Icon from '@components/Icon/Icon';
 import { colors } from '@shared/theme';
 import { formatCurrencyAmount, getDaysLeftInMonth, getLimitStatus, hexToRgba } from '@shared/utils';
 

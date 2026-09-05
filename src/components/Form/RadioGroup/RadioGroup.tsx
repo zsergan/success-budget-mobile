@@ -2,8 +2,8 @@ import { useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { ScrollView, View, Dimensions } from 'react-native';
 
-import type { TinyButtonProps } from '@components';
-import { TinyButton } from '@components';
+import type { TinyButtonProps } from '@components/Buttons/TinyButton/TinyButton';
+import TinyButton from '@components/Buttons/TinyButton/TinyButton';
 
 import styles from './style';
 
