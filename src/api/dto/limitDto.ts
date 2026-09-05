@@ -1,32 +1,54 @@
 import type { LimitType } from '@shared/enums';
+import type { IconType } from '@shared/types';
 import type { Category } from './categoryDto';
 
-export interface Limit {
+export interface LimitCategory {
   id: number;
-  limit_type: LimitType;
-  amount: number;
-  category: Category;
-  spent: number;
-  in_percent: number;
+  name: string;
+  icon: IconType;
+  color: string;
 }
 
-export interface LimitsOverall {
+export interface LimitView {
+  id: number;
+  name: string | null;
+  amount: string;
   spent: number;
-  sum: number;
   in_percent: number;
+  categories: LimitCategory[];
+}
+
+export interface OverAllocation {
+  category_total: number;
+  difference: number;
 }
 
 export interface GetLimitsResponse {
-  limits: Limit[];
-  overall: LimitsOverall;
+  total: LimitView | null;
+  categories: LimitView[];
+  over_allocation: OverAllocation | null;
+}
+
+// Raw entity shape returned as-is by POST/PUT — richer than LimitView's
+// trimmed nested categories (includes limit_type and full Category objects).
+export interface LimitEntity {
+  id: number;
+  name: string | null;
+  limit_type: LimitType;
+  amount: string;
+  created_at: string;
+  updated_at: string;
+  categories: Category[];
 }
 
 export interface CreateLimitRequest {
-  category_id?: number;
+  category_ids?: number[];
+  name?: string;
   amount: string;
 }
 
 export interface UpdateLimitRequest {
-  category_id?: number;
+  category_ids?: number[];
+  name?: string;
   amount?: string;
 }
