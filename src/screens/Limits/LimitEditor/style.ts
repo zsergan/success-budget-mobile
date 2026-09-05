@@ -73,7 +73,6 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   nameSection: {
-    marginHorizontal: theme.spacing.xl,
     rowGap: theme.spacing.sm - 2,
   },
   nameBox: {
@@ -100,7 +99,6 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
   hero: {
-    marginHorizontal: theme.spacing.xl,
     borderRadius: theme.radius.lg,
     paddingVertical: theme.spacing.lg,
     alignItems: 'center',
