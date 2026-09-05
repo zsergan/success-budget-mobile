@@ -11,7 +11,7 @@ import { selectProfile } from '@redux/state/profile/selectors';
 import { colors } from '@shared/theme';
 import { formatDateMM, getDaysLeftInMonth } from '@shared/utils';
 import type { LimitScope } from './LimitEditor/useLimitEditorForm';
-import LimitEditorSheet from './LimitEditor/LimitEditorSheet';
+import LimitEditorSheet, { LIMIT_EDITOR_SNAP_POINT } from './LimitEditor/LimitEditorSheet';
 import DeleteLimitDialog from './DeleteLimitDialog/DeleteLimitDialog';
 import TotalLimitCard from './TotalLimitCard/TotalLimitCard';
 import OverAllocationBanner from './OverAllocationBanner/OverAllocationBanner';
@@ -49,7 +49,7 @@ const LimitsScreen = () => {
 
   return (
     <>
-      <BottomModal ref={editorRef} snapPoint="94%">
+      <BottomModal ref={editorRef} snapPoint={LIMIT_EDITOR_SNAP_POINT}>
         <LimitEditorSheet
           key={editorKey}
           limit={editorTarget.limit}

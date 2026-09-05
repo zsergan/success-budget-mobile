@@ -1,4 +1,4 @@
-import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Controller } from 'react-hook-form';
@@ -24,6 +24,10 @@ const SCOPES: { value: LimitScope; label: string }[] = [
 
 const ALLOCATION_COLORS = [colors.accent, '#8a5406', colors.ok, colors.muted];
 
+// Must match the snapPoint passed to the BottomModal wrapping this sheet in LimitsScreen.tsx.
+export const LIMIT_EDITOR_SNAP_POINT = '94%';
+const SNAP_FRACTION = parseFloat(LIMIT_EDITOR_SNAP_POINT) / 100;
+
 interface Props {
   limit?: LimitModel;
   initialScope?: LimitScope;
@@ -32,6 +36,7 @@ interface Props {
 
 const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const { expenses } = useAppSelector(selectActiveCategories);
   const { total, categoryLimits } = useAppSelector(selectLimit);
   const { baseCurrency } = useAppSelector(selectProfile);
@@ -71,7 +76,7 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
   const overCommitted = total ? committedTotal > Number(total.amount) : false;
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { height: windowHeight * SNAP_FRACTION }]}>
       <View style={styles.topBlock}>
         <View style={styles.handle} />
 
