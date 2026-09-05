@@ -277,7 +277,6 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: theme.spacing.md,
     marginHorizontal: theme.spacing.xl,
-    marginBottom: theme.spacing.xl,
     rowGap: theme.spacing.sm,
   },
   resetNote: {

@@ -1,4 +1,6 @@
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Controller } from 'react-hook-form';
 
 import type { LimitModel } from '@api/models';
@@ -8,7 +10,7 @@ import { selectActiveCategories } from '@redux/state/category/selectors';
 import { selectLimit } from '@redux/state/limit/selectors';
 import { selectProfile } from '@redux/state/profile/selectors';
 import { formatCurrencyAmount, hexToRgba } from '@shared/utils';
-import { colors } from '@shared/theme';
+import theme, { colors } from '@shared/theme';
 import type { LimitScope } from './useLimitEditorForm';
 import useLimitEditorForm from './useLimitEditorForm';
 
@@ -29,6 +31,7 @@ interface Props {
 }
 
 const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
+  const insets = useSafeAreaInsets();
   const { expenses } = useAppSelector(selectActiveCategories);
   const { total, categoryLimits } = useAppSelector(selectLimit);
   const { baseCurrency } = useAppSelector(selectProfile);
@@ -105,9 +108,8 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
         </View>
       </View>
 
-      <ScrollView
+      <BottomSheetScrollView
         style={styles.body}
-        automaticallyAdjustKeyboardInsets
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -283,9 +285,9 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
             </View>
           )}
         </View>
-      </ScrollView>
+      </BottomSheetScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { marginBottom: theme.spacing.xl + insets.bottom }]}>
         <View style={styles.resetNote}>
           <Icon name="refresh" size={15} color={colors.muted} strokeWidth={1.9} />
 

@@ -49,7 +49,7 @@ const LimitsScreen = () => {
 
   return (
     <>
-      <BottomModal ref={editorRef}>
+      <BottomModal ref={editorRef} snapPoint="94%">
         <LimitEditorSheet
           key={editorKey}
           limit={editorTarget.limit}
