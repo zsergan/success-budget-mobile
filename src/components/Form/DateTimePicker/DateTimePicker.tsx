@@ -9,9 +9,7 @@ interface Props {
   onDismiss?: () => void;
 }
 
-// 'compact' on iOS renders a small pill that opens a floating popover on tap
-// (no inline expansion); Android has no such trigger style, so 'default'
-// there is what pops the OS dialog when this component gets mounted.
+// 'compact' (iOS) is a self-contained tappable pill; Android has no such style, so 'default' pops the dialog on mount.
 const DateTimePicker = ({ value, mode = 'date', onChange, onDismiss }: Props) => {
   return (
     <Picker

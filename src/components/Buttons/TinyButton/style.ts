@@ -39,11 +39,7 @@ const styles = StyleSheet.create({
     height: 24,
   },
   smTitle: {
-    // paddingRight buffer: Plus Jakarta Sans SemiBold's own intrinsic
-    // measurement comes out a hair narrow (same bug as cde3346) — this
-    // box auto-sizes from that measurement (it's a content-hugging chip,
-    // can't just force a wide explicit box like on a full-width Text),
-    // so give the glyphs a little extra room directly.
+    // Plus Jakarta Sans under-measures; see cde3346.
     paddingRight: 2,
     fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.caption,

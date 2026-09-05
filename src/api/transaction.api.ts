@@ -34,7 +34,6 @@ export const getLatestTransaction = async () => {
   }
 };
 
-// Not wired to any UI yet — added for API-layer completeness.
 export const deleteTransaction = async (transactionId: string) => {
   await api.deleteRequest(`/transactions/${transactionId}`);
 };

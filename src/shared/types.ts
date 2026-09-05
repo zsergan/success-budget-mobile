@@ -28,11 +28,7 @@ export type RootStackParamList = {
 export interface ScreenProps<T extends ScreenNames> extends NativeStackScreenProps<RootStackParamList, T> {}
 export type NavigationType<T extends ScreenNames> = NativeStackNavigationProp<RootStackParamList, T>;
 
-// UI icon names + category icon names, see `src/shared/icons.ts` for the
-// SVG path each one renders (design stage 3). Pre-stage-3 icon names are
-// intentionally not part of this type — the app never writes them again —
-// but `icons.ts` still resolves them at runtime for old persisted
-// `category.icon` values coming straight off the backend.
+// UI + category icon names (see `src/shared/icons.ts` for each path); legacy names are excluded here but still resolved there.
 export type IconType =
   | CategoryIconType
   | TransactionTypeIconType

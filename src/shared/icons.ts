@@ -1,9 +1,4 @@
-/**
- * SVG path data for the app's icon set (design stage 3), one path per
- * 24x24 viewBox, rendered as a stroke-only line icon (see `Icon`
- * component). Source: `.private/design/Home Stage 2.dc.html`, constants
- * `UI_ICONS` and `CAT_ICONS`.
- */
+// SVG path data for the app's icon set, one path per 24x24 viewBox, rendered as a stroke-only line icon (see `Icon`).
 
 const UI_ICON_PATHS = {
   plus: 'M12 5v14M5 12h14',
@@ -85,16 +80,7 @@ const CATEGORY_ICON_PATHS = {
   other: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 10.5A3 3 0 0 1 15 11c0 2-3 2-3 4M12 18v.01',
 } as const;
 
-/**
- * Old (pre design-stage-3) icon names, aliased to a current path. Needed
- * because `CategoryModel.icon` / `Category.icon` come straight off the
- * backend (`src/api/dto/categoryDto.ts`) with zero runtime validation —
- * existing rows saved under the old MaterialIcons-based names must keep
- * rendering *something* sensible without a backend data migration.
- * `IconType` (`@shared/types`) no longer includes these names — new
- * writes (the icon picker, hardcoded UI constants) always use current
- * names; this table exists only to interpret old persisted data.
- */
+// Old icon names aliased to a current path — category rows saved under the old names (unvalidated backend data) must still render.
 const LEGACY_ICON_ALIASES: Record<string, keyof typeof UI_ICON_PATHS | keyof typeof CATEGORY_ICON_PATHS> = {
   add: 'plus',
   email: 'mail',

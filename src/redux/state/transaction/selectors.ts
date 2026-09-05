@@ -10,12 +10,7 @@ export const selectLatestTransaction = (state: RootState) => state.transaction.l
 
 const selectBaseCurrency = (state: RootState) => state.profile.baseCurrency;
 
-/**
- * Income/expense totals for the currently loaded (from/to-scoped) range —
- * base-currency-only, same convention as `groupTransactionsByDay`'s
- * per-day totals: no exchange-rate data exists anywhere in the app, so
- * summing across currencies would produce a meaningless number.
- */
+// Base-currency-only totals — no exchange-rate data exists, so summing across currencies would be meaningless.
 export const selectPeriodTotals = createSelector(
   selectRangeTransactions,
   selectBaseCurrency,

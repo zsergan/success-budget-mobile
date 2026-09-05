@@ -1,11 +1,7 @@
 export const horizontalScreenPadding = 20;
 
-/**
- * General UI color tokens — "Slate & Amber" (design stage 2), with full
- * light/dark parity as specified by the design so stage 8 (theme
- * switching) can wire this up without redefining the values. `colorScheme`
- * below is the only thing hardcoded for now — no switcher exists yet.
- */
+// "Slate & Amber" (design stage 2) — both variants defined now so stage 8's
+// theme switcher can wire in without redefining values.
 const colorTokens = {
   light: {
     bg: '#F6F7F9',
@@ -41,20 +37,13 @@ const colorTokens = {
   },
 } as const;
 
-// Hardcoded until design stage 8 adds an actual switcher (system
-// Appearance / user setting) and makes this dynamic. Exported so other
-// light/dark-paired token sets (e.g. the wallet gradients in
-// constants.ts) can resolve against the same active scheme.
+// Hardcoded until stage 8 adds a real switcher; exported so other paired
+// token sets (e.g. wallet gradients in constants.ts) share the same scheme.
 export const colorScheme: keyof typeof colorTokens = 'light';
 
 export const colors = colorTokens[colorScheme];
 
-/**
- * Colors used by the category color picker (CreateCategoryScreen) and a
- * couple of one-off surfaces (ModalContainer's scrim, the income/expense
- * arrow icons on WalletCard) — unrelated to the wallet gradient presets,
- * which live in constants.ts.
- */
+// Used by the category color picker and a few one-off surfaces, unrelated to the wallet gradients in constants.ts.
 export const palette = {
   yellow: '#FFC55A',
   greenDark: '#57C84D',
@@ -71,12 +60,7 @@ const theme = {
     medium: 'PlusJakartaSans-Medium',
     semiBold: 'PlusJakartaSans-SemiBold',
   },
-  /**
-   * Typographic scale (9 steps, Foundation.dc.html — design stage 4).
-   * `fontSizes`/`lineHeights`/`letterSpacing` are parallel maps keyed by
-   * the same token names; font weight is chosen per usage via
-   * `theme.fonts`, independently of the size step.
-   */
+  // fontSizes/lineHeights/letterSpacing are parallel maps keyed by the same token names.
   fontSizes: {
     display: 38,
     titleLg: 28,
@@ -110,26 +94,11 @@ const theme = {
     titleSm: -0.2,
     micro: 0.6,
   },
-  /**
-   * Radius sizes.
-   * @property sm - 12
-   * @property md - 14 (Button/Input, Foundation.dc.html — design stage 5)
-   * @property lg - 20
-   */
   radius: {
     sm: 12,
     md: 14,
     lg: 20,
   },
-  /**
-   * Spacing sizes for margins and paddings.
-   * @property xs - 4
-   * @property sm - 8
-   * @property md - 12
-   * @property lg - 16
-   * @property xl - 20
-   * @property xxl - 24
-   */
   spacing: {
     xs: 4,
     sm: 8,
@@ -151,10 +120,7 @@ export const shadow: Record<string, unknown> = {
   shadowRadius: 10,
 };
 
-// Elevation 2 (modal), per Foundation.dc.html — design stage 5. Not wired
-// up anywhere yet: nothing that uses ProgressBar today sits inside a
-// modal, but the token exists so a future modal host doesn't have to
-// invent one.
+// Elevation 2 (modal) — not wired up anywhere yet, exists for a future modal host.
 export const shadowModal: Record<string, unknown> = {
   shadowColor: colors.text,
   shadowOpacity: 0.28,

@@ -18,10 +18,7 @@ const styles = StyleSheet.create({
   gradient: {
     borderRadius: theme.radius.lg,
   },
-  // Color comes from the wallet's own gradient preset (`walletTextColors`
-  // in constants.ts), not `theme.colors` — every preset is a dark card
-  // that needs near-white text regardless of the app's own light/dark
-  // theme, so it's applied inline in WalletCard.tsx instead of here.
+  // Color comes from the wallet's own gradient preset (walletTextColors), applied inline in WalletCard.tsx, not here.
   name: {
     fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.caption,

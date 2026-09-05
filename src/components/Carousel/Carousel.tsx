@@ -19,10 +19,7 @@ import styles from './style';
 
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
-// How much of the neighbouring card peeks in on each side of the centered,
-// focused card — keeping this fixed (rather than a scale transform on the
-// items) is what makes every card end up the same size and lets the active
-// one sit exactly centered, regardless of item count.
+// Fixed neighbor-peek (not a scale transform) keeps every card the same size with the active one centered.
 const PEEK = 32;
 const GAP = 14;
 
