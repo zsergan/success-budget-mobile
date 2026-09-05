@@ -63,7 +63,7 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
         amount: formData.amount,
         wallet_id: formData.wallet_id,
         category_id: formData.category_id,
-        timestamp: formData.date,
+        timestamp: formData.date.toISOString(),
         transaction_type: formData.transaction_type,
         description: formData.notes,
       };
