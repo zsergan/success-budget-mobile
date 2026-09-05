@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native';
 
 import type { Limit } from '@api/dto';
-import { formatNumber } from '@shared/utils';
+import { formatCurrencyAmount } from '@shared/utils';
 import CircleIcon from '../CircleIcon/CircleIcon';
 import ProgressBar from '../ProgressBar/ProgressBar';
 import TinyButton from '../Buttons/TinyButton/TinyButton';
@@ -33,7 +33,7 @@ const LimitItem = ({ limit, currencyCode, onEdit }: Props) => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.text}>{`${formatNumber(amount)} ${currencyCode}`}</Text>
+          <Text style={styles.text}>{formatCurrencyAmount(amount, currencyCode)}</Text>
 
           {onEdit && <TinyButton icon="edit" onPress={onEdit} />}
         </View>
@@ -42,7 +42,7 @@ const LimitItem = ({ limit, currencyCode, onEdit }: Props) => {
       <ProgressBar
         percentage={in_percent}
         positionInfo="bottom"
-        leftInfo={`${formatNumber(spent)} ${currencyCode}`}
+        leftInfo={formatCurrencyAmount(spent, currencyCode)}
         rightInfo={`${in_percent}%`}
       />
     </View>

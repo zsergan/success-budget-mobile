@@ -1,6 +1,6 @@
 import type { StyleProp, ViewStyle } from 'react-native';
 
-import GradientBackground from '../../GradientBackground/GradientBackground';
+import { GradientBackground } from '@components';
 import { gradients, resolveWalletDesign } from '@shared/constants';
 import type { WalletDesign } from '@shared/enums';
 
@@ -9,9 +9,7 @@ interface Props {
   style?: StyleProp<ViewStyle>;
 }
 
-// 152deg per Foundation.dc.html, converted from a CSS gradient-angle to
-// expo-linear-gradient's normalized start/end points; `locations` matches
-// the design's 0%/78% stops instead of an even 0%/100% spread.
+// 152deg converted to expo-linear-gradient's start/end points; locations match the design's 0%/78% stops.
 const WalletGradientBackground = ({ design, style }: Props) => (
   <GradientBackground
     style={style}

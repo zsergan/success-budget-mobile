@@ -3,7 +3,7 @@ import { TouchableOpacity, Text, View } from 'react-native';
 
 import type { IconType } from '@shared/types';
 import { colors } from '@shared/theme';
-import Icon from '../../Icon/Icon';
+import { Icon } from '@components';
 
 import styles from './style';
 

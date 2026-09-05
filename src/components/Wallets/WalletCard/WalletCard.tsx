@@ -1,10 +1,10 @@
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import Icon from '../../Icon/Icon';
+import { Icon } from '@components';
 import WalletGradientBackground from '../WalletGradientBackground/WalletGradientBackground';
 import { resolveWalletDesign, walletTextColors } from '@shared/constants';
-import { formatNumber } from '@shared/utils';
+import { formatCurrencyAmount } from '@shared/utils';
 import { WalletDesign } from '@shared/enums';
 
 import styles from './style';
@@ -40,7 +40,7 @@ const WalletCard = ({
         <View>
           <Text style={[styles.name, { color: dim }]}>{walletName}</Text>
 
-          <Text style={[styles.balance, { color: fg }]}>{`${formatNumber(Number(balance))} ${currencyCode}`}</Text>
+          <Text style={[styles.balance, { color: fg }]}>{formatCurrencyAmount(Number(balance), currencyCode)}</Text>
         </View>
 
         {onMorePress && (
@@ -54,13 +54,13 @@ const WalletCard = ({
         <View style={[styles.totalBlock, { backgroundColor: inner }]}>
           <Text style={[styles.name, { color: dim }]}>Income</Text>
 
-          <Text style={[styles.total, { color: fg }]}>{`${formatNumber(totalIncome || 0)} ${currencyCode}`}</Text>
+          <Text style={[styles.total, { color: fg }]}>{formatCurrencyAmount(totalIncome || 0, currencyCode)}</Text>
         </View>
 
         <View style={[styles.totalBlock, { backgroundColor: inner }]}>
           <Text style={[styles.name, { color: dim }]}>Expense</Text>
 
-          <Text style={[styles.total, { color: fg }]}>{`${formatNumber(totalSpend || 0)} ${currencyCode}`}</Text>
+          <Text style={[styles.total, { color: fg }]}>{formatCurrencyAmount(totalSpend || 0, currencyCode)}</Text>
         </View>
       </View>
     </View>
