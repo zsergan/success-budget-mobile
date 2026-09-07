@@ -7,7 +7,7 @@ import styles from './style';
 interface Props {
   title?: string;
   icon?: ReactNode;
-  variant?: 'primary' | 'secondary' | 'tertiary';
+  variant?: 'primary' | 'secondary' | 'tertiary' | 'danger';
   onPress: () => void;
   withShadow?: boolean;
   disabled?: boolean;

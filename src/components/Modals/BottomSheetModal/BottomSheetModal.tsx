@@ -10,12 +10,14 @@ export type Ref = BottomSheetModal;
 interface Props {
   children: ReactNode;
   onDismiss?: () => void;
-  /** Size the sheet to its content instead of the fixed 85% snap point. */
+  /** Size the sheet to its content instead of the fixed snap point. */
   dynamicSizing?: boolean;
+  /** Fixed snap point, ignored when `dynamicSizing` is set. */
+  snapPoint?: string;
 }
 
 const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheetModal(
-  { children, onDismiss, dynamicSizing = false },
+  { children, onDismiss, dynamicSizing = false, snapPoint = '85%' },
   ref,
 ) {
   const renderBackdrop = useCallback(
@@ -29,7 +31,7 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
     <BottomSheetModal
       ref={ref}
       index={0}
-      snapPoints={dynamicSizing ? undefined : ['85%']}
+      snapPoints={dynamicSizing ? undefined : [snapPoint]}
       enableDynamicSizing={dynamicSizing}
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.background}
