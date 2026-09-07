@@ -4,14 +4,14 @@ import * as Haptics from 'expo-haptics';
 import type { WalletCardProps } from '@components';
 import { WalletCard, LongPressedModal, BottomModal, TinyWallet, Carousel, EmptyState } from '@components';
 import type { GetWalletsResponse } from '@api/dto';
-import type { WalletDesign } from '@shared/enums';
+import type { AppColor } from '@shared/enums';
 import type { NavigationType } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import useWalletsData from './useWalletsData';
 
 import styles from './style';
 
-const renderBottomModalContent = (walletName: string, currencyCode: string, design?: WalletDesign) => (
+const renderBottomModalContent = (walletName: string, currencyCode: string, design?: AppColor) => (
   <View style={styles.confirmContainer}>
     <TinyWallet walletName={walletName} currencyCode={currencyCode} design={design} />
 

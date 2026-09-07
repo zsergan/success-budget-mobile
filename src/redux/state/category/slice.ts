@@ -2,7 +2,7 @@ import { createSlice, isPending, isRejected } from '@reduxjs/toolkit';
 
 import { logoutMe } from '../auth/thunks';
 import initialState from './initialState';
-import { addCategory, editCategory, fetchCategories, sortCategoryForward } from './thunks';
+import { addCategory, deleteCategory, editCategory, fetchCategories, reorderCategories } from './thunks';
 
 const categorySlice = createSlice({
   name: 'category',
@@ -22,16 +22,35 @@ const categorySlice = createSlice({
     builder.addCase(fetchCategories.fulfilled, (state, action) => {
       state.incomes = action.payload.incomes;
       state.expenses = action.payload.expenses;
+      state.archived = action.payload.archived;
       state.isLoading = false;
     });
 
-    builder.addMatcher(isPending(fetchCategories, editCategory, addCategory, sortCategoryForward), (state) => {
-      state.error = undefined;
+    builder.addCase(deleteCategory.pending, (state) => {
+      state.isDeleting = true;
     });
 
-    builder.addMatcher(isRejected(fetchCategories, editCategory, addCategory, sortCategoryForward), (state, action) => {
-      state.error = action.payload;
+    builder.addCase(deleteCategory.fulfilled, (state) => {
+      state.isDeleting = false;
     });
+
+    builder.addCase(deleteCategory.rejected, (state) => {
+      state.isDeleting = false;
+    });
+
+    builder.addMatcher(
+      isPending(fetchCategories, editCategory, addCategory, deleteCategory, reorderCategories),
+      (state) => {
+        state.error = undefined;
+      },
+    );
+
+    builder.addMatcher(
+      isRejected(fetchCategories, editCategory, addCategory, deleteCategory, reorderCategories),
+      (state, action) => {
+        state.error = action.payload;
+      },
+    );
   },
 });
 

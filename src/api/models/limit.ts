@@ -1,4 +1,14 @@
-import type { GetLimitsResponse, LimitCategory, LimitView, OverAllocation } from '@api/dto';
+import type { AppColor } from '@shared/enums';
+import type { IconType } from '@shared/types';
+import type { GetLimitsResponse, LimitView, OverAllocation } from '@api/dto';
+import { toMobileIcon } from './category';
+
+export interface LimitCategoryModel {
+  id: number;
+  name: string;
+  icon: IconType;
+  color: AppColor;
+}
 
 export interface LimitModel {
   id: number;
@@ -6,7 +16,7 @@ export interface LimitModel {
   amount: string;
   spent: number;
   inPercent: number;
-  categories: LimitCategory[];
+  categories: LimitCategoryModel[];
 }
 
 export interface OverAllocationModel {
@@ -26,7 +36,12 @@ export const mapLimitView = (dto: LimitView): LimitModel => ({
   amount: dto.amount,
   spent: dto.spent,
   inPercent: dto.in_percent,
-  categories: dto.categories,
+  categories: dto.categories.map((category) => ({
+    id: category.id,
+    name: category.name,
+    icon: toMobileIcon(category.icon),
+    color: category.color,
+  })),
 });
 
 const mapOverAllocation = (dto: OverAllocation): OverAllocationModel => ({

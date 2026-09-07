@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   dangerButtonText: {
-    color: '#fffdfa',
+    color: '#FFFDFA',
   },
   primaryButtonTextDisabled: {
     color: colors.muted,

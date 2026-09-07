@@ -1,11 +1,11 @@
 import type { StyleProp, ViewStyle } from 'react-native';
 
 import GradientBackground from '@components/GradientBackground/GradientBackground';
-import { gradients, resolveWalletDesign } from '@shared/constants';
-import type { WalletDesign } from '@shared/enums';
+import { gradients, resolveAppColor } from '@shared/constants';
+import type { AppColor } from '@shared/enums';
 
 interface Props {
-  design: WalletDesign;
+  design: AppColor;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -13,7 +13,7 @@ interface Props {
 const WalletGradientBackground = ({ design, style }: Props) => (
   <GradientBackground
     style={style}
-    colors={gradients[resolveWalletDesign(design)]}
+    colors={gradients[resolveAppColor(design)]}
     locations={[0, 0.78]}
     start={{ x: 0.27, y: 0.06 }}
     end={{ x: 0.73, y: 0.94 }}

@@ -56,3 +56,6 @@ export const formatMonthYear = (d: Date | string) =>
 
 export const formatDateLong = (d: Date | string) =>
   new Date(d).toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+
+export const formatDayMonth = (d: Date | string) =>
+  new Date(d).toLocaleString('en-US', { day: 'numeric', month: 'short' });

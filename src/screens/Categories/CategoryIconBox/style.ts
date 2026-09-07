@@ -3,8 +3,10 @@ import { StyleSheet } from 'react-native';
 import theme from '@shared/theme';
 
 const styles = StyleSheet.create({
-  section: {
-    rowGap: theme.spacing.md,
+  box: {
+    borderRadius: theme.radius.md - 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

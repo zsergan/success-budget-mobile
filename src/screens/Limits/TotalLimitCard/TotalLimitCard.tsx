@@ -3,7 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import type { LimitModel } from '@api/models';
 import { Icon, WalletGradientBackground } from '@components';
 import { walletTextColors } from '@shared/constants';
-import { WalletDesign } from '@shared/enums';
+import { AppColor } from '@shared/enums';
 import { colors } from '@shared/theme';
 import { formatCurrencyAmount, getDailyPace, getDaysLeftInMonth, getLimitStatus } from '@shared/utils';
 
@@ -23,7 +23,7 @@ const nextResetLabel = () => {
 };
 
 const TotalLimitCard = ({ total, currencyCode, onEdit }: Props) => {
-  const { fg, dim, inner } = walletTextColors[WalletDesign.SLATE];
+  const { fg, dim, inner } = walletTextColors[AppColor.SLATE];
   const amount = Number(total.amount);
   const status = getLimitStatus(total.spent, amount);
   const daysLeft = getDaysLeftInMonth();
@@ -32,7 +32,7 @@ const TotalLimitCard = ({ total, currencyCode, onEdit }: Props) => {
 
   return (
     <View style={styles.root}>
-      <WalletGradientBackground style={styles.gradient} design={WalletDesign.SLATE} />
+      <WalletGradientBackground style={styles.gradient} design={AppColor.SLATE} />
 
       <View style={styles.topRow}>
         <View>

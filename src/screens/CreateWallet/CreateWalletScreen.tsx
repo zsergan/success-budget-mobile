@@ -12,7 +12,7 @@ import {
   Icon,
 } from '@components';
 import type { ScreenProps } from '@shared/types';
-import type { ScreenNames, WalletDesign } from '@shared/enums';
+import type { ScreenNames, AppColor } from '@shared/enums';
 import { gradients, walletTextColors } from '@shared/constants';
 import useCreateWalletForm from './useCreateWalletForm';
 
@@ -94,7 +94,7 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
               render={({ field: { onChange, value } }) => (
                 <View style={styles.designsContainer}>
                   {Object.keys(gradients).map((key) => {
-                    const design = key as WalletDesign;
+                    const design = key as AppColor;
                     const isSelected = design === value;
 
                     return (

@@ -1,12 +1,12 @@
-import type { LimitType } from '@shared/enums';
-import type { IconType } from '@shared/types';
-import type { Category } from './categoryDto';
+import type { AppColor, LimitType } from '@shared/enums';
+import type { Category, CategoryIconApi } from './categoryDto';
 
 export interface LimitCategory {
   id: number;
   name: string;
-  icon: IconType;
-  color: string;
+  // Wire value, same as Category.icon — reads don't validate, so old rows may still carry a legacy name.
+  icon: CategoryIconApi | string;
+  color: AppColor;
 }
 
 export interface LimitView {

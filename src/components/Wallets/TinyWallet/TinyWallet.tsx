@@ -1,21 +1,21 @@
 import { View, Text } from 'react-native';
 
 import WalletGradientBackground from '../WalletGradientBackground/WalletGradientBackground';
-import { resolveWalletDesign, walletTextColors } from '@shared/constants';
-import { WalletDesign } from '@shared/enums';
+import { resolveAppColor, walletTextColors } from '@shared/constants';
+import { AppColor } from '@shared/enums';
 
 import styles from './style';
 
 interface Props {
   walletName: string;
   currencyCode: string;
-  design?: WalletDesign;
+  design?: AppColor;
   backgroundStyle?: 'gradient' | 'grey';
 }
 
-const TinyWallet = ({ walletName, currencyCode, design = WalletDesign.SLATE, backgroundStyle = 'gradient' }: Props) => {
+const TinyWallet = ({ walletName, currencyCode, design = AppColor.SLATE, backgroundStyle = 'gradient' }: Props) => {
   const isGradient = backgroundStyle === 'gradient';
-  const fg = isGradient ? walletTextColors[resolveWalletDesign(design)].fg : undefined;
+  const fg = isGradient ? walletTextColors[resolveAppColor(design)].fg : undefined;
 
   return (
     <View style={[styles.root, backgroundStyle === 'grey' && styles.grey]}>

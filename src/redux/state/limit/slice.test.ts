@@ -1,4 +1,5 @@
 import type { LimitModel } from '@api/models';
+import { AppColor } from '@shared/enums';
 import { logoutMe } from '../auth/thunks';
 import limitReducer from './slice';
 import initialState from './initialState';
@@ -10,7 +11,7 @@ const groceries: LimitModel = {
   amount: '400.00',
   spent: 100,
   inPercent: 25,
-  categories: [{ id: 1, name: 'Groceries', icon: 'grocery', color: '#000' }],
+  categories: [{ id: 1, name: 'Groceries', icon: 'grocery', color: AppColor.SLATE }],
 };
 
 const total: LimitModel = {

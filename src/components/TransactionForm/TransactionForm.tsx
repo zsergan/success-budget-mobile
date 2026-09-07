@@ -10,7 +10,7 @@ import { findLimitForCategory, selectLimit } from '@redux/state/limit/selectors'
 import { selectWallet } from '@redux/state/wallet/selectors';
 import { TransactionType } from '@shared/enums';
 import type { IconType } from '@shared/types';
-import { gradients, resolveWalletDesign } from '@shared/constants';
+import { gradients, resolveAppColor } from '@shared/constants';
 import { formatDateHHMM, formatGroupLabel, hexToRgba } from '@shared/utils';
 import LimitHint from './LimitHint/LimitHint';
 import useTransactionForm from './useTransactionForm';
@@ -248,7 +248,7 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
                 <View style={styles.walletsRow}>
                   {wallets.map(({ wallet: { id, wallet_name, design } }) => {
                     const selected = value === id;
-                    const dotColor = gradients[resolveWalletDesign(design)][0];
+                    const dotColor = gradients[resolveAppColor(design)][0];
 
                     return (
                       <TouchableOpacity

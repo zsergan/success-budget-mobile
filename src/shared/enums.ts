@@ -3,7 +3,7 @@ export enum TransactionType {
   EXPENSE = 'expense',
 }
 
-export enum WalletDesign {
+export enum AppColor {
   SLATE = 'slate',
   AMBER = 'amber',
   EVERGREEN = 'evergreen',
@@ -22,7 +22,6 @@ export enum ScreenNames {
   LIMITS_TAB = 'Limits',
   HOME_SCREEN = 'HomeScreen',
   ADD_WALLET_SCREEN = 'AddWalletScreen',
-  ADD_CATEGORY_SCREEN = 'AddCategoryScreen',
   TRANSACTIONS_TAB = 'Transactions',
   SETTINGS_TAB = 'Settings',
   CATEGORIES_SCREEN = 'CategoriesScreen',

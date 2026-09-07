@@ -1,5 +1,5 @@
 import type { GetWalletsResponse } from '@api/dto';
-import { WalletDesign } from '@shared/enums';
+import { AppColor } from '@shared/enums';
 import { logoutMe } from '../auth/thunks';
 import walletReducer from './slice';
 import initialState from './initialState';
@@ -11,7 +11,7 @@ const wallet: GetWalletsResponse = {
     wallet_name: 'Cash',
     balance: '100',
     currency: { id: 1, code: 'USD', name: 'Dollar' },
-    design: WalletDesign.SLATE,
+    design: AppColor.SLATE,
   },
   total_spend: 0,
   total_income: 0,
