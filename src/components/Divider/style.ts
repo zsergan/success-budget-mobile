@@ -1,12 +1,12 @@
 import { StyleSheet } from 'react-native';
 
-import { palette } from '@shared/theme';
+import { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
     width: '100%',
     height: 1,
-    backgroundColor: palette.black,
+    backgroundColor: colors.hairline,
   },
 });
 

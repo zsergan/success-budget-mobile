@@ -1,5 +1,5 @@
 import type { GetWalletsResponse } from '@api/dto';
-import { WalletDesign } from '@shared/enums';
+import { AppColor } from '@shared/enums';
 import { logoutMe } from '../auth/thunks';
 import walletReducer from './slice';
 import initialState from './initialState';
@@ -11,7 +11,7 @@ const wallet: GetWalletsResponse = {
     wallet_name: 'Cash',
     balance: '100',
     currency: { id: 1, code: 'USD', name: 'Dollar' },
-    design: WalletDesign.GREEN,
+    design: AppColor.SLATE,
   },
   total_spend: 0,
   total_income: 0,
@@ -33,9 +33,19 @@ describe('wallet slice', () => {
     const pendingState = walletReducer(initialState, fetchWallets.pending('req-1', undefined));
     expect(pendingState.isLoading).toBe(true);
 
-    const fulfilledState = walletReducer(pendingState, fetchWallets.fulfilled([wallet], 'req-1', undefined));
+    const fulfilledState = walletReducer(
+      pendingState,
+      fetchWallets.fulfilled(
+        { total_balance: 100, total_balance_currency: 'USD', delta_percent: 4.2, wallets: [wallet] },
+        'req-1',
+        undefined,
+      ),
+    );
     expect(fulfilledState.isLoading).toBe(false);
     expect(fulfilledState.wallets).toEqual([wallet]);
+    expect(fulfilledState.totalBalance).toBe(100);
+    expect(fulfilledState.totalBalanceCurrency).toBe('USD');
+    expect(fulfilledState.deltaPercent).toBe(4.2);
   });
 
   it('records the server error on a rejected wallet thunk (fetch, add, edit, or remove)', () => {
@@ -56,7 +66,14 @@ describe('wallet slice', () => {
   });
 
   it('resets to the initial state on logout, even with wallets and an error already loaded', () => {
-    const dirtyState = { wallets: [wallet], isLoading: false, error: errorResponse };
+    const dirtyState = {
+      wallets: [wallet],
+      totalBalance: 100,
+      totalBalanceCurrency: 'USD',
+      deltaPercent: 4.2,
+      isLoading: false,
+      error: errorResponse,
+    };
 
     const state = walletReducer(dirtyState, logoutMe.fulfilled(undefined, 'req-3', undefined));
 

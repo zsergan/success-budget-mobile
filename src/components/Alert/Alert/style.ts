@@ -1,13 +1,13 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { horizontalScreenPadding, palette } from '@shared/theme';
+import theme, { horizontalScreenPadding, colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.xxl,
     paddingHorizontal: horizontalScreenPadding,
-    backgroundColor: palette.black,
+    backgroundColor: colors.secondary,
   },
   container: {
     flexDirection: 'row',
@@ -18,8 +18,9 @@ const styles = StyleSheet.create({
   text: {
     maxWidth: '80%',
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.sm,
-    color: palette.white,
+    fontSize: theme.fontSizes.bodyLg,
+    lineHeight: theme.lineHeights.bodyLg,
+    color: colors.onSecondary,
   },
 });
 

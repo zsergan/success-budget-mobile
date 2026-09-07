@@ -1,22 +1,29 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { palette, shadow } from '@shared/theme';
+import theme, { colors, shadow } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
     rowGap: theme.spacing.xs,
   },
   input: {
-    paddingVertical: theme.spacing.sm,
+    height: 52,
     paddingHorizontal: theme.spacing.lg,
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.md,
-    borderRadius: theme.radius.sm,
-    backgroundColor: palette.white,
+    fontSize: theme.fontSizes.bodyLg,
+    lineHeight: theme.lineHeights.bodyLg,
+    borderRadius: theme.radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  focused: {
+    borderWidth: 1.5,
+    borderColor: colors.accent,
   },
   withError: {
-    borderColor: palette.red,
-    borderWidth: 1,
+    borderWidth: 1.5,
+    borderColor: colors.danger,
   },
   inputWithLeftIcon: {
     paddingLeft: theme.spacing.lg + 32 + theme.spacing.md,
@@ -41,13 +48,15 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.primary,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    color: colors.text,
   },
   error: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.sm,
-    color: palette.red,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    color: colors.danger,
   },
 });
 

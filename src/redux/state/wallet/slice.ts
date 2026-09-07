@@ -20,7 +20,10 @@ const walletSlice = createSlice({
     });
 
     builder.addCase(fetchWallets.fulfilled, (state, action) => {
-      state.wallets = action.payload;
+      state.wallets = action.payload.wallets;
+      state.totalBalance = action.payload.total_balance;
+      state.totalBalanceCurrency = action.payload.total_balance_currency;
+      state.deltaPercent = action.payload.delta_percent;
       state.isLoading = false;
     });
 

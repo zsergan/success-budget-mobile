@@ -1,21 +1,32 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-import { WalletCard, LongPressedModal, BottomModal, TinyWallet, Carousel } from '@components';
-import type { WalletDesign } from '@shared/enums';
+import type { WalletCardProps } from '@components';
+import { WalletCard, LongPressedModal, BottomModal, TinyWallet, Carousel, EmptyState } from '@components';
+import type { GetWalletsResponse } from '@api/dto';
+import type { AppColor } from '@shared/enums';
 import type { NavigationType } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import useWalletsData from './useWalletsData';
 
 import styles from './style';
 
-const renderBottomModalContent = (walletName: string, currencyCode: string, design?: WalletDesign) => (
+const renderBottomModalContent = (walletName: string, currencyCode: string, design?: AppColor) => (
   <View style={styles.confirmContainer}>
     <TinyWallet walletName={walletName} currencyCode={currencyCode} design={design} />
 
     <Text style={styles.confirmText}>{`Delete a ${walletName} permanently?`}</Text>
   </View>
 );
+
+const toWalletCardProps = (item: GetWalletsResponse): Omit<WalletCardProps, 'onMorePress' | 'style'> => ({
+  walletName: item.wallet.wallet_name,
+  balance: item.wallet.balance,
+  currencyCode: item.wallet.currency.code,
+  totalIncome: item.total_income,
+  totalSpend: item.total_spend,
+  design: item.wallet.design,
+});
 
 interface Props {
   navigation: NavigationType<ScreenNames.HOME_TAB>;
@@ -54,20 +65,7 @@ const Wallets = ({ navigation, onScrollEnd }: Props) => {
 
           onDeleteCancel();
         }}
-        longPressedItem={
-          selectedWallet ? (
-            <WalletCard
-              walletName={selectedWallet.wallet.wallet_name}
-              balance={selectedWallet.wallet.balance}
-              currencyCode={selectedWallet.wallet.currency.code}
-              totalIncome={selectedWallet.total_income}
-              totalSpend={selectedWallet.total_spend}
-              design={selectedWallet.wallet.design}
-            />
-          ) : (
-            <></>
-          )
-        }
+        longPressedItem={selectedWallet ? <WalletCard {...toWalletCardProps(selectedWallet)} /> : <></>}
         onDelete={onDeletePress}
       />
 
@@ -82,29 +80,40 @@ const Wallets = ({ navigation, onScrollEnd }: Props) => {
         actions={[{ title: 'Delete', onPress: onConfirm }]}
       />
 
-      <Carousel
-        itemsLength={wallets.length}
-        items={wallets}
-        itemScale={0.88}
-        onScrollEnd={onScrollEnd}
-        renderItem={(item, walletWidth) => (
-          <TouchableOpacity
-            key={item?.wallet.id}
-            onLongPress={() => Haptics.impactAsync().then(() => onWalletLongPress(item))}
-            activeOpacity={0.7}
-          >
-            <WalletCard
-              style={{ width: walletWidth }}
-              walletName={item?.wallet.wallet_name}
-              balance={item?.wallet.balance}
-              currencyCode={item?.wallet.currency.code}
-              totalIncome={item.total_income}
-              totalSpend={item.total_spend}
-              design={item?.wallet.design}
-            />
-          </TouchableOpacity>
-        )}
-      />
+      {wallets.length === 0 && (
+        <EmptyState
+          icon="wallet"
+          title="No wallets yet"
+          description="Add your first wallet to start tracking income and expenses."
+          actionLabel="Add first wallet"
+          actionIcon="plus"
+          onActionPress={() => navigation.navigate(ScreenNames.ADD_WALLET_SCREEN, { id: 'new' })}
+        />
+      )}
+
+      {wallets.length === 1 && (
+        <WalletCard {...toWalletCardProps(wallets[0])} onMorePress={() => onWalletLongPress(wallets[0])} />
+      )}
+
+      {wallets.length > 1 && (
+        <Carousel
+          items={wallets}
+          keyExtractor={(item) => item.wallet.id}
+          onIndexChange={onScrollEnd}
+          renderItem={(item, walletWidth) => (
+            <TouchableOpacity
+              onLongPress={() => Haptics.impactAsync().then(() => onWalletLongPress(item))}
+              activeOpacity={0.7}
+            >
+              <WalletCard
+                {...toWalletCardProps(item)}
+                style={{ width: walletWidth }}
+                onMorePress={() => onWalletLongPress(item)}
+              />
+            </TouchableOpacity>
+          )}
+        />
+      )}
     </>
   );
 };

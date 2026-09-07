@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { palette } from '@shared/theme';
+import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
@@ -12,6 +12,12 @@ const styles = StyleSheet.create({
   },
   section: {
     rowGap: theme.spacing.md,
+  },
+  presetName: {
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    color: colors.text,
   },
   formContainer: {
     rowGap: theme.spacing.lg,
@@ -29,19 +35,22 @@ const styles = StyleSheet.create({
   },
   designsContainer: {
     flexDirection: 'row',
-    columnGap: theme.spacing.md,
+    columnGap: 14,
   },
   designCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 60,
+    width: 44,
+    height: 44,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   selectedCircle: {
-    borderWidth: 2,
-    borderColor: palette.black,
+    borderColor: colors.accent,
   },
   gradient: {
-    borderRadius: 60,
+    borderRadius: 15,
   },
 });
 

@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import type { TextInputProps, StyleProp, ViewStyle } from 'react-native';
 import { Text, TextInput, View, TouchableOpacity } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 
-import { palette } from '@shared/theme';
+import Icon from '@components/Icon/Icon';
+import { colors } from '@shared/theme';
 import type { IconType } from '@shared/types';
 
 import styles from './style';
@@ -25,44 +26,59 @@ const Input = ({
   onIconRightPress,
   withShadow,
   containerStyle,
+  onFocus,
+  onBlur,
   ...props
-}: InputProps) => (
-  <View style={[styles.root, containerStyle]}>
-    {label && <Text style={styles.label}>{label}</Text>}
+}: InputProps) => {
+  const [isFocused, setIsFocused] = useState(false);
 
-    <View>
-      {iconLeft && (
-        <View style={[styles.icon, styles.iconLeft]}>
-          <MaterialIcons name={iconLeft} size={32} color={palette.greyDark} />
-        </View>
-      )}
+  return (
+    <View style={[styles.root, containerStyle]}>
+      {label && <Text style={styles.label}>{label}</Text>}
 
-      <TextInput
-        {...props}
-        style={[
-          styles.input,
-          !!error && styles.withError,
-          iconLeft && styles.inputWithLeftIcon,
-          iconRight && styles.inputWithRightIcon,
-          withShadow && styles.inputWithShadow,
-        ]}
-      />
+      <View>
+        {iconLeft && (
+          <View style={[styles.icon, styles.iconLeft]}>
+            <Icon name={iconLeft} size={32} color={colors.muted} />
+          </View>
+        )}
 
-      {(iconRight || error) && (
-        <View style={[styles.icon, styles.iconRight]}>
-          <TouchableOpacity onPress={onIconRightPress}>
-            <MaterialIcons
-              name={iconRight ? iconRight : 'error'}
-              size={32}
-              color={error && !iconRight ? palette.red : palette.black}
-            />
-          </TouchableOpacity>
-        </View>
-      )}
+        <TextInput
+          {...props}
+          onFocus={(e) => {
+            setIsFocused(true);
+            onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setIsFocused(false);
+            onBlur?.(e);
+          }}
+          style={[
+            styles.input,
+            isFocused && !error && styles.focused,
+            !!error && styles.withError,
+            iconLeft && styles.inputWithLeftIcon,
+            iconRight && styles.inputWithRightIcon,
+            withShadow && styles.inputWithShadow,
+          ]}
+        />
+
+        {(iconRight || error) && (
+          <View style={[styles.icon, styles.iconRight]}>
+            <TouchableOpacity onPress={onIconRightPress}>
+              <Icon
+                name={iconRight ? iconRight : 'alert'}
+                size={32}
+                color={error && !iconRight ? colors.danger : colors.text}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {error && <Text style={styles.error}>{error}</Text>}
     </View>
-
-    {error && <Text style={styles.error}>{error}</Text>}
-  </View>
-);
+  );
+};
 
 export default Input;

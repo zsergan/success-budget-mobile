@@ -1,11 +1,11 @@
 import type { StyleProp, ViewStyle } from 'react-native';
-import { Text, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
-import CircleIcon from '../../CircleIcon/CircleIcon';
+import Icon from '@components/Icon/Icon';
 import WalletGradientBackground from '../WalletGradientBackground/WalletGradientBackground';
-import { palette } from '@shared/theme';
-import { formatNumber } from '@shared/utils';
-import { WalletDesign } from '@shared/enums';
+import { resolveAppColor, walletTextColors } from '@shared/constants';
+import { formatCurrencyAmount } from '@shared/utils';
+import { AppColor } from '@shared/enums';
 
 import styles from './style';
 
@@ -15,7 +15,8 @@ export interface WalletCardProps {
   currencyCode: string;
   totalIncome: number;
   totalSpend: number;
-  design?: WalletDesign;
+  design?: AppColor;
+  onMorePress?: () => void;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -25,40 +26,45 @@ const WalletCard = ({
   currencyCode,
   totalIncome,
   totalSpend,
-  design = WalletDesign.GREEN,
+  design = AppColor.SLATE,
+  onMorePress,
   style,
-}: WalletCardProps) => (
-  <View style={[styles.root, style]}>
-    <WalletGradientBackground style={styles.gradient} design={design} />
+}: WalletCardProps) => {
+  const { fg, dim, inner } = walletTextColors[resolveAppColor(design)];
 
-    <View>
-      <Text style={styles.name}>{`${walletName} Balance`}</Text>
+  return (
+    <View style={[styles.root, style]}>
+      <WalletGradientBackground style={styles.gradient} design={design} />
 
-      <Text style={styles.balance}>{`${formatNumber(Number(balance))} ${currencyCode}`}</Text>
-    </View>
-
-    <View style={styles.bottomInfo}>
-      <View style={styles.totalBlock}>
-        <CircleIcon icon="arrow-downward" size="lg" color={palette.green} />
-
+      <View style={styles.topRow}>
         <View>
-          <Text style={styles.name}>Income</Text>
+          <Text style={[styles.name, { color: dim }]}>{walletName}</Text>
 
-          <Text style={styles.total}>{`${formatNumber(totalIncome || 0)} ${currencyCode}`}</Text>
+          <Text style={[styles.balance, { color: fg }]}>{formatCurrencyAmount(Number(balance), currencyCode)}</Text>
         </View>
+
+        {onMorePress && (
+          <TouchableOpacity onPress={onMorePress} hitSlop={8}>
+            <Icon name="more" size={18} color={dim} />
+          </TouchableOpacity>
+        )}
       </View>
 
-      <View style={styles.totalBlock}>
-        <CircleIcon icon="arrow-outward" size="lg" color={palette.red} />
+      <View style={styles.bottomInfo}>
+        <View style={[styles.totalBlock, { backgroundColor: inner }]}>
+          <Text style={[styles.name, { color: dim }]}>Income</Text>
 
-        <View>
-          <Text style={styles.name}>Expense</Text>
+          <Text style={[styles.total, { color: fg }]}>{formatCurrencyAmount(totalIncome || 0, currencyCode)}</Text>
+        </View>
 
-          <Text style={styles.total}>{`${formatNumber(totalSpend || 0)} ${currencyCode}`}</Text>
+        <View style={[styles.totalBlock, { backgroundColor: inner }]}>
+          <Text style={[styles.name, { color: dim }]}>Expense</Text>
+
+          <Text style={[styles.total, { color: fg }]}>{formatCurrencyAmount(totalSpend || 0, currencyCode)}</Text>
         </View>
       </View>
     </View>
-  </View>
-);
+  );
+};
 
 export default WalletCard;

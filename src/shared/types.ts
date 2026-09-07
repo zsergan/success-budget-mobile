@@ -1,21 +1,14 @@
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { ScreenNames, TransactionType, WalletDesign } from '@shared/enums';
+import type { ScreenNames, AppColor } from '@shared/enums';
 
 type AddWalletParams =
-  { id: 'new' } | { id: number; walletName: string; balance: string; currencyId: number; design: WalletDesign };
-
-type AddCategoryParams =
-  { id: 'new' } | { id: number; name: string; icon: string; color: string; transactionType: TransactionType };
-
-type AddLimitParams = { id: 'new' } | { id: number; amount: string; category_id?: number };
+  { id: 'new' } | { id: number; walletName: string; balance: string; currencyId: number; design: AppColor };
 
 export type RootStackParamList = {
   [ScreenNames.HOME_TAB]: undefined;
   [ScreenNames.LIMITS_TAB]: undefined;
   [ScreenNames.HOME_SCREEN]: undefined;
   [ScreenNames.ADD_WALLET_SCREEN]: AddWalletParams;
-  [ScreenNames.ADD_LIMIT_SCREEN]: AddLimitParams;
-  [ScreenNames.ADD_CATEGORY_SCREEN]: AddCategoryParams;
   [ScreenNames.TRANSACTIONS_TAB]: undefined;
   [ScreenNames.SETTINGS_TAB]: undefined;
   [ScreenNames.CATEGORIES_SCREEN]: undefined;
@@ -28,45 +21,82 @@ export type RootStackParamList = {
 export interface ScreenProps<T extends ScreenNames> extends NativeStackScreenProps<RootStackParamList, T> {}
 export type NavigationType<T extends ScreenNames> = NativeStackNavigationProp<RootStackParamList, T>;
 
+// UI + category icon names (see `src/shared/icons.ts` for each path); legacy names are excluded here but still resolved there.
 export type IconType =
   | CategoryIconType
   | TransactionTypeIconType
-  | 'add'
-  | 'edit'
-  | 'lock'
-  | 'email'
+  | 'plus'
+  | 'minus'
   | 'close'
-  | 'error'
-  | 'person'
-  | 'delete'
+  | 'check'
+  | 'back'
+  | 'forward'
+  | 'chevron-down'
+  | 'chevron-up'
+  | 'edit'
+  | 'trash'
+  | 'more'
+  | 'calendar'
+  | 'eye'
+  | 'eye-off'
+  | 'search'
+  | 'filter'
+  | 'settings'
+  | 'bell'
+  | 'lock'
+  | 'mail'
+  | 'user'
   | 'logout'
-  | 'interests'
-  | 'data-usage'
-  | 'visibility'
-  | 'arrow-back'
-  | 'attach-money'
-  | 'visibility-off'
-  | 'sentiment-neutral'
-  | 'keyboard-arrow-right';
+  | 'wallet'
+  | 'transfer'
+  | 'home'
+  | 'list'
+  | 'limit'
+  | 'chart'
+  | 'alert'
+  | 'info'
+  | 'refresh'
+  | 'download'
+  | 'grid'
+  | 'note'
+  | 'trend-up'
+  | 'trend-down';
 
-export type TransactionTypeIconType = 'arrow-outward' | 'arrow-downward';
+export type TransactionTypeIconType = 'income' | 'expense';
 
 export type CategoryIconType =
-  | 'paid'
-  | 'home'
+  | 'salary'
+  | 'bonus'
+  | 'freelance'
+  | 'investments'
+  | 'dividends'
+  | 'refund'
+  | 'grocery'
+  | 'restaurant'
+  | 'cafe'
+  | 'housing'
+  | 'utilities'
+  | 'internet'
+  | 'transport'
+  | 'fuel'
+  | 'car'
+  | 'taxi'
+  | 'health'
+  | 'pharmacy'
+  | 'fitness'
+  | 'beauty'
+  | 'clothes'
+  | 'electronics'
+  | 'home-goods'
+  | 'education'
+  | 'kids'
   | 'pets'
-  | 'store'
-  | 'money'
-  | 'flight'
-  | 'cable'
-  | 'school'
-  | 'healing'
-  | 'category'
-  | 'fastfood'
-  | 'checkroom'
-  | 'water-drop'
-  | 'directions-bus'
-  | 'directions-car'
-  | 'sports-esports'
-  | 'shopping-basket'
-  | 'card-giftcard';
+  | 'travel'
+  | 'entertainment'
+  | 'subscriptions'
+  | 'gifts'
+  | 'charity'
+  | 'fees'
+  | 'taxes'
+  | 'savings'
+  | 'other';

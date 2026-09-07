@@ -1,5 +1,5 @@
 import type { CreateLimitRequest, UpdateLimitRequest } from '@api/dto';
-import { getLimits, createLimit, updateLimit } from '@api/limit.api';
+import { getLimits, createLimit, updateLimit, deleteLimit } from '@api/limit.api';
 import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
 export const fetchLimits = createAppAsyncThunk('limit/fetchLimits', async (_: void, thunkAPI) => {
@@ -36,3 +36,13 @@ export const editLimit = createAppAsyncThunk(
     }
   },
 );
+
+export const removeLimit = createAppAsyncThunk('limit/removeLimit', async (limitId: number, thunkAPI) => {
+  try {
+    await deleteLimit(limitId);
+
+    thunkAPI.dispatch(fetchLimits());
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getRejectValue(error));
+  }
+});

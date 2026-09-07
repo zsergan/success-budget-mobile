@@ -6,12 +6,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import {
   CategoriesScreen,
   CreateWalletScreen,
-  CreateCategoryScreen,
   SignInScreen,
   SignUpScreen,
   VerifyEmailScreen,
   LoadingScreen,
-  CreateLimitScreen,
 } from '@screens';
 import type { RootStackParamList } from '@shared/types';
 import { useAuth, useLoadInitData } from '@hooks';
@@ -52,18 +50,8 @@ const RootNavigator = () => {
                   options={{ headerShown: false }}
                 />
                 <Stack.Screen
-                  name={ScreenNames.ADD_LIMIT_SCREEN}
-                  component={CreateLimitScreen}
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
                   name={ScreenNames.CATEGORIES_SCREEN}
                   component={CategoriesScreen}
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name={ScreenNames.ADD_CATEGORY_SCREEN}
-                  component={CreateCategoryScreen}
                   options={{ headerShown: false }}
                 />
               </>

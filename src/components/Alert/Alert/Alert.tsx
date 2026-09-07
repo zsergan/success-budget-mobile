@@ -1,7 +1,7 @@
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View, Text } from 'react-native';
 
-import TinyButton from '../../Buttons/TinyButton/TinyButton';
+import TinyButton from '@components/Buttons/TinyButton/TinyButton';
 
 import styles from './style';
 

@@ -1,8 +1,8 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { MaterialIcons } from '@expo/vector-icons';
 
 import { HomeScreen, LimitsScreen, SettingsScreen, TransactionsScreen } from '@screens';
-import { palette } from '@shared/theme';
+import { Icon } from '@components';
+import { colors } from '@shared/theme';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackParamList } from '@shared/types';
 
@@ -13,19 +13,19 @@ interface IconProps {
   size: number;
 }
 
-const HomeIcon = ({ color, size }: IconProps) => <MaterialIcons name="home" size={size} color={color} />;
-const LimitsIcon = ({ color, size }: IconProps) => <MaterialIcons name="data-usage" size={size} color={color} />;
-const TransactionsIcon = ({ color, size }: IconProps) => <MaterialIcons name="payments" size={size} color={color} />;
-const SettingsIcon = ({ color, size }: IconProps) => <MaterialIcons name="settings" size={size} color={color} />;
+const HomeIcon = ({ color, size }: IconProps) => <Icon name="home" size={size} color={color} />;
+const LimitsIcon = ({ color, size }: IconProps) => <Icon name="limit" size={size} color={color} />;
+const TransactionsIcon = ({ color, size }: IconProps) => <Icon name="list" size={size} color={color} />;
+const SettingsIcon = ({ color, size }: IconProps) => <Icon name="settings" size={size} color={color} />;
 
 const MainNavigator = () => {
   return (
     <Tab.Navigator
-      sceneContainerStyle={{ backgroundColor: palette.greyLight }}
+      sceneContainerStyle={{ backgroundColor: colors.bg }}
       screenOptions={{
-        tabBarStyle: { backgroundColor: palette.greyLight },
-        tabBarActiveTintColor: palette.black,
-        tabBarInactiveTintColor: palette.greyDark,
+        tabBarStyle: { backgroundColor: colors.bg },
+        tabBarActiveTintColor: colors.text,
+        tabBarInactiveTintColor: colors.muted,
       }}
     >
       <Tab.Screen
@@ -35,21 +35,21 @@ const MainNavigator = () => {
       />
 
       <Tab.Screen
+        name={ScreenNames.TRANSACTIONS_TAB}
+        component={TransactionsScreen}
+        options={{ tabBarIcon: TransactionsIcon, tabBarLabel: 'History', headerShown: false }}
+      />
+
+      <Tab.Screen
         name={ScreenNames.LIMITS_TAB}
         component={LimitsScreen}
         options={{ tabBarIcon: LimitsIcon, headerShown: false }}
       />
 
       <Tab.Screen
-        name={ScreenNames.TRANSACTIONS_TAB}
-        component={TransactionsScreen}
-        options={{ tabBarIcon: TransactionsIcon, headerShown: false }}
-      />
-
-      <Tab.Screen
         name={ScreenNames.SETTINGS_TAB}
         component={SettingsScreen}
-        options={{ tabBarIcon: SettingsIcon, headerShown: false }}
+        options={{ tabBarIcon: SettingsIcon, tabBarLabel: 'Profile', headerShown: false }}
       />
     </Tab.Navigator>
   );

@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { palette } from '@shared/theme';
+import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
@@ -10,20 +10,22 @@ const styles = StyleSheet.create({
     width: 110,
   },
   grey: {
-    backgroundColor: palette.grey,
+    backgroundColor: colors.track,
   },
   gradient: {
     borderRadius: theme.radius.sm,
   },
+  // Default (grey) color; overridden inline in TinyWallet.tsx to the gradient preset's `fg` when on a dark card.
   walletName: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.xs,
-    color: palette.black,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    color: colors.text,
   },
   currencyCode: {
     fontFamily: theme.fonts.medium,
     fontSize: 8,
-    color: palette.black,
+    color: colors.text,
     alignSelf: 'flex-end',
   },
 });

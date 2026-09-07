@@ -1,4 +1,5 @@
-import type { Limit, GetLimitsResponse, CreateLimitRequest, UpdateLimitRequest } from './dto';
+import type { CreateLimitRequest, GetLimitsResponse, LimitEntity, UpdateLimitRequest } from './dto';
+import { mapLimitsResponse } from './models';
 import { ApiClient } from './instance';
 
 const api = ApiClient();
@@ -6,17 +7,21 @@ const api = ApiClient();
 export const getLimits = async () => {
   const response = await api.get<GetLimitsResponse>('/limits');
 
-  return response.data;
+  return mapLimitsResponse(response.data);
 };
 
 export const createLimit = async (data: CreateLimitRequest) => {
-  const response = await api.post<Limit>('/limits', data);
+  const response = await api.post<LimitEntity>('/limits', data);
 
   return response.data;
 };
 
 export const updateLimit = async (limitId: number, data: UpdateLimitRequest) => {
-  const response = await api.put<Limit>(`/limits/${limitId}`, data);
+  const response = await api.put<LimitEntity>(`/limits/${limitId}`, data);
 
   return response.data;
+};
+
+export const deleteLimit = async (limitId: number) => {
+  await api.deleteRequest(`/limits/${limitId}`);
 };

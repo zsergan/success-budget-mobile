@@ -1,4 +1,4 @@
-import type { WalletDesign } from '@shared/enums';
+import type { AppColor } from '@shared/enums';
 import type { Currency } from './currencyDto';
 
 export interface Wallet {
@@ -6,7 +6,7 @@ export interface Wallet {
   wallet_name: string;
   balance: string;
   currency: Currency;
-  design: WalletDesign;
+  design: AppColor;
 }
 
 export interface GetWalletsResponse {
@@ -15,14 +15,21 @@ export interface GetWalletsResponse {
   total_income: number;
 }
 
+export interface WalletsOverviewResponse {
+  total_balance: number;
+  total_balance_currency: string;
+  delta_percent: number;
+  wallets: GetWalletsResponse[];
+}
+
 export interface CreateWalletRequest {
   wallet_name: string;
   balance: number;
   currency_id: number;
-  design: WalletDesign;
+  design: AppColor;
 }
 
 export interface UpdateWalletRequest {
   wallet_name: string;
-  design: WalletDesign;
+  design: AppColor;
 }

@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { palette } from '@shared/theme';
+import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
@@ -10,23 +10,23 @@ const styles = StyleSheet.create({
     flexDirection: 'column-reverse',
   },
   bar: {
-    height: 5,
+    height: 6,
     width: '100%',
-    borderRadius: theme.radius.sm,
-    backgroundColor: palette.grey,
+    borderRadius: 3,
+    backgroundColor: colors.track,
   },
   progress: {
-    height: 5,
-    borderRadius: theme.radius.sm,
+    height: 6,
+    borderRadius: 3,
   },
   progressGreen: {
-    backgroundColor: palette.greenDark,
+    backgroundColor: colors.ok,
   },
   progressYellow: {
-    backgroundColor: palette.yellow,
+    backgroundColor: colors.warn,
   },
   progressRed: {
-    backgroundColor: palette.red,
+    backgroundColor: colors.danger,
   },
   info: {
     flexDirection: 'row',
@@ -35,8 +35,9 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.text.primary,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    color: colors.text,
   },
 });
 

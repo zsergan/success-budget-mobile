@@ -10,7 +10,7 @@ export interface TransactionModel {
   categoryId: number;
   transactionType: TransactionType;
   amount: string;
-  timestamp: Date;
+  timestamp: string;
   description: string;
   wallet: Wallet | null;
   category: CategoryModel;

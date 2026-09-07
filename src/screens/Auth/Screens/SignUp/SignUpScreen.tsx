@@ -9,7 +9,7 @@ import { useAppSelector } from '@redux/hooks';
 import { selectAuth } from '@redux/state/auth/selectors';
 import { useAlert } from '@hooks';
 import { getErrorMessage } from '@shared/utils';
-import AuthLayout from '../../AuthLayout';
+import AuthLayout from '@screens/Auth/AuthLayout/AuthLayout';
 import useSignUpForm from './useSignUpForm';
 
 import styles from '../style';
@@ -39,7 +39,7 @@ const SignUpScreen = ({ navigation }: Props) => {
               control={control}
               render={({ field: { onChange, value }, formState: { errors } }) => (
                 <Input
-                  iconLeft="person"
+                  iconLeft="user"
                   value={value}
                   placeholder="Name"
                   onChangeText={onChange}
@@ -73,7 +73,7 @@ const SignUpScreen = ({ navigation }: Props) => {
             control={control}
             render={({ field: { onChange, value }, formState: { errors } }) => (
               <Input
-                iconLeft="email"
+                iconLeft="mail"
                 value={value}
                 placeholder="E-mail"
                 onChangeText={onChange}

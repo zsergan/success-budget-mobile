@@ -7,7 +7,7 @@ import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectProfile } from '@redux/state/profile/selectors';
 import type { ScreenNames } from '@shared/enums';
 import type { ScreenProps } from '@shared/types';
-import { WalletDesign } from '@shared/enums';
+import { AppColor } from '@shared/enums';
 import { addWallet, editWallet } from '@redux/state/wallet/thunks';
 import { fetchCurrencies } from '@redux/state/currency/thunks';
 import { selectCurrency } from '@redux/state/currency/selectors';
@@ -18,14 +18,14 @@ interface CreateWalletFormData {
   walletName: string;
   initialBalance: string;
   currency: number;
-  design: WalletDesign;
+  design: AppColor;
 }
 
 const schema = yup.object().shape({
   walletName: yup.string().required(),
   initialBalance: amountSchema,
   currency: yup.number().required(),
-  design: yup.mixed<WalletDesign>().oneOf(Object.values(WalletDesign)).required(),
+  design: yup.mixed<AppColor>().oneOf(Object.values(AppColor)).required(),
 });
 
 interface UseCreateWalletFormProps extends ScreenProps<ScreenNames.ADD_WALLET_SCREEN> {}
@@ -48,7 +48,7 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
       walletName: isNewWallet ? '' : route.params.walletName,
       initialBalance: isNewWallet ? '' : route.params.balance,
       currency: isNewWallet ? baseCurrency?.id || 1 : route.params.currencyId,
-      design: isNewWallet ? WalletDesign.GREEN : route.params.design,
+      design: isNewWallet ? AppColor.SLATE : route.params.design,
     },
   });
 

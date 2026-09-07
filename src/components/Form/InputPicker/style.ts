@@ -1,31 +1,33 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { palette, shadow } from '@shared/theme';
+import theme, { colors, shadow } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
     rowGap: theme.spacing.xs,
   },
   inputContainer: {
-    paddingVertical: theme.spacing.sm + 1,
+    height: 52,
+    justifyContent: 'center',
     paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.radius.sm,
-    backgroundColor: palette.white,
-    minHeight: 46,
+    borderRadius: theme.radius.md,
+    backgroundColor: colors.surface,
   },
   input: {
     textAlign: 'center',
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.md,
+    fontSize: theme.fontSizes.bodyLg,
+    lineHeight: theme.lineHeights.bodyLg,
   },
   placeholder: {
-    color: theme.colors.text.secondary,
+    color: colors.muted,
   },
   inputWithShadow: { ...shadow },
   label: {
     fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.primary,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    color: colors.text,
   },
   container: {
     flex: 1,
@@ -35,7 +37,7 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   contentContainer: {
-    backgroundColor: palette.greyLight,
+    backgroundColor: colors.bg,
     borderRadius: theme.radius.sm,
   },
 });

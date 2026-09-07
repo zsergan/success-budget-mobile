@@ -1,10 +1,10 @@
 import type { ErrorInfo, ReactNode } from 'react';
 import { Component } from 'react';
 import { Text, View } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 
 import Button from '../Buttons/Button/Button';
-import { palette } from '@shared/theme';
+import Icon from '../Icon/Icon';
+import { colors } from '@shared/theme';
 
 import styles from './style';
 
@@ -38,7 +38,7 @@ class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <View style={styles.root}>
-          <MaterialIcons name="error-outline" size={60} color={palette.greyDark} />
+          <Icon name="alert" size={60} color={colors.muted} />
 
           <Text style={styles.message}>Something went wrong. Please try again.</Text>
 

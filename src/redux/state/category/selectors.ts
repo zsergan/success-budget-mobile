@@ -12,3 +12,5 @@ export const selectActiveCategories = createSelector(baseSelect, (state) => {
 
   return { incomes: activeIncomes, expenses: activeExpenses, isLoading: state.isLoading };
 });
+
+export const selectArchivedCategories = createSelector(baseSelect, (state) => state.archived);

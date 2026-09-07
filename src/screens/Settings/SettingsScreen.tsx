@@ -6,7 +6,7 @@ import { logoutMe } from '@redux/state/auth/thunks';
 import type { IconType, ScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 
-import Profile from './Profile';
+import Profile from './Profile/Profile';
 
 import styles from './style';
 
@@ -18,8 +18,8 @@ const SettingsScreen = ({ navigation }: Props) => {
   const handleLogout = () => dispatch(logoutMe());
 
   const menuItems: { title: string; icon: IconType; onPress?(): void }[] = [
-    { title: 'Categories', icon: 'category', onPress: () => navigation.navigate(ScreenNames.CATEGORIES_SCREEN) },
-    { title: 'Limitations', icon: 'data-usage' },
+    { title: 'Categories', icon: 'other', onPress: () => navigation.navigate(ScreenNames.CATEGORIES_SCREEN) },
+    { title: 'Limitations', icon: 'limit' },
   ];
 
   return (

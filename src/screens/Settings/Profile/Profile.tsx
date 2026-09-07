@@ -11,7 +11,7 @@ const Profile = () => {
 
   return (
     <View style={styles.root}>
-      <CircleIcon icon="person" size="xl" border />
+      <CircleIcon icon="user" size="xl" border />
 
       <View style={styles.profile}>
         <Text style={styles.name}>{name}</Text>
