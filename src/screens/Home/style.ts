@@ -9,6 +9,15 @@ const styles = StyleSheet.create({
   hero: {
     rowGap: 5,
   },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    columnGap: theme.spacing.md,
+  },
+  heroInfo: {
+    rowGap: 5,
+  },
   heroLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -33,6 +42,20 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.caption,
     lineHeight: theme.lineHeights.caption,
     color: colors.muted,
+  },
+  deltaBadge: {
+    marginTop: 20,
+    height: 26,
+    borderRadius: 13,
+    paddingHorizontal: theme.spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: 4,
+  },
+  deltaText: {
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.micro,
+    lineHeight: theme.lineHeights.micro,
   },
   walletsTitle: {
     marginTop: 26,

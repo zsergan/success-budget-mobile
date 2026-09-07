@@ -58,7 +58,9 @@ export type IconType =
   | 'refresh'
   | 'download'
   | 'grid'
-  | 'note';
+  | 'note'
+  | 'trend-up'
+  | 'trend-down';
 
 export type TransactionTypeIconType = 'income' | 'expense';
 

@@ -13,6 +13,12 @@ const styles = StyleSheet.create({
   section: {
     rowGap: theme.spacing.md,
   },
+  presetName: {
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    color: colors.text,
+  },
   formContainer: {
     rowGap: theme.spacing.lg,
   },

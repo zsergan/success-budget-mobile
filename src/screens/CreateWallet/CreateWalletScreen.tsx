@@ -1,4 +1,4 @@
-import { TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
 import {
@@ -12,8 +12,9 @@ import {
   Icon,
 } from '@components';
 import type { ScreenProps } from '@shared/types';
-import type { ScreenNames, AppColor } from '@shared/enums';
+import type { ScreenNames } from '@shared/enums';
 import { gradients, walletTextColors } from '@shared/constants';
+import { CATEGORY_COLOR_NAMES, CATEGORY_COLOR_ORDER } from '@shared/categoryColors';
 import useCreateWalletForm from './useCreateWalletForm';
 
 import styles from './style';
@@ -86,19 +87,21 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
           </View>
 
           <View style={styles.section}>
-            <SectionTitle title="Design" />
+            <SectionTitle
+              title="Card colour"
+              button={<Text style={styles.presetName}>{CATEGORY_COLOR_NAMES[selectedDesign]}</Text>}
+            />
 
             <Controller
               name="design"
               control={control}
               render={({ field: { onChange, value } }) => (
                 <View style={styles.designsContainer}>
-                  {Object.keys(gradients).map((key) => {
-                    const design = key as AppColor;
+                  {CATEGORY_COLOR_ORDER.map((design) => {
                     const isSelected = design === value;
 
                     return (
-                      <TouchableOpacity key={key} onPress={() => onChange(design)} activeOpacity={0.5}>
+                      <TouchableOpacity key={design} onPress={() => onChange(design)} activeOpacity={0.5}>
                         <View style={[styles.designCircle, isSelected && styles.selectedCircle]}>
                           <GradientBackground
                             colors={gradients[design]}

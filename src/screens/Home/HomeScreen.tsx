@@ -14,7 +14,7 @@ import {
   TransactionForm,
 } from '@components';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
-import { selectTotalBalance } from '@redux/state/wallet/selectors';
+import { selectTotalBalance, selectWallet } from '@redux/state/wallet/selectors';
 import { selectTransaction } from '@redux/state/transaction/selectors';
 import { fetchTransactions } from '@redux/state/transaction/thunks';
 import { useBalanceVisibility } from '@hooks';
@@ -40,9 +40,16 @@ const HomeScreen = ({ navigation }: Props) => {
   const handlePresentExpenseModalPress = () => expenseBottomSheetRef.current?.present();
   const handlePresentIncomeModalPress = () => incomeBottomSheetRef.current?.present();
 
-  const { total, currencyCode, walletsCount } = useAppSelector(selectTotalBalance);
+  const { total, currencyCode, walletsCount, deltaPercent } = useAppSelector(selectTotalBalance);
+  const { wallets } = useAppSelector(selectWallet);
   const { transactions } = useAppSelector(selectTransaction);
   const { isHidden, toggle } = useBalanceVisibility();
+
+  const hasWallets = wallets.length > 0;
+  const deltaPositive = deltaPercent > 0;
+  const deltaNeutral = deltaPercent === 0;
+  const deltaFg = deltaNeutral ? colors.muted : deltaPositive ? colors.ok : colors.danger;
+  const deltaBg = deltaNeutral ? colors.track : `${deltaFg}26`;
 
   useEffect(() => {
     dispatch(fetchTransactions());
@@ -62,25 +69,39 @@ const HomeScreen = ({ navigation }: Props) => {
 
       <RootLayout style={styles.container} scrollable>
         <View style={styles.hero}>
-          <View style={styles.heroLabelRow}>
-            <Text style={styles.heroLabel}>Total balance</Text>
+          <View style={styles.heroRow}>
+            <View style={styles.heroInfo}>
+              <View style={styles.heroLabelRow}>
+                <Text style={styles.heroLabel}>Total balance</Text>
 
-            <TouchableOpacity onPress={toggle} hitSlop={8}>
-              <Icon name={isHidden ? 'eye-off' : 'eye'} size={15} color={colors.muted} />
-            </TouchableOpacity>
+                <TouchableOpacity onPress={toggle} hitSlop={8}>
+                  <Icon name={isHidden ? 'eye-off' : 'eye'} size={15} color={colors.muted} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.heroTotal}>
+                {isHidden
+                  ? `••• •••${currencyCode ? ` ${currencyCode}` : ''}`
+                  : `${formatNumber(total)}${currencyCode ? ` ${currencyCode}` : ''}`}
+              </Text>
+
+              {currencyCode && (
+                <Text
+                  style={styles.heroSub}
+                >{`${walletsCount} wallet${walletsCount === 1 ? '' : 's'} · ${currencyCode}`}</Text>
+              )}
+            </View>
+
+            {currencyCode && (
+              <View style={[styles.deltaBadge, { backgroundColor: deltaBg }]}>
+                {!deltaNeutral && (
+                  <Icon name={deltaPositive ? 'trend-up' : 'trend-down'} size={11} color={deltaFg} strokeWidth={2.3} />
+                )}
+
+                <Text style={[styles.deltaText, { color: deltaFg }]}>{`${Math.abs(deltaPercent).toFixed(1)}%`}</Text>
+              </View>
+            )}
           </View>
-
-          <Text style={styles.heroTotal}>
-            {isHidden
-              ? `••• •••${currencyCode ? ` ${currencyCode}` : ''}`
-              : `${formatNumber(total)}${currencyCode ? ` ${currencyCode}` : ''}`}
-          </Text>
-
-          {currencyCode && (
-            <Text
-              style={styles.heroSub}
-            >{`${walletsCount} wallet${walletsCount === 1 ? '' : 's'} · ${currencyCode}`}</Text>
-          )}
         </View>
 
         <SectionTitle
@@ -117,8 +138,12 @@ const HomeScreen = ({ navigation }: Props) => {
           {transactions.length === 0 ? (
             <EmptyState
               icon="list"
-              title="No transactions yet"
-              description="Your income and expenses will show up here."
+              title="Nothing here yet"
+              description={
+                hasWallets
+                  ? 'Tap + to record your first income or expense.'
+                  : 'Transactions will appear here once you add a wallet.'
+              }
             />
           ) : (
             <View style={styles.activity}>
