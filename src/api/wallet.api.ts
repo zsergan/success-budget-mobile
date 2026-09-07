@@ -1,10 +1,10 @@
-import type { CreateWalletRequest, UpdateWalletRequest, GetWalletsResponse, Wallet } from '@api/dto';
+import type { CreateWalletRequest, UpdateWalletRequest, WalletsOverviewResponse, Wallet } from '@api/dto';
 import { ApiClient } from './instance';
 
 const api = ApiClient();
 
 export const getWallets = async () => {
-  const response = await api.get<GetWalletsResponse[]>('/wallets');
+  const response = await api.get<WalletsOverviewResponse>('/wallets');
 
   return response.data;
 };

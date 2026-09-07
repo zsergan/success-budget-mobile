@@ -4,16 +4,22 @@ import type { RootState } from '@redux/Store';
 export const selectWallet = (state: RootState) => state.wallet;
 
 const selectWallets = (state: RootState) => state.wallet.wallets;
-const selectBaseCurrency = (state: RootState) => state.profile.baseCurrency;
+const selectRawTotalBalance = (state: RootState) => state.wallet.totalBalance;
+const selectTotalBalanceCurrency = (state: RootState) => state.wallet.totalBalanceCurrency;
+const selectDeltaPercent = (state: RootState) => state.wallet.deltaPercent;
 
-// Sums only base-currency wallets — no exchange-rate data exists, so mixing currencies would be meaningless.
-export const selectTotalBalance = createSelector(selectWallets, selectBaseCurrency, (wallets, baseCurrency) => {
-  if (!baseCurrency) {
-    return { total: 0, currencyCode: undefined, walletsCount: 0 };
-  }
-
-  const baseCurrencyWallets = wallets.filter((w) => w.wallet.currency.id === baseCurrency.id);
-  const total = baseCurrencyWallets.reduce((sum, w) => sum + Number(w.wallet.balance), 0);
-
-  return { total, currencyCode: baseCurrency.code, walletsCount: baseCurrencyWallets.length };
-});
+// total/currencyCode/deltaPercent now come straight from the backend (it already
+// excludes non-base-currency wallets — see mobile-api-changes.md); walletsCount
+// keeps its prior meaning by counting wallets in that same currency.
+export const selectTotalBalance = createSelector(
+  selectWallets,
+  selectRawTotalBalance,
+  selectTotalBalanceCurrency,
+  selectDeltaPercent,
+  (wallets, total, currencyCode, deltaPercent) => ({
+    total,
+    currencyCode: currencyCode || undefined,
+    walletsCount: wallets.filter((w) => w.wallet.currency.code === currencyCode).length,
+    deltaPercent,
+  }),
+);

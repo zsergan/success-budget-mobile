@@ -15,6 +15,13 @@ export interface GetWalletsResponse {
   total_income: number;
 }
 
+export interface WalletsOverviewResponse {
+  total_balance: number;
+  total_balance_currency: string;
+  delta_percent: number;
+  wallets: GetWalletsResponse[];
+}
+
 export interface CreateWalletRequest {
   wallet_name: string;
   balance: number;
