@@ -43,14 +43,8 @@ export const colorScheme: keyof typeof colorTokens = 'light';
 
 export const colors = colorTokens[colorScheme];
 
-// Used by the category color picker and a few one-off surfaces, unrelated to the wallet gradients in constants.ts.
+// A fixed dark scrim color, independent of colorScheme (the modal backdrop should stay dark even under a light theme).
 export const palette = {
-  yellow: '#FFC55A',
-  greenDark: '#57C84D',
-  green: '#5BDA8C',
-  blue: '#5078F2',
-  red: '#FC4100',
-  pinkLight: '#F79AD3',
   black: '#1D2430',
 };
 
