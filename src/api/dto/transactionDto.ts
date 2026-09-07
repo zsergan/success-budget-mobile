@@ -21,6 +21,6 @@ export interface CreateTransactionRequest {
   category_id: number;
   transaction_type: TransactionType;
   amount: string;
-  timestamp: Date;
+  timestamp: string;
   description?: string;
 }

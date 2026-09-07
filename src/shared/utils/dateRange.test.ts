@@ -46,6 +46,12 @@ describe('getCurrentMonthRange / getMonthRange', () => {
     expect(getMonthRange(new Date(2026, 0, 10)).to).toEqual(new Date(2026, 0, 31, 23, 59, 59, 999));
     expect(getMonthRange(new Date(2024, 1, 10)).to).toEqual(new Date(2024, 1, 29, 23, 59, 59, 999));
   });
+
+  it('accepts an ISO string reference without crashing (API timestamps arrive as strings)', () => {
+    expect(getMonthRange('2026-09-10T12:00:00.000Z').to.getMonth()).toBe(
+      new Date('2026-09-10T12:00:00.000Z').getMonth(),
+    );
+  });
 });
 
 describe('getCurrentYearRange', () => {

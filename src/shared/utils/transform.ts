@@ -5,6 +5,15 @@ export const formatNumber = (num: number | string) => Number(num).toLocaleString
 export const formatCurrencyAmount = (amount: number | string, currencyCode?: string) =>
   currencyCode ? `${formatNumber(amount)} ${currencyCode}` : formatNumber(amount);
 
+export const hexToRgba = (hex: string, alpha: number) => {
+  const value = hex.replace('#', '');
+  const r = parseInt(value.substring(0, 2), 16);
+  const g = parseInt(value.substring(2, 4), 16);
+  const b = parseInt(value.substring(4, 6), 16);
+
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
 export const formatAmount = (amount: number | string, transactionType: TransactionType, currency?: string) => {
   let formattedAmount = formatNumber(amount);
 

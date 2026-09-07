@@ -4,14 +4,11 @@ import type { ScreenNames, AppColor } from '@shared/enums';
 type AddWalletParams =
   { id: 'new' } | { id: number; walletName: string; balance: string; currencyId: number; design: AppColor };
 
-type AddLimitParams = { id: 'new' } | { id: number; amount: string; category_id?: number };
-
 export type RootStackParamList = {
   [ScreenNames.HOME_TAB]: undefined;
   [ScreenNames.LIMITS_TAB]: undefined;
   [ScreenNames.HOME_SCREEN]: undefined;
   [ScreenNames.ADD_WALLET_SCREEN]: AddWalletParams;
-  [ScreenNames.ADD_LIMIT_SCREEN]: AddLimitParams;
   [ScreenNames.TRANSACTIONS_TAB]: undefined;
   [ScreenNames.SETTINGS_TAB]: undefined;
   [ScreenNames.CATEGORIES_SCREEN]: undefined;

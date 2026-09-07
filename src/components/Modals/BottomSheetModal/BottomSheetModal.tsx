@@ -10,9 +10,9 @@ export type Ref = BottomSheetModal;
 interface Props {
   children: ReactNode;
   onDismiss?: () => void;
-  /** Size the sheet to its content instead of the fixed snap point. */
+  /** Size the sheet to its content instead of a fixed snap point. */
   dynamicSizing?: boolean;
-  /** Fixed snap point, ignored when `dynamicSizing` is set. */
+  /** Fixed snap point when `dynamicSizing` is false. Defaults to '85%'. */
   snapPoint?: string;
 }
 
