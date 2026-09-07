@@ -39,6 +39,8 @@ const UI_ICON_PATHS = {
   download: 'M12 4v11M7 11l5 5 5-5M5 20h14',
   grid: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
   note: 'M6 3h9l4 4v14H6zM15 3v4h4M9 12h6M9 16h4',
+  'trend-up': 'M12 19V5M6 11l6-6 6 6',
+  'trend-down': 'M12 5v14M6 13l6 6 6-6',
 } as const;
 
 const CATEGORY_ICON_PATHS = {
