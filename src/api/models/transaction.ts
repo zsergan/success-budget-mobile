@@ -10,7 +10,7 @@ export interface TransactionModel {
   categoryId: number;
   transactionType: TransactionType;
   amount: string;
-  timestamp: Date;
+  timestamp: string;
   description: string;
   wallet: Wallet | null;
   category: CategoryModel;
@@ -23,7 +23,7 @@ export const mapTransaction = (dto: Transaction): TransactionModel => ({
   categoryId: dto.category_id,
   transactionType: dto.transaction_type,
   amount: dto.amount,
-  timestamp: new Date(dto.timestamp),
+  timestamp: dto.timestamp,
   description: dto.description,
   wallet: dto.wallet,
   category: mapCategory(dto.category),
