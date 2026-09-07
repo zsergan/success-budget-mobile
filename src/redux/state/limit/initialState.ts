@@ -1,18 +1,21 @@
-import type { ErrorResponse, GetLimitsResponse } from '@api/dto';
+import type { ErrorResponse } from '@api/dto';
+import type { LimitModel, OverAllocationModel } from '@api/models';
 
-interface InitialState extends GetLimitsResponse {
+interface InitialState {
+  total: LimitModel | null;
+  categoryLimits: LimitModel[];
+  overAllocation: OverAllocationModel | null;
   isLoading: boolean;
+  isDeleting: boolean;
   error?: ErrorResponse;
 }
 
 const initialState: InitialState = {
-  limits: [],
-  overall: {
-    spent: 0,
-    sum: 0,
-    in_percent: 0,
-  },
+  total: null,
+  categoryLimits: [],
+  overAllocation: null,
   isLoading: false,
+  isDeleting: false,
 };
 
 export default initialState;

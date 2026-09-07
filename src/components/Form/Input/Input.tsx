@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { TextInputProps, StyleProp, ViewStyle } from 'react-native';
 import { Text, TextInput, View, TouchableOpacity } from 'react-native';
 
-import { Icon } from '@components';
+import Icon from '@components/Icon/Icon';
 import { colors } from '@shared/theme';
 import type { IconType } from '@shared/types';
 

@@ -81,5 +81,3 @@ export const DEFAULT_WALLET_DESIGN = WalletDesign.SLATE;
 // Wallets saved before stage 6 may carry an old `design` value (see legacy icon aliases in shared/icons.ts); unrecognized values fall back rather than crash.
 export const resolveWalletDesign = (design?: WalletDesign): WalletDesign =>
   design && design in gradients ? design : DEFAULT_WALLET_DESIGN;
-
-export const ALL_OTHERS_CATEGORIES_ID = 9999999;

@@ -3,7 +3,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { TouchableOpacity, TouchableWithoutFeedback, View, Text } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 
-import { ModalContainer } from '@components';
+import ModalContainer from '@components/Modals/ModalContainer/ModalContainer';
 
 import styles from './style';
 

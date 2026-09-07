@@ -12,6 +12,9 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.lg,
     rowGap: theme.spacing.md + 2,
   },
+  limitHint: {
+    marginHorizontal: theme.spacing.xl,
+  },
   handle: {
     width: 44,
     height: 5,

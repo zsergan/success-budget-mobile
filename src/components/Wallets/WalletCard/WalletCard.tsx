@@ -1,7 +1,7 @@
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import { Icon } from '@components';
+import Icon from '@components/Icon/Icon';
 import WalletGradientBackground from '../WalletGradientBackground/WalletGradientBackground';
 import { resolveWalletDesign, walletTextColors } from '@shared/constants';
 import { formatCurrencyAmount } from '@shared/utils';

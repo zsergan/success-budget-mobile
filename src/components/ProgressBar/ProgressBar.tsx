@@ -8,9 +8,11 @@ interface Props {
   positionInfo?: 'top' | 'bottom';
   leftInfo?: string;
   rightInfo?: string;
+  /** Overrides the default 60/90% green/yellow/red thresholds with an explicit bar color. */
+  color?: string;
 }
 
-const ProgressBar = ({ percentage, positionInfo, leftInfo, rightInfo }: Props) => {
+const ProgressBar = ({ percentage, positionInfo, leftInfo, rightInfo, color }: Props) => {
   const progressWidth: DimensionValue = percentage > 100 ? '100%' : `${percentage}%`;
   const progressColor =
     percentage > 90 ? styles.progressRed : percentage > 60 ? styles.progressYellow : styles.progressGreen;
@@ -18,14 +20,16 @@ const ProgressBar = ({ percentage, positionInfo, leftInfo, rightInfo }: Props) =
   return (
     <View style={[styles.root, positionInfo === 'top' && styles.rootReverse]}>
       <View style={styles.bar}>
-        <View style={[styles.progress, progressColor, { width: progressWidth }]} />
+        <View style={[styles.progress, color ? { backgroundColor: color } : progressColor, { width: progressWidth }]} />
       </View>
 
-      <View style={styles.info}>
-        <Text style={styles.infoText}>{leftInfo}</Text>
+      {(leftInfo || rightInfo) && (
+        <View style={styles.info}>
+          <Text style={styles.infoText}>{leftInfo}</Text>
 
-        <Text style={styles.infoText}>{rightInfo}</Text>
-      </View>
+          <Text style={styles.infoText}>{rightInfo}</Text>
+        </View>
+      )}
     </View>
   );
 };

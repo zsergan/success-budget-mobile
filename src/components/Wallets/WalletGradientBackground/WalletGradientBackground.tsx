@@ -1,6 +1,6 @@
 import type { StyleProp, ViewStyle } from 'react-native';
 
-import { GradientBackground } from '@components';
+import GradientBackground from '@components/GradientBackground/GradientBackground';
 import { gradients, resolveWalletDesign } from '@shared/constants';
 import type { WalletDesign } from '@shared/enums';
 

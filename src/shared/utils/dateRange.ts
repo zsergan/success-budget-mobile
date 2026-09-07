@@ -21,11 +21,15 @@ export const endOfDay = (date: Date) => new Date(date.getFullYear(), date.getMon
 const monthShort = (date: Date) => date.toLocaleString('en-US', { month: 'short' });
 
 /** Month boundaries for whatever month `reference` falls in, no preset attached. */
-export const getMonthRange = (reference: Date): { from: Date; to: Date } => ({
-  from: new Date(reference.getFullYear(), reference.getMonth(), 1, 0, 0, 0, 0),
-  // Day 0 of next month = the last day of this month.
-  to: new Date(reference.getFullYear(), reference.getMonth() + 1, 0, 23, 59, 59, 999),
-});
+export const getMonthRange = (reference: Date | string): { from: Date; to: Date } => {
+  const date = new Date(reference);
+
+  return {
+    from: new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0),
+    // Day 0 of next month = the last day of this month.
+    to: new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999),
+  };
+};
 
 export const getCurrentMonthRange = (reference: Date = new Date()): DateRange => ({
   ...getMonthRange(reference),
