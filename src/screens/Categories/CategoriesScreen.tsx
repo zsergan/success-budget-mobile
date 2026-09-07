@@ -99,7 +99,7 @@ const CategoriesScreen = ({ navigation }: Props) => {
               activeOpacity={0.7}
             >
               <Icon
-                name={isManual ? 'grid' : 'list'}
+                name={isManual ? 'list' : 'chart'}
                 size={13}
                 color={isManual ? colors.onAccent : colors.text}
                 strokeWidth={2.1}

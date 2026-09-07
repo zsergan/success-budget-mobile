@@ -39,12 +39,13 @@ const useCategories = () => {
   const filteredList = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    if (!query) {
+    // Manual-order drags must submit the segment's complete active id list — never let a filter shrink it.
+    if (!query || sortMode === 'manual') {
       return sortedList;
     }
 
     return sortedList.filter((category) => category.name.toLowerCase().includes(query));
-  }, [sortedList, searchQuery]);
+  }, [sortedList, searchQuery, sortMode]);
 
   const isSearching = searchQuery.trim().length > 0;
   const segmentNoun: Record<CategorySegment, string> = { expenses: 'expense', income: 'income', archived: 'archived' };
@@ -61,7 +62,11 @@ const useCategories = () => {
     }
   };
 
-  const toggleSortMode = () => setSortMode((mode) => (mode === 'manual' ? 'most-used' : 'manual'));
+  const toggleSortMode = () => {
+    // Manual-order drags must submit the segment's complete active id list — clear any filter so it can't shrink it.
+    setSearchQuery('');
+    setSortMode((mode) => (mode === 'manual' ? 'most-used' : 'manual'));
+  };
 
   const handleReorder = (orderedCategories: CategoryModel[]) => {
     dispatch(reorderCategories(orderedCategories.map((category) => category.id)))
