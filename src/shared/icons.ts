@@ -125,3 +125,42 @@ for (const [legacyName, currentName] of Object.entries(LEGACY_ICON_ALIASES)) {
 
 export type UiIconName = keyof typeof UI_ICON_PATHS;
 export type CategoryIconName = keyof typeof CATEGORY_ICON_PATHS;
+
+// Picker order for the category icon grid — expense icons first, income icons last (matches the design's PICKER_ICONS ordering).
+export const CATEGORY_ICON_LIST: CategoryIconName[] = [
+  'grocery',
+  'restaurant',
+  'cafe',
+  'housing',
+  'utilities',
+  'internet',
+  'transport',
+  'fuel',
+  'car',
+  'taxi',
+  'health',
+  'pharmacy',
+  'fitness',
+  'beauty',
+  'clothes',
+  'electronics',
+  'home-goods',
+  'education',
+  'kids',
+  'pets',
+  'travel',
+  'entertainment',
+  'subscriptions',
+  'gifts',
+  'charity',
+  'fees',
+  'taxes',
+  'savings',
+  'salary',
+  'bonus',
+  'freelance',
+  'investments',
+  'dividends',
+  'refund',
+  'other',
+];

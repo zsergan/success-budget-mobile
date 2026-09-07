@@ -1,5 +1,11 @@
 import type { CreateCategoryRequest, UpdateCategoryRequest } from '@api/dto';
-import { getCategories, updateCategory, createCategory, moveCategoryForward } from '@api/category.api';
+import {
+  getCategories,
+  updateCategory,
+  createCategory,
+  deleteCategory as deleteCategoryRequest,
+  reorderCategories as reorderCategoriesRequest,
+} from '@api/category.api';
 import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
 export const fetchCategories = createAppAsyncThunk('category/fetchCategories', async (_: void, thunkAPI) => {
@@ -40,11 +46,23 @@ export const addCategory = createAppAsyncThunk(
   },
 );
 
-export const sortCategoryForward = createAppAsyncThunk(
-  'category/sortCategoryForward',
-  async (categoryId: number, thunkAPI) => {
+export const deleteCategory = createAppAsyncThunk('category/deleteCategory', async (categoryId: number, thunkAPI) => {
+  try {
+    const response = await deleteCategoryRequest(categoryId);
+
+    thunkAPI.dispatch(fetchCategories());
+
+    return response;
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getRejectValue(error));
+  }
+});
+
+export const reorderCategories = createAppAsyncThunk(
+  'category/reorderCategories',
+  async (categoryIds: number[], thunkAPI) => {
     try {
-      await moveCategoryForward(categoryId);
+      await reorderCategoriesRequest(categoryIds);
 
       thunkAPI.dispatch(fetchCategories());
     } catch (error: unknown) {

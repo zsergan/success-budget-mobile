@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 
 import type { Limit } from '@api/dto';
+import { toMobileIcon } from '@api/models';
 import { formatCurrencyAmount } from '@shared/utils';
 import CircleIcon from '../CircleIcon/CircleIcon';
 import ProgressBar from '../ProgressBar/ProgressBar';
@@ -25,7 +26,7 @@ const LimitItem = ({ limit, currencyCode, onEdit }: Props) => {
           <CircleIcon
             circleColor={colors.bg}
             size="lg"
-            icon={category ? category.icon : 'other'}
+            icon={category ? toMobileIcon(category.icon) : 'other'}
             color={category ? category.color : colors.text}
           />
 

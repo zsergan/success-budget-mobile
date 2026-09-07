@@ -1,5 +1,5 @@
 import type { Limit } from '@api/dto';
-import { LimitType, TransactionType } from '@shared/enums';
+import { AppColor, LimitType, TransactionType } from '@shared/enums';
 import { logoutMe } from '../auth/thunks';
 import limitReducer from './slice';
 import initialState from './initialState';
@@ -13,9 +13,12 @@ const limit: Limit = {
     id: 1,
     name: 'Groceries',
     transaction_type: TransactionType.EXPENSE,
-    icon: 'grocery',
-    color: '#000',
+    icon: 'Grocery',
+    color: AppColor.SLATE,
     is_active: 1,
+    transaction_count: 0,
+    limit: null,
+    archived_at: null,
   },
   spent: 100,
   in_percent: 20,
