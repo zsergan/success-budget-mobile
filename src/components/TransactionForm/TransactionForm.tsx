@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform, Text, TextInput, ScrollView, View, TouchableOpacity } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import { DateTimePicker, Icon } from '@components';
+import DateTimePicker from '@components/Form/DateTimePicker/DateTimePicker';
+import Icon from '@components/Icon/Icon';
 import { useAppSelector } from '@redux/hooks';
 import { selectActiveCategories } from '@redux/state/category/selectors';
 import { selectWallet } from '@redux/state/wallet/selectors';

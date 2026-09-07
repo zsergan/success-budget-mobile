@@ -3,7 +3,8 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import { colors } from '@shared/theme';
 import type { IconType } from '@shared/types';
-import { Divider, Icon } from '@components';
+import Divider from '@components/Divider/Divider';
+import Icon from '@components/Icon/Icon';
 
 import styles from './style';
 

@@ -1,11 +1,11 @@
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import { Icon } from '@components';
+import Icon from '@components/Icon/Icon';
 import WalletGradientBackground from '../WalletGradientBackground/WalletGradientBackground';
-import { resolveWalletDesign, walletTextColors } from '@shared/constants';
+import { resolveAppColor, walletTextColors } from '@shared/constants';
 import { formatCurrencyAmount } from '@shared/utils';
-import { WalletDesign } from '@shared/enums';
+import { AppColor } from '@shared/enums';
 
 import styles from './style';
 
@@ -15,7 +15,7 @@ export interface WalletCardProps {
   currencyCode: string;
   totalIncome: number;
   totalSpend: number;
-  design?: WalletDesign;
+  design?: AppColor;
   onMorePress?: () => void;
   style?: StyleProp<ViewStyle>;
 }
@@ -26,11 +26,11 @@ const WalletCard = ({
   currencyCode,
   totalIncome,
   totalSpend,
-  design = WalletDesign.SLATE,
+  design = AppColor.SLATE,
   onMorePress,
   style,
 }: WalletCardProps) => {
-  const { fg, dim, inner } = walletTextColors[resolveWalletDesign(design)];
+  const { fg, dim, inner } = walletTextColors[resolveAppColor(design)];
 
   return (
     <View style={[styles.root, style]}>
