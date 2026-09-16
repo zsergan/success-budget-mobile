@@ -5,6 +5,7 @@ import categoryReducer from './state/category/slice';
 import currencyReducer from './state/currency/slice';
 import limitReducer from './state/limit/slice';
 import profileReducer from './state/profile/slice';
+import spaceReducer from './state/space/slice';
 import transactionReducer from './state/transaction/slice';
 import walletReducer from './state/wallet/slice';
 
@@ -15,6 +16,7 @@ const store = configureStore({
     currency: currencyReducer,
     limit: limitReducer,
     profile: profileReducer,
+    space: spaceReducer,
     transaction: transactionReducer,
     wallet: walletReducer,
   },

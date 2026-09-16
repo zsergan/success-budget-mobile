@@ -3,6 +3,13 @@ import * as SecureStore from 'expo-secure-store';
 
 import { login, register, verifyEmail } from '@api/auth.api';
 import { AUTH_TOKEN_KEY } from '@shared/constants';
+import categoryReducer from '../category/slice';
+import currencyReducer from '../currency/slice';
+import limitReducer from '../limit/slice';
+import profileReducer from '../profile/slice';
+import spaceReducer from '../space/slice';
+import transactionReducer from '../transaction/slice';
+import walletReducer from '../wallet/slice';
 import authReducer from './slice';
 import { checkAuth, loginMe, logoutMe, registerMe, verifyEmailMe } from './thunks';
 
@@ -16,7 +23,19 @@ const mockedSetItemAsync = jest.mocked(SecureStore.setItemAsync);
 const mockedGetItemAsync = jest.mocked(SecureStore.getItemAsync);
 const mockedDeleteItemAsync = jest.mocked(SecureStore.deleteItemAsync);
 
-const createTestStore = () => configureStore({ reducer: { auth: authReducer } });
+const testReducer = {
+  auth: authReducer,
+  category: categoryReducer,
+  currency: currencyReducer,
+  limit: limitReducer,
+  profile: profileReducer,
+  space: spaceReducer,
+  transaction: transactionReducer,
+  wallet: walletReducer,
+};
+
+const createTestStore = (preloadedState?: { auth: ReturnType<typeof authReducer> }) =>
+  configureStore({ reducer: testReducer, preloadedState });
 
 const errorResponse = {
   message: 'Invalid credentials',
@@ -157,9 +176,8 @@ describe('logoutMe', () => {
   it('clears the session even if SecureStore fails to delete the token', async () => {
     mockedDeleteItemAsync.mockRejectedValue(new Error('Keystore is corrupted'));
 
-    const store = configureStore({
-      reducer: { auth: authReducer },
-      preloadedState: { auth: { isLoading: false, isSignedIn: true, userToken: 'a-token', userEmail: null } },
+    const store = createTestStore({
+      auth: { isLoading: false, isSignedIn: true, userToken: 'a-token', userEmail: null },
     });
 
     const action = await store.dispatch(logoutMe());

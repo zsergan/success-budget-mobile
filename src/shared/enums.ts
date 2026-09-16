@@ -17,6 +17,11 @@ export enum LimitType {
   OTHERS = 'others',
 }
 
+export enum SpaceType {
+  PERSONAL = 'personal',
+  GROUP = 'group',
+}
+
 export enum ScreenNames {
   HOME_TAB = 'Home',
   LIMITS_TAB = 'Limits',
