@@ -79,12 +79,7 @@ describe('loginMe', () => {
 
 describe('registerMe', () => {
   const registerPayload = { name: 'Alex', base_currency_id: 1, email: 'a@b.com', password: 'password1' };
-  const profileResponse = {
-    id: '1',
-    email: 'a@b.com',
-    name: 'Alex',
-    baseCurrency: { id: 1, code: 'USD', name: 'Dollar' },
-  };
+  const profileResponse = { id: '1', email: 'a@b.com', name: 'Alex' };
 
   it('records the registered email on success without signing the user in yet', async () => {
     mockedRegister.mockResolvedValue(profileResponse);

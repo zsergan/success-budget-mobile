@@ -10,9 +10,10 @@ import styles from './style';
 
 interface Props {
   transaction: TransactionModel;
+  currencyCode?: string;
 }
 
-const TransactionCard = ({ transaction }: Props) => {
+const TransactionCard = ({ transaction, currencyCode }: Props) => {
   const isIncome = transaction.transactionType === TransactionType.INCOME;
   const walletName = transaction.wallet ? transaction.wallet.wallet_name : 'Deleted wallet';
   const time = formatDateHHMM(transaction.timestamp);
@@ -39,7 +40,7 @@ const TransactionCard = ({ transaction }: Props) => {
       </View>
 
       <Text style={[styles.amount, isIncome && styles.income]}>
-        {formatAmount(transaction.amount, transaction.transactionType, transaction.currency.code)}
+        {formatAmount(transaction.amount, transaction.transactionType, currencyCode)}
       </Text>
     </View>
   );

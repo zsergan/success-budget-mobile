@@ -3,16 +3,28 @@ import { getLimits, createLimit, updateLimit, deleteLimit } from '@api/limit.api
 import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
 export const fetchLimits = createAppAsyncThunk('limit/fetchLimits', async (_: void, thunkAPI) => {
+  const spaceId = thunkAPI.getState().space.currentSpaceId;
+
+  if (spaceId === null) {
+    return thunkAPI.rejectWithValue(undefined);
+  }
+
   try {
-    return await getLimits();
+    return await getLimits(spaceId);
   } catch (error: unknown) {
     return thunkAPI.rejectWithValue(getRejectValue(error));
   }
 });
 
 export const addLimit = createAppAsyncThunk('limit/addLimit', async (data: CreateLimitRequest, thunkAPI) => {
+  const spaceId = thunkAPI.getState().space.currentSpaceId;
+
+  if (spaceId === null) {
+    return thunkAPI.rejectWithValue(undefined);
+  }
+
   try {
-    const response = await createLimit(data);
+    const response = await createLimit(spaceId, data);
 
     thunkAPI.dispatch(fetchLimits());
 
@@ -25,8 +37,14 @@ export const addLimit = createAppAsyncThunk('limit/addLimit', async (data: Creat
 export const editLimit = createAppAsyncThunk(
   'limit/editLimit',
   async (data: { limitId: number; limitData: UpdateLimitRequest }, thunkAPI) => {
+    const spaceId = thunkAPI.getState().space.currentSpaceId;
+
+    if (spaceId === null) {
+      return thunkAPI.rejectWithValue(undefined);
+    }
+
     try {
-      const response = await updateLimit(data.limitId, data.limitData);
+      const response = await updateLimit(spaceId, data.limitId, data.limitData);
 
       thunkAPI.dispatch(fetchLimits());
 
@@ -38,8 +56,14 @@ export const editLimit = createAppAsyncThunk(
 );
 
 export const removeLimit = createAppAsyncThunk('limit/removeLimit', async (limitId: number, thunkAPI) => {
+  const spaceId = thunkAPI.getState().space.currentSpaceId;
+
+  if (spaceId === null) {
+    return thunkAPI.rejectWithValue(undefined);
+  }
+
   try {
-    await deleteLimit(limitId);
+    await deleteLimit(spaceId, limitId);
 
     thunkAPI.dispatch(fetchLimits());
   } catch (error: unknown) {

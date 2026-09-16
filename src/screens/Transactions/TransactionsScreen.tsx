@@ -12,7 +12,6 @@ import {
   selectRangeTransactions,
 } from '@redux/state/transaction/selectors';
 import { fetchLatestTransaction, fetchTransactionsInRange } from '@redux/state/transaction/thunks';
-import { selectProfile } from '@redux/state/profile/selectors';
 import { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
 import type { DateRange } from '@shared/utils';
@@ -48,7 +47,6 @@ const TransactionsScreen = () => {
   const isLoadingRange = useAppSelector(selectIsLoadingRange);
   const latest = useAppSelector(selectLatestTransaction);
   const { income, expense, currencyCode } = useAppSelector(selectPeriodTotals);
-  const { baseCurrency } = useAppSelector(selectProfile);
 
   const refreshRange = () => dispatch(fetchTransactionsInRange({ from: activeRange.from, to: activeRange.to }));
 
@@ -74,7 +72,7 @@ const TransactionsScreen = () => {
     dispatch(fetchLatestTransaction());
   }, [dispatch]);
 
-  const groups = groupTransactionsByDay(rangeTransactions, baseCurrency?.code);
+  const groups = groupTransactionsByDay(rangeTransactions, currencyCode);
 
   // latest === undefined means "not fetched yet" — treat that as still
   // loading too, or the wrong empty-state variant flashes on cold start.
@@ -166,7 +164,7 @@ const TransactionsScreen = () => {
 
                   <View style={styles.groupItems}>
                     {group.items.map((transaction) => (
-                      <TransactionCard key={transaction.id} transaction={transaction} />
+                      <TransactionCard key={transaction.id} transaction={transaction} currencyCode={currencyCode} />
                     ))}
                   </View>
                 </View>

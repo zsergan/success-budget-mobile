@@ -1,11 +1,10 @@
 import type { AppColor } from '@shared/enums';
-import type { Currency } from './currencyDto';
+import type { Transaction } from './transactionDto';
 
 export interface Wallet {
   id: number;
   wallet_name: string;
   balance: string;
-  currency: Currency;
   design: AppColor;
 }
 
@@ -24,9 +23,13 @@ export interface WalletsOverviewResponse {
 
 export interface CreateWalletRequest {
   wallet_name: string;
-  balance: number;
-  currency_id: number;
+  initial_balance: number;
   design: AppColor;
+}
+
+export interface CreateWalletResponse {
+  wallet: Wallet;
+  transaction: Transaction | null;
 }
 
 export interface UpdateWalletRequest {

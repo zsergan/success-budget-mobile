@@ -7,6 +7,8 @@ import type { GetWalletsResponse } from '@api/dto';
 import type { AppColor } from '@shared/enums';
 import type { NavigationType } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
+import { useAppSelector } from '@redux/hooks';
+import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import useWalletsData from './useWalletsData';
 
 import styles from './style';
@@ -19,10 +21,13 @@ const renderBottomModalContent = (walletName: string, currencyCode: string, desi
   </View>
 );
 
-const toWalletCardProps = (item: GetWalletsResponse): Omit<WalletCardProps, 'onMorePress' | 'style'> => ({
+const toWalletCardProps = (
+  item: GetWalletsResponse,
+  currencyCode: string,
+): Omit<WalletCardProps, 'onMorePress' | 'style'> => ({
   walletName: item.wallet.wallet_name,
   balance: item.wallet.balance,
-  currencyCode: item.wallet.currency.code,
+  currencyCode,
   totalIncome: item.total_income,
   totalSpend: item.total_spend,
   design: item.wallet.design,
@@ -46,6 +51,8 @@ const Wallets = ({ navigation, onScrollEnd }: Props) => {
     onConfirmCancel,
   } = useWalletsData();
 
+  const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode) || '';
+
   return (
     <>
       <LongPressedModal
@@ -58,14 +65,13 @@ const Wallets = ({ navigation, onScrollEnd }: Props) => {
               id: selectedWallet.wallet.id,
               walletName: selectedWallet.wallet.wallet_name,
               balance: selectedWallet.wallet.balance,
-              currencyId: selectedWallet.wallet.currency.id,
               design: selectedWallet.wallet.design,
             });
           }
 
           onDeleteCancel();
         }}
-        longPressedItem={selectedWallet ? <WalletCard {...toWalletCardProps(selectedWallet)} /> : <></>}
+        longPressedItem={selectedWallet ? <WalletCard {...toWalletCardProps(selectedWallet, currencyCode)} /> : <></>}
         onDelete={onDeletePress}
       />
 
@@ -74,7 +80,7 @@ const Wallets = ({ navigation, onScrollEnd }: Props) => {
         onClose={onConfirmCancel}
         content={renderBottomModalContent(
           selectedWallet?.wallet.wallet_name || '',
-          selectedWallet?.wallet.currency.code || '',
+          currencyCode,
           selectedWallet?.wallet.design,
         )}
         actions={[{ title: 'Delete', onPress: onConfirm }]}
@@ -92,7 +98,10 @@ const Wallets = ({ navigation, onScrollEnd }: Props) => {
       )}
 
       {wallets.length === 1 && (
-        <WalletCard {...toWalletCardProps(wallets[0])} onMorePress={() => onWalletLongPress(wallets[0])} />
+        <WalletCard
+          {...toWalletCardProps(wallets[0], currencyCode)}
+          onMorePress={() => onWalletLongPress(wallets[0])}
+        />
       )}
 
       {wallets.length > 1 && (
@@ -106,7 +115,7 @@ const Wallets = ({ navigation, onScrollEnd }: Props) => {
               activeOpacity={0.7}
             >
               <WalletCard
-                {...toWalletCardProps(item)}
+                {...toWalletCardProps(item, currencyCode)}
                 style={{ width: walletWidth }}
                 onMorePress={() => onWalletLongPress(item)}
               />

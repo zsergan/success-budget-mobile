@@ -22,17 +22,6 @@ const styles = StyleSheet.create({
   formContainer: {
     rowGap: theme.spacing.lg,
   },
-  rowInputs: {
-    flexDirection: 'row',
-    columnGap: theme.spacing.xl,
-  },
-  currency: {
-    flex: 1,
-    textAlign: 'center',
-  },
-  balance: {
-    flex: 2,
-  },
   designsContainer: {
     flexDirection: 'row',
     columnGap: 14,

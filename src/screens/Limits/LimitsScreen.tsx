@@ -7,7 +7,7 @@ import type { LimitModel } from '@api/models';
 import { BottomSheetModal as BottomModal, EmptyState, Icon, LimitItem } from '@components';
 import { useAppSelector } from '@redux/hooks';
 import { selectLimit } from '@redux/state/limit/selectors';
-import { selectProfile } from '@redux/state/profile/selectors';
+import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import { colors } from '@shared/theme';
 import { formatDateMM, getDaysLeftInMonth } from '@shared/utils';
 import type { LimitScope } from './LimitEditor/useLimitEditorForm';
@@ -31,7 +31,7 @@ interface EditorTarget {
 
 const LimitsScreen = () => {
   const { total, categoryLimits, overAllocation } = useAppSelector(selectLimit);
-  const { baseCurrency } = useAppSelector(selectProfile);
+  const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
   const editorRef = useRef<BottomSheetModal>(null);
   const [editorTarget, setEditorTarget] = useState<EditorTarget>({});
@@ -45,7 +45,6 @@ const LimitsScreen = () => {
   };
 
   const isFullyEmpty = !total && categoryLimits.length === 0;
-  const currencyCode = baseCurrency?.code;
 
   return (
     <>

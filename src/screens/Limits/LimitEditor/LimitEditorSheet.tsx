@@ -8,7 +8,7 @@ import { Icon } from '@components';
 import { useAppSelector } from '@redux/hooks';
 import { selectActiveCategories } from '@redux/state/category/selectors';
 import { selectLimit } from '@redux/state/limit/selectors';
-import { selectProfile } from '@redux/state/profile/selectors';
+import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import { formatCurrencyAmount, hexToRgba } from '@shared/utils';
 import theme, { colors } from '@shared/theme';
 import type { LimitScope } from './useLimitEditorForm';
@@ -39,7 +39,7 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
   const { height: windowHeight } = useWindowDimensions();
   const { expenses } = useAppSelector(selectActiveCategories);
   const { total, categoryLimits } = useAppSelector(selectLimit);
-  const { baseCurrency } = useAppSelector(selectProfile);
+  const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
   const { control, watch, setScope, toggleCategory, onNameChange, onSubmit, isSubmitDisabled, closeBottomSheet } =
     useLimitEditorForm({ limit, initialScope });
@@ -157,7 +157,7 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
                 )}
               />
 
-              {baseCurrency && <Text style={styles.heroCurrency}>{baseCurrency.code}</Text>}
+              {currencyCode && <Text style={styles.heroCurrency}>{currencyCode}</Text>}
             </View>
 
             <Text style={styles.heroSub}>
@@ -170,7 +170,7 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
               <Icon name="info" size={16} color={colors.muted} strokeWidth={1.9} />
 
               <Text style={styles.spentContextText}>
-                {`${formatCurrencyAmount(limit.spent, baseCurrency?.code)} already spent this month — editing moves the threshold only, history stays.`}
+                {`${formatCurrencyAmount(limit.spent, currencyCode)} already spent this month — editing moves the threshold only, history stays.`}
               </Text>
             </View>
           )}
@@ -248,7 +248,7 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
                 <Text style={styles.sectionLabel}>Already committed to categories</Text>
 
                 <Text style={[styles.sectionHint, overCommitted && { color: colors.warn }]}>
-                  {formatCurrencyAmount(committedTotal, baseCurrency?.code)}
+                  {formatCurrencyAmount(committedTotal, currencyCode)}
                 </Text>
               </View>
 
@@ -277,14 +277,14 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
                   <Text style={styles.allocationName}>{categoryLimit.name ?? categoryLimit.categories[0]?.name}</Text>
 
                   <Text style={styles.allocationAmount}>
-                    {formatCurrencyAmount(Number(categoryLimit.amount), baseCurrency?.code)}
+                    {formatCurrencyAmount(Number(categoryLimit.amount), currencyCode)}
                   </Text>
                 </View>
               ))}
 
               {overCommitted && total && (
                 <Text style={styles.takenHint}>
-                  {`Categories currently commit ${formatCurrencyAmount(committedTotal, baseCurrency?.code)} — ${formatCurrencyAmount(committedTotal - Number(total.amount), baseCurrency?.code)} above this total. Raising it makes both numbers agree.`}
+                  {`Categories currently commit ${formatCurrencyAmount(committedTotal, currencyCode)} — ${formatCurrencyAmount(committedTotal - Number(total.amount), currencyCode)} above this total. Raising it makes both numbers agree.`}
                 </Text>
               )}
             </View>

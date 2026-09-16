@@ -6,8 +6,14 @@ import { fetchLimits } from '../limit/thunks';
 import { fetchWallets } from '../wallet/thunks';
 
 export const fetchTransactions = createAppAsyncThunk('transaction/fetchTransactions', async (_: void, thunkAPI) => {
+  const spaceId = thunkAPI.getState().space.currentSpaceId;
+
+  if (spaceId === null) {
+    return thunkAPI.rejectWithValue(undefined);
+  }
+
   try {
-    return await getTransactions();
+    return await getTransactions(spaceId);
   } catch (error: unknown) {
     return thunkAPI.rejectWithValue(getRejectValue(error));
   }
@@ -16,8 +22,14 @@ export const fetchTransactions = createAppAsyncThunk('transaction/fetchTransacti
 export const fetchTransactionsInRange = createAppAsyncThunk(
   'transaction/fetchTransactionsInRange',
   async (params: { from: Date; to: Date }, thunkAPI) => {
+    const spaceId = thunkAPI.getState().space.currentSpaceId;
+
+    if (spaceId === null) {
+      return thunkAPI.rejectWithValue(undefined);
+    }
+
     try {
-      return await getTransactions(params);
+      return await getTransactions(spaceId, params);
     } catch (error: unknown) {
       return thunkAPI.rejectWithValue(getRejectValue(error));
     }
@@ -27,8 +39,14 @@ export const fetchTransactionsInRange = createAppAsyncThunk(
 export const fetchLatestTransaction = createAppAsyncThunk(
   'transaction/fetchLatestTransaction',
   async (_: void, thunkAPI) => {
+    const spaceId = thunkAPI.getState().space.currentSpaceId;
+
+    if (spaceId === null) {
+      return thunkAPI.rejectWithValue(undefined);
+    }
+
     try {
-      return await getLatestTransaction();
+      return await getLatestTransaction(spaceId);
     } catch (error: unknown) {
       return thunkAPI.rejectWithValue(getRejectValue(error));
     }
@@ -38,8 +56,14 @@ export const fetchLatestTransaction = createAppAsyncThunk(
 export const addTransaction = createAppAsyncThunk(
   'transaction/addTransaction',
   async (payload: CreateTransactionRequest, thunkAPI) => {
+    const spaceId = thunkAPI.getState().space.currentSpaceId;
+
+    if (spaceId === null) {
+      return thunkAPI.rejectWithValue(undefined);
+    }
+
     try {
-      const response = await createTransaction(payload);
+      const response = await createTransaction(spaceId, payload);
 
       thunkAPI.dispatch(fetchTransactions());
       thunkAPI.dispatch(fetchWallets());

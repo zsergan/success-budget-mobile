@@ -7,6 +7,7 @@ import Icon from '@components/Icon/Icon';
 import { useAppSelector } from '@redux/hooks';
 import { selectActiveCategories } from '@redux/state/category/selectors';
 import { findLimitForCategory, selectLimit } from '@redux/state/limit/selectors';
+import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import { selectWallet } from '@redux/state/wallet/selectors';
 import { TransactionType } from '@shared/enums';
 import type { IconType } from '@shared/types';
@@ -81,6 +82,7 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
   const { wallets } = useAppSelector(selectWallet);
   const { expenses, incomes } = useAppSelector(selectActiveCategories);
   const { categoryLimits } = useAppSelector(selectLimit);
+  const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
   const { control, watch, resetField, onSubmit, isSubmitDisabled, closeBottomSheet } = useTransactionForm({
     transactionType,
@@ -212,21 +214,19 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
               )}
             />
 
-            {selectedWallet && (
-              <Text style={[styles.heroCurrency, { color: typeColor }]}>{selectedWallet.currency.code}</Text>
-            )}
+            {selectedWallet && <Text style={[styles.heroCurrency, { color: typeColor }]}>{currencyCode}</Text>}
           </View>
 
           {selectedWallet && (
             <Text style={styles.heroSub}>
-              {selectedWallet.currency.code} · {isIncome ? 'added to' : 'taken from'} {selectedWallet.wallet_name}
+              {currencyCode} · {isIncome ? 'added to' : 'taken from'} {selectedWallet.wallet_name}
             </Text>
           )}
         </View>
 
         {matchedLimit && (
           <View style={styles.limitHint}>
-            <LimitHint limit={matchedLimit} amount={amount} currencyCode={selectedWallet?.currency.code} />
+            <LimitHint limit={matchedLimit} amount={amount} currencyCode={currencyCode} />
           </View>
         )}
       </View>
