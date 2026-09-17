@@ -9,6 +9,7 @@ import {
   Icon,
   RootLayout,
   SectionTitle,
+  SpaceSwitcher,
   TinyButton,
   TransactionCard,
   TransactionForm,
@@ -70,6 +71,8 @@ const HomeScreen = ({ navigation }: Props) => {
       </BottomModal>
 
       <RootLayout style={styles.container} scrollable>
+        <SpaceSwitcher navigation={navigation} />
+
         <View style={styles.hero}>
           <View style={styles.heroRow}>
             <View style={styles.heroInfo}>
