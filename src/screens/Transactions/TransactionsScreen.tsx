@@ -12,6 +12,7 @@ import {
   selectRangeTransactions,
 } from '@redux/state/transaction/selectors';
 import { fetchLatestTransaction, fetchTransactionsInRange } from '@redux/state/transaction/thunks';
+import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
 import type { DateRange } from '@shared/utils';
@@ -47,6 +48,7 @@ const TransactionsScreen = () => {
   const isLoadingRange = useAppSelector(selectIsLoadingRange);
   const latest = useAppSelector(selectLatestTransaction);
   const { income, expense, currencyCode } = useAppSelector(selectPeriodTotals);
+  const currentSpaceId = useAppSelector(selectCurrentSpaceId);
 
   const refreshRange = () => dispatch(fetchTransactionsInRange({ from: activeRange.from, to: activeRange.to }));
 
@@ -66,11 +68,11 @@ const TransactionsScreen = () => {
 
   useEffect(() => {
     dispatch(fetchTransactionsInRange({ from: activeRange.from, to: activeRange.to }));
-  }, [dispatch, activeRange]);
+  }, [dispatch, activeRange, currentSpaceId]);
 
   useEffect(() => {
     dispatch(fetchLatestTransaction());
-  }, [dispatch]);
+  }, [dispatch, currentSpaceId]);
 
   const groups = groupTransactionsByDay(rangeTransactions, currencyCode);
 

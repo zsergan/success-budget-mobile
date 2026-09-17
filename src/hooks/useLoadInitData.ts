@@ -10,7 +10,7 @@ import { selectWallet } from '@redux/state/wallet/selectors';
 import { selectLimit } from '@redux/state/limit/selectors';
 import { selectCategory } from '@redux/state/category/selectors';
 import { selectProfile } from '@redux/state/profile/selectors';
-import { selectSpace } from '@redux/state/space/selectors';
+import { selectCurrentSpaceId, selectSpace } from '@redux/state/space/selectors';
 
 interface UseLoadInitDataProps {
   isSignedIn: boolean;
@@ -19,6 +19,7 @@ interface UseLoadInitDataProps {
 const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   const dispatch = useAppDispatch();
   const { isLoading: isSpaceLoading } = useAppSelector(selectSpace);
+  const currentSpaceId = useAppSelector(selectCurrentSpaceId);
   const { isLoading: isWalletLoading } = useAppSelector(selectWallet);
   const { isLoading: isLimitsLoading } = useAppSelector(selectLimit);
   const { isLoading: isCategoryLoading } = useAppSelector(selectCategory);
@@ -26,17 +27,20 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
 
   useEffect(() => {
     if (isSignedIn) {
-      dispatch(fetchSpaces())
-        .unwrap()
-        .then(() => {
-          dispatch(fetchWallets());
-          dispatch(fetchLimits());
-          dispatch(fetchCategories());
-        })
-        .catch(() => {});
+      dispatch(fetchSpaces());
       dispatch(fetchProfile());
     }
   }, [dispatch, isSignedIn]);
+
+  // Re-fires on every space switch, not just the initial load, so wallets/
+  // limits/categories always match whichever space is currently selected.
+  useEffect(() => {
+    if (isSignedIn && currentSpaceId !== null) {
+      dispatch(fetchWallets());
+      dispatch(fetchLimits());
+      dispatch(fetchCategories());
+    }
+  }, [dispatch, isSignedIn, currentSpaceId]);
 
   return {
     isLoading:

@@ -1,8 +1,8 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, isPending, isRejected } from '@reduxjs/toolkit';
 
 import { logoutMe } from '../auth/thunks';
 import initialState from './initialState';
-import { fetchSpaces } from './thunks';
+import { addSpace, fetchSpaces, removeSpace, setCurrentSpaceId } from './thunks';
 
 const spaceSlice = createSlice({
   name: 'space',
@@ -11,20 +11,24 @@ const spaceSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(logoutMe.fulfilled, () => initialState);
 
-    builder.addCase(fetchSpaces.pending, (state) => {
-      state.isLoading = true;
-      state.error = undefined;
-    });
-
-    builder.addCase(fetchSpaces.rejected, (state, action) => {
-      state.isLoading = false;
-      state.error = action.payload;
+    builder.addCase(setCurrentSpaceId, (state, action) => {
+      state.currentSpaceId = action.payload;
     });
 
     builder.addCase(fetchSpaces.fulfilled, (state, action) => {
       state.spaces = action.payload.spaces;
       state.currentSpaceId = action.payload.currentSpaceId;
       state.isLoading = false;
+    });
+
+    builder.addMatcher(isPending(fetchSpaces, addSpace, removeSpace), (state) => {
+      state.isLoading = true;
+      state.error = undefined;
+    });
+
+    builder.addMatcher(isRejected(fetchSpaces, addSpace, removeSpace), (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload;
     });
   },
 });
