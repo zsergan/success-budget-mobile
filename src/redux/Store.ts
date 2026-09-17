@@ -4,6 +4,7 @@ import authReducer from './state/auth/slice';
 import categoryReducer from './state/category/slice';
 import currencyReducer from './state/currency/slice';
 import limitReducer from './state/limit/slice';
+import memberReducer from './state/member/slice';
 import profileReducer from './state/profile/slice';
 import spaceReducer from './state/space/slice';
 import transactionReducer from './state/transaction/slice';
@@ -15,6 +16,7 @@ const store = configureStore({
     category: categoryReducer,
     currency: currencyReducer,
     limit: limitReducer,
+    member: memberReducer,
     profile: profileReducer,
     space: spaceReducer,
     transaction: transactionReducer,

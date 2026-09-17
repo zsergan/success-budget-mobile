@@ -6,6 +6,7 @@ import { AUTH_TOKEN_KEY } from '@shared/constants';
 import categoryReducer from '../category/slice';
 import currencyReducer from '../currency/slice';
 import limitReducer from '../limit/slice';
+import memberReducer from '../member/slice';
 import profileReducer from '../profile/slice';
 import spaceReducer from '../space/slice';
 import transactionReducer from '../transaction/slice';
@@ -28,6 +29,7 @@ const testReducer = {
   category: categoryReducer,
   currency: currencyReducer,
   limit: limitReducer,
+  member: memberReducer,
   profile: profileReducer,
   space: spaceReducer,
   transaction: transactionReducer,
