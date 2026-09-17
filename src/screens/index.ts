@@ -1,5 +1,6 @@
 export * from './Auth';
 export { default as CategoriesScreen } from './Categories/CategoriesScreen';
+export { default as CreateSpaceScreen } from './CreateSpace/CreateSpaceScreen';
 export { default as CreateWalletScreen } from './CreateWallet/CreateWalletScreen';
 export { default as HomeScreen } from './Home/HomeScreen';
 export { default as LimitsScreen } from './Limits/LimitsScreen';
