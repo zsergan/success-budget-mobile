@@ -14,6 +14,7 @@ export { default as MenuItem } from './MenuItem/MenuItem';
 export * from './Modals';
 export { default as ProgressBar } from './ProgressBar/ProgressBar';
 export { default as RootLayout } from './RootLayout/RootLayout';
+export { default as SpaceSwitcher } from './SpaceSwitcher/SpaceSwitcher';
 export { default as TransactionCard } from './TransactionCard/TransactionCard';
 export { default as TransactionForm } from './TransactionForm/TransactionForm';
 export * from './Typography';

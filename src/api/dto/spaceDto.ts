@@ -10,3 +10,10 @@ export interface Space {
   member_count: number;
   created_at: string;
 }
+
+export interface CreateSpaceRequest {
+  name: string;
+  currency_id: number;
+  type: SpaceType;
+  invites?: string[];
+}

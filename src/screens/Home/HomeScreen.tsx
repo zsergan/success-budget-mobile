@@ -9,6 +9,7 @@ import {
   Icon,
   RootLayout,
   SectionTitle,
+  SpaceSwitcher,
   TinyButton,
   TransactionCard,
   TransactionForm,
@@ -17,6 +18,7 @@ import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectTotalBalance, selectWallet } from '@redux/state/wallet/selectors';
 import { selectTransaction } from '@redux/state/transaction/selectors';
 import { fetchTransactions } from '@redux/state/transaction/thunks';
+import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { useBalanceVisibility } from '@hooks';
 import { ScreenNames, TransactionType } from '@shared/enums';
 import type { ScreenProps } from '@shared/types';
@@ -43,6 +45,7 @@ const HomeScreen = ({ navigation }: Props) => {
   const { total, currencyCode, walletsCount, deltaPercent } = useAppSelector(selectTotalBalance);
   const { wallets } = useAppSelector(selectWallet);
   const { transactions } = useAppSelector(selectTransaction);
+  const currentSpaceId = useAppSelector(selectCurrentSpaceId);
   const { isHidden, toggle } = useBalanceVisibility();
 
   const hasWallets = wallets.length > 0;
@@ -53,7 +56,7 @@ const HomeScreen = ({ navigation }: Props) => {
 
   useEffect(() => {
     dispatch(fetchTransactions());
-  }, [dispatch]);
+  }, [dispatch, currentSpaceId]);
 
   const recentGroups = groupTransactionsByDay(transactions.slice(0, RECENT_TRANSACTIONS_LIMIT), currencyCode);
 
@@ -68,6 +71,8 @@ const HomeScreen = ({ navigation }: Props) => {
       </BottomModal>
 
       <RootLayout style={styles.container} scrollable>
+        <SpaceSwitcher navigation={navigation} />
+
         <View style={styles.hero}>
           <View style={styles.heroRow}>
             <View style={styles.heroInfo}>

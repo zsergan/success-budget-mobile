@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import {
   CategoriesScreen,
+  CreateSpaceScreen,
   CreateWalletScreen,
   SignInScreen,
   SignUpScreen,
@@ -52,6 +53,11 @@ const RootNavigator = () => {
                 <Stack.Screen
                   name={ScreenNames.CATEGORIES_SCREEN}
                   component={CategoriesScreen}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name={ScreenNames.CREATE_SPACE_SCREEN}
+                  component={CreateSpaceScreen}
                   options={{ headerShown: false }}
                 />
               </>
