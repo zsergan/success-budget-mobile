@@ -11,6 +11,7 @@ export type RootStackParamList = {
   [ScreenNames.TRANSACTIONS_TAB]: undefined;
   [ScreenNames.SETTINGS_TAB]: undefined;
   [ScreenNames.CATEGORIES_SCREEN]: undefined;
+  [ScreenNames.CREATE_SPACE_SCREEN]: undefined;
   [ScreenNames.LOADING_SCREEN]: undefined;
   [ScreenNames.SIGN_IN_SCREEN]: undefined;
   [ScreenNames.SIGN_UP_SCREEN]: undefined;
@@ -45,6 +46,7 @@ export type IconType =
   | 'lock'
   | 'mail'
   | 'user'
+  | 'users'
   | 'logout'
   | 'wallet'
   | 'transfer'
