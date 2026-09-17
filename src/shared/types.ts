@@ -12,6 +12,8 @@ export type RootStackParamList = {
   [ScreenNames.SETTINGS_TAB]: undefined;
   [ScreenNames.CATEGORIES_SCREEN]: undefined;
   [ScreenNames.CREATE_SPACE_SCREEN]: undefined;
+  [ScreenNames.MEMBERS_SCREEN]: undefined;
+  [ScreenNames.ACCEPT_INVITE_SCREEN]: undefined;
   [ScreenNames.LOADING_SCREEN]: undefined;
   [ScreenNames.SIGN_IN_SCREEN]: undefined;
   [ScreenNames.SIGN_UP_SCREEN]: undefined;
