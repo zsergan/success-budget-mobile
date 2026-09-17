@@ -21,10 +21,7 @@ export const formatGroupLabel = (date: Date | string) => {
   return formatDateDDMMYYYY(date);
 };
 
-export const groupTransactionsByDay = (
-  transactions: TransactionModel[],
-  baseCurrencyCode?: string,
-): TransactionGroup[] => {
+export const groupTransactionsByDay = (transactions: TransactionModel[], currencyCode?: string): TransactionGroup[] => {
   const groups: TransactionGroup[] = [];
 
   transactions.forEach((transaction) => {
@@ -32,19 +29,15 @@ export const groupTransactionsByDay = (
     const lastGroup = groups[groups.length - 1];
     const group = lastGroup?.label === label ? lastGroup : undefined;
     const signedAmount = transaction.transactionType === TransactionType.EXPENSE ? -1 : 1;
-    const countsTowardTotal = transaction.currency.code === baseCurrencyCode;
 
     if (group) {
-      if (countsTowardTotal) {
-        group.total = (group.total || 0) + signedAmount * Number(transaction.amount);
-      }
-
+      group.total = (group.total || 0) + signedAmount * Number(transaction.amount);
       group.items.push(transaction);
     } else {
       groups.push({
         label,
-        total: countsTowardTotal ? signedAmount * Number(transaction.amount) : undefined,
-        currencyCode: baseCurrencyCode,
+        total: signedAmount * Number(transaction.amount),
+        currencyCode,
         items: [transaction],
       });
     }

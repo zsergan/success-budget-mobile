@@ -4,24 +4,24 @@ import { ApiClient } from './instance';
 
 const api = ApiClient();
 
-export const getLimits = async () => {
-  const response = await api.get<GetLimitsResponse>('/limits');
+export const getLimits = async (spaceId: number) => {
+  const response = await api.get<GetLimitsResponse>(`/spaces/${spaceId}/limits`);
 
   return mapLimitsResponse(response.data);
 };
 
-export const createLimit = async (data: CreateLimitRequest) => {
-  const response = await api.post<LimitEntity>('/limits', data);
+export const createLimit = async (spaceId: number, data: CreateLimitRequest) => {
+  const response = await api.post<LimitEntity>(`/spaces/${spaceId}/limits`, data);
 
   return response.data;
 };
 
-export const updateLimit = async (limitId: number, data: UpdateLimitRequest) => {
-  const response = await api.put<LimitEntity>(`/limits/${limitId}`, data);
+export const updateLimit = async (spaceId: number, limitId: number, data: UpdateLimitRequest) => {
+  const response = await api.put<LimitEntity>(`/spaces/${spaceId}/limits/${limitId}`, data);
 
   return response.data;
 };
 
-export const deleteLimit = async (limitId: number) => {
-  await api.deleteRequest(`/limits/${limitId}`);
+export const deleteLimit = async (spaceId: number, limitId: number) => {
+  await api.deleteRequest(`/spaces/${spaceId}/limits/${limitId}`);
 };

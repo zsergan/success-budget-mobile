@@ -6,23 +6,23 @@ import { ApiClient } from './instance';
 
 const api = ApiClient();
 
-export const getTransactions = async (params?: { from?: Date; to?: Date }) => {
-  const response = await api.get<Transaction[]>('/transactions', {
+export const getTransactions = async (spaceId: number, params?: { from?: Date; to?: Date }) => {
+  const response = await api.get<Transaction[]>(`/spaces/${spaceId}/transactions`, {
     params: { from: params?.from?.toISOString(), to: params?.to?.toISOString() },
   });
 
   return response.data.map(mapTransaction);
 };
 
-export const createTransaction = async (payload: CreateTransactionRequest) => {
-  const response = await api.post<Transaction>('/transactions', payload);
+export const createTransaction = async (spaceId: number, payload: CreateTransactionRequest) => {
+  const response = await api.post<Transaction>(`/spaces/${spaceId}/transactions`, payload);
 
   return mapTransaction(response.data);
 };
 
-export const getLatestTransaction = async () => {
+export const getLatestTransaction = async (spaceId: number) => {
   try {
-    const response = await api.get<Transaction>('/transactions/latest');
+    const response = await api.get<Transaction>(`/spaces/${spaceId}/transactions/latest`);
 
     return mapTransaction(response.data);
   } catch (error) {
@@ -34,6 +34,6 @@ export const getLatestTransaction = async () => {
   }
 };
 
-export const deleteTransaction = async (transactionId: string) => {
-  await api.deleteRequest(`/transactions/${transactionId}`);
+export const deleteTransaction = async (spaceId: number, transactionId: string) => {
+  await api.deleteRequest(`/spaces/${spaceId}/transactions/${transactionId}`);
 };

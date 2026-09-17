@@ -1,30 +1,25 @@
-import { useEffect } from 'react';
 import * as yup from 'yup';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
-import { useAppDispatch, useAppSelector } from '@redux/hooks';
-import { selectProfile } from '@redux/state/profile/selectors';
+import { useAppSelector, useAppDispatch } from '@redux/hooks';
+import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import type { ScreenNames } from '@shared/enums';
 import type { ScreenProps } from '@shared/types';
 import { AppColor } from '@shared/enums';
 import { addWallet, editWallet } from '@redux/state/wallet/thunks';
-import { fetchCurrencies } from '@redux/state/currency/thunks';
-import { selectCurrency } from '@redux/state/currency/selectors';
 import { useFormSubmitHandler } from '@hooks';
 import { amountSchema } from '@shared/utils';
 
 interface CreateWalletFormData {
   walletName: string;
   initialBalance: string;
-  currency: number;
   design: AppColor;
 }
 
 const schema = yup.object().shape({
   walletName: yup.string().required(),
   initialBalance: amountSchema,
-  currency: yup.number().required(),
   design: yup.mixed<AppColor>().oneOf(Object.values(AppColor)).required(),
 });
 
@@ -33,8 +28,7 @@ interface UseCreateWalletFormProps extends ScreenProps<ScreenNames.ADD_WALLET_SC
 const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) => {
   const isNewWallet = route.params.id === 'new';
 
-  const { baseCurrency } = useAppSelector(selectProfile);
-  const { currencies } = useAppSelector(selectCurrency);
+  const spaceCurrencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
   const dispatch = useAppDispatch();
 
   const {
@@ -47,14 +41,9 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
     defaultValues: {
       walletName: isNewWallet ? '' : route.params.walletName,
       initialBalance: isNewWallet ? '' : route.params.balance,
-      currency: isNewWallet ? baseCurrency?.id || 1 : route.params.currencyId,
       design: isNewWallet ? AppColor.SLATE : route.params.design,
     },
   });
-
-  useEffect(() => {
-    dispatch(fetchCurrencies());
-  }, [dispatch]);
 
   const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<CreateWalletFormData>({
     handleSubmit,
@@ -64,8 +53,7 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
         ? dispatch(
             addWallet({
               wallet_name: formData.walletName,
-              balance: Number(formData.initialBalance),
-              currency_id: Number(formData.currency),
+              initial_balance: Number(formData.initialBalance),
               design: formData.design,
             }),
           ).unwrap()
@@ -86,7 +74,7 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
   });
 
   return {
-    currencies: currencies.map((c) => ({ label: c.code, value: c.id })),
+    spaceCurrencyCode,
     isNewWallet,
     control,
     onSubmit,

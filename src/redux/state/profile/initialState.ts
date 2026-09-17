@@ -9,7 +9,6 @@ const initialState: InitialState = {
   id: undefined,
   email: undefined,
   name: undefined,
-  baseCurrency: undefined,
   isLoading: false,
 };
 

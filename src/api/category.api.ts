@@ -11,8 +11,8 @@ import { ApiClient } from './instance';
 
 const api = ApiClient();
 
-export const getCategories = async () => {
-  const response = await api.get<GetCategoriesResponse>('/categories');
+export const getCategories = async (spaceId: number) => {
+  const response = await api.get<GetCategoriesResponse>(`/spaces/${spaceId}/categories`);
 
   return {
     incomes: response.data.incomes.map(mapCategory),
@@ -21,24 +21,26 @@ export const getCategories = async () => {
   };
 };
 
-export const updateCategory = async (categoryId: number, data: UpdateCategoryRequest) => {
-  const response = await api.put<Category>(`/categories/${categoryId}`, data);
+export const updateCategory = async (spaceId: number, categoryId: number, data: UpdateCategoryRequest) => {
+  const response = await api.put<Category>(`/spaces/${spaceId}/categories/${categoryId}`, data);
 
   return mapCategory(response.data);
 };
 
-export const createCategory = async (data: CreateCategoryRequest) => {
-  const response = await api.post<Category>('/categories', data);
+export const createCategory = async (spaceId: number, data: CreateCategoryRequest) => {
+  const response = await api.post<Category>(`/spaces/${spaceId}/categories`, data);
 
   return mapCategory(response.data);
 };
 
-export const deleteCategory = async (categoryId: number) => {
-  const response = await api.deleteRequest<DeleteCategoryResponse>(`/categories/${categoryId}`);
+export const deleteCategory = async (spaceId: number, categoryId: number) => {
+  const response = await api.deleteRequest<DeleteCategoryResponse>(`/spaces/${spaceId}/categories/${categoryId}`);
 
   return response.data;
 };
 
-export const reorderCategories = async (categoryIds: number[]) => {
-  await api.put<void, ReorderCategoriesRequest>('/categories/reorder', { category_ids: categoryIds });
+export const reorderCategories = async (spaceId: number, categoryIds: number[]) => {
+  await api.put<void, ReorderCategoriesRequest>(`/spaces/${spaceId}/categories/reorder`, {
+    category_ids: categoryIds,
+  });
 };

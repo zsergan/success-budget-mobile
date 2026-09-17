@@ -25,7 +25,6 @@ const profileSlice = createSlice({
       state.id = action.payload.id;
       state.email = action.payload.email;
       state.name = action.payload.name;
-      state.baseCurrency = action.payload.baseCurrency;
       state.isLoading = false;
     });
   },

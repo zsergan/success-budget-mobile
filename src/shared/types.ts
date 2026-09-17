@@ -1,8 +1,7 @@
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ScreenNames, AppColor } from '@shared/enums';
 
-type AddWalletParams =
-  { id: 'new' } | { id: number; walletName: string; balance: string; currencyId: number; design: AppColor };
+type AddWalletParams = { id: 'new' } | { id: number; walletName: string; balance: string; design: AppColor };
 
 export type RootStackParamList = {
   [ScreenNames.HOME_TAB]: undefined;

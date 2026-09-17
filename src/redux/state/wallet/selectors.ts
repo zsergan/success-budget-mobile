@@ -8,9 +8,8 @@ const selectRawTotalBalance = (state: RootState) => state.wallet.totalBalance;
 const selectTotalBalanceCurrency = (state: RootState) => state.wallet.totalBalanceCurrency;
 const selectDeltaPercent = (state: RootState) => state.wallet.deltaPercent;
 
-// total/currencyCode/deltaPercent now come straight from the backend (it already
-// excludes non-base-currency wallets — see mobile-api-changes.md); walletsCount
-// keeps its prior meaning by counting wallets in that same currency.
+// total/currencyCode/deltaPercent come straight from the backend; a space
+// has exactly one currency, so every wallet in `wallets` already shares it.
 export const selectTotalBalance = createSelector(
   selectWallets,
   selectRawTotalBalance,
@@ -19,7 +18,7 @@ export const selectTotalBalance = createSelector(
   (wallets, total, currencyCode, deltaPercent) => ({
     total,
     currencyCode: currencyCode || undefined,
-    walletsCount: wallets.filter((w) => w.wallet.currency.code === currencyCode).length,
+    walletsCount: wallets.length,
     deltaPercent,
   }),
 );

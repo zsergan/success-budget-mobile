@@ -1,5 +1,5 @@
 import type { TransactionType } from '@shared/enums';
-import type { Currency, Transaction, Wallet } from '@api/dto';
+import type { Transaction, Wallet } from '@api/dto';
 
 import type { CategoryModel } from './category';
 import { mapCategory } from './category';
@@ -14,7 +14,6 @@ export interface TransactionModel {
   description: string;
   wallet: Wallet | null;
   category: CategoryModel;
-  currency: Currency;
 }
 
 export const mapTransaction = (dto: Transaction): TransactionModel => ({
@@ -27,5 +26,4 @@ export const mapTransaction = (dto: Transaction): TransactionModel => ({
   description: dto.description,
   wallet: dto.wallet,
   category: mapCategory(dto.category),
-  currency: dto.currency,
 });

@@ -9,8 +9,14 @@ import {
 import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
 export const fetchCategories = createAppAsyncThunk('category/fetchCategories', async (_: void, thunkAPI) => {
+  const spaceId = thunkAPI.getState().space.currentSpaceId;
+
+  if (spaceId === null) {
+    return thunkAPI.rejectWithValue(undefined);
+  }
+
   try {
-    return await getCategories();
+    return await getCategories(spaceId);
   } catch (error: unknown) {
     return thunkAPI.rejectWithValue(getRejectValue(error));
   }
@@ -19,8 +25,14 @@ export const fetchCategories = createAppAsyncThunk('category/fetchCategories', a
 export const editCategory = createAppAsyncThunk(
   'category/updateCategory',
   async (data: { categoryId: number; categoryData: UpdateCategoryRequest }, thunkAPI) => {
+    const spaceId = thunkAPI.getState().space.currentSpaceId;
+
+    if (spaceId === null) {
+      return thunkAPI.rejectWithValue(undefined);
+    }
+
     try {
-      const response = await updateCategory(data.categoryId, data.categoryData);
+      const response = await updateCategory(spaceId, data.categoryId, data.categoryData);
 
       thunkAPI.dispatch(fetchCategories());
 
@@ -34,8 +46,14 @@ export const editCategory = createAppAsyncThunk(
 export const addCategory = createAppAsyncThunk(
   'category/createCategory',
   async (data: CreateCategoryRequest, thunkAPI) => {
+    const spaceId = thunkAPI.getState().space.currentSpaceId;
+
+    if (spaceId === null) {
+      return thunkAPI.rejectWithValue(undefined);
+    }
+
     try {
-      const response = await createCategory(data);
+      const response = await createCategory(spaceId, data);
 
       thunkAPI.dispatch(fetchCategories());
 
@@ -47,8 +65,14 @@ export const addCategory = createAppAsyncThunk(
 );
 
 export const deleteCategory = createAppAsyncThunk('category/deleteCategory', async (categoryId: number, thunkAPI) => {
+  const spaceId = thunkAPI.getState().space.currentSpaceId;
+
+  if (spaceId === null) {
+    return thunkAPI.rejectWithValue(undefined);
+  }
+
   try {
-    const response = await deleteCategoryRequest(categoryId);
+    const response = await deleteCategoryRequest(spaceId, categoryId);
 
     thunkAPI.dispatch(fetchCategories());
 
@@ -61,8 +85,14 @@ export const deleteCategory = createAppAsyncThunk('category/deleteCategory', asy
 export const reorderCategories = createAppAsyncThunk(
   'category/reorderCategories',
   async (categoryIds: number[], thunkAPI) => {
+    const spaceId = thunkAPI.getState().space.currentSpaceId;
+
+    if (spaceId === null) {
+      return thunkAPI.rejectWithValue(undefined);
+    }
+
     try {
-      await reorderCategoriesRequest(categoryIds);
+      await reorderCategoriesRequest(spaceId, categoryIds);
 
       thunkAPI.dispatch(fetchCategories());
     } catch (error: unknown) {

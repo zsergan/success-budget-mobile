@@ -163,7 +163,7 @@ const HomeScreen = ({ navigation }: Props) => {
 
                   <View style={styles.groupItems}>
                     {group.items.map((transaction) => (
-                      <TransactionCard key={transaction.id} transaction={transaction} />
+                      <TransactionCard key={transaction.id} transaction={transaction} currencyCode={currencyCode} />
                     ))}
                   </View>
                 </View>

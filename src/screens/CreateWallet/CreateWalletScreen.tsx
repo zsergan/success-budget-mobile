@@ -1,16 +1,7 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import {
-  Input,
-  RootLayout,
-  Button,
-  SectionTitle,
-  GradientBackground,
-  WalletCard,
-  InputPicker,
-  Icon,
-} from '@components';
+import { Input, RootLayout, Button, SectionTitle, GradientBackground, WalletCard, Icon } from '@components';
 import type { ScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
 import { gradients, walletTextColors } from '@shared/constants';
@@ -22,13 +13,12 @@ import styles from './style';
 interface Props extends ScreenProps<ScreenNames.ADD_WALLET_SCREEN> {}
 
 const CreateWalletScreen = ({ navigation, route }: Props) => {
-  const { currencies, isNewWallet, control, onSubmit, watch, isSubmitDisabled } = useCreateWalletForm({
+  const { spaceCurrencyCode, isNewWallet, control, onSubmit, watch, isSubmitDisabled } = useCreateWalletForm({
     navigation,
     route,
   });
 
   const selectedWalletName = watch('walletName');
-  const selectedCurrency = watch('currency');
   const selectedDesign = watch('design');
 
   return (
@@ -49,41 +39,22 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
               )}
             />
 
-            <View style={styles.rowInputs}>
-              <Controller
-                name="currency"
-                control={control}
-                render={({ field: { onChange, value } }) => (
-                  <InputPicker
-                    items={currencies}
-                    selectedValue={value}
-                    onValueChange={(v) => onChange(v as number)}
-                    label="Currency"
-                    withShadow
-                    containerStyle={styles.currency}
-                    disabled={!isNewWallet}
-                  />
-                )}
-              />
-
-              <Controller
-                name="initialBalance"
-                control={control}
-                render={({ field: { onChange, value } }) => (
-                  <Input
-                    containerStyle={styles.balance}
-                    label="Balance"
-                    placeholder="0"
-                    value={value}
-                    onChangeText={onChange}
-                    keyboardType="numeric"
-                    returnKeyType="done"
-                    editable={isNewWallet}
-                    withShadow
-                  />
-                )}
-              />
-            </View>
+            <Controller
+              name="initialBalance"
+              control={control}
+              render={({ field: { onChange, value } }) => (
+                <Input
+                  label="Balance"
+                  placeholder="0"
+                  value={value}
+                  onChangeText={onChange}
+                  keyboardType="numeric"
+                  returnKeyType="done"
+                  editable={isNewWallet}
+                  withShadow
+                />
+              )}
+            />
           </View>
 
           <View style={styles.section}>
@@ -126,7 +97,7 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
             <WalletCard
               walletName={selectedWalletName || 'Wallet name'}
               balance="999999999999"
-              currencyCode={currencies.find((c) => c.value === Number(selectedCurrency))?.label || ''}
+              currencyCode={spaceCurrencyCode || ''}
               totalIncome={9999999999}
               totalSpend={999999999}
               design={selectedDesign}
