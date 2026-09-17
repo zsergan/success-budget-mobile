@@ -7,6 +7,7 @@ import {
   CategoriesScreen,
   CreateSpaceScreen,
   CreateWalletScreen,
+  MembersScreen,
   SignInScreen,
   SignUpScreen,
   VerifyEmailScreen,
@@ -58,6 +59,11 @@ const RootNavigator = () => {
                 <Stack.Screen
                   name={ScreenNames.CREATE_SPACE_SCREEN}
                   component={CreateSpaceScreen}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name={ScreenNames.MEMBERS_SCREEN}
+                  component={MembersScreen}
                   options={{ headerShown: false }}
                 />
               </>

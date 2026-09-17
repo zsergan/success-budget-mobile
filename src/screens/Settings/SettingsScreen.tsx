@@ -20,6 +20,7 @@ const SettingsScreen = ({ navigation }: Props) => {
   const menuItems: { title: string; icon: IconType; onPress?(): void }[] = [
     { title: 'Categories', icon: 'other', onPress: () => navigation.navigate(ScreenNames.CATEGORIES_SCREEN) },
     { title: 'Limitations', icon: 'limit' },
+    { title: 'Members', icon: 'users', onPress: () => navigation.navigate(ScreenNames.MEMBERS_SCREEN) },
   ];
 
   return (
