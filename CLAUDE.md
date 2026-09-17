@@ -67,6 +67,15 @@ exists or is up to date without checking.
   lint cleanup) into one commit. If a task naturally spans several
   concerns, make several commits, each one buildable and each with a
   commit message that accurately describes just that commit's diff.
+- **Branch naming**: `<type>/<global-scope>-<specific-change>[-<extra-info>]`
+  — `<type>` is `feat`, `fix`, or another conventional-commit-style prefix;
+  `<global-scope>` names the broader initiative or area (e.g. `spaces`);
+  `<specific-change>` names what this particular branch actually does
+  within that scope (e.g. `foundation`, `backend-compat`); an optional
+  trailing `-<extra-info>` segment adds disambiguating detail only when
+  needed. Examples: `feat/spaces-foundation`, `fix/spaces-backend-compat`.
+  Don't invent per-stage numbering (`stage1`, etc.) — it stops being
+  informative once stages shift or get renamed.
 - **Commit messages**: concise, imperative subject line describing the
   actual change (not "fix stuff" / "updates"); add a short body only when
   the _why_ isn't obvious from the diff. Follow the style of existing
