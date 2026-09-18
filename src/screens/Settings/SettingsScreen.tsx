@@ -11,6 +11,7 @@ import { useAlert, useThemePreference } from '@hooks';
 import type { ScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 
+import DeleteAccountDialog from './DeleteAccountDialog/DeleteAccountDialog';
 import Profile from './Profile/Profile';
 import SettingsRow from './SettingsRow';
 import SettingsSection from './SettingsSection';
@@ -30,6 +31,7 @@ const SettingsScreen = ({ navigation }: Props) => {
   const { walletsCount } = useAppSelector(selectTotalBalance);
 
   const [isLogoutConfirmVisible, setIsLogoutConfirmVisible] = useState(false);
+  const [isDeleteAccountVisible, setIsDeleteAccountVisible] = useState(false);
 
   const handleConfirmLogout = () => {
     setIsLogoutConfirmVisible(false);
@@ -112,7 +114,7 @@ const SettingsScreen = ({ navigation }: Props) => {
             label="Delete account"
             sub="Permanent, along with all your data"
             danger
-            onPress={() => {}}
+            onPress={() => setIsDeleteAccountVisible(true)}
           />
         </SettingsSection>
       </View>
@@ -130,6 +132,8 @@ const SettingsScreen = ({ navigation }: Props) => {
         }
         actions={[{ title: 'Log out', onPress: handleConfirmLogout }]}
       />
+
+      <DeleteAccountDialog isVisible={isDeleteAccountVisible} onClose={() => setIsDeleteAccountVisible(false)} />
     </RootLayout>
   );
 };
