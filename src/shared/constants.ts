@@ -23,6 +23,7 @@ const resolveApiBaseUrl = () => {
 export const BASE_API_URL = resolveApiBaseUrl();
 export const AUTH_TOKEN_KEY = 'sbm-AUTH_TOKEN_KEY';
 export const BALANCE_HIDDEN_KEY = 'sbm-BALANCE_HIDDEN';
+export const THEME_PREFERENCE_KEY = 'sbm-THEME_PREFERENCE';
 
 // Wallet-card gradient presets, paired per color scheme like the rest of the theme (angle/stops in WalletGradientBackground.tsx).
 const walletGradientsByScheme: Record<'light' | 'dark', Record<AppColor, [string, string]>> = {
