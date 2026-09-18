@@ -4,6 +4,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import {
+  AcceptInviteScreen,
   CategoriesScreen,
   CreateSpaceScreen,
   CreateWalletScreen,
@@ -64,6 +65,11 @@ const RootNavigator = () => {
                 <Stack.Screen
                   name={ScreenNames.MEMBERS_SCREEN}
                   component={MembersScreen}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name={ScreenNames.ACCEPT_INVITE_SCREEN}
+                  component={AcceptInviteScreen}
                   options={{ headerShown: false }}
                 />
               </>

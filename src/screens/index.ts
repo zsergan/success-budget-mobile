@@ -1,4 +1,5 @@
 export * from './Auth';
+export { default as AcceptInviteScreen } from './AcceptInvite/AcceptInviteScreen';
 export { default as CategoriesScreen } from './Categories/CategoriesScreen';
 export { default as CreateSpaceScreen } from './CreateSpace/CreateSpaceScreen';
 export { default as CreateWalletScreen } from './CreateWallet/CreateWalletScreen';
