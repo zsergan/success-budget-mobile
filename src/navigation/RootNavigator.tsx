@@ -13,6 +13,7 @@ import {
   SignUpScreen,
   VerifyEmailScreen,
   LoadingScreen,
+  WelcomeScreen,
 } from '@screens';
 import type { RootStackParamList } from '@shared/types';
 import { useAuth, useLoadInitData } from '@hooks';
@@ -75,6 +76,11 @@ const RootNavigator = () => {
               </>
             ) : (
               <>
+                <Stack.Screen
+                  name={ScreenNames.WELCOME_SCREEN}
+                  component={WelcomeScreen}
+                  options={{ headerShown: false }}
+                />
                 <Stack.Screen
                   name={ScreenNames.SIGN_IN_SCREEN}
                   component={SignInScreen}

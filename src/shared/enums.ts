@@ -34,6 +34,7 @@ export enum ScreenNames {
   MEMBERS_SCREEN = 'MembersScreen',
   ACCEPT_INVITE_SCREEN = 'AcceptInviteScreen',
   LOADING_SCREEN = 'LoadingScreen',
+  WELCOME_SCREEN = 'WelcomeScreen',
   SIGN_IN_SCREEN = 'SignInScreen',
   SIGN_UP_SCREEN = 'SighUpScreen',
   VERIFY_EMAIL_SCREEN = 'VerifyEmailScreen',

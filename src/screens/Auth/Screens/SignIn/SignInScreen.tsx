@@ -28,7 +28,7 @@ const SignInScreen = ({ navigation }: Props) => {
   }, [error, addAlert]);
 
   return (
-    <AuthLayout>
+    <AuthLayout onBackButtonPress={() => navigation.goBack()}>
       <View style={styles.root}>
         <H>Sign in</H>
 

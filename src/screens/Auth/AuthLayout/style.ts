@@ -18,6 +18,12 @@ const styles = StyleSheet.create({
     left: theme.spacing.xl,
     right: theme.spacing.xl,
   },
+  backButton: {
+    position: 'absolute',
+    top: theme.spacing.lg,
+    left: horizontalScreenPadding,
+    zIndex: 10,
+  },
 });
 
 export default styles;
