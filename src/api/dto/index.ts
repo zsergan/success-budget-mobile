@@ -3,6 +3,7 @@ export * from './categoryDto';
 export * from './currencyDto';
 export * from './errorDto';
 export * from './limitDto';
+export * from './memberDto';
 export * from './profileDto';
 export * from './spaceDto';
 export * from './transactionDto';

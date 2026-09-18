@@ -31,6 +31,8 @@ export enum ScreenNames {
   SETTINGS_TAB = 'Settings',
   CATEGORIES_SCREEN = 'CategoriesScreen',
   CREATE_SPACE_SCREEN = 'CreateSpaceScreen',
+  MEMBERS_SCREEN = 'MembersScreen',
+  ACCEPT_INVITE_SCREEN = 'AcceptInviteScreen',
   LOADING_SCREEN = 'LoadingScreen',
   SIGN_IN_SCREEN = 'SignInScreen',
   SIGN_UP_SCREEN = 'SighUpScreen',
