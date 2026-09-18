@@ -1,35 +1,43 @@
 import { useEffect, useRef } from 'react';
-import { View, Animated, Dimensions, Easing } from 'react-native';
+import { Animated, Easing, Text, View } from 'react-native';
+
+import { Icon } from '@components';
+import { colors } from '@shared/theme';
 
 import styles from './style';
 
 const LoadingScreen = () => {
-  const screenWidth = Dimensions.get('window').width;
-  const translateXSuccess = useRef(new Animated.Value(-screenWidth)).current;
-  const translateXBudget = useRef(new Animated.Value(screenWidth)).current;
+  const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(translateXSuccess, {
-      toValue: 0,
-      duration: 1500,
-      easing: Easing.bounce,
-      useNativeDriver: true,
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: 1800,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
     }).start();
+  }, [progress]);
 
-    Animated.timing(translateXBudget, {
-      toValue: 0,
-      duration: 1500,
-      easing: Easing.bounce,
-      useNativeDriver: true,
-    }).start();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const width = progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '70%'] });
 
   return (
     <View style={styles.container}>
-      <Animated.Text style={[styles.text, { transform: [{ translateX: translateXSuccess }] }]}>Success</Animated.Text>
+      <View style={styles.iconBox}>
+        <Icon name="chart" size={48} color={colors.onAccent} strokeWidth={2.1} />
+      </View>
 
-      <Animated.Text style={[styles.text, { transform: [{ translateX: translateXBudget }] }]}>Budget</Animated.Text>
+      <View style={styles.wordmarkContainer}>
+        <Text style={styles.wordmark}>Success Budget</Text>
+        <Text style={styles.subtitle}>Personal and shared budgets</Text>
+      </View>
+
+      <View style={styles.progressContainer}>
+        <View style={styles.progressTrack}>
+          <Animated.View style={[styles.progressFill, { width }]} />
+        </View>
+
+        <Text style={styles.status}>Checking your session…</Text>
+      </View>
     </View>
   );
 };
