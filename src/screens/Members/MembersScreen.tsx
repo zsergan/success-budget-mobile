@@ -114,15 +114,17 @@ const MembersScreen = ({ navigation }: Props) => {
     setPendingRemoval(null);
   };
 
-  const handleConfirmLeave = () => {
+  const handleConfirmLeave = async () => {
     if (!ownRow) return;
 
-    dispatch(removeMember(ownRow.id))
-      .unwrap()
-      .catch((error: unknown) => addAlert(getErrorMessage(error)));
-
     setIsLeaveConfirmVisible(false);
-    navigation.goBack();
+
+    try {
+      await dispatch(removeMember(ownRow.id)).unwrap();
+      navigation.goBack();
+    } catch (error: unknown) {
+      addAlert(getErrorMessage(error));
+    }
   };
 
   return (
