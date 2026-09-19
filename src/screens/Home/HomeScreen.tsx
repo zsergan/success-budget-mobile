@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Text, TouchableOpacity, View } from 'react-native';
 
@@ -14,11 +14,9 @@ import {
   TransactionCard,
   TransactionForm,
 } from '@components';
-import { useAppDispatch, useAppSelector } from '@redux/hooks';
+import { useAppSelector } from '@redux/hooks';
 import { selectTotalBalance, selectWallet } from '@redux/state/wallet/selectors';
 import { selectTransaction } from '@redux/state/transaction/selectors';
-import { fetchTransactions } from '@redux/state/transaction/thunks';
-import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { useBalanceVisibility } from '@hooks';
 import { ScreenNames, TransactionType } from '@shared/enums';
 import type { ScreenProps } from '@shared/types';
@@ -33,7 +31,6 @@ const RECENT_TRANSACTIONS_LIMIT = 5;
 interface Props extends ScreenProps<ScreenNames.HOME_TAB> {}
 
 const HomeScreen = ({ navigation }: Props) => {
-  const dispatch = useAppDispatch();
   const [currentWalletIndex, setCurrentWalletIndex] = useState<number>(0);
 
   const expenseBottomSheetRef = useRef<BottomSheetModal>(null);
@@ -45,7 +42,6 @@ const HomeScreen = ({ navigation }: Props) => {
   const { total, currencyCode, walletsCount, deltaPercent } = useAppSelector(selectTotalBalance);
   const { wallets } = useAppSelector(selectWallet);
   const { transactions } = useAppSelector(selectTransaction);
-  const currentSpaceId = useAppSelector(selectCurrentSpaceId);
   const { isHidden, toggle } = useBalanceVisibility();
 
   const hasWallets = wallets.length > 0;
@@ -53,10 +49,6 @@ const HomeScreen = ({ navigation }: Props) => {
   const deltaNeutral = deltaPercent === 0;
   const deltaFg = deltaNeutral ? colors.muted : deltaPositive ? colors.ok : colors.danger;
   const deltaBg = deltaNeutral ? colors.track : `${deltaFg}26`;
-
-  useEffect(() => {
-    dispatch(fetchTransactions());
-  }, [dispatch, currentSpaceId]);
 
   const recentGroups = groupTransactionsByDay(transactions.slice(0, RECENT_TRANSACTIONS_LIMIT), currencyCode);
 

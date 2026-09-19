@@ -4,6 +4,10 @@ import type { TransactionModel } from '@api/models';
 interface InitialState {
   transactions: TransactionModel[];
   isLoading: boolean;
+  // Guards against an older fetch resolving after a newer one (e.g. a fast
+  // space switch) and clobbering it — only the fulfilled/rejected action
+  // matching this id is applied.
+  requestId?: string;
   // Separate from `transactions` so the two differently-scoped fetches don't clobber each other.
   rangeTransactions: TransactionModel[];
   isLoadingRange: boolean;
@@ -14,6 +18,7 @@ interface InitialState {
   // has never recorded a transaction, otherwise the most recent one.
   latest: TransactionModel | null | undefined;
   isLoadingLatest: boolean;
+  latestRequestId?: string;
   isCreating: boolean;
   error?: ErrorResponse;
 }
@@ -21,11 +26,13 @@ interface InitialState {
 const initialState: InitialState = {
   transactions: [],
   isLoading: false,
+  requestId: undefined,
   rangeTransactions: [],
   isLoadingRange: false,
   rangeRequestId: undefined,
   latest: undefined,
   isLoadingLatest: false,
+  latestRequestId: undefined,
   isCreating: false,
 };
 
