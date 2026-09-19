@@ -48,10 +48,17 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
     }
   }, [dispatch, isSignedIn, currentSpaceId]);
 
+  // isSpaceLoading also flips true for background refreshes unrelated to an
+  // explicit navigation (addSpace/removeSpace/acceptInvite/leaving a
+  // member all re-dispatch fetchSpaces) -- only the initial bootstrap,
+  // before any space is selected yet, should hold the whole app on
+  // LOADING_SCREEN for it.
+  const isInitialSpaceLoad = isSpaceLoading && currentSpaceId === null;
+
   return {
     isLoading:
       isSignedIn &&
-      (isSpaceLoading ||
+      (isInitialSpaceLoad ||
         isWalletLoading ||
         isLimitsLoading ||
         isCategoryLoading ||
