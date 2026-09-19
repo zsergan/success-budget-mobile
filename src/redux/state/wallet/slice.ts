@@ -11,15 +11,20 @@ const walletSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(logoutMe.fulfilled, () => initialState);
 
-    builder.addCase(fetchWallets.pending, (state) => {
+    builder.addCase(fetchWallets.pending, (state, action) => {
       state.isLoading = true;
+      state.requestId = action.meta.requestId;
     });
 
-    builder.addCase(fetchWallets.rejected, (state) => {
+    builder.addCase(fetchWallets.rejected, (state, action) => {
+      if (action.meta.requestId !== state.requestId) return;
+
       state.isLoading = false;
     });
 
     builder.addCase(fetchWallets.fulfilled, (state, action) => {
+      if (action.meta.requestId !== state.requestId) return;
+
       state.wallets = action.payload.wallets;
       state.totalBalance = action.payload.total_balance;
       state.totalBalanceCurrency = action.payload.total_balance_currency;
