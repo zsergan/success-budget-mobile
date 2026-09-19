@@ -25,6 +25,18 @@ export const AUTH_TOKEN_KEY = 'sbm-AUTH_TOKEN_KEY';
 export const BALANCE_HIDDEN_KEY = 'sbm-BALANCE_HIDDEN';
 export const THEME_PREFERENCE_KEY = 'sbm-THEME_PREFERENCE';
 
+// Mirrors the backend's temporary SPACE_LIMITS (success-budget-backend/src/shared/constants.ts) — not a considered business rule, revisit if the backend's changes.
+export const SPACE_LIMITS = {
+  MAX_MEMBERS_PER_SPACE: 20,
+  MAX_PENDING_INVITES_PER_SPACE: 10,
+};
+
+export const INVITE_EXPIRY_DAYS = 7;
+
+// The invite endpoint is rate-limited to 5/60s on the backend; the API returns no
+// Retry-After header, so this is a fixed cooldown matching that window rather than a precise one.
+export const INVITE_RATE_LIMIT_COOLDOWN_MS = 60_000;
+
 // Wallet-card gradient presets, paired per color scheme like the rest of the theme (angle/stops in WalletGradientBackground.tsx).
 const walletGradientsByScheme: Record<'light' | 'dark', Record<AppColor, [string, string]>> = {
   light: {
