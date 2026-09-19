@@ -16,9 +16,15 @@ const spaceSlice = createSlice({
     });
 
     builder.addCase(fetchSpaces.fulfilled, (state, action) => {
+      if (action.meta.requestId !== state.requestId) return;
+
       state.spaces = action.payload.spaces;
       state.currentSpaceId = action.payload.currentSpaceId;
       state.isLoading = false;
+    });
+
+    builder.addCase(fetchSpaces.pending, (state, action) => {
+      state.requestId = action.meta.requestId;
     });
 
     builder.addMatcher(isPending(fetchSpaces, addSpace, removeSpace), (state) => {
