@@ -1,6 +1,6 @@
 import type { AxiosError } from 'axios';
 
-import type { CreateTransactionRequest, Transaction } from '@api/dto';
+import type { CreateTransactionRequest, CreateTransactionResponse, Transaction } from '@api/dto';
 import { mapTransaction } from '@api/models';
 import { ApiClient } from './instance';
 
@@ -15,9 +15,9 @@ export const getTransactions = async (spaceId: number, params?: { from?: Date; t
 };
 
 export const createTransaction = async (spaceId: number, payload: CreateTransactionRequest) => {
-  const response = await api.post<Transaction>(`/spaces/${spaceId}/transactions`, payload);
+  const response = await api.post<CreateTransactionResponse>(`/spaces/${spaceId}/transactions`, payload);
 
-  return mapTransaction(response.data);
+  return response.data;
 };
 
 export const getLatestTransaction = async (spaceId: number) => {
