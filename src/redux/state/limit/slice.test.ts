@@ -37,8 +37,9 @@ describe('limit slice', () => {
 
   it('stores the total, category limits, and over-allocation on fetchLimits.fulfilled', () => {
     const payload = { total, categoryLimits: [groceries], overAllocation: { categoryTotal: 2150, difference: 150 } };
+    const pending = limitReducer(initialState, fetchLimits.pending('req-1', undefined));
 
-    const state = limitReducer(initialState, fetchLimits.fulfilled(payload, 'req-1', undefined));
+    const state = limitReducer(pending, fetchLimits.fulfilled(payload, 'req-1', undefined));
 
     expect(state.total).toEqual(total);
     expect(state.categoryLimits).toEqual([groceries]);

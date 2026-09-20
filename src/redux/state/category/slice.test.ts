@@ -31,8 +31,9 @@ describe('category slice', () => {
 
   it('stores incomes, expenses and archived on fetchCategories.fulfilled', () => {
     const payload = { incomes: [], expenses: [category], archived: [{ ...category, id: 2, isActive: false }] };
+    const pending = categoryReducer(initialState, fetchCategories.pending('req-1', undefined));
 
-    const state = categoryReducer(initialState, fetchCategories.fulfilled(payload, 'req-1', undefined));
+    const state = categoryReducer(pending, fetchCategories.fulfilled(payload, 'req-1', undefined));
 
     expect(state.expenses).toEqual(payload.expenses);
     expect(state.archived).toEqual(payload.archived);
