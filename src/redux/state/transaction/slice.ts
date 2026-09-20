@@ -11,15 +11,20 @@ const transactionSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(logoutMe.fulfilled, () => initialState);
 
-    builder.addCase(fetchTransactions.pending, (state) => {
+    builder.addCase(fetchTransactions.pending, (state, action) => {
       state.isLoading = true;
+      state.requestId = action.meta.requestId;
     });
 
-    builder.addCase(fetchTransactions.rejected, (state) => {
+    builder.addCase(fetchTransactions.rejected, (state, action) => {
+      if (action.meta.requestId !== state.requestId) return;
+
       state.isLoading = false;
     });
 
     builder.addCase(fetchTransactions.fulfilled, (state, action) => {
+      if (action.meta.requestId !== state.requestId) return;
+
       state.transactions = action.payload;
       state.isLoading = false;
     });
@@ -42,17 +47,25 @@ const transactionSlice = createSlice({
       state.isLoadingRange = false;
     });
 
-    builder.addCase(fetchLatestTransaction.pending, (state) => {
+    builder.addCase(fetchLatestTransaction.pending, (state, action) => {
       state.isLoadingLatest = true;
+      state.latestRequestId = action.meta.requestId;
+      // Reset to "not fetched yet" so a stale value from the previous space
+      // can't drive an empty-state decision while this fetch is in flight.
+      state.latest = undefined;
     });
 
-    builder.addCase(fetchLatestTransaction.rejected, (state) => {
+    builder.addCase(fetchLatestTransaction.rejected, (state, action) => {
+      if (action.meta.requestId !== state.latestRequestId) return;
+
       // A failed lookup isn't proof the account has no transactions —
       // leave `latest` as-is rather than guessing.
       state.isLoadingLatest = false;
     });
 
     builder.addCase(fetchLatestTransaction.fulfilled, (state, action) => {
+      if (action.meta.requestId !== state.latestRequestId) return;
+
       state.latest = action.payload;
       state.isLoadingLatest = false;
     });

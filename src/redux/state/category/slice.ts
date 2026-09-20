@@ -11,15 +11,20 @@ const categorySlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(logoutMe.fulfilled, () => initialState);
 
-    builder.addCase(fetchCategories.pending, (state) => {
+    builder.addCase(fetchCategories.pending, (state, action) => {
       state.isLoading = true;
+      state.requestId = action.meta.requestId;
     });
 
-    builder.addCase(fetchCategories.rejected, (state) => {
+    builder.addCase(fetchCategories.rejected, (state, action) => {
+      if (action.meta.requestId !== state.requestId) return;
+
       state.isLoading = false;
     });
 
     builder.addCase(fetchCategories.fulfilled, (state, action) => {
+      if (action.meta.requestId !== state.requestId) return;
+
       state.incomes = action.payload.incomes;
       state.expenses = action.payload.expenses;
       state.archived = action.payload.archived;

@@ -15,6 +15,10 @@ export const selectPeriodTotals = createSelector(
   selectRangeTransactions,
   selectCurrentSpaceCurrencyCode,
   (transactions, currencyCode) => {
+    if (!currencyCode) {
+      return { income: 0, expense: 0, currencyCode: undefined };
+    }
+
     const income = transactions
       .filter((t) => t.transactionType === TransactionType.INCOME)
       .reduce((sum, t) => sum + Number(t.amount), 0);

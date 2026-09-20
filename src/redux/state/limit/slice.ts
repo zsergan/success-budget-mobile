@@ -11,15 +11,20 @@ const limitSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(logoutMe.fulfilled, () => initialState);
 
-    builder.addCase(fetchLimits.pending, (state) => {
+    builder.addCase(fetchLimits.pending, (state, action) => {
       state.isLoading = true;
+      state.requestId = action.meta.requestId;
     });
 
-    builder.addCase(fetchLimits.rejected, (state) => {
+    builder.addCase(fetchLimits.rejected, (state, action) => {
+      if (action.meta.requestId !== state.requestId) return;
+
       state.isLoading = false;
     });
 
     builder.addCase(fetchLimits.fulfilled, (state, action) => {
+      if (action.meta.requestId !== state.requestId) return;
+
       state.total = action.payload.total;
       state.categoryLimits = action.payload.categoryLimits;
       state.overAllocation = action.payload.overAllocation;

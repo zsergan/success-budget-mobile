@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import type { InviteResponse, SpaceMember } from '@api/dto';
+import type { ErrorResponse, InviteResponse, SpaceMember } from '@api/dto';
 import { BottomModal, Icon, RootLayout, SectionTitle } from '@components';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectMember } from '@redux/state/member/selectors';
@@ -10,6 +10,7 @@ import { selectProfile } from '@redux/state/profile/selectors';
 import { selectCurrentSpace, selectCurrentSpaceId } from '@redux/state/space/selectors';
 import type { ScreenNames } from '@shared/enums';
 import type { ScreenProps } from '@shared/types';
+import { INVITE_EXPIRY_DAYS, INVITE_RATE_LIMIT_COOLDOWN_MS, SPACE_LIMITS } from '@shared/constants';
 import { colors } from '@shared/theme';
 import { getErrorMessage } from '@shared/utils';
 import { useAlert } from '@hooks';
@@ -36,10 +37,29 @@ const MembersScreen = ({ navigation }: Props) => {
   const [revealedInvite, setRevealedInvite] = useState<InviteResponse | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<SpaceMember | null>(null);
   const [isLeaveConfirmVisible, setIsLeaveConfirmVisible] = useState(false);
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     dispatch(fetchMembers());
   }, [dispatch, currentSpaceId]);
+
+  const cooldownRemaining = cooldownUntil ? Math.max(0, Math.ceil((cooldownUntil - now) / 1000)) : 0;
+
+  useEffect(() => {
+    if (cooldownUntil === null) return;
+
+    const interval = setInterval(() => {
+      if (Date.now() >= cooldownUntil) {
+        setCooldownUntil(null);
+        clearInterval(interval);
+      } else {
+        setNow(Date.now());
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [cooldownUntil]);
 
   if (!currentSpace) {
     return null;
@@ -47,6 +67,12 @@ const MembersScreen = ({ navigation }: Props) => {
 
   const isOwner = currentSpace.role === 'owner';
   const ownRow = members.find((member) => member.email.toLowerCase() === myEmail?.toLowerCase());
+
+  const memberCount = members.filter((member) => member.type === 'member').length;
+  const pendingInviteCount = members.filter((member) => member.type === 'invite').length;
+  const isAtMemberCap = memberCount >= SPACE_LIMITS.MAX_MEMBERS_PER_SPACE;
+  const isAtInviteCap = pendingInviteCount >= SPACE_LIMITS.MAX_PENDING_INVITES_PER_SPACE;
+  const isInviteCapped = isAtMemberCap || isAtInviteCap;
 
   const handleInvite = async () => {
     const email = inviteEmail.trim().toLowerCase();
@@ -64,7 +90,13 @@ const MembersScreen = ({ navigation }: Props) => {
       setInviteEmail('');
       setRevealedInvite(invite);
     } catch (error: unknown) {
-      addAlert(getErrorMessage(error));
+      const errorResponse = error as ErrorResponse | undefined;
+
+      if (errorResponse?.statusCode === 429) {
+        setCooldownUntil(Date.now() + INVITE_RATE_LIMIT_COOLDOWN_MS);
+      } else {
+        addAlert(getErrorMessage(error));
+      }
     } finally {
       setIsInviting(false);
     }
@@ -82,15 +114,17 @@ const MembersScreen = ({ navigation }: Props) => {
     setPendingRemoval(null);
   };
 
-  const handleConfirmLeave = () => {
+  const handleConfirmLeave = async () => {
     if (!ownRow) return;
 
-    dispatch(removeMember(ownRow.id))
-      .unwrap()
-      .catch((error: unknown) => addAlert(getErrorMessage(error)));
-
     setIsLeaveConfirmVisible(false);
-    navigation.goBack();
+
+    try {
+      await dispatch(removeMember(ownRow.id)).unwrap();
+      navigation.goBack();
+    } catch (error: unknown) {
+      addAlert(getErrorMessage(error));
+    }
   };
 
   return (
@@ -104,30 +138,48 @@ const MembersScreen = ({ navigation }: Props) => {
           <View style={styles.section}>
             <Text style={styles.label}>Invite by email</Text>
 
-            <View style={styles.inviteRow}>
-              <Icon name="mail" size={18} color={colors.muted} strokeWidth={1.9} />
+            {isInviteCapped ? (
+              <Text style={styles.hint}>
+                {isAtMemberCap
+                  ? `This space has reached its ${SPACE_LIMITS.MAX_MEMBERS_PER_SPACE}-member limit.`
+                  : `There are already ${SPACE_LIMITS.MAX_PENDING_INVITES_PER_SPACE} pending invites -- revoke one before sending another.`}
+              </Text>
+            ) : (
+              <>
+                <View style={styles.inviteRow}>
+                  <Icon name="mail" size={18} color={colors.muted} strokeWidth={1.9} />
 
-              <TextInput
-                style={styles.inviteInput}
-                value={inviteEmail}
-                onChangeText={setInviteEmail}
-                placeholder="name@email.com"
-                placeholderTextColor={colors.muted}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                returnKeyType="done"
-                editable={!isInviting}
-                onSubmitEditing={handleInvite}
-              />
+                  <TextInput
+                    style={styles.inviteInput}
+                    value={inviteEmail}
+                    onChangeText={setInviteEmail}
+                    placeholder="name@email.com"
+                    placeholderTextColor={colors.muted}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    returnKeyType="done"
+                    editable={!isInviting && cooldownRemaining === 0}
+                    onSubmitEditing={handleInvite}
+                  />
 
-              <TouchableOpacity style={styles.inviteButton} onPress={handleInvite} disabled={isInviting}>
-                <Text style={styles.inviteButtonText}>Invite</Text>
-              </TouchableOpacity>
-            </View>
+                  <TouchableOpacity
+                    style={styles.inviteButton}
+                    onPress={handleInvite}
+                    disabled={isInviting || cooldownRemaining > 0}
+                  >
+                    <Text style={styles.inviteButtonText}>
+                      {cooldownRemaining > 0 ? `Wait ${cooldownRemaining}s` : 'Invite'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
 
-            <Text style={styles.hint}>
-              There&apos;s no email -- after you invite, share the code with them yourself.
-            </Text>
+                <Text style={styles.hint}>
+                  {cooldownRemaining > 0
+                    ? `Too many invites sent -- try again in ${cooldownRemaining}s.`
+                    : `There's no email -- after you invite, share the code with them yourself. Invites expire after ${INVITE_EXPIRY_DAYS} days if unused.`}
+                </Text>
+              </>
+            )}
           </View>
         )}
 
