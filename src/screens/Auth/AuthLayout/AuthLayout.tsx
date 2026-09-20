@@ -18,7 +18,7 @@ const AuthLayout = ({ children, onBackButtonPress }: Props) => (
 
     {onBackButtonPress && (
       <View style={styles.backButton}>
-        <TinyButton icon="back" onPress={onBackButtonPress} />
+        <TinyButton icon="back" size="lg" iconWrap={false} strokeWidth={2} onPress={onBackButtonPress} />
       </View>
     )}
 
