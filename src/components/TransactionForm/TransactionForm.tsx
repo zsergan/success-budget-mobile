@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Platform, Text, TextInput, ScrollView, View, TouchableOpacity } from 'react-native';
+import { Platform, Text, TextInput, View, TouchableOpacity } from 'react-native';
 import { Controller } from 'react-hook-form';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
 import DateTimePicker from '@components/Form/DateTimePicker/DateTimePicker';
 import Icon from '@components/Icon/Icon';
@@ -20,6 +21,8 @@ import { colors } from '@shared/theme';
 import styles from './style';
 
 const SAVE_READY_TEXT_COLOR = '#FFFDFA';
+
+export const TRANSACTION_FORM_SNAP_POINT = '94%';
 
 const isValidAmount = (value?: string) => {
   if (!value) return false;
@@ -231,9 +234,8 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
         )}
       </View>
 
-      <ScrollView
+      <BottomSheetScrollView
         style={styles.body}
-        automaticallyAdjustKeyboardInsets
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -387,7 +389,7 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
             />
           </View>
         </View>
-      </ScrollView>
+      </BottomSheetScrollView>
 
       <View style={styles.footer}>
         {helperText && (
