@@ -25,6 +25,10 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.danger,
   },
+  disabledInput: {
+    backgroundColor: colors.track,
+    color: colors.muted,
+  },
   inputWithLeftIcon: {
     paddingLeft: theme.spacing.lg + 32 + theme.spacing.md,
   },

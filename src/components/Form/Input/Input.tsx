@@ -28,6 +28,7 @@ const Input = ({
   containerStyle,
   onFocus,
   onBlur,
+  editable = true,
   ...props
 }: InputProps) => {
   const [isFocused, setIsFocused] = useState(false);
@@ -46,6 +47,7 @@ const Input = ({
         <TextInput
           placeholderTextColor={colors.muted}
           {...props}
+          editable={editable}
           onFocus={(e) => {
             setIsFocused(true);
             onFocus?.(e);
@@ -61,6 +63,7 @@ const Input = ({
             iconLeft && styles.inputWithLeftIcon,
             iconRight && styles.inputWithRightIcon,
             withShadow && styles.inputWithShadow,
+            !editable && styles.disabledInput,
           ]}
         />
 
