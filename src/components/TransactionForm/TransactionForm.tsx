@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Platform, Text, TextInput, ScrollView, View, TouchableOpacity } from 'react-native';
+import { Platform, Text, TextInput, useWindowDimensions, View, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Controller } from 'react-hook-form';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
 import DateTimePicker from '@components/Form/DateTimePicker/DateTimePicker';
 import Icon from '@components/Icon/Icon';
@@ -16,10 +18,13 @@ import { formatDateHHMM, formatGroupLabel, hexToRgba } from '@shared/utils';
 import LimitHint from './LimitHint/LimitHint';
 import useTransactionForm from './useTransactionForm';
 
-import { colors } from '@shared/theme';
+import theme, { colors } from '@shared/theme';
 import styles from './style';
 
 const SAVE_READY_TEXT_COLOR = '#FFFDFA';
+
+export const TRANSACTION_FORM_SNAP_POINT = '86%';
+const SNAP_FRACTION = parseFloat(TRANSACTION_FORM_SNAP_POINT) / 100;
 
 const isValidAmount = (value?: string) => {
   if (!value) return false;
@@ -78,6 +83,8 @@ interface Props {
 }
 
 const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType.EXPENSE }: Props) => {
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const amountRef = useRef<TextInput>(null);
   const { wallets } = useAppSelector(selectWallet);
   const { expenses, incomes } = useAppSelector(selectActiveCategories);
@@ -123,7 +130,7 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
       : undefined;
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { height: windowHeight * SNAP_FRACTION }]}>
       <View style={styles.topBlock}>
         <View style={styles.handle} />
 
@@ -231,9 +238,8 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
         )}
       </View>
 
-      <ScrollView
+      <BottomSheetScrollView
         style={styles.body}
-        automaticallyAdjustKeyboardInsets
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -387,9 +393,9 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
             />
           </View>
         </View>
-      </ScrollView>
+      </BottomSheetScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { marginBottom: theme.spacing.xl + insets.bottom }]}>
         {helperText && (
           <View style={styles.helperRow}>
             <Icon name="info" size={13} color={colors.muted} strokeWidth={1.8} />

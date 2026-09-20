@@ -22,3 +22,11 @@ export interface CreateTransactionRequest {
   timestamp: string;
   description?: string;
 }
+
+// The created transaction has no `category`/`wallet` relation loaded (a
+// plain create+save, no join) -- unlike GET, which eager-joins both.
+export interface CreateTransactionResponse {
+  transaction: Omit<Transaction, 'wallet' | 'category'>;
+  wallet: Wallet;
+  previous_balance: number;
+}

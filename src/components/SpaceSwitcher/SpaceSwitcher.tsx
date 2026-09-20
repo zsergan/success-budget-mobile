@@ -2,7 +2,8 @@ import { useRef } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import { BottomSheetModal as BottomModal, Icon } from '@components';
+import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
+import Icon from '@components/Icon/Icon';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectCurrentSpace, selectSpace } from '@redux/state/space/selectors';
 import { setCurrentSpaceId } from '@redux/state/space/thunks';

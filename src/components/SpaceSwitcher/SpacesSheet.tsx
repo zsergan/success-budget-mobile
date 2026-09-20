@@ -3,7 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
 import type { Space } from '@api/dto';
-import { Icon } from '@components';
+import Icon from '@components/Icon/Icon';
 import { SpaceType } from '@shared/enums';
 import theme, { colors } from '@shared/theme';
 

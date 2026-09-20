@@ -14,6 +14,7 @@ import {
   TransactionCard,
   TransactionForm,
 } from '@components';
+import { TRANSACTION_FORM_SNAP_POINT } from '@components/TransactionForm/TransactionForm';
 import { useAppSelector } from '@redux/hooks';
 import { selectTotalBalance, selectWallet } from '@redux/state/wallet/selectors';
 import { selectTransaction } from '@redux/state/transaction/selectors';
@@ -54,11 +55,11 @@ const HomeScreen = ({ navigation }: Props) => {
 
   return (
     <>
-      <BottomModal ref={expenseBottomSheetRef}>
+      <BottomModal ref={expenseBottomSheetRef} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
         <TransactionForm initialWalletIndex={currentWalletIndex} />
       </BottomModal>
 
-      <BottomModal ref={incomeBottomSheetRef}>
+      <BottomModal ref={incomeBottomSheetRef} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
         <TransactionForm initialWalletIndex={currentWalletIndex} transactionType={TransactionType.INCOME} />
       </BottomModal>
 

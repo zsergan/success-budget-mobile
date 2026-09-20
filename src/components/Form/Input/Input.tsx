@@ -44,6 +44,7 @@ const Input = ({
         )}
 
         <TextInput
+          placeholderTextColor={colors.muted}
           {...props}
           onFocus={(e) => {
             setIsFocused(true);

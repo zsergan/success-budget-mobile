@@ -4,6 +4,7 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomSheetModal as BottomModal, EmptyState, Fab, Icon, TransactionCard, TransactionForm } from '@components';
+import { TRANSACTION_FORM_SNAP_POINT } from '@components/TransactionForm/TransactionForm';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import {
   selectIsLoadingRange,
@@ -85,11 +86,11 @@ const TransactionsScreen = () => {
 
   return (
     <>
-      <BottomModal ref={expenseBottomSheetRef} onDismiss={refreshRange}>
+      <BottomModal ref={expenseBottomSheetRef} onDismiss={refreshRange} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
         <TransactionForm initialWalletIndex={0} />
       </BottomModal>
 
-      <BottomModal ref={incomeBottomSheetRef} onDismiss={refreshRange}>
+      <BottomModal ref={incomeBottomSheetRef} onDismiss={refreshRange} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
         <TransactionForm initialWalletIndex={0} transactionType={TransactionType.INCOME} />
       </BottomModal>
 
