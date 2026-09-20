@@ -45,6 +45,7 @@ describe('wallet slice', () => {
     expect(fulfilledState.totalBalance).toBe(100);
     expect(fulfilledState.totalBalanceCurrency).toBe('USD');
     expect(fulfilledState.deltaPercent).toBe(4.2);
+    expect(fulfilledState.hasLoaded).toBe(true);
   });
 
   it('records the server error on a rejected wallet thunk (fetch, add, edit, or remove)', () => {
@@ -71,6 +72,7 @@ describe('wallet slice', () => {
       totalBalanceCurrency: 'USD',
       deltaPercent: 4.2,
       isLoading: false,
+      hasLoaded: true,
       error: errorResponse,
     };
 
