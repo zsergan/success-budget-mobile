@@ -19,6 +19,13 @@ const styles = StyleSheet.create({
   mdButton: {
     height: 40,
   },
+  lgButton: {
+    width: 34,
+    height: 34,
+    paddingHorizontal: 0,
+    borderRadius: 12,
+    justifyContent: 'center',
+  },
   selected: {
     backgroundColor: colors.accent,
   },
@@ -38,6 +45,10 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
   },
+  lgCircle: {
+    width: 24,
+    height: 24,
+  },
   smTitle: {
     // Plus Jakarta Sans under-measures; see cde3346.
     paddingRight: 2,
@@ -46,6 +57,12 @@ const styles = StyleSheet.create({
     lineHeight: theme.lineHeights.caption,
   },
   mdTitle: {
+    paddingRight: 2,
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.label,
+    lineHeight: theme.lineHeights.label,
+  },
+  lgTitle: {
     paddingRight: 2,
     fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.label,
