@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Platform, Text, TextInput, useWindowDimensions, View, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Controller } from 'react-hook-form';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
@@ -17,12 +18,12 @@ import { formatDateHHMM, formatGroupLabel, hexToRgba } from '@shared/utils';
 import LimitHint from './LimitHint/LimitHint';
 import useTransactionForm from './useTransactionForm';
 
-import { colors } from '@shared/theme';
+import theme, { colors } from '@shared/theme';
 import styles from './style';
 
 const SAVE_READY_TEXT_COLOR = '#FFFDFA';
 
-export const TRANSACTION_FORM_SNAP_POINT = '94%';
+export const TRANSACTION_FORM_SNAP_POINT = '86%';
 const SNAP_FRACTION = parseFloat(TRANSACTION_FORM_SNAP_POINT) / 100;
 
 const isValidAmount = (value?: string) => {
@@ -83,6 +84,7 @@ interface Props {
 
 const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType.EXPENSE }: Props) => {
   const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const amountRef = useRef<TextInput>(null);
   const { wallets } = useAppSelector(selectWallet);
   const { expenses, incomes } = useAppSelector(selectActiveCategories);
@@ -393,7 +395,7 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
         </View>
       </BottomSheetScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { marginBottom: theme.spacing.xl + insets.bottom }]}>
         {helperText && (
           <View style={styles.helperRow}>
             <Icon name="info" size={13} color={colors.muted} strokeWidth={1.8} />
