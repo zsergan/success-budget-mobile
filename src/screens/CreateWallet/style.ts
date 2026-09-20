@@ -22,6 +22,15 @@ const styles = StyleSheet.create({
   formContainer: {
     rowGap: theme.spacing.lg,
   },
+  fieldGroup: {
+    rowGap: theme.spacing.sm,
+  },
+  hint: {
+    fontFamily: theme.fonts.medium,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    color: colors.muted,
+  },
   designsContainer: {
     flexDirection: 'row',
     columnGap: 14,

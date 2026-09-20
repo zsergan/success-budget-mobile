@@ -19,6 +19,7 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
   });
 
   const selectedWalletName = watch('walletName');
+  const selectedBalance = watch('initialBalance');
   const selectedDesign = watch('design');
 
   return (
@@ -30,6 +31,16 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
             onBackButtonPress={() => navigation.goBack()}
           />
 
+          <WalletCard
+            walletName={selectedWalletName || 'Wallet name'}
+            balance={selectedBalance || '0'}
+            currencyCode={spaceCurrencyCode || ''}
+            totalIncome={0}
+            totalSpend={0}
+            design={selectedDesign}
+            badgeLabel="PREVIEW"
+          />
+
           <View style={styles.formContainer}>
             <Controller
               name="walletName"
@@ -39,22 +50,30 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
               )}
             />
 
-            <Controller
-              name="initialBalance"
-              control={control}
-              render={({ field: { onChange, value } }) => (
-                <Input
-                  label="Balance"
-                  placeholder="0"
-                  value={value}
-                  onChangeText={onChange}
-                  keyboardType="numeric"
-                  returnKeyType="done"
-                  editable={isNewWallet}
-                  withShadow
-                />
+            <View style={styles.fieldGroup}>
+              <Controller
+                name="initialBalance"
+                control={control}
+                render={({ field: { onChange, value } }) => (
+                  <Input
+                    label="Starting balance"
+                    placeholder="0"
+                    value={value}
+                    onChangeText={onChange}
+                    keyboardType="numeric"
+                    returnKeyType="done"
+                    editable={isNewWallet}
+                    withShadow
+                  />
+                )}
+              />
+
+              {isNewWallet && (
+                <Text style={styles.hint}>
+                  {`How much is already in this wallet. Amounts are in ${spaceCurrencyCode}, the currency of this space.`}
+                </Text>
               )}
-            />
+            </View>
           </View>
 
           <View style={styles.section}>
@@ -88,19 +107,6 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
                   })}
                 </View>
               )}
-            />
-          </View>
-
-          <View style={styles.section}>
-            <SectionTitle title="Preview" />
-
-            <WalletCard
-              walletName={selectedWalletName || 'Wallet name'}
-              balance="999999999999"
-              currencyCode={spaceCurrencyCode || ''}
-              totalIncome={9999999999}
-              totalSpend={999999999}
-              design={selectedDesign}
             />
           </View>
         </View>
