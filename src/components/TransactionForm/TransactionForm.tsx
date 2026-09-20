@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Platform, Text, TextInput, View, TouchableOpacity } from 'react-native';
+import { Platform, Text, TextInput, useWindowDimensions, View, TouchableOpacity } from 'react-native';
 import { Controller } from 'react-hook-form';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
@@ -23,6 +23,7 @@ import styles from './style';
 const SAVE_READY_TEXT_COLOR = '#FFFDFA';
 
 export const TRANSACTION_FORM_SNAP_POINT = '94%';
+const SNAP_FRACTION = parseFloat(TRANSACTION_FORM_SNAP_POINT) / 100;
 
 const isValidAmount = (value?: string) => {
   if (!value) return false;
@@ -81,6 +82,7 @@ interface Props {
 }
 
 const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType.EXPENSE }: Props) => {
+  const { height: windowHeight } = useWindowDimensions();
   const amountRef = useRef<TextInput>(null);
   const { wallets } = useAppSelector(selectWallet);
   const { expenses, incomes } = useAppSelector(selectActiveCategories);
@@ -126,7 +128,7 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
       : undefined;
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { height: windowHeight * SNAP_FRACTION }]}>
       <View style={styles.topBlock}>
         <View style={styles.handle} />
 
