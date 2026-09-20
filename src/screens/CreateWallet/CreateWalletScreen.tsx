@@ -92,15 +92,22 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
 
                     return (
                       <TouchableOpacity key={design} onPress={() => onChange(design)} activeOpacity={0.5}>
-                        <View style={[styles.designCircle, isSelected && styles.selectedCircle]}>
-                          <GradientBackground
-                            colors={gradients[design]}
-                            style={styles.gradient}
-                            start={{ x: 0, y: 0.0 }}
-                            end={{ x: 1.0, y: 1.0 }}
+                        <View style={styles.swatch}>
+                          <View
+                            pointerEvents="none"
+                            style={[styles.selectionRing, isSelected && styles.selectedRing]}
                           />
 
-                          {isSelected && <Icon name="check" size={17} color={walletTextColors[design].fg} />}
+                          <View style={styles.designCircle}>
+                            <GradientBackground
+                              colors={gradients[design]}
+                              style={styles.gradient}
+                              start={{ x: 0, y: 0.0 }}
+                              end={{ x: 1.0, y: 1.0 }}
+                            />
+
+                            {isSelected && <Icon name="check" size={17} color={walletTextColors[design].fg} />}
+                          </View>
                         </View>
                       </TouchableOpacity>
                     );

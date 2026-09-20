@@ -35,17 +35,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     columnGap: 14,
   },
+  swatch: {
+    width: 44,
+    height: 44,
+  },
+  selectionRing: {
+    position: 'absolute',
+    top: -5,
+    left: -5,
+    right: -5,
+    bottom: -5,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  selectedRing: {
+    borderColor: colors.accent,
+  },
   designCircle: {
     width: 44,
     height: 44,
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  selectedCircle: {
-    borderColor: colors.accent,
+    overflow: 'hidden',
   },
   gradient: {
     borderRadius: 15,
