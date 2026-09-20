@@ -53,7 +53,7 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
         ? dispatch(
             addWallet({
               wallet_name: formData.walletName,
-              initial_balance: Number(formData.initialBalance),
+              initial_balance: formData.initialBalance,
               design: formData.design,
             }),
           ).unwrap()
