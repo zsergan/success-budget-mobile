@@ -57,7 +57,9 @@ const LimitItem = ({ limit, currencyCode, onPress }: Props) => {
           {isGroup ? (
             <View style={styles.miniIconGrid}>
               {categories.slice(0, 4).map((category) => (
-                <Icon key={category.id} name={category.icon} size={14} color={iconFg} strokeWidth={2.2} />
+                <View key={category.id} style={styles.miniIconCell}>
+                  <Icon name={category.icon} size={14} color={iconFg} strokeWidth={2.2} />
+                </View>
               ))}
             </View>
           ) : (

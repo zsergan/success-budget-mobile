@@ -29,14 +29,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   miniIconGrid: {
-    width: '100%',
-    height: '100%',
+    width: 32,
+    height: 32,
     flexDirection: 'row',
     flexWrap: 'wrap',
+  },
+  miniIconCell: {
+    width: '50%',
+    height: '50%',
     alignItems: 'center',
     justifyContent: 'center',
-    columnGap: 1,
-    rowGap: 1,
   },
   textBlock: {
     flex: 1,
