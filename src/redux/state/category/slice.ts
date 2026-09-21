@@ -16,13 +16,18 @@ const categorySlice = createSlice({
 
     builder.addCase(fetchCategories.pending, (state, action) => {
       state.isLoading = true;
+      state.error = undefined;
       state.requestId = action.meta.requestId;
     });
 
+    // Guarded like fulfilled below -- an older fetchCategories rejecting
+    // after a newer one has already taken over must not overwrite `error`
+    // with a stale failure.
     builder.addCase(fetchCategories.rejected, (state, action) => {
       if (action.meta.requestId !== state.requestId) return;
 
       state.isLoading = false;
+      state.error = action.payload;
     });
 
     builder.addCase(fetchCategories.fulfilled, (state, action) => {
@@ -47,19 +52,13 @@ const categorySlice = createSlice({
       state.isDeleting = false;
     });
 
-    builder.addMatcher(
-      isPending(fetchCategories, editCategory, addCategory, deleteCategory, reorderCategories),
-      (state) => {
-        state.error = undefined;
-      },
-    );
+    builder.addMatcher(isPending(editCategory, addCategory, deleteCategory, reorderCategories), (state) => {
+      state.error = undefined;
+    });
 
-    builder.addMatcher(
-      isRejected(fetchCategories, editCategory, addCategory, deleteCategory, reorderCategories),
-      (state, action) => {
-        state.error = action.payload;
-      },
-    );
+    builder.addMatcher(isRejected(editCategory, addCategory, deleteCategory, reorderCategories), (state, action) => {
+      state.error = action.payload;
+    });
   },
 });
 

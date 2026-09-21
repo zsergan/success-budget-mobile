@@ -88,4 +88,17 @@ describe('limit slice', () => {
 
     expect(state).toEqual(initialState);
   });
+
+  it('an old rejected fetchLimits must not overwrite a newer request in flight', () => {
+    const oldPending = limitReducer(initialState, fetchLimits.pending('old', undefined));
+    const newPending = limitReducer(oldPending, fetchLimits.pending('new', undefined));
+
+    const afterStaleReject = limitReducer(
+      newPending,
+      fetchLimits.rejected(new Error('old failed'), 'old', undefined, errorResponse),
+    );
+
+    expect(afterStaleReject.isLoading).toBe(true);
+    expect(afterStaleReject.error).toBeUndefined();
+  });
 });

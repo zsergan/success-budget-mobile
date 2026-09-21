@@ -96,4 +96,17 @@ describe('category slice', () => {
 
     expect(state).toEqual(initialState);
   });
+
+  it('an old rejected fetchCategories must not overwrite a newer request in flight', () => {
+    const oldPending = categoryReducer(initialState, fetchCategories.pending('old', undefined));
+    const newPending = categoryReducer(oldPending, fetchCategories.pending('new', undefined));
+
+    const afterStaleReject = categoryReducer(
+      newPending,
+      fetchCategories.rejected(new Error('old failed'), 'old', undefined, errorResponse),
+    );
+
+    expect(afterStaleReject.isLoading).toBe(true);
+    expect(afterStaleReject.error).toBeUndefined();
+  });
 });

@@ -21,13 +21,18 @@ const walletSlice = createSlice({
 
     builder.addCase(fetchWallets.pending, (state, action) => {
       state.isLoading = true;
+      state.error = undefined;
       state.requestId = action.meta.requestId;
     });
 
+    // Guarded like fulfilled below -- an older fetchWallets rejecting after
+    // a newer one is already loading (or has already succeeded) must not
+    // overwrite `error` with a stale failure.
     builder.addCase(fetchWallets.rejected, (state, action) => {
       if (action.meta.requestId !== state.requestId) return;
 
       state.isLoading = false;
+      state.error = action.payload;
     });
 
     builder.addCase(fetchWallets.fulfilled, (state, action) => {
@@ -41,11 +46,11 @@ const walletSlice = createSlice({
       state.hasLoaded = true;
     });
 
-    builder.addMatcher(isPending(fetchWallets, addWallet, editWallet, removeWallet), (state) => {
+    builder.addMatcher(isPending(addWallet, editWallet, removeWallet), (state) => {
       state.error = undefined;
     });
 
-    builder.addMatcher(isRejected(fetchWallets, addWallet, editWallet, removeWallet), (state, action) => {
+    builder.addMatcher(isRejected(addWallet, editWallet, removeWallet), (state, action) => {
       state.error = action.payload;
     });
   },

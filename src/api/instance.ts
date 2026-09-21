@@ -24,15 +24,26 @@ export const ApiClient = () => {
   api.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
-      // Lazy import: a static one here would close a load-order-dependent
-      // import cycle back through Store.ts into this same file.
       if (error.response?.status === 401) {
-        const [{ default: store }, { logoutMe }] = await Promise.all([
-          import('@redux/Store'),
-          import('@redux/state/auth/thunks'),
-        ]);
+        // A 401 from a request sent under a token the user has since
+        // replaced (logged out and back in, or another 401 already forced
+        // a logout) must not end that newer session -- only log out if the
+        // token this specific request carried is still the one currently
+        // stored.
+        const requestAuth = error.config?.headers?.Authorization;
+        const requestToken = typeof requestAuth === 'string' ? requestAuth.replace(/^Bearer /, '') : undefined;
+        const currentToken = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
 
-        store.dispatch(logoutMe());
+        if (requestToken && requestToken === currentToken) {
+          // Lazy import: a static one here would close a load-order-dependent
+          // import cycle back through Store.ts into this same file.
+          const [{ default: store }, { logoutMe }] = await Promise.all([
+            import('@redux/Store'),
+            import('@redux/state/auth/thunks'),
+          ]);
+
+          store.dispatch(logoutMe());
+        }
       }
 
       if (error.response?.status === 429) {
