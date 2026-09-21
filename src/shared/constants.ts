@@ -1,5 +1,5 @@
 import { AppColor } from '@shared/enums';
-import { colorScheme } from '@shared/theme';
+import theme, { colorScheme } from '@shared/theme';
 
 const LOCAL_API_BASE_URL = 'http://localhost:3000/api/v1';
 
@@ -94,3 +94,6 @@ export const DEFAULT_WALLET_DESIGN = AppColor.SLATE;
 // Wallets saved before stage 6 may carry an old `design` value (see legacy icon aliases in shared/icons.ts); unrecognized values fall back rather than crash.
 export const resolveAppColor = (design?: AppColor): AppColor =>
   design && design in gradients ? design : DEFAULT_WALLET_DESIGN;
+
+// Bottom padding a scrollable screen needs so its last row clears the floating Fab (58px button + 24px offset) with a visible gap, not just the tab bar underneath it.
+export const FAB_SCROLL_CLEARANCE = theme.spacing.xxl + 70;
