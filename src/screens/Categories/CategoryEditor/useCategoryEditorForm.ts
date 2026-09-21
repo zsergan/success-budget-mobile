@@ -13,7 +13,7 @@ import type { IconType } from '@shared/types';
 import { CATEGORY_ICON_LIST } from '@shared/icons';
 import { useFormSubmitHandler } from '@hooks';
 
-export const NAME_MAX_LENGTH = 24;
+export const NAME_MAX_LENGTH = 20;
 
 interface CategoryEditorFormData {
   name: string;
