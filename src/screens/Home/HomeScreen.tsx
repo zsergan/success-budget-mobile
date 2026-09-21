@@ -1,12 +1,11 @@
 import { useRef, useState } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import {
   BottomSheetModal as BottomModal,
   EmptyState,
   Fab,
-  Icon,
   RootLayout,
   SectionTitle,
   SpaceSwitcher,
@@ -21,9 +20,9 @@ import { selectTransaction } from '@redux/state/transaction/selectors';
 import { useBalanceVisibility } from '@hooks';
 import { ScreenNames, TransactionType } from '@shared/enums';
 import type { ScreenProps } from '@shared/types';
-import { colors } from '@shared/theme';
 import { FAB_SCROLL_CLEARANCE } from '@shared/constants';
 import { formatNumber, groupTransactionsByDay } from '@shared/utils';
+import BalanceOverview from './components/BalanceOverview/BalanceOverview';
 import Wallets from './Wallets/Wallets';
 
 import styles from './style';
@@ -47,10 +46,6 @@ const HomeScreen = ({ navigation }: Props) => {
   const { isHidden, toggle } = useBalanceVisibility();
 
   const hasWallets = wallets.length > 0;
-  const deltaPositive = deltaPercent > 0;
-  const deltaNeutral = deltaPercent === 0;
-  const deltaFg = deltaNeutral ? colors.muted : deltaPositive ? colors.ok : colors.danger;
-  const deltaBg = deltaNeutral ? colors.track : `${deltaFg}26`;
 
   const recentGroups = groupTransactionsByDay(transactions.slice(0, RECENT_TRANSACTIONS_LIMIT), currencyCode);
   const currentWalletId = wallets[currentWalletIndex]?.wallet.id ?? -1;
@@ -73,41 +68,14 @@ const HomeScreen = ({ navigation }: Props) => {
       >
         <SpaceSwitcher navigation={navigation} />
 
-        <View style={styles.hero}>
-          <View style={styles.heroRow}>
-            <View style={styles.heroInfo}>
-              <View style={styles.heroLabelRow}>
-                <Text style={styles.heroLabel}>Total balance</Text>
-
-                <TouchableOpacity onPress={toggle} hitSlop={8}>
-                  <Icon name={isHidden ? 'eye-off' : 'eye'} size={15} color={colors.muted} />
-                </TouchableOpacity>
-              </View>
-
-              <Text style={styles.heroTotal}>
-                {isHidden
-                  ? `••• •••${currencyCode ? ` ${currencyCode}` : ''}`
-                  : `${formatNumber(total)}${currencyCode ? ` ${currencyCode}` : ''}`}
-              </Text>
-
-              {currencyCode && (
-                <Text
-                  style={styles.heroSub}
-                >{`${walletsCount} wallet${walletsCount === 1 ? '' : 's'} · ${currencyCode}`}</Text>
-              )}
-            </View>
-
-            {currencyCode && (
-              <View style={[styles.deltaBadge, { backgroundColor: deltaBg }]}>
-                {!deltaNeutral && (
-                  <Icon name={deltaPositive ? 'trend-up' : 'trend-down'} size={11} color={deltaFg} strokeWidth={2.3} />
-                )}
-
-                <Text style={[styles.deltaText, { color: deltaFg }]}>{`${Math.abs(deltaPercent).toFixed(1)}%`}</Text>
-              </View>
-            )}
-          </View>
-        </View>
+        <BalanceOverview
+          total={total}
+          currencyCode={currencyCode}
+          walletsCount={walletsCount}
+          deltaPercent={deltaPercent}
+          isHidden={isHidden}
+          onToggleVisibility={toggle}
+        />
 
         <SectionTitle
           style={styles.walletsTitle}
