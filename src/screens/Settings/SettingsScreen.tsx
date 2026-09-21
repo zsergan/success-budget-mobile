@@ -11,7 +11,7 @@ import { useAlert, useThemePreference } from '@hooks';
 import type { ScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
 
-import DeleteAccountDialog from './DeleteAccountDialog/DeleteAccountDialog';
+import DeleteAccountDialog from './components/DeleteAccountDialog/DeleteAccountDialog';
 import Profile from './components/Profile/Profile';
 import SettingsRow from './components/SettingsRow/SettingsRow';
 import SettingsSection from './components/SettingsSection/SettingsSection';
