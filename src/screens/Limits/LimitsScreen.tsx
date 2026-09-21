@@ -1,5 +1,4 @@
-import { useRef, useState } from 'react';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,11 +9,11 @@ import { selectLimit } from '@redux/state/limit/selectors';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import { colors } from '@shared/theme';
 import { formatDateMM, getDaysLeftInMonth } from '@shared/utils';
-import type { LimitScope } from './LimitEditor/useLimitEditorForm';
 import LimitEditorSheet, { LIMIT_EDITOR_SNAP_POINT } from './LimitEditor/LimitEditorSheet';
 import DeleteLimitDialog from './DeleteLimitDialog/DeleteLimitDialog';
 import TotalLimitCard from './TotalLimitCard/TotalLimitCard';
 import OverAllocationBanner from './OverAllocationBanner/OverAllocationBanner';
+import useLimitEditor from './hooks/useLimitEditor';
 
 import styles from './style';
 
@@ -24,25 +23,12 @@ const RULES = [
   'A limit counts spending across all wallets together.',
 ];
 
-interface EditorTarget {
-  limit?: LimitModel;
-  scope?: LimitScope;
-}
-
 const LimitsScreen = () => {
   const { total, categoryLimits, overAllocation } = useAppSelector(selectLimit);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
-  const editorRef = useRef<BottomSheetModal>(null);
-  const [editorTarget, setEditorTarget] = useState<EditorTarget>({});
-  const [editorKey, setEditorKey] = useState(0);
+  const { editorTarget, editorKey, openEditor, editorRef } = useLimitEditor();
   const [deletingLimit, setDeletingLimit] = useState<LimitModel | undefined>(undefined);
-
-  const openEditor = (target: EditorTarget) => {
-    setEditorTarget(target);
-    setEditorKey((key) => key + 1);
-    editorRef.current?.present();
-  };
 
   const isFullyEmpty = !total && categoryLimits.length === 0;
 
