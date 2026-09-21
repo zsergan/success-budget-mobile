@@ -1,8 +1,9 @@
 import { createSlice, isFulfilled, isPending, isRejected } from '@reduxjs/toolkit';
 
 import { logoutMe } from '../auth/thunks';
+import { spaceContextChanged } from '../space/thunks';
 import initialState from './initialState';
-import { acceptInvite, fetchMembers, inviteMember, removeMember, revokeInvite } from './thunks';
+import { acceptInvite, fetchMembers, inviteMember, leaveSpace, removeMember, revokeInvite } from './thunks';
 
 const memberSlice = createSlice({
   name: 'member',
@@ -10,6 +11,12 @@ const memberSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder.addCase(logoutMe.fulfilled, () => initialState);
+
+    // Drop the previous space's members immediately -- before its own
+    // fetchMembers has even been dispatched -- and forget any in-flight
+    // request for it (clearing requestId means a late response can no
+    // longer match).
+    builder.addCase(spaceContextChanged, (state) => ({ ...initialState, hasLoaded: state.hasLoaded }));
 
     builder.addCase(fetchMembers.pending, (state, action) => {
       state.requestId = action.meta.requestId;
@@ -20,21 +27,25 @@ const memberSlice = createSlice({
 
       state.members = action.payload;
       state.isLoading = false;
+      state.hasLoaded = true;
     });
 
-    builder.addMatcher(isPending(fetchMembers, inviteMember, revokeInvite, removeMember, acceptInvite), (state) => {
-      state.isLoading = true;
-      state.error = undefined;
-    });
+    builder.addMatcher(
+      isPending(fetchMembers, inviteMember, revokeInvite, removeMember, leaveSpace, acceptInvite),
+      (state) => {
+        state.isLoading = true;
+        state.error = undefined;
+      },
+    );
 
     // fetchMembers.fulfilled already clears isLoading above; this covers the
-    // other four, none of which touch it themselves.
-    builder.addMatcher(isFulfilled(inviteMember, revokeInvite, removeMember, acceptInvite), (state) => {
+    // other five, none of which touch it themselves.
+    builder.addMatcher(isFulfilled(inviteMember, revokeInvite, removeMember, leaveSpace, acceptInvite), (state) => {
       state.isLoading = false;
     });
 
     builder.addMatcher(
-      isRejected(fetchMembers, inviteMember, revokeInvite, removeMember, acceptInvite),
+      isRejected(fetchMembers, inviteMember, revokeInvite, removeMember, leaveSpace, acceptInvite),
       (state, action) => {
         state.isLoading = false;
         state.error = action.payload;

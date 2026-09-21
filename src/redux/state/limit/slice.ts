@@ -1,6 +1,7 @@
 import { createSlice, isPending, isRejected } from '@reduxjs/toolkit';
 
 import { logoutMe } from '../auth/thunks';
+import { spaceContextChanged } from '../space/thunks';
 import initialState from './initialState';
 import { addLimit, editLimit, fetchLimits, removeLimit } from './thunks';
 
@@ -10,6 +11,8 @@ const limitSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder.addCase(logoutMe.fulfilled, () => initialState);
+
+    builder.addCase(spaceContextChanged, (state) => ({ ...initialState, hasLoaded: state.hasLoaded, isLoading: true }));
 
     builder.addCase(fetchLimits.pending, (state, action) => {
       state.isLoading = true;

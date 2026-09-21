@@ -1,6 +1,7 @@
 import { createSlice, isPending, isRejected } from '@reduxjs/toolkit';
 
 import { logoutMe } from '../auth/thunks';
+import { spaceContextChanged } from '../space/thunks';
 import initialState from './initialState';
 import { addTransaction, fetchLatestTransaction, fetchTransactions, fetchTransactionsInRange } from './thunks';
 
@@ -10,6 +11,11 @@ const transactionSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder.addCase(logoutMe.fulfilled, () => initialState);
+
+    // Drops recent/range/latest together and forgets every in-flight
+    // request id -- a stale response from the previous space can no longer
+    // match any of the three once this fires.
+    builder.addCase(spaceContextChanged, (state) => ({ ...initialState, hasLoaded: state.hasLoaded, isLoading: true }));
 
     builder.addCase(fetchTransactions.pending, (state, action) => {
       state.isLoading = true;

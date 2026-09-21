@@ -8,7 +8,7 @@ import {
 } from '@api/member.api';
 import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
-import { fetchSpaces, setCurrentSpaceId } from '../space/thunks';
+import { activateSpace, fetchSpaces } from '../space/thunks';
 
 export const fetchMembers = createAppAsyncThunk('member/fetchMembers', async (_: void, thunkAPI) => {
   const spaceId = thunkAPI.getState().space.currentSpaceId;
@@ -58,10 +58,11 @@ export const revokeInvite = createAppAsyncThunk('member/revokeInvite', async (in
   }
 });
 
-// Serves both "owner removes someone else" and "I'm leaving" -- same
-// backend endpoint either way. Refetching fetchSpaces() here is a no-op
-// when removing someone else, and is exactly what makes the existing
-// fall-back-to-personal logic in fetchSpaces kick in on a self-leave.
+// The owner removing someone else -- the space itself is unaffected, so a
+// plain refresh of both members (list) and spaces (member_count/role) is
+// safe. For the caller leaving their own space, use `leaveSpace` instead:
+// that call can delete the space entirely, and re-fetching members for a
+// space you just lost access to would just 403/404.
 export const removeMember = createAppAsyncThunk('member/removeMember', async (userId: number, thunkAPI) => {
   const spaceId = thunkAPI.getState().space.currentSpaceId;
 
@@ -79,19 +80,53 @@ export const removeMember = createAppAsyncThunk('member/removeMember', async (us
   }
 });
 
-export const acceptInvite = createAppAsyncThunk('member/acceptInvite', async (code: string, thunkAPI) => {
+export const leaveSpace = createAppAsyncThunk('member/leaveSpace', async (_: void, thunkAPI) => {
+  const { currentSpaceId } = thunkAPI.getState().space;
+  const myUserId = thunkAPI.getState().profile.id;
+
+  if (currentSpaceId === null || myUserId === undefined) {
+    return thunkAPI.rejectWithValue(undefined);
+  }
+
   try {
-    const previousSpaceIds = new Set(thunkAPI.getState().space.spaces.map((space) => space.id));
-
-    await acceptInviteRequest(code);
-
-    const { spaces } = await thunkAPI.dispatch(fetchSpaces()).unwrap();
-    const joinedSpace = spaces.find((space) => !previousSpaceIds.has(space.id));
-
-    if (joinedSpace) {
-      thunkAPI.dispatch(setCurrentSpaceId(joinedSpace.id));
-    }
+    await removeMemberRequest(currentSpaceId, myUserId);
   } catch (error: unknown) {
     return thunkAPI.rejectWithValue(getRejectValue(error));
   }
+
+  // The left space is no longer a valid context for this session -- don't
+  // touch `member` state for it. fetchSpaces both refreshes the list and,
+  // via its own fallback logic, activates whatever space is valid next
+  // (which synchronously clears wallet/category/limit/transaction/member
+  // for the old space).
+  try {
+    await thunkAPI.dispatch(fetchSpaces()).unwrap();
+  } catch {
+    // Leaving already succeeded server-side; a failed list refresh is
+    // surfaced through fetchSpaces' own error state, not re-thrown here.
+  }
+});
+
+export const acceptInvite = createAppAsyncThunk('member/acceptInvite', async (code: string, thunkAPI) => {
+  let space;
+
+  try {
+    space = await acceptInviteRequest(code);
+  } catch (error: unknown) {
+    return thunkAPI.rejectWithValue(getRejectValue(error));
+  }
+
+  // The response carries the joined space's real id -- use that directly
+  // rather than diffing the space list before/after, which breaks the
+  // moment two joins race or the list order isn't stable.
+  thunkAPI.dispatch(activateSpace(space.id));
+
+  try {
+    await thunkAPI.dispatch(fetchSpaces()).unwrap();
+  } catch {
+    // The invite was accepted and the space is already selected; a failed
+    // list refresh doesn't undo that and shouldn't fail this thunk.
+  }
+
+  return space;
 });

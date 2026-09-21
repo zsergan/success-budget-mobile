@@ -1,6 +1,7 @@
 import { createSlice, isPending, isRejected } from '@reduxjs/toolkit';
 
 import { logoutMe } from '../auth/thunks';
+import { spaceContextChanged } from '../space/thunks';
 import initialState from './initialState';
 import { addCategory, deleteCategory, editCategory, fetchCategories, reorderCategories } from './thunks';
 
@@ -10,6 +11,8 @@ const categorySlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder.addCase(logoutMe.fulfilled, () => initialState);
+
+    builder.addCase(spaceContextChanged, (state) => ({ ...initialState, hasLoaded: state.hasLoaded, isLoading: true }));
 
     builder.addCase(fetchCategories.pending, (state, action) => {
       state.isLoading = true;

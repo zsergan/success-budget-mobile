@@ -1,6 +1,7 @@
 import { createSlice, isPending, isRejected } from '@reduxjs/toolkit';
 
 import { logoutMe } from '../auth/thunks';
+import { spaceContextChanged } from '../space/thunks';
 import initialState from './initialState';
 import { addWallet, editWallet, fetchWallets, removeWallet } from './thunks';
 
@@ -10,6 +11,13 @@ const walletSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder.addCase(logoutMe.fulfilled, () => initialState);
+
+    // Drop the previous space's wallets immediately -- before its own
+    // fetchWallets has even been dispatched -- and forget any in-flight
+    // request for it (clearing requestId means a late response can no
+    // longer match). `hasLoaded` survives so useLoadInitData doesn't treat
+    // a space switch as the app's very first load.
+    builder.addCase(spaceContextChanged, (state) => ({ ...initialState, hasLoaded: state.hasLoaded, isLoading: true }));
 
     builder.addCase(fetchWallets.pending, (state, action) => {
       state.isLoading = true;

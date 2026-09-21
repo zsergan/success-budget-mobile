@@ -3,29 +3,51 @@ import { createAction } from '@reduxjs/toolkit';
 import type { CreateSpaceRequest } from '@api/dto';
 import { getSpaces, createSpace, deleteSpace } from '@api/space.api';
 import { SpaceType } from '@shared/enums';
+import type { AppThunk } from '@redux/Store';
 import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
-// Switching the current space is local, synchronous UI state, not a network
-// call -- a plain action rather than an async thunk with nothing to await.
-export const setCurrentSpaceId = createAction<number>('space/setCurrentSpaceId');
+// The one event that means "the active space identity changed". wallet,
+// category, limit, transaction and member all listen for this (not just
+// `currentSpaceId`) to synchronously drop the previous space's data and
+// reject in-flight responses that belong to it -- see `contextKey` on
+// space/initialState for why a plain id comparison isn't enough.
+export const spaceContextChanged = createAction<{ spaceId: number | null; contextKey: number }>('space/contextChanged');
+
+// The only way `currentSpaceId` should change. Selecting the space that's
+// already active is a deliberate no-op: it must not reset forms/dialogs or
+// re-trigger every fetch.
+export const activateSpace =
+  (spaceId: number | null): AppThunk =>
+  (dispatch, getState) => {
+    const { currentSpaceId, contextKey } = getState().space;
+
+    if (spaceId === currentSpaceId) return;
+
+    dispatch(spaceContextChanged({ spaceId, contextKey: contextKey + 1 }));
+  };
+
+const pickFallbackSpaceId = (spaces: { id: number; type: SpaceType }[]): number | null => {
+  if (spaces.length === 0) return null;
+
+  const personalSpace = spaces.find((space) => space.type === SpaceType.PERSONAL);
+
+  if (personalSpace) return personalSpace.id;
+
+  // No personal space (a group-only account, or it was just left/deleted) --
+  // fall back to the lowest id so the pick is deterministic rather than
+  // whatever order the backend happened to return.
+  return spaces.reduce((lowest, space) => (space.id < lowest.id ? space : lowest)).id;
+};
 
 export const fetchSpaces = createAppAsyncThunk('space/fetchSpaces', async (_: void, thunkAPI) => {
   try {
     const spaces = await getSpaces();
-    const previousSpaceId = thunkAPI.getState().space.currentSpaceId;
-    const stillValid = previousSpaceId !== null && spaces.some((space) => space.id === previousSpaceId);
+    const { currentSpaceId } = thunkAPI.getState().space;
+    const stillValid = currentSpaceId !== null && spaces.some((space) => space.id === currentSpaceId);
 
-    if (stillValid) {
-      return { spaces, currentSpaceId: previousSpaceId };
-    }
+    thunkAPI.dispatch(activateSpace(stillValid ? currentSpaceId : pickFallbackSpaceId(spaces)));
 
-    const personalSpace = spaces.find((space) => space.type === SpaceType.PERSONAL);
-
-    if (!personalSpace) {
-      return thunkAPI.rejectWithValue(undefined);
-    }
-
-    return { spaces, currentSpaceId: personalSpace.id };
+    return spaces;
   } catch (error: unknown) {
     return thunkAPI.rejectWithValue(getRejectValue(error));
   }
@@ -35,7 +57,7 @@ export const addSpace = createAppAsyncThunk('space/addSpace', async (data: Creat
   try {
     const space = await createSpace(data);
 
-    thunkAPI.dispatch(setCurrentSpaceId(space.id));
+    thunkAPI.dispatch(activateSpace(space.id));
     thunkAPI.dispatch(fetchSpaces());
 
     return space;

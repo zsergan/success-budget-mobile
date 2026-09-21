@@ -1,3 +1,4 @@
+import type { Action, ThunkAction } from '@reduxjs/toolkit';
 import { configureStore } from '@reduxjs/toolkit';
 
 import authReducer from './state/auth/slice';
@@ -27,3 +28,7 @@ const store = configureStore({
 export default store;
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
+// For a plain (non-async-thunk) action creator that needs dispatch/getState,
+// e.g. one that decides synchronously whether to dispatch a follow-up
+// action -- createAppAsyncThunk is for API calls, not this.
+export type AppThunk<ReturnType = void> = ThunkAction<ReturnType, RootState, unknown, Action>;

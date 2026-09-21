@@ -6,7 +6,7 @@ import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
 import Icon from '@components/Icon/Icon';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectCurrentSpace, selectSpace } from '@redux/state/space/selectors';
-import { setCurrentSpaceId } from '@redux/state/space/thunks';
+import { activateSpace } from '@redux/state/space/thunks';
 import { ScreenNames, SpaceType } from '@shared/enums';
 import type { NavigationType } from '@shared/types';
 import { colors } from '@shared/theme';
@@ -25,7 +25,7 @@ const SpaceSwitcher = ({ navigation }: Props) => {
   const currentSpace = useAppSelector(selectCurrentSpace);
 
   const handleSelect = (spaceId: number) => {
-    dispatch(setCurrentSpaceId(spaceId));
+    dispatch(activateSpace(spaceId));
     sheetRef.current?.dismiss();
   };
 
