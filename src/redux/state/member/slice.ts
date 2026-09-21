@@ -1,5 +1,6 @@
 import { createSlice, isFulfilled, isPending, isRejected } from '@reduxjs/toolkit';
 
+import { INVITE_RATE_LIMIT_COOLDOWN_MS } from '@shared/constants';
 import { logoutMe } from '../auth/thunks';
 import { spaceContextChanged } from '../space/thunks';
 import initialState from './initialState';
@@ -15,8 +16,13 @@ const memberSlice = createSlice({
     // Drop the previous space's members immediately -- before its own
     // fetchMembers has even been dispatched -- and forget any in-flight
     // request for it (clearing requestId means a late response can no
-    // longer match).
-    builder.addCase(spaceContextChanged, (state) => ({ ...initialState, hasLoaded: state.hasLoaded }));
+    // longer match). inviteCooldownUntil survives -- the invite rate limit
+    // isn't scoped to one space.
+    builder.addCase(spaceContextChanged, (state) => ({
+      ...initialState,
+      hasLoaded: state.hasLoaded,
+      inviteCooldownUntil: state.inviteCooldownUntil,
+    }));
 
     builder.addCase(fetchMembers.pending, (state, action) => {
       state.requestId = action.meta.requestId;
@@ -28,6 +34,19 @@ const memberSlice = createSlice({
       state.members = action.payload;
       state.isLoading = false;
       state.hasLoaded = true;
+    });
+
+    builder.addCase(inviteMember.fulfilled, (state) => {
+      // A successful send is proof the window has actually reset, even if
+      // our own countdown (fallback or a previous Retry-After) hadn't hit
+      // zero yet.
+      state.inviteCooldownUntil = null;
+    });
+
+    builder.addCase(inviteMember.rejected, (state, action) => {
+      if (action.payload?.statusCode !== 429) return;
+
+      state.inviteCooldownUntil = Date.now() + (action.payload.retryAfterMs ?? INVITE_RATE_LIMIT_COOLDOWN_MS);
     });
 
     builder.addMatcher(

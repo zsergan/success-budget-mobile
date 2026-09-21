@@ -9,7 +9,7 @@ import styles from './style';
 interface Props {
   member: SpaceMember;
   isSelf: boolean;
-  onRemovePress: () => void;
+  onActionPress: () => void;
 }
 
 const getInitials = (name: string) =>
@@ -20,7 +20,7 @@ const getInitials = (name: string) =>
     .map((word) => word[0]?.toUpperCase())
     .join('');
 
-const MemberRow = ({ member, isSelf, onRemovePress }: Props) => {
+const MemberRow = ({ member, isSelf, onActionPress }: Props) => {
   const isInvite = member.type === 'invite';
   const tag = isInvite
     ? 'Invited'
@@ -63,7 +63,7 @@ const MemberRow = ({ member, isSelf, onRemovePress }: Props) => {
       </View>
 
       {member.can_remove && (
-        <TouchableOpacity style={styles.rowRemove} onPress={onRemovePress} hitSlop={8}>
+        <TouchableOpacity style={styles.rowRemove} onPress={onActionPress} hitSlop={8}>
           <Icon name="close" size={14} color={colors.danger} strokeWidth={2.1} />
         </TouchableOpacity>
       )}
