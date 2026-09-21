@@ -63,7 +63,7 @@ const LimitsScreen = () => {
         onClose={() => setDeletingLimit(undefined)}
       />
 
-      <SafeAreaView style={styles.root}>
+      <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <Text style={styles.title}>Limits</Text>
 

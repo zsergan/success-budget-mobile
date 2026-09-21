@@ -98,7 +98,7 @@ const TransactionsScreen = () => {
         <RangePickerSheet activeRange={activeRange} onApply={setActiveRange} />
       </BottomModal>
 
-      <SafeAreaView style={styles.root}>
+      <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <Text style={styles.title}>Transactions</Text>
 

@@ -64,7 +64,12 @@ const HomeScreen = ({ navigation }: Props) => {
         <TransactionForm initialWalletIndex={currentWalletIndex} transactionType={TransactionType.INCOME} />
       </BottomModal>
 
-      <RootLayout style={styles.container} contentContainerStyle={{ paddingBottom: FAB_SCROLL_CLEARANCE }} scrollable>
+      <RootLayout
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: FAB_SCROLL_CLEARANCE }}
+        edges={['top', 'left', 'right']}
+        scrollable
+      >
         <SpaceSwitcher navigation={navigation} />
 
         <View style={styles.hero}>
