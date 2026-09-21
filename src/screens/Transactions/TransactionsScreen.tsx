@@ -34,7 +34,7 @@ const TransactionsScreen = () => {
 
   return (
     <>
-      <TransactionComposer ref={composerRef} initialWalletId={firstWalletId} onDismiss={refetch} />
+      <TransactionComposer ref={composerRef} initialWalletId={firstWalletId} onSaved={refetch} />
 
       <BottomModal ref={rangePickerRef} dynamicSizing>
         <RangePickerSheet activeRange={activeRange} onApply={setActiveRange} />

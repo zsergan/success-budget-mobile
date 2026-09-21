@@ -29,9 +29,10 @@ const SNAP_FRACTION = parseFloat(TRANSACTION_FORM_SNAP_POINT) / 100;
 interface Props {
   initialWalletId: number;
   transactionType?: TransactionType;
+  onSaved?: () => void;
 }
 
-const TransactionForm = ({ initialWalletId, transactionType = TransactionType.EXPENSE }: Props) => {
+const TransactionForm = ({ initialWalletId, transactionType = TransactionType.EXPENSE, onSaved }: Props) => {
   const { height: windowHeight } = useWindowDimensions();
   const amountRef = useRef<TextInput>(null);
   const { wallets } = useAppSelector(selectWallet);
@@ -43,6 +44,7 @@ const TransactionForm = ({ initialWalletId, transactionType = TransactionType.EX
     useTransactionForm({
       transactionType,
       initialWalletId,
+      onSaved,
     });
 
   const selectedWalletId = watch('wallet_id');

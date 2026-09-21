@@ -31,9 +31,10 @@ const schema = yup.object().shape({
 interface UseTransactionFormProps {
   transactionType: TransactionType;
   initialWalletId: number;
+  onSaved?: () => void;
 }
 
-const useTransactionForm = ({ transactionType, initialWalletId }: UseTransactionFormProps) => {
+const useTransactionForm = ({ transactionType, initialWalletId, onSaved }: UseTransactionFormProps) => {
   const dispatch = useAppDispatch();
   const { close } = useBottomSheet();
 
@@ -72,7 +73,10 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
 
       return dispatch(addTransaction(payload)).unwrap();
     },
-    onSuccess: () => close(),
+    onSuccess: () => {
+      close();
+      onSaved?.();
+    },
     getInvalidMessage: (errors) =>
       [errors.amount && 'Enter an amount', errors.category_id && 'Select a category'].filter(Boolean).join('\n'),
     reset,

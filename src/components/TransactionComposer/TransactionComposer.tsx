@@ -12,13 +12,12 @@ export interface TransactionComposerHandle {
 
 interface Props {
   initialWalletId: number;
-  /** Temporary: fires on any close, including cancel. Superseded by an onSaved prop once forms report success. */
-  onDismiss?: () => void;
+  onSaved?: () => void;
 }
 
 // Home and Transactions each hand-rolled the same pair of income/expense
 // sheets plus present handlers -- this is that pairing, extracted once.
-const TransactionComposer = forwardRef<TransactionComposerHandle, Props>(({ initialWalletId, onDismiss }, ref) => {
+const TransactionComposer = forwardRef<TransactionComposerHandle, Props>(({ initialWalletId, onSaved }, ref) => {
   const expenseRef = useRef<BottomSheetModal>(null);
   const incomeRef = useRef<BottomSheetModal>(null);
 
@@ -29,12 +28,12 @@ const TransactionComposer = forwardRef<TransactionComposerHandle, Props>(({ init
 
   return (
     <>
-      <BottomModal ref={expenseRef} onDismiss={onDismiss} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
-        <TransactionForm initialWalletId={initialWalletId} />
+      <BottomModal ref={expenseRef} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
+        <TransactionForm initialWalletId={initialWalletId} onSaved={onSaved} />
       </BottomModal>
 
-      <BottomModal ref={incomeRef} onDismiss={onDismiss} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
-        <TransactionForm initialWalletId={initialWalletId} transactionType={TransactionType.INCOME} />
+      <BottomModal ref={incomeRef} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
+        <TransactionForm initialWalletId={initialWalletId} transactionType={TransactionType.INCOME} onSaved={onSaved} />
       </BottomModal>
     </>
   );
