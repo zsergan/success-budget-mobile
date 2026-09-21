@@ -25,7 +25,7 @@ const TransactionsScreen = () => {
   const handleOpenPicker = () => rangePickerRef.current?.present();
 
   const { activeRange, setActiveRange, setPresetRange, resetRange, jumpToMonthOf } = useTransactionRange();
-  const { transactions, viewState, latest, income, expense, currencyCode, refetch } = useTransactionsData({
+  const { transactions, viewState, latest, income, expense, currencyCode, refetch, retryLatest } = useTransactionsData({
     range: activeRange,
   });
 
@@ -68,6 +68,10 @@ const TransactionsScreen = () => {
             onJumpToLatest={() => jumpToMonthOf(latest.timestamp)}
           />
         )}
+
+        {viewState === 'rangeError' && <TransactionsEmptyState variant="rangeError" onRetry={refetch} />}
+
+        {viewState === 'latestError' && <TransactionsEmptyState variant="latestError" onRetry={retryLatest} />}
 
         {viewState === 'ready' && (
           <TransactionsList groups={groupTransactionsByDay(transactions, currencyCode)} currencyCode={currencyCode} />

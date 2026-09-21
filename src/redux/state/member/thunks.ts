@@ -8,7 +8,7 @@ import {
 } from '@api/member.api';
 import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
-import { activateSpace, fetchSpaces } from '../space/thunks';
+import { activateSpace, fetchSpaces, isSpaceContextCurrent } from '../space/thunks';
 
 export const fetchMembers = createAppAsyncThunk('member/fetchMembers', async (_: void, thunkAPI) => {
   const spaceId = thunkAPI.getState().space.currentSpaceId;
@@ -25,7 +25,7 @@ export const fetchMembers = createAppAsyncThunk('member/fetchMembers', async (_:
 });
 
 export const inviteMember = createAppAsyncThunk('member/inviteMember', async (email: string, thunkAPI) => {
-  const spaceId = thunkAPI.getState().space.currentSpaceId;
+  const { currentSpaceId: spaceId, contextKey } = thunkAPI.getState().space;
 
   if (spaceId === null) {
     return thunkAPI.rejectWithValue(undefined);
@@ -34,7 +34,13 @@ export const inviteMember = createAppAsyncThunk('member/inviteMember', async (em
   try {
     const invite = await inviteMemberRequest(spaceId, { email } satisfies InviteRequest);
 
-    thunkAPI.dispatch(fetchMembers());
+    // The user may have switched away from this space while the request
+    // was in flight -- its own activation already reset (and will reload)
+    // member state, so a refresh here would either be wasted or, worse,
+    // race that fresh load.
+    if (isSpaceContextCurrent(thunkAPI.getState, contextKey)) {
+      thunkAPI.dispatch(fetchMembers());
+    }
 
     return invite;
   } catch (error: unknown) {
@@ -43,7 +49,7 @@ export const inviteMember = createAppAsyncThunk('member/inviteMember', async (em
 });
 
 export const revokeInvite = createAppAsyncThunk('member/revokeInvite', async (inviteId: number, thunkAPI) => {
-  const spaceId = thunkAPI.getState().space.currentSpaceId;
+  const { currentSpaceId: spaceId, contextKey } = thunkAPI.getState().space;
 
   if (spaceId === null) {
     return thunkAPI.rejectWithValue(undefined);
@@ -52,7 +58,9 @@ export const revokeInvite = createAppAsyncThunk('member/revokeInvite', async (in
   try {
     await revokeInviteRequest(spaceId, inviteId);
 
-    thunkAPI.dispatch(fetchMembers());
+    if (isSpaceContextCurrent(thunkAPI.getState, contextKey)) {
+      thunkAPI.dispatch(fetchMembers());
+    }
   } catch (error: unknown) {
     return thunkAPI.rejectWithValue(getRejectValue(error));
   }
@@ -64,7 +72,7 @@ export const revokeInvite = createAppAsyncThunk('member/revokeInvite', async (in
 // that call can delete the space entirely, and re-fetching members for a
 // space you just lost access to would just 403/404.
 export const removeMember = createAppAsyncThunk('member/removeMember', async (userId: number, thunkAPI) => {
-  const spaceId = thunkAPI.getState().space.currentSpaceId;
+  const { currentSpaceId: spaceId, contextKey } = thunkAPI.getState().space;
 
   if (spaceId === null) {
     return thunkAPI.rejectWithValue(undefined);
@@ -73,8 +81,10 @@ export const removeMember = createAppAsyncThunk('member/removeMember', async (us
   try {
     await removeMemberRequest(spaceId, userId);
 
-    thunkAPI.dispatch(fetchMembers());
-    thunkAPI.dispatch(fetchSpaces());
+    if (isSpaceContextCurrent(thunkAPI.getState, contextKey)) {
+      thunkAPI.dispatch(fetchMembers());
+      thunkAPI.dispatch(fetchSpaces());
+    }
   } catch (error: unknown) {
     return thunkAPI.rejectWithValue(getRejectValue(error));
   }
@@ -94,11 +104,17 @@ export const leaveSpace = createAppAsyncThunk('member/leaveSpace', async (_: voi
     return thunkAPI.rejectWithValue(getRejectValue(error));
   }
 
-  // The left space is no longer a valid context for this session -- don't
-  // touch `member` state for it. fetchSpaces both refreshes the list and,
-  // via its own fallback logic, activates whatever space is valid next
-  // (which synchronously clears wallet/category/limit/transaction/member
-  // for the old space).
+  // The space we just left is invalid the instant the DELETE succeeds --
+  // don't wait on the spaces refresh (which can itself fail) to stop
+  // treating it as the active context. Only touch the active space if the
+  // user is still on the one just left; if they'd already switched away
+  // while this was in flight, leave their current selection alone.
+  if (thunkAPI.getState().space.currentSpaceId === currentSpaceId) {
+    thunkAPI.dispatch(activateSpace(null));
+  }
+
+  // fetchSpaces both refreshes the list and, via its own fallback logic,
+  // activates whatever space is valid next.
   try {
     await thunkAPI.dispatch(fetchSpaces()).unwrap();
   } catch {

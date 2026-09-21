@@ -3,7 +3,7 @@ import { logoutMe } from '../auth/thunks';
 import { spaceContextChanged } from '../space/thunks';
 import initialState from './initialState';
 import memberReducer from './slice';
-import { inviteMember } from './thunks';
+import { fetchMembers, inviteMember } from './thunks';
 
 const member = {
   type: 'member' as const,
@@ -98,5 +98,44 @@ describe('member slice', () => {
     const state = memberReducer(cooling, logoutMe.fulfilled(undefined, 'req-1', undefined));
 
     expect(state.inviteCooldownUntil).toBeNull();
+  });
+
+  describe('fetchMembers request identity', () => {
+    it('an old rejected members request must not stop the new context loading', () => {
+      const oldPending = memberReducer(initialState, fetchMembers.pending('old', undefined));
+      const switched = memberReducer(oldPending, spaceContextChanged({ spaceId: 2, contextKey: 1 }));
+      const newPending = memberReducer(switched, fetchMembers.pending('new', undefined));
+
+      const afterStaleReject = memberReducer(
+        newPending,
+        fetchMembers.rejected(new Error('old failed'), 'old', undefined, { statusCode: 500 } as never),
+      );
+
+      expect(afterStaleReject.isLoading).toBe(true);
+      expect(afterStaleReject.error).toBeUndefined();
+    });
+
+    it('an old fulfilled members request must not overwrite the new context list', () => {
+      const oldPending = memberReducer(initialState, fetchMembers.pending('old', undefined));
+      const switched = memberReducer(oldPending, spaceContextChanged({ spaceId: 2, contextKey: 1 }));
+      const newPending = memberReducer(switched, fetchMembers.pending('new', undefined));
+      const newApplied = memberReducer(newPending, fetchMembers.fulfilled([member], 'new', undefined));
+
+      const afterStale = memberReducer(newApplied, fetchMembers.fulfilled([], 'old', undefined));
+
+      expect(afterStale.members).toEqual([member]);
+    });
+
+    it('a mutation (invite/revoke/remove/leave/accept) settling does not toggle the members-list loading flag', () => {
+      const loadingList = memberReducer(initialState, fetchMembers.pending('req-1', undefined));
+
+      const afterInviteRejected = memberReducer(
+        loadingList,
+        inviteMember.rejected(new Error('failed'), 'invite-1', 'a@b.com', { statusCode: 400 } as never),
+      );
+
+      expect(afterInviteRejected.isLoading).toBe(true);
+      expect(afterInviteRejected.error).toBeUndefined();
+    });
   });
 });

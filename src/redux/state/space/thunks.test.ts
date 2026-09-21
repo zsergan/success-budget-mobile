@@ -189,6 +189,35 @@ describe('fetchSpaces fallback selection', () => {
   });
 });
 
+describe('fetchSpaces race with a newer request or explicit selection', () => {
+  const deferred = <T>() => {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((r) => (resolve = r));
+
+    return { promise, resolve };
+  };
+
+  it('an obsolete spaces response must not undo a newer selection', async () => {
+    const store = createTestStore();
+
+    store.dispatch(activateSpace(1));
+
+    const old = deferred<Space[]>();
+
+    mockedGetSpaces.mockReturnValueOnce(old.promise).mockResolvedValueOnce([space({ id: 1 }), space({ id: 2 })]);
+
+    const pending = store.dispatch(fetchSpaces());
+
+    await store.dispatch(fetchSpaces());
+    store.dispatch(activateSpace(2));
+
+    old.resolve([space({ id: 1 })]);
+    await pending;
+
+    expect(store.getState().space.currentSpaceId).toBe(2);
+  });
+});
+
 describe('logout / login contextKey uniqueness', () => {
   it('never repeats a contextKey across a logout, even after resetting other fields', () => {
     const store = createTestStore();

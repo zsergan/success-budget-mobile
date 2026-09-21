@@ -1,10 +1,10 @@
-import { createSlice, isFulfilled, isPending, isRejected } from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit';
 
 import { INVITE_RATE_LIMIT_COOLDOWN_MS } from '@shared/constants';
 import { logoutMe } from '../auth/thunks';
 import { spaceContextChanged } from '../space/thunks';
 import initialState from './initialState';
-import { acceptInvite, fetchMembers, inviteMember, leaveSpace, removeMember, revokeInvite } from './thunks';
+import { fetchMembers, inviteMember } from './thunks';
 
 const memberSlice = createSlice({
   name: 'member',
@@ -24,8 +24,23 @@ const memberSlice = createSlice({
       inviteCooldownUntil: state.inviteCooldownUntil,
     }));
 
+    // isLoading/error here describe reading the members list, nothing
+    // else -- inviteMember/revokeInvite/removeMember/leaveSpace/acceptInvite
+    // each own their own pending/error UI locally (useInviteMember,
+    // useMemberActions, useFormSubmitHandler for accept), so a mutation
+    // finishing must never flip this off mid-fetch, and a fetch's own
+    // pending/error must never look like a mutation is in flight.
     builder.addCase(fetchMembers.pending, (state, action) => {
+      state.isLoading = true;
+      state.error = undefined;
       state.requestId = action.meta.requestId;
+    });
+
+    builder.addCase(fetchMembers.rejected, (state, action) => {
+      if (action.meta.requestId !== state.requestId) return;
+
+      state.isLoading = false;
+      state.error = action.payload;
     });
 
     builder.addCase(fetchMembers.fulfilled, (state, action) => {
@@ -48,28 +63,6 @@ const memberSlice = createSlice({
 
       state.inviteCooldownUntil = Date.now() + (action.payload.retryAfterMs ?? INVITE_RATE_LIMIT_COOLDOWN_MS);
     });
-
-    builder.addMatcher(
-      isPending(fetchMembers, inviteMember, revokeInvite, removeMember, leaveSpace, acceptInvite),
-      (state) => {
-        state.isLoading = true;
-        state.error = undefined;
-      },
-    );
-
-    // fetchMembers.fulfilled already clears isLoading above; this covers the
-    // other five, none of which touch it themselves.
-    builder.addMatcher(isFulfilled(inviteMember, revokeInvite, removeMember, leaveSpace, acceptInvite), (state) => {
-      state.isLoading = false;
-    });
-
-    builder.addMatcher(
-      isRejected(fetchMembers, inviteMember, revokeInvite, removeMember, leaveSpace, acceptInvite),
-      (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload;
-      },
-    );
   },
 });
 

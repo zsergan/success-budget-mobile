@@ -3,7 +3,7 @@ import { createAction } from '@reduxjs/toolkit';
 import type { CreateSpaceRequest } from '@api/dto';
 import { getSpaces, createSpace, deleteSpace } from '@api/space.api';
 import { SpaceType } from '@shared/enums';
-import type { AppThunk } from '@redux/Store';
+import type { AppThunk, RootState } from '@redux/Store';
 import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
 // The one event that means "the active space identity changed". wallet,
@@ -26,6 +26,14 @@ export const activateSpace =
     dispatch(spaceContextChanged({ spaceId, contextKey: contextKey + 1 }));
   };
 
+// For a mutation thunk that captured space.contextKey before its request:
+// after the await, this tells it whether the space is still the one the
+// request actually ran against -- false means the user switched (or
+// logged out) while it was in flight, so its result must not drive a
+// refresh, revision bump, or any other now-irrelevant side effect.
+export const isSpaceContextCurrent = (getState: () => RootState, contextKey: number) =>
+  getState().space.contextKey === contextKey;
+
 const pickFallbackSpaceId = (spaces: { id: number; type: SpaceType }[]): number | null => {
   if (spaces.length === 0) return null;
 
@@ -42,10 +50,18 @@ const pickFallbackSpaceId = (spaces: { id: number; type: SpaceType }[]): number 
 export const fetchSpaces = createAppAsyncThunk('space/fetchSpaces', async (_: void, thunkAPI) => {
   try {
     const spaces = await getSpaces();
-    const { currentSpaceId } = thunkAPI.getState().space;
-    const stillValid = currentSpaceId !== null && spaces.some((space) => space.id === currentSpaceId);
 
-    thunkAPI.dispatch(activateSpace(stillValid ? currentSpaceId : pickFallbackSpaceId(spaces)));
+    // A newer fetchSpaces (or an explicit activateSpace the user made
+    // directly) may have already superseded this one -- only the request
+    // the slice still considers "current" gets to decide the fallback
+    // activation. Otherwise this response is stale data (it may not even
+    // include a space the user has since switched to) and must not act.
+    if (thunkAPI.getState().space.requestId === thunkAPI.requestId) {
+      const { currentSpaceId } = thunkAPI.getState().space;
+      const stillValid = currentSpaceId !== null && spaces.some((space) => space.id === currentSpaceId);
+
+      thunkAPI.dispatch(activateSpace(stillValid ? currentSpaceId : pickFallbackSpaceId(spaces)));
+    }
 
     return spaces;
   } catch (error: unknown) {

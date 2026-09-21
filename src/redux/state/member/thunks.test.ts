@@ -41,6 +41,7 @@ const createTestStore = () => configureStore({ reducer: testReducer });
 const createTestStoreAsUser = (profileId: number) => {
   const store = createTestStore();
 
+  store.dispatch(fetchProfile.pending('req-profile', undefined));
   store.dispatch(
     fetchProfile.fulfilled({ id: profileId, email: 'me@example.com', name: 'Me' }, 'req-profile', undefined),
   );
@@ -98,6 +99,36 @@ describe('leaveSpace', () => {
 
     expect(action.type).toBe('member/leaveSpace/rejected');
     expect(mockedRemoveMember).not.toHaveBeenCalled();
+  });
+
+  it('invalidates the left space immediately even when the follow-up GET spaces fails', async () => {
+    const store = createTestStoreAsUser(777);
+
+    store.dispatch(activateSpace(10));
+    mockedRemoveMember.mockResolvedValue(undefined);
+    mockedGetSpaces.mockRejectedValue({ response: { data: { statusCode: 500 } } });
+
+    await store.dispatch(leaveSpace());
+
+    expect(store.getState().space.currentSpaceId).not.toBe(10);
+  });
+
+  it('does not touch the current space if the user already switched away before the DELETE resolved', async () => {
+    const store = createTestStoreAsUser(777);
+
+    store.dispatch(activateSpace(10));
+
+    let resolveRemove!: () => void;
+    mockedRemoveMember.mockReturnValue(new Promise((resolve) => (resolveRemove = () => resolve(undefined))));
+    mockedGetSpaces.mockResolvedValue([space({ id: 30, type: SpaceType.GROUP })]);
+
+    const pending = store.dispatch(leaveSpace());
+
+    store.dispatch(activateSpace(30));
+    resolveRemove();
+    await pending;
+
+    expect(store.getState().space.currentSpaceId).toBe(30);
   });
 });
 

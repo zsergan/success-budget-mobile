@@ -15,11 +15,13 @@ type Props =
       activeRange: DateRange;
       onResetRange: () => void;
       onJumpToLatest: () => void;
-    };
+    }
+  | { variant: 'rangeError'; onRetry: () => void }
+  | { variant: 'latestError'; onRetry: () => void };
 
 const TransactionsEmptyState = (props: Props) => (
   <View style={styles.emptyContainer}>
-    {props.variant === 'trueEmpty' ? (
+    {props.variant === 'trueEmpty' && (
       <EmptyState
         icon="list"
         title="No transactions yet"
@@ -28,7 +30,9 @@ const TransactionsEmptyState = (props: Props) => (
         actionIcon="plus"
         onActionPress={props.onAddTransaction}
       />
-    ) : (
+    )}
+
+    {props.variant === 'filteredEmpty' && (
       <EmptyState
         variant="solid"
         icon="calendar"
@@ -39,6 +43,26 @@ const TransactionsEmptyState = (props: Props) => (
         onActionPress={props.onResetRange}
         secondaryActionLabel={`Jump to ${formatDateDDMMYYYY(props.latest.timestamp)}`}
         onSecondaryActionPress={props.onJumpToLatest}
+      />
+    )}
+
+    {props.variant === 'rangeError' && (
+      <EmptyState
+        icon="list"
+        title="Couldn't load this period"
+        description="Check your connection and try again."
+        actionLabel="Retry"
+        onActionPress={props.onRetry}
+      />
+    )}
+
+    {props.variant === 'latestError' && (
+      <EmptyState
+        icon="list"
+        title="Couldn't confirm this is empty"
+        description="This period has no transactions, but we couldn't check the rest of your history to be sure. Try again."
+        actionLabel="Retry"
+        onActionPress={props.onRetry}
       />
     )}
   </View>

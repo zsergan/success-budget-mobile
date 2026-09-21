@@ -7,7 +7,10 @@ export const selectTransaction = (state: RootState) => state.transaction;
 
 export const selectRangeTransactions = (state: RootState) => state.transaction.rangeTransactions;
 export const selectIsLoadingRange = (state: RootState) => state.transaction.isLoadingRange;
+export const selectRangeError = (state: RootState) => state.transaction.rangeError;
 export const selectLatestTransaction = (state: RootState) => state.transaction.latest;
+export const selectIsLoadingLatest = (state: RootState) => state.transaction.isLoadingLatest;
+export const selectLatestError = (state: RootState) => state.transaction.latestError;
 export const selectDataRevision = (state: RootState) => state.transaction.dataRevision;
 
 // A space has exactly one currency, so every transaction in it is already in
