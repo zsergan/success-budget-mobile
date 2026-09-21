@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 
 import type { LimitModel } from '@api/models';
-import type { LimitScope } from '../LimitEditor/useLimitEditorForm';
+import type { LimitScope } from '../LimitEditor/types';
 
 interface EditorTarget {
   limit?: LimitModel;

@@ -11,7 +11,7 @@ import { selectLimit } from '@redux/state/limit/selectors';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import { formatCurrencyAmount, hexToRgba } from '@shared/utils';
 import theme, { colors } from '@shared/theme';
-import type { LimitScope } from './useLimitEditorForm';
+import type { LimitScope } from './types';
 import useLimitEditorForm from './useLimitEditorForm';
 
 import styles from './style';

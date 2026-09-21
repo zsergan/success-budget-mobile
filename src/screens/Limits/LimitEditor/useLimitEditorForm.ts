@@ -10,8 +10,7 @@ import { useAppDispatch } from '@redux/hooks';
 import { addLimit, editLimit } from '@redux/state/limit/thunks';
 import { amountSchema } from '@shared/utils';
 import { useFormSubmitHandler } from '@hooks';
-
-export type LimitScope = 'category' | 'group' | 'total';
+import type { LimitScope } from './types';
 
 interface LimitFormData {
   scope: LimitScope;
