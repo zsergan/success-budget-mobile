@@ -10,7 +10,7 @@ import { addTransaction } from '@redux/state/transaction/thunks';
 import { amountSchema } from '@shared/utils';
 import { useFormSubmitHandler } from '@hooks';
 
-interface TransactionFormData {
+export interface TransactionFormData {
   amount: string;
   wallet_id: number;
   transaction_type: TransactionType;
