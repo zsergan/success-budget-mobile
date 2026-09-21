@@ -36,9 +36,11 @@ const RootLayout = ({ children, scrollable, style, contentContainerStyle }: Prop
     <SafeAreaView style={styles.root}>
       <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <Container style={style} contentContainerStyle={contentContainerStyle}>
-            {children}
-          </Container>
+          <View style={styles.root}>
+            <Container style={style} contentContainerStyle={contentContainerStyle}>
+              {children}
+            </Container>
+          </View>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </SafeAreaView>
