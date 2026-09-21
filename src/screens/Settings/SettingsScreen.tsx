@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
-import { BottomModal, RootLayout, SectionTitle } from '@components';
+import { RootLayout, SectionTitle } from '@components';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { logoutMe } from '@redux/state/auth/thunks';
 import { selectCategory } from '@redux/state/category/selectors';
@@ -19,6 +19,7 @@ import ThemeRow from './components/ThemeRow/ThemeRow';
 import SpaceSettingsSection from './components/SpaceSettingsSection/SpaceSettingsSection';
 import ManagementSettingsSection from './components/ManagementSettingsSection/ManagementSettingsSection';
 import AccountSettingsSection from './components/AccountSettingsSection/AccountSettingsSection';
+import LogoutDialog from './components/LogoutDialog/LogoutDialog';
 
 import styles from './style';
 
@@ -77,18 +78,10 @@ const SettingsScreen = ({ navigation }: Props) => {
         />
       </View>
 
-      <BottomModal
+      <LogoutDialog
         isVisible={isLogoutConfirmVisible}
         onClose={() => setIsLogoutConfirmVisible(false)}
-        content={
-          <>
-            <Text style={styles.confirmText}>Log out of your account?</Text>
-            <Text style={styles.confirmSubtext}>
-              Your data stays on the server. Sign back in with the same email and password.
-            </Text>
-          </>
-        }
-        actions={[{ title: 'Log out', onPress: handleConfirmLogout }]}
+        onConfirm={handleConfirmLogout}
       />
 
       <DeleteAccountDialog isVisible={isDeleteAccountVisible} onClose={() => setIsDeleteAccountVisible(false)} />
