@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 import theme, { colors } from '@shared/theme';
+import { FAB_SCROLL_CLEARANCE } from '@shared/constants';
 
 const styles = StyleSheet.create({
   root: {
@@ -50,7 +51,7 @@ const styles = StyleSheet.create({
   },
   container: {
     paddingHorizontal: theme.spacing.xl,
-    paddingBottom: theme.spacing.xxl + 70,
+    paddingBottom: FAB_SCROLL_CLEARANCE,
     rowGap: theme.spacing.lg,
   },
   emptyBlock: {

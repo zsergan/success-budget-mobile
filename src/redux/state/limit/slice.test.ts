@@ -45,6 +45,7 @@ describe('limit slice', () => {
     expect(state.categoryLimits).toEqual([groceries]);
     expect(state.overAllocation).toEqual(payload.overAllocation);
     expect(state.isLoading).toBe(false);
+    expect(state.hasLoaded).toBe(true);
   });
 
   it('records the server error on a rejected limit thunk (fetch, add, edit, or remove)', () => {
@@ -79,6 +80,7 @@ describe('limit slice', () => {
       overAllocation: null,
       isLoading: false,
       isDeleting: false,
+      hasLoaded: true,
       error: errorResponse,
     };
 

@@ -38,6 +38,7 @@ describe('category slice', () => {
     expect(state.expenses).toEqual(payload.expenses);
     expect(state.archived).toEqual(payload.archived);
     expect(state.isLoading).toBe(false);
+    expect(state.hasLoaded).toBe(true);
   });
 
   it('tracks isDeleting across a deleteCategory request', () => {
@@ -87,6 +88,7 @@ describe('category slice', () => {
       archived: [],
       isLoading: false,
       isDeleting: false,
+      hasLoaded: true,
       error: errorResponse,
     };
 

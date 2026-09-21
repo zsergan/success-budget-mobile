@@ -27,6 +27,7 @@ const transactionSlice = createSlice({
 
       state.transactions = action.payload;
       state.isLoading = false;
+      state.hasLoaded = true;
     });
 
     builder.addCase(fetchTransactionsInRange.pending, (state, action) => {

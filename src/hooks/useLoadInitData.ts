@@ -23,9 +23,9 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   const { isLoading: isSpaceLoading } = useAppSelector(selectSpace);
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
   const { isLoading: isWalletLoading, hasLoaded: hasWalletsLoaded } = useAppSelector(selectWallet);
-  const { isLoading: isLimitsLoading } = useAppSelector(selectLimit);
-  const { isLoading: isCategoryLoading } = useAppSelector(selectCategory);
-  const { isLoading: isTransactionLoading } = useAppSelector(selectTransaction);
+  const { isLoading: isLimitsLoading, hasLoaded: hasLimitsLoaded } = useAppSelector(selectLimit);
+  const { isLoading: isCategoryLoading, hasLoaded: hasCategoriesLoaded } = useAppSelector(selectCategory);
+  const { isLoading: isTransactionLoading, hasLoaded: hasTransactionsLoaded } = useAppSelector(selectTransaction);
   const { isLoading: isProfileLoading } = useAppSelector(selectProfile);
 
   useEffect(() => {
@@ -55,21 +55,27 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   // LOADING_SCREEN for it.
   const isInitialSpaceLoad = isSpaceLoading && currentSpaceId === null;
 
-  // Same problem as space: addWallet/editWallet/removeWallet re-dispatch
-  // fetchWallets in the background, so isWalletLoading flips true well
-  // after the initial load too. Gating the whole app on it then would tear
-  // down and remount the entire signed-in navigator mid-mutation, breaking
-  // any pending navigation.goBack() (e.g. right after creating a wallet).
+  // Same problem as space, and the same fix, for every other domain whose
+  // mutation thunks re-dispatch their own list fetch in the background
+  // (addWallet/editWallet/removeWallet -> fetchWallets; addLimit/editLimit/
+  // removeLimit -> fetchLimits; addCategory/editCategory/deleteCategory/
+  // reorderCategories -> fetchCategories; addTransaction -> fetchTransactions).
+  // Gating the whole app on any of these raw flags would tear down and
+  // remount the entire signed-in navigator mid-mutation, breaking any
+  // pending navigation.goBack() or dropping the user back on the Home tab.
   const isInitialWalletLoad = isWalletLoading && !hasWalletsLoaded;
+  const isInitialLimitsLoad = isLimitsLoading && !hasLimitsLoaded;
+  const isInitialCategoryLoad = isCategoryLoading && !hasCategoriesLoaded;
+  const isInitialTransactionLoad = isTransactionLoading && !hasTransactionsLoaded;
 
   return {
     isLoading:
       isSignedIn &&
       (isInitialSpaceLoad ||
         isInitialWalletLoad ||
-        isLimitsLoading ||
-        isCategoryLoading ||
-        isTransactionLoading ||
+        isInitialLimitsLoad ||
+        isInitialCategoryLoad ||
+        isInitialTransactionLoad ||
         isProfileLoading),
   };
 };

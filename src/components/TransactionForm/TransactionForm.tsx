@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform, Text, TextInput, useWindowDimensions, View, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Controller } from 'react-hook-form';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 
 import DateTimePicker from '@components/Form/DateTimePicker/DateTimePicker';
 import Icon from '@components/Icon/Icon';
@@ -378,7 +378,7 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
               name="notes"
               control={control}
               render={({ field: { onChange, value } }) => (
-                <TextInput
+                <BottomSheetTextInput
                   style={styles.note}
                   value={value}
                   onChangeText={onChange}

@@ -29,6 +29,7 @@ const limitSlice = createSlice({
       state.categoryLimits = action.payload.categoryLimits;
       state.overAllocation = action.payload.overAllocation;
       state.isLoading = false;
+      state.hasLoaded = true;
     });
 
     builder.addCase(removeLimit.pending, (state) => {

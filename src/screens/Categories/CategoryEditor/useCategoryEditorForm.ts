@@ -13,7 +13,7 @@ import type { IconType } from '@shared/types';
 import { CATEGORY_ICON_LIST } from '@shared/icons';
 import { useFormSubmitHandler } from '@hooks';
 
-export const NAME_MAX_LENGTH = 24;
+export const NAME_MAX_LENGTH = 20;
 
 interface CategoryEditorFormData {
   name: string;
@@ -43,6 +43,7 @@ const useCategoryEditorForm = ({ category, defaultTransactionType }: UseCategory
     control,
     handleSubmit,
     watch,
+    reset,
     formState: { isSubmitting, isSubmitSuccessful },
   } = useForm({
     resolver: yupResolver(schema),
@@ -79,6 +80,7 @@ const useCategoryEditorForm = ({ category, defaultTransactionType }: UseCategory
     },
     onSuccess: () => close(),
     getInvalidMessage: (errors) => [errors.name && 'Enter a category name'].filter(Boolean).join('\n'),
+    reset,
   });
 
   return {

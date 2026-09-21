@@ -9,6 +9,15 @@ interface UseFormSubmitHandlerOptions<TFormData extends FieldValues> {
   onSubmit: (formData: TFormData) => Promise<unknown>;
   onSuccess: () => void;
   getInvalidMessage: (errors: FieldErrors<TFormData>) => string;
+  /**
+   * react-hook-form's own reset(), called right after a successful submit.
+   * isSubmitSuccessful otherwise never clears on its own, so a form whose
+   * instance survives the submit (e.g. a bottom sheet that stays mounted
+   * and is just re-presented) has its submit button silently stuck disabled
+   * on every later open. Screens that unmount on success (e.g. via
+   * navigation.goBack()) don't need this, but passing it is harmless.
+   */
+  reset?: () => void;
 }
 
 // dispatch().unwrap() resolves even on a rejected action, so we await it
@@ -19,12 +28,14 @@ const useFormSubmitHandler = <TFormData extends FieldValues>({
   onSubmit,
   onSuccess,
   getInvalidMessage,
+  reset,
 }: UseFormSubmitHandlerOptions<TFormData>) => {
   const { addAlert } = useAlert();
 
   const submit = async (formData: TFormData) => {
     try {
       await onSubmit(formData);
+      reset?.();
       onSuccess();
     } catch (error) {
       addAlert(getErrorMessage(error));

@@ -22,6 +22,7 @@ import { useBalanceVisibility } from '@hooks';
 import { ScreenNames, TransactionType } from '@shared/enums';
 import type { ScreenProps } from '@shared/types';
 import { colors } from '@shared/theme';
+import { FAB_SCROLL_CLEARANCE } from '@shared/constants';
 import { formatNumber, groupTransactionsByDay } from '@shared/utils';
 import Wallets from './Wallets/Wallets';
 
@@ -63,7 +64,12 @@ const HomeScreen = ({ navigation }: Props) => {
         <TransactionForm initialWalletIndex={currentWalletIndex} transactionType={TransactionType.INCOME} />
       </BottomModal>
 
-      <RootLayout style={styles.container} scrollable>
+      <RootLayout
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: FAB_SCROLL_CLEARANCE }}
+        edges={['top', 'left', 'right']}
+        scrollable
+      >
         <SpaceSwitcher navigation={navigation} />
 
         <View style={styles.hero}>

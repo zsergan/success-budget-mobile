@@ -48,7 +48,7 @@ const SettingsScreen = ({ navigation }: Props) => {
   const walletsLabel = `${walletsCount} wallet${walletsCount === 1 ? '' : 's'} in this space`;
 
   return (
-    <RootLayout style={styles.root} scrollable>
+    <RootLayout style={styles.root} edges={['top', 'left', 'right']} scrollable>
       <SectionTitle title="Settings" />
 
       <View style={styles.scrollContent}>

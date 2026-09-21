@@ -40,7 +40,7 @@ const useLimitEditorForm = ({ limit, initialScope = 'category' }: UseLimitEditor
   const { close } = useBottomSheet();
   const [nameTouched, setNameTouched] = useState(false);
 
-  const { control, handleSubmit, watch, setValue, formState } = useForm({
+  const { control, handleSubmit, watch, setValue, reset, formState } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
       scope: limit ? scopeForLimit(limit) : initialScope,
@@ -100,6 +100,7 @@ const useLimitEditorForm = ({ limit, initialScope = 'category' }: UseLimitEditor
     },
     onSuccess: () => close(),
     getInvalidMessage: (errors) => (errors.amount ? 'Enter an amount' : ''),
+    reset,
   });
 
   return {
