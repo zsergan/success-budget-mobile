@@ -29,6 +29,7 @@ const categorySlice = createSlice({
       state.expenses = action.payload.expenses;
       state.archived = action.payload.archived;
       state.isLoading = false;
+      state.hasLoaded = true;
     });
 
     builder.addCase(deleteCategory.pending, (state) => {

@@ -4,6 +4,10 @@ import type { TransactionModel } from '@api/models';
 interface InitialState {
   transactions: TransactionModel[];
   isLoading: boolean;
+  // True once fetchTransactions has resolved at least once — lets useLoadInitData
+  // tell the true initial load apart from a background refresh (addTransaction
+  // re-dispatches fetchTransactions).
+  hasLoaded: boolean;
   // Guards against an older fetch resolving after a newer one (e.g. a fast
   // space switch) and clobbering it — only the fulfilled/rejected action
   // matching this id is applied.
@@ -26,6 +30,7 @@ interface InitialState {
 const initialState: InitialState = {
   transactions: [],
   isLoading: false,
+  hasLoaded: false,
   requestId: undefined,
   rangeTransactions: [],
   isLoadingRange: false,
