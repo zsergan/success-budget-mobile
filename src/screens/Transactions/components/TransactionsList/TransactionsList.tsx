@@ -1,40 +1,60 @@
-import { ScrollView, Text, View } from 'react-native';
+import { SectionList, Text, View } from 'react-native';
 
 import { TransactionCard } from '@components';
+import type { TransactionModel } from '@api/models';
 import type { TransactionGroup } from '@shared/utils';
 import { formatSignedAmount } from '@shared/utils';
 
 import styles from './style';
+
+interface Section {
+  title: string;
+  total?: number;
+  currencyCode?: string;
+  /** The first header sits right under the filter bar and needs no gap above it. */
+  isFirst: boolean;
+  data: TransactionModel[];
+}
+
+const ItemSeparator = () => <View style={styles.itemSeparator} />;
 
 interface Props {
   groups: TransactionGroup[];
   currencyCode?: string;
 }
 
-const TransactionsList = ({ groups, currencyCode }: Props) => (
-  <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
-    <View style={styles.container}>
-      {groups.map((group) => (
-        <View key={group.label} style={styles.group}>
-          <View style={styles.groupHeader}>
-            <Text style={styles.groupLabel}>{group.label}</Text>
+const TransactionsList = ({ groups, currencyCode }: Props) => {
+  const sections: Section[] = groups.map((group, index) => ({
+    title: group.label,
+    total: group.total,
+    currencyCode: group.currencyCode,
+    isFirst: index === 0,
+    data: group.items,
+  }));
 
-            {group.total !== undefined && (
-              <Text style={[styles.groupTotal, group.total >= 0 && styles.groupTotalPositive]}>
-                {formatSignedAmount(group.total, group.currencyCode)}
-              </Text>
-            )}
-          </View>
+  return (
+    <SectionList
+      style={styles.body}
+      contentContainerStyle={styles.container}
+      sections={sections}
+      keyExtractor={(item) => item.id}
+      stickySectionHeadersEnabled={false}
+      showsVerticalScrollIndicator={false}
+      ItemSeparatorComponent={ItemSeparator}
+      renderSectionHeader={({ section }) => (
+        <View style={[styles.groupHeader, !section.isFirst && styles.groupHeaderSpaced]}>
+          <Text style={styles.groupLabel}>{section.title}</Text>
 
-          <View style={styles.groupItems}>
-            {group.items.map((transaction) => (
-              <TransactionCard key={transaction.id} transaction={transaction} currencyCode={currencyCode} />
-            ))}
-          </View>
+          {section.total !== undefined && (
+            <Text style={[styles.groupTotal, section.total >= 0 && styles.groupTotalPositive]}>
+              {formatSignedAmount(section.total, section.currencyCode)}
+            </Text>
+          )}
         </View>
-      ))}
-    </View>
-  </ScrollView>
-);
+      )}
+      renderItem={({ item }) => <TransactionCard transaction={item} currencyCode={currencyCode} />}
+    />
+  );
+};
 
 export default TransactionsList;
