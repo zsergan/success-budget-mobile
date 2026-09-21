@@ -1,5 +1,3 @@
-import type { AxiosError } from 'axios';
-
 import type { CreateTransactionRequest, CreateTransactionResponse, Transaction } from '@api/dto';
 import { mapTransaction } from '@api/models';
 import { ApiClient } from './instance';
@@ -21,17 +19,9 @@ export const createTransaction = async (spaceId: number, payload: CreateTransact
 };
 
 export const getLatestTransaction = async (spaceId: number) => {
-  try {
-    const response = await api.get<Transaction>(`/spaces/${spaceId}/transactions/latest`);
+  const response = await api.get<Transaction | null>(`/spaces/${spaceId}/transactions/latest`);
 
-    return mapTransaction(response.data);
-  } catch (error) {
-    if ((error as AxiosError).response?.status === 404) {
-      return null;
-    }
-
-    throw error;
-  }
+  return response.data ? mapTransaction(response.data) : null;
 };
 
 export const deleteTransaction = async (spaceId: number, transactionId: string) => {

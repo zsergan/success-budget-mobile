@@ -33,8 +33,10 @@ export const SPACE_LIMITS = {
 
 export const INVITE_EXPIRY_DAYS = 7;
 
-// The invite endpoint is rate-limited to 5/60s on the backend; the API returns no
-// Retry-After header, so this is a fixed cooldown matching that window rather than a precise one.
+// The invite endpoint is rate-limited to 5/60s on the backend via
+// ThrottlerGuard, which does send a Retry-After header -- prefer
+// `error.retryAfterMs` (see getRejectValue) and only fall back to this
+// fixed window when the header is missing or unparsable.
 export const INVITE_RATE_LIMIT_COOLDOWN_MS = 60_000;
 
 // Wallet-card gradient presets, paired per color scheme like the rest of the theme (angle/stops in WalletGradientBackground.tsx).
