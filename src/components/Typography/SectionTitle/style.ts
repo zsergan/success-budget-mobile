@@ -27,6 +27,11 @@ const styles = StyleSheet.create({
     lineHeight: theme.lineHeights.label,
     color: colors.text,
   },
+  headerTitle: {
+    fontSize: theme.fontSizes.titleSm,
+    lineHeight: theme.lineHeights.titleSm,
+    letterSpacing: theme.letterSpacing.titleSm,
+  },
 });
 
 export default styles;

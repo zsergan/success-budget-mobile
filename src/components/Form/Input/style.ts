@@ -12,6 +12,8 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.bodyLg,
     lineHeight: theme.lineHeights.bodyLg,
+    // Plus Jakarta Sans Medium collapses the space between words here; see cde3346.
+    letterSpacing: 0.2,
     borderRadius: theme.radius.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -24,6 +26,10 @@ const styles = StyleSheet.create({
   withError: {
     borderWidth: 1.5,
     borderColor: colors.danger,
+  },
+  disabledInput: {
+    backgroundColor: colors.track,
+    color: colors.muted,
   },
   inputWithLeftIcon: {
     paddingLeft: theme.spacing.lg + 32 + theme.spacing.md,

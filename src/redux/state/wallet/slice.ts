@@ -30,6 +30,7 @@ const walletSlice = createSlice({
       state.totalBalanceCurrency = action.payload.total_balance_currency;
       state.deltaPercent = action.payload.delta_percent;
       state.isLoading = false;
+      state.hasLoaded = true;
     });
 
     builder.addMatcher(isPending(fetchWallets, addWallet, editWallet, removeWallet), (state) => {

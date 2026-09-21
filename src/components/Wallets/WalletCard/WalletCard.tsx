@@ -17,6 +17,8 @@ export interface WalletCardProps {
   totalSpend: number;
   design?: AppColor;
   onMorePress?: () => void;
+  /** Small pill shown in place of the "more" button, e.g. "PREVIEW" on the create-wallet live preview. */
+  badgeLabel?: string;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -28,6 +30,7 @@ const WalletCard = ({
   totalSpend,
   design = AppColor.SLATE,
   onMorePress,
+  badgeLabel,
   style,
 }: WalletCardProps) => {
   const { fg, dim, inner } = walletTextColors[resolveAppColor(design)];
@@ -40,13 +43,21 @@ const WalletCard = ({
         <View>
           <Text style={[styles.name, { color: dim }]}>{walletName}</Text>
 
-          <Text style={[styles.balance, { color: fg }]}>{formatCurrencyAmount(Number(balance), currencyCode)}</Text>
+          <Text style={[styles.balance, { color: fg }]}>
+            {formatCurrencyAmount(Number(balance) || 0, currencyCode)}
+          </Text>
         </View>
 
         {onMorePress && (
           <TouchableOpacity onPress={onMorePress} hitSlop={8}>
             <Icon name="more" size={18} color={dim} />
           </TouchableOpacity>
+        )}
+
+        {badgeLabel && (
+          <View style={[styles.badge, { backgroundColor: inner }]}>
+            <Text style={[styles.badgeText, { color: fg }]}>{badgeLabel}</Text>
+          </View>
         )}
       </View>
 

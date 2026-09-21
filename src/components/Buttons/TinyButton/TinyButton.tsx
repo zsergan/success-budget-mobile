@@ -10,12 +10,13 @@ import styles from './style';
 const iconSize = {
   sm: 13,
   md: 14,
+  lg: 16,
 };
 
 export interface TinyButtonProps {
   onPress?: () => void;
   onLongPress?: (event: GestureResponderEvent) => void;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   /** 'filled' (default) is the track-colored chip; 'plain' is bare icon/text, no box — for link-style actions like "See all". */
   variant?: 'filled' | 'plain';
   title?: string;

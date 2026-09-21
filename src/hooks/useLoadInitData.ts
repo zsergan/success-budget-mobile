@@ -22,7 +22,7 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   const dispatch = useAppDispatch();
   const { isLoading: isSpaceLoading } = useAppSelector(selectSpace);
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
-  const { isLoading: isWalletLoading } = useAppSelector(selectWallet);
+  const { isLoading: isWalletLoading, hasLoaded: hasWalletsLoaded } = useAppSelector(selectWallet);
   const { isLoading: isLimitsLoading } = useAppSelector(selectLimit);
   const { isLoading: isCategoryLoading } = useAppSelector(selectCategory);
   const { isLoading: isTransactionLoading } = useAppSelector(selectTransaction);
@@ -55,11 +55,18 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   // LOADING_SCREEN for it.
   const isInitialSpaceLoad = isSpaceLoading && currentSpaceId === null;
 
+  // Same problem as space: addWallet/editWallet/removeWallet re-dispatch
+  // fetchWallets in the background, so isWalletLoading flips true well
+  // after the initial load too. Gating the whole app on it then would tear
+  // down and remount the entire signed-in navigator mid-mutation, breaking
+  // any pending navigation.goBack() (e.g. right after creating a wallet).
+  const isInitialWalletLoad = isWalletLoading && !hasWalletsLoaded;
+
   return {
     isLoading:
       isSignedIn &&
       (isInitialSpaceLoad ||
-        isWalletLoading ||
+        isInitialWalletLoad ||
         isLimitsLoading ||
         isCategoryLoading ||
         isTransactionLoading ||

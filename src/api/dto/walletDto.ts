@@ -23,7 +23,7 @@ export interface WalletsOverviewResponse {
 
 export interface CreateWalletRequest {
   wallet_name: string;
-  initial_balance: number;
+  initial_balance: string;
   design: AppColor;
 }
 

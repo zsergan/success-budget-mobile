@@ -39,6 +39,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     columnGap: theme.spacing.sm,
   },
+  badge: {
+    height: 22,
+    paddingHorizontal: theme.spacing.sm,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    fontFamily: theme.fonts.semiBold,
+    fontSize: 10,
+    letterSpacing: 0.4,
+  },
   totalBlock: {
     flex: 1,
     borderRadius: theme.spacing.md,
