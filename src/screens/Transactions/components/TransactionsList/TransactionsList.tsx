@@ -2,7 +2,7 @@ import { ScrollView, Text, View } from 'react-native';
 
 import { TransactionCard } from '@components';
 import type { TransactionGroup } from '@shared/utils';
-import { formatNumber } from '@shared/utils';
+import { formatSignedAmount } from '@shared/utils';
 
 import styles from './style';
 
@@ -21,9 +21,7 @@ const TransactionsList = ({ groups, currencyCode }: Props) => (
 
             {group.total !== undefined && (
               <Text style={[styles.groupTotal, group.total >= 0 && styles.groupTotalPositive]}>
-                {`${group.total >= 0 ? '+' : '-'}${formatNumber(Math.abs(group.total))}${
-                  group.currencyCode ? ` ${group.currencyCode}` : ''
-                }`}
+                {formatSignedAmount(group.total, group.currencyCode)}
               </Text>
             )}
           </View>

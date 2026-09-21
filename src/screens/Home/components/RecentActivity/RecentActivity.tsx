@@ -4,7 +4,7 @@ import { EmptyState, SectionTitle, TinyButton, TransactionCard } from '@componen
 import type { TransactionModel } from '@api/models';
 import type { NavigationType } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
-import { formatNumber, groupTransactionsByDay } from '@shared/utils';
+import { formatSignedAmount, groupTransactionsByDay } from '@shared/utils';
 
 import styles from './style';
 
@@ -53,11 +53,7 @@ const RecentActivity = ({ navigation, transactions, currencyCode, hasWallets }: 
                   <Text style={styles.groupLabel}>{group.label}</Text>
 
                   {group.total !== undefined && (
-                    <Text style={styles.groupTotal}>
-                      {`${group.total >= 0 ? '+' : '-'}${formatNumber(Math.abs(group.total))}${
-                        group.currencyCode ? ` ${group.currencyCode}` : ''
-                      }`}
-                    </Text>
+                    <Text style={styles.groupTotal}>{formatSignedAmount(group.total, group.currencyCode)}</Text>
                   )}
                 </View>
 
