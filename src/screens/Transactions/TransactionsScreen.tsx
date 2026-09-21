@@ -14,6 +14,7 @@ import {
 } from '@redux/state/transaction/selectors';
 import { fetchLatestTransaction, fetchTransactionsInRange } from '@redux/state/transaction/thunks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
+import { selectWallet } from '@redux/state/wallet/selectors';
 import { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
 import type { DateRange } from '@shared/utils';
@@ -50,6 +51,8 @@ const TransactionsScreen = () => {
   const latest = useAppSelector(selectLatestTransaction);
   const { income, expense, currencyCode } = useAppSelector(selectPeriodTotals);
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
+  const { wallets } = useAppSelector(selectWallet);
+  const firstWalletId = wallets[0]?.wallet.id ?? -1;
 
   const refreshRange = () => dispatch(fetchTransactionsInRange({ from: activeRange.from, to: activeRange.to }));
 
@@ -87,11 +90,11 @@ const TransactionsScreen = () => {
   return (
     <>
       <BottomModal ref={expenseBottomSheetRef} onDismiss={refreshRange} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
-        <TransactionForm initialWalletIndex={0} />
+        <TransactionForm initialWalletId={firstWalletId} />
       </BottomModal>
 
       <BottomModal ref={incomeBottomSheetRef} onDismiss={refreshRange} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
-        <TransactionForm initialWalletIndex={0} transactionType={TransactionType.INCOME} />
+        <TransactionForm initialWalletId={firstWalletId} transactionType={TransactionType.INCOME} />
       </BottomModal>
 
       <BottomModal ref={rangePickerRef} dynamicSizing>

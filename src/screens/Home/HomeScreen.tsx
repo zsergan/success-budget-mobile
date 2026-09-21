@@ -53,15 +53,16 @@ const HomeScreen = ({ navigation }: Props) => {
   const deltaBg = deltaNeutral ? colors.track : `${deltaFg}26`;
 
   const recentGroups = groupTransactionsByDay(transactions.slice(0, RECENT_TRANSACTIONS_LIMIT), currencyCode);
+  const currentWalletId = wallets[currentWalletIndex]?.wallet.id ?? -1;
 
   return (
     <>
       <BottomModal ref={expenseBottomSheetRef} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
-        <TransactionForm initialWalletIndex={currentWalletIndex} />
+        <TransactionForm initialWalletId={currentWalletId} />
       </BottomModal>
 
       <BottomModal ref={incomeBottomSheetRef} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
-        <TransactionForm initialWalletIndex={currentWalletIndex} transactionType={TransactionType.INCOME} />
+        <TransactionForm initialWalletId={currentWalletId} transactionType={TransactionType.INCOME} />
       </BottomModal>
 
       <RootLayout

@@ -78,11 +78,11 @@ const DateField = ({ icon, label, mode, value, onPick }: DateFieldProps) => {
 };
 
 interface Props {
-  initialWalletIndex: number;
+  initialWalletId: number;
   transactionType?: TransactionType;
 }
 
-const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType.EXPENSE }: Props) => {
+const TransactionForm = ({ initialWalletId, transactionType = TransactionType.EXPENSE }: Props) => {
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const amountRef = useRef<TextInput>(null);
@@ -93,7 +93,7 @@ const TransactionForm = ({ initialWalletIndex, transactionType = TransactionType
 
   const { control, watch, resetField, onSubmit, isSubmitDisabled, closeBottomSheet } = useTransactionForm({
     transactionType,
-    initialWalletId: wallets[initialWalletIndex]?.wallet.id ?? -1,
+    initialWalletId,
   });
 
   const selectedWalletId = watch('wallet_id');
