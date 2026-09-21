@@ -6,12 +6,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  walletsTitle: {
-    marginTop: 26,
-  },
-  walletsSection: {
-    marginTop: 14,
-  },
   activityTitle: {
     marginTop: 26,
   },

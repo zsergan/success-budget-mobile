@@ -23,7 +23,7 @@ import type { ScreenProps } from '@shared/types';
 import { FAB_SCROLL_CLEARANCE } from '@shared/constants';
 import { formatNumber, groupTransactionsByDay } from '@shared/utils';
 import BalanceOverview from './components/BalanceOverview/BalanceOverview';
-import Wallets from './Wallets/Wallets';
+import WalletsSection from './components/WalletsSection/WalletsSection';
 
 import styles from './style';
 
@@ -32,7 +32,7 @@ const RECENT_TRANSACTIONS_LIMIT = 5;
 interface Props extends ScreenProps<ScreenNames.HOME_TAB> {}
 
 const HomeScreen = ({ navigation }: Props) => {
-  const [currentWalletIndex, setCurrentWalletIndex] = useState<number>(0);
+  const [focusedWalletId, setFocusedWalletId] = useState<number | undefined>(undefined);
 
   const expenseBottomSheetRef = useRef<BottomSheetModal>(null);
   const incomeBottomSheetRef = useRef<BottomSheetModal>(null);
@@ -48,16 +48,21 @@ const HomeScreen = ({ navigation }: Props) => {
   const hasWallets = wallets.length > 0;
 
   const recentGroups = groupTransactionsByDay(transactions.slice(0, RECENT_TRANSACTIONS_LIMIT), currencyCode);
-  const currentWalletId = wallets[currentWalletIndex]?.wallet.id ?? -1;
+
+  // The focused wallet can disappear (deleted, or a space switch replaced the list), so fall back to the first one.
+  const composerWalletId =
+    focusedWalletId !== undefined && wallets.some(({ wallet }) => wallet.id === focusedWalletId)
+      ? focusedWalletId
+      : (wallets[0]?.wallet.id ?? -1);
 
   return (
     <>
       <BottomModal ref={expenseBottomSheetRef} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
-        <TransactionForm initialWalletId={currentWalletId} />
+        <TransactionForm initialWalletId={composerWalletId} />
       </BottomModal>
 
       <BottomModal ref={incomeBottomSheetRef} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
-        <TransactionForm initialWalletId={currentWalletId} transactionType={TransactionType.INCOME} />
+        <TransactionForm initialWalletId={composerWalletId} transactionType={TransactionType.INCOME} />
       </BottomModal>
 
       <RootLayout
@@ -77,23 +82,7 @@ const HomeScreen = ({ navigation }: Props) => {
           onToggleVisibility={toggle}
         />
 
-        <SectionTitle
-          style={styles.walletsTitle}
-          title="Your wallets"
-          button={
-            <TinyButton
-              title="Add Wallet"
-              icon="plus"
-              iconWrap={false}
-              strokeWidth={2.2}
-              onPress={() => navigation.navigate(ScreenNames.ADD_WALLET_SCREEN, { id: 'new' })}
-            />
-          }
-        />
-
-        <View style={styles.walletsSection}>
-          <Wallets navigation={navigation} onScrollEnd={(index: number) => setCurrentWalletIndex(index)} />
-        </View>
+        <WalletsSection navigation={navigation} onFocusedWalletChange={setFocusedWalletId} />
 
         <SectionTitle
           style={styles.activityTitle}
