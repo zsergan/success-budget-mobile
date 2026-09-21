@@ -1,18 +1,19 @@
 import { useRef } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BottomSheetModal as BottomModal, EmptyState, Fab, Icon, TransactionCard, TransactionForm } from '@components';
+import { BottomSheetModal as BottomModal, Fab, TransactionForm } from '@components';
 import { TRANSACTION_FORM_SNAP_POINT } from '@components/TransactionForm/TransactionForm';
 import { useAppSelector } from '@redux/hooks';
 import { selectWallet } from '@redux/state/wallet/selectors';
 import { TransactionType } from '@shared/enums';
-import { colors } from '@shared/theme';
-import { formatDateDDMMYYYY, formatNumber, formatRangeLabel, groupTransactionsByDay } from '@shared/utils';
-import FilterBar from './FilterBar/FilterBar';
-import RangePickerSheet from './RangePicker/RangePickerSheet';
-import TransactionsSkeleton from './Skeleton/TransactionsSkeleton';
+import { groupTransactionsByDay } from '@shared/utils';
+import FilterBar from './components/FilterBar/FilterBar';
+import RangePickerSheet from './components/RangePicker/RangePickerSheet';
+import TransactionsSkeleton from './components/Skeleton/TransactionsSkeleton';
+import TransactionsEmptyState from './components/TransactionsEmptyState/TransactionsEmptyState';
+import TransactionsHeader from './components/TransactionsHeader/TransactionsHeader';
+import TransactionsList from './components/TransactionsList/TransactionsList';
 import useTransactionRange from './hooks/useTransactionRange';
 import useTransactionsData from './hooks/useTransactionsData';
 
@@ -35,8 +36,6 @@ const TransactionsScreen = () => {
   const { wallets } = useAppSelector(selectWallet);
   const firstWalletId = wallets[0]?.wallet.id ?? -1;
 
-  const groups = groupTransactionsByDay(transactions, currencyCode);
-
   return (
     <>
       <BottomModal ref={expenseBottomSheetRef} onDismiss={refetch} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
@@ -52,13 +51,7 @@ const TransactionsScreen = () => {
       </BottomModal>
 
       <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Transactions</Text>
-
-          <TouchableOpacity style={styles.searchButton} hitSlop={8}>
-            <Icon name="search" size={18} color={colors.text} />
-          </TouchableOpacity>
-        </View>
+        <TransactionsHeader />
 
         <FilterBar
           range={activeRange}
@@ -73,60 +66,21 @@ const TransactionsScreen = () => {
         {viewState === 'loading' && <TransactionsSkeleton />}
 
         {viewState === 'trueEmpty' && (
-          <View style={styles.emptyContainer}>
-            <EmptyState
-              icon="list"
-              title="No transactions yet"
-              description="Your income and expenses will show up here."
-              actionLabel="Add transaction"
-              actionIcon="plus"
-              onActionPress={handlePresentExpenseModalPress}
-            />
-          </View>
+          <TransactionsEmptyState variant="trueEmpty" onAddTransaction={handlePresentExpenseModalPress} />
         )}
 
         {viewState === 'filteredEmpty' && latest && (
-          <View style={styles.emptyContainer}>
-            <EmptyState
-              variant="solid"
-              icon="calendar"
-              title="Nothing in this period"
-              description={`No transactions between ${formatRangeLabel(activeRange)}. Your last one was on ${formatDateDDMMYYYY(latest.timestamp)}.`}
-              actionLabel="Reset to this month"
-              actionVariant="secondary"
-              onActionPress={resetRange}
-              secondaryActionLabel={`Jump to ${formatDateDDMMYYYY(latest.timestamp)}`}
-              onSecondaryActionPress={() => jumpToMonthOf(latest.timestamp)}
-            />
-          </View>
+          <TransactionsEmptyState
+            variant="filteredEmpty"
+            latest={latest}
+            activeRange={activeRange}
+            onResetRange={resetRange}
+            onJumpToLatest={() => jumpToMonthOf(latest.timestamp)}
+          />
         )}
 
         {viewState === 'ready' && (
-          <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
-            <View style={styles.container}>
-              {groups.map((group) => (
-                <View key={group.label} style={styles.group}>
-                  <View style={styles.groupHeader}>
-                    <Text style={styles.groupLabel}>{group.label}</Text>
-
-                    {group.total !== undefined && (
-                      <Text style={[styles.groupTotal, group.total >= 0 && styles.groupTotalPositive]}>
-                        {`${group.total >= 0 ? '+' : '-'}${formatNumber(Math.abs(group.total))}${
-                          group.currencyCode ? ` ${group.currencyCode}` : ''
-                        }`}
-                      </Text>
-                    )}
-                  </View>
-
-                  <View style={styles.groupItems}>
-                    {group.items.map((transaction) => (
-                      <TransactionCard key={transaction.id} transaction={transaction} currencyCode={currencyCode} />
-                    ))}
-                  </View>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
+          <TransactionsList groups={groupTransactionsByDay(transactions, currencyCode)} currencyCode={currencyCode} />
         )}
       </SafeAreaView>
 
