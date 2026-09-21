@@ -1,43 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomSheetModal as BottomModal, EmptyState, Fab, Icon, TransactionCard, TransactionForm } from '@components';
 import { TRANSACTION_FORM_SNAP_POINT } from '@components/TransactionForm/TransactionForm';
-import { useAppDispatch, useAppSelector } from '@redux/hooks';
-import {
-  selectIsLoadingRange,
-  selectLatestTransaction,
-  selectPeriodTotals,
-  selectRangeTransactions,
-} from '@redux/state/transaction/selectors';
-import { fetchLatestTransaction, fetchTransactionsInRange } from '@redux/state/transaction/thunks';
-import { selectCurrentSpaceId } from '@redux/state/space/selectors';
+import { useAppSelector } from '@redux/hooks';
 import { selectWallet } from '@redux/state/wallet/selectors';
 import { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
-import type { DateRange } from '@shared/utils';
-import {
-  formatDateDDMMYYYY,
-  formatNumber,
-  formatRangeLabel,
-  getCurrentMonthRange,
-  getCurrentWeekRange,
-  getCurrentYearRange,
-  getMonthRange,
-  groupTransactionsByDay,
-} from '@shared/utils';
+import { formatDateDDMMYYYY, formatNumber, formatRangeLabel, groupTransactionsByDay } from '@shared/utils';
 import FilterBar from './FilterBar/FilterBar';
 import RangePickerSheet from './RangePicker/RangePickerSheet';
 import TransactionsSkeleton from './Skeleton/TransactionsSkeleton';
+import useTransactionRange from './hooks/useTransactionRange';
+import useTransactionsData from './hooks/useTransactionsData';
 
 import styles from './style';
 
 const TransactionsScreen = () => {
-  const dispatch = useAppDispatch();
-  const [activeRange, setActiveRange] = useState<DateRange>(() => getCurrentMonthRange());
-
   const expenseBottomSheetRef = useRef<BottomSheetModal>(null);
   const incomeBottomSheetRef = useRef<BottomSheetModal>(null);
   const rangePickerRef = useRef<BottomSheetModal>(null);
@@ -46,54 +27,23 @@ const TransactionsScreen = () => {
   const handlePresentIncomeModalPress = () => incomeBottomSheetRef.current?.present();
   const handleOpenPicker = () => rangePickerRef.current?.present();
 
-  const rangeTransactions = useAppSelector(selectRangeTransactions);
-  const isLoadingRange = useAppSelector(selectIsLoadingRange);
-  const latest = useAppSelector(selectLatestTransaction);
-  const { income, expense, currencyCode } = useAppSelector(selectPeriodTotals);
-  const currentSpaceId = useAppSelector(selectCurrentSpaceId);
+  const { activeRange, setActiveRange, setPresetRange, resetRange, jumpToMonthOf } = useTransactionRange();
+  const { transactions, viewState, latest, income, expense, currencyCode, refetch } = useTransactionsData({
+    range: activeRange,
+  });
+
   const { wallets } = useAppSelector(selectWallet);
   const firstWalletId = wallets[0]?.wallet.id ?? -1;
 
-  const refreshRange = () => dispatch(fetchTransactionsInRange({ from: activeRange.from, to: activeRange.to }));
-
-  const handlePresetPress = (preset: 'week' | 'month' | 'year') => {
-    if (preset === 'week') setActiveRange(getCurrentWeekRange());
-    else if (preset === 'month') setActiveRange(getCurrentMonthRange());
-    else setActiveRange(getCurrentYearRange());
-  };
-
-  const handleReset = () => setActiveRange(getCurrentMonthRange());
-
-  const handleJumpToLatest = () => {
-    if (!latest) return;
-
-    setActiveRange({ ...getMonthRange(latest.timestamp), preset: 'custom' });
-  };
-
-  useEffect(() => {
-    dispatch(fetchTransactionsInRange({ from: activeRange.from, to: activeRange.to }));
-  }, [dispatch, activeRange, currentSpaceId]);
-
-  useEffect(() => {
-    dispatch(fetchLatestTransaction());
-  }, [dispatch, currentSpaceId]);
-
-  const groups = groupTransactionsByDay(rangeTransactions, currencyCode);
-
-  // latest === undefined means "not fetched yet" — treat that as still
-  // loading too, or the wrong empty-state variant flashes on cold start.
-  const showSkeleton = isLoadingRange || (rangeTransactions.length === 0 && latest === undefined);
-  const showTrueEmpty = !showSkeleton && latest === null;
-  const showFilteredEmpty = !showSkeleton && latest !== null && rangeTransactions.length === 0;
-  const showList = !showSkeleton && rangeTransactions.length > 0;
+  const groups = groupTransactionsByDay(transactions, currencyCode);
 
   return (
     <>
-      <BottomModal ref={expenseBottomSheetRef} onDismiss={refreshRange} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
+      <BottomModal ref={expenseBottomSheetRef} onDismiss={refetch} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
         <TransactionForm initialWalletId={firstWalletId} />
       </BottomModal>
 
-      <BottomModal ref={incomeBottomSheetRef} onDismiss={refreshRange} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
+      <BottomModal ref={incomeBottomSheetRef} onDismiss={refetch} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
         <TransactionForm initialWalletId={firstWalletId} transactionType={TransactionType.INCOME} />
       </BottomModal>
 
@@ -115,14 +65,14 @@ const TransactionsScreen = () => {
           income={income}
           expense={expense}
           currencyCode={currencyCode}
-          onPresetPress={handlePresetPress}
+          onPresetPress={setPresetRange}
           onOpenPicker={handleOpenPicker}
-          onReset={handleReset}
+          onReset={resetRange}
         />
 
-        {showSkeleton && <TransactionsSkeleton />}
+        {viewState === 'loading' && <TransactionsSkeleton />}
 
-        {showTrueEmpty && (
+        {viewState === 'trueEmpty' && (
           <View style={styles.emptyContainer}>
             <EmptyState
               icon="list"
@@ -135,7 +85,7 @@ const TransactionsScreen = () => {
           </View>
         )}
 
-        {showFilteredEmpty && latest && (
+        {viewState === 'filteredEmpty' && latest && (
           <View style={styles.emptyContainer}>
             <EmptyState
               variant="solid"
@@ -144,14 +94,14 @@ const TransactionsScreen = () => {
               description={`No transactions between ${formatRangeLabel(activeRange)}. Your last one was on ${formatDateDDMMYYYY(latest.timestamp)}.`}
               actionLabel="Reset to this month"
               actionVariant="secondary"
-              onActionPress={handleReset}
+              onActionPress={resetRange}
               secondaryActionLabel={`Jump to ${formatDateDDMMYYYY(latest.timestamp)}`}
-              onSecondaryActionPress={handleJumpToLatest}
+              onSecondaryActionPress={() => jumpToMonthOf(latest.timestamp)}
             />
           </View>
         )}
 
-        {showList && (
+        {viewState === 'ready' && (
           <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
             <View style={styles.container}>
               {groups.map((group) => (
@@ -180,7 +130,9 @@ const TransactionsScreen = () => {
         )}
       </SafeAreaView>
 
-      {!showSkeleton && <Fab onExpense={handlePresentExpenseModalPress} onIncome={handlePresentIncomeModalPress} />}
+      {viewState !== 'loading' && (
+        <Fab onExpense={handlePresentExpenseModalPress} onIncome={handlePresentIncomeModalPress} />
+      )}
     </>
   );
 };
