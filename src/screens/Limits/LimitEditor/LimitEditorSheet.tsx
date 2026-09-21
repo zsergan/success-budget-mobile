@@ -12,6 +12,7 @@ import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import { formatCurrencyAmount, hexToRgba } from '@shared/utils';
 import theme, { colors } from '@shared/theme';
 import type { LimitScope } from './types';
+import { getCommittedTotal, isOverCommitted } from './allocation';
 import useLimitEditorForm from './useLimitEditorForm';
 
 import styles from './style';
@@ -72,8 +73,8 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
   const readyAmount = Number(amount.replace(',', '.')) > 0;
   const ready = readyCategories && readyName && readyAmount;
 
-  const committedTotal = categoryLimits.reduce((sum, l) => sum + Number(l.amount), 0);
-  const overCommitted = total ? committedTotal > Number(total.amount) : false;
+  const committedTotal = getCommittedTotal(categoryLimits);
+  const overCommitted = isOverCommitted(committedTotal, total ?? undefined);
 
   return (
     <View style={[styles.root, { height: windowHeight * SNAP_FRACTION }]}>
