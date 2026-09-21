@@ -12,7 +12,7 @@ import { amountSchema } from '@shared/utils';
 import { useFormSubmitHandler } from '@hooks';
 import type { LimitScope } from './types';
 
-interface LimitFormData {
+export interface LimitFormData {
   scope: LimitScope;
   categoryIds: number[];
   name: string;
