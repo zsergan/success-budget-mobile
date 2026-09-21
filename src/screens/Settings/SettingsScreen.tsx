@@ -12,10 +12,10 @@ import type { ScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 
 import DeleteAccountDialog from './DeleteAccountDialog/DeleteAccountDialog';
-import Profile from './Profile/Profile';
-import SettingsRow from './SettingsRow';
-import SettingsSection from './SettingsSection';
-import ThemeRow from './ThemeRow';
+import Profile from './components/Profile/Profile';
+import SettingsRow from './components/SettingsRow/SettingsRow';
+import SettingsSection from './components/SettingsSection/SettingsSection';
+import ThemeRow from './components/ThemeRow/ThemeRow';
 
 import styles from './style';
 
