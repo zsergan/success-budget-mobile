@@ -20,13 +20,16 @@ const ScrollViewContainer = ({ children, style, contentContainerStyle }: Contain
     style={[styles.container, style]}
     contentContainerStyle={contentContainerStyle}
     keyboardShouldPersistTaps="handled"
+    keyboardDismissMode="on-drag"
   >
     {children}
   </ScrollView>
 );
 
 const ViewContainer = ({ children, style }: ContainerProps) => (
-  <View style={[styles.container, style]}>{children}</View>
+  <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+    <View style={[styles.container, style]}>{children}</View>
+  </TouchableWithoutFeedback>
 );
 
 const RootLayout = ({ children, scrollable, style, contentContainerStyle }: Props) => {
@@ -35,13 +38,9 @@ const RootLayout = ({ children, scrollable, style, contentContainerStyle }: Prop
   return (
     <SafeAreaView style={styles.root}>
       <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <View style={styles.root}>
-            <Container style={style} contentContainerStyle={contentContainerStyle}>
-              {children}
-            </Container>
-          </View>
-        </TouchableWithoutFeedback>
+        <Container style={style} contentContainerStyle={contentContainerStyle}>
+          {children}
+        </Container>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
