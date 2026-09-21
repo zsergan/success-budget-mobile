@@ -12,6 +12,13 @@ categories, spending limits, multi-currency support.
 
 See [`CLAUDE.md`](./CLAUDE.md) for the full project layout and conventions.
 
+## Project structure
+
+Screens live under `src/screens/**`; a screen that outgrows a single
+file decomposes into `components/` and `hooks/` subfolders. See
+["Screen organization" in `CLAUDE.md`](./CLAUDE.md#screen-organization)
+for the rules behind that split.
+
 ## Requirements
 
 - Node.js version pinned in [`.nvmrc`](./.nvmrc) (run `nvm use` if you use nvm)
