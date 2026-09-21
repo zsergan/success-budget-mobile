@@ -16,6 +16,8 @@ export { default as ProgressBar } from './ProgressBar/ProgressBar';
 export { default as RootLayout } from './RootLayout/RootLayout';
 export { default as SpaceSwitcher } from './SpaceSwitcher/SpaceSwitcher';
 export { default as TransactionCard } from './TransactionCard/TransactionCard';
+export { default as TransactionComposer } from './TransactionComposer/TransactionComposer';
+export type { TransactionComposerHandle } from './TransactionComposer/TransactionComposer';
 export { default as TransactionForm } from './TransactionForm/TransactionForm';
 export * from './Typography';
 export * from './Wallets';

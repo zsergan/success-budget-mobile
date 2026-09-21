@@ -2,11 +2,10 @@ import { useRef } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BottomSheetModal as BottomModal, Fab, TransactionForm } from '@components';
-import { TRANSACTION_FORM_SNAP_POINT } from '@components/TransactionForm/TransactionForm';
+import type { TransactionComposerHandle } from '@components';
+import { BottomSheetModal as BottomModal, Fab, TransactionComposer } from '@components';
 import { useAppSelector } from '@redux/hooks';
 import { selectWallet } from '@redux/state/wallet/selectors';
-import { TransactionType } from '@shared/enums';
 import { groupTransactionsByDay } from '@shared/utils';
 import FilterBar from './components/FilterBar/FilterBar';
 import RangePickerSheet from './components/RangePicker/RangePickerSheet';
@@ -20,12 +19,9 @@ import useTransactionsData from './hooks/useTransactionsData';
 import styles from './style';
 
 const TransactionsScreen = () => {
-  const expenseBottomSheetRef = useRef<BottomSheetModal>(null);
-  const incomeBottomSheetRef = useRef<BottomSheetModal>(null);
+  const composerRef = useRef<TransactionComposerHandle>(null);
   const rangePickerRef = useRef<BottomSheetModal>(null);
 
-  const handlePresentExpenseModalPress = () => expenseBottomSheetRef.current?.present();
-  const handlePresentIncomeModalPress = () => incomeBottomSheetRef.current?.present();
   const handleOpenPicker = () => rangePickerRef.current?.present();
 
   const { activeRange, setActiveRange, setPresetRange, resetRange, jumpToMonthOf } = useTransactionRange();
@@ -38,13 +34,7 @@ const TransactionsScreen = () => {
 
   return (
     <>
-      <BottomModal ref={expenseBottomSheetRef} onDismiss={refetch} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
-        <TransactionForm initialWalletId={firstWalletId} />
-      </BottomModal>
-
-      <BottomModal ref={incomeBottomSheetRef} onDismiss={refetch} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
-        <TransactionForm initialWalletId={firstWalletId} transactionType={TransactionType.INCOME} />
-      </BottomModal>
+      <TransactionComposer ref={composerRef} initialWalletId={firstWalletId} onDismiss={refetch} />
 
       <BottomModal ref={rangePickerRef} dynamicSizing>
         <RangePickerSheet activeRange={activeRange} onApply={setActiveRange} />
@@ -66,7 +56,7 @@ const TransactionsScreen = () => {
         {viewState === 'loading' && <TransactionsSkeleton />}
 
         {viewState === 'trueEmpty' && (
-          <TransactionsEmptyState variant="trueEmpty" onAddTransaction={handlePresentExpenseModalPress} />
+          <TransactionsEmptyState variant="trueEmpty" onAddTransaction={() => composerRef.current?.openExpense()} />
         )}
 
         {viewState === 'filteredEmpty' && latest && (
@@ -85,7 +75,7 @@ const TransactionsScreen = () => {
       </SafeAreaView>
 
       {viewState !== 'loading' && (
-        <Fab onExpense={handlePresentExpenseModalPress} onIncome={handlePresentIncomeModalPress} />
+        <Fab onExpense={() => composerRef.current?.openExpense()} onIncome={() => composerRef.current?.openIncome()} />
       )}
     </>
   );
