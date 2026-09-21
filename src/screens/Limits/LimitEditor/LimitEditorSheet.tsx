@@ -7,7 +7,7 @@ import type { LimitModel } from '@api/models';
 import { Icon } from '@components';
 import { useAppSelector } from '@redux/hooks';
 import { selectActiveCategories } from '@redux/state/category/selectors';
-import { selectLimit } from '@redux/state/limit/selectors';
+import { findLimitForCategory, selectLimit } from '@redux/state/limit/selectors';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import { formatCurrencyAmount, hexToRgba } from '@shared/utils';
 import theme, { colors } from '@shared/theme';
@@ -52,9 +52,13 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
 
   const namesById = Object.fromEntries(expenses.map((category) => [category.id, category.name]));
   const claimedElsewhere = new Set(
-    categoryLimits
-      .filter((otherLimit) => otherLimit.id !== limit?.id)
-      .flatMap((otherLimit) => otherLimit.categories.map((category) => category.id)),
+    expenses
+      .filter((category) => {
+        const owner = findLimitForCategory(categoryLimits, category.id);
+
+        return owner !== undefined && owner.id !== limit?.id;
+      })
+      .map((category) => category.id),
   );
 
   const selectedNames = categoryIds.map((id) => namesById[id]).filter(Boolean);
