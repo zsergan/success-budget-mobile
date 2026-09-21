@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { Icon } from '@components';
+import Icon from '@components/Icon/Icon';
 import { INVITE_EXPIRY_DAYS, SPACE_LIMITS } from '@shared/constants';
 import { colors } from '@shared/theme';
 

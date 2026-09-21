@@ -1,7 +1,7 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import type { SpaceMember } from '@api/dto';
-import { Icon } from '@components';
+import Icon from '@components/Icon/Icon';
 import { colors } from '@shared/theme';
 
 import styles from './style';
@@ -9,6 +9,9 @@ import styles from './style';
 interface Props {
   member: SpaceMember;
   isSelf: boolean;
+  // Server-authoritative can_remove intersected with what the client can
+  // actually act on safely -- see MembersList for why these can differ.
+  canAct: boolean;
   onActionPress: () => void;
 }
 
@@ -20,7 +23,7 @@ const getInitials = (name: string) =>
     .map((word) => word[0]?.toUpperCase())
     .join('');
 
-const MemberRow = ({ member, isSelf, onActionPress }: Props) => {
+const MemberRow = ({ member, isSelf, canAct, onActionPress }: Props) => {
   const isInvite = member.type === 'invite';
   const tag = isInvite
     ? 'Invited'
@@ -62,8 +65,14 @@ const MemberRow = ({ member, isSelf, onActionPress }: Props) => {
         )}
       </View>
 
-      {member.can_remove && (
-        <TouchableOpacity style={styles.rowRemove} onPress={onActionPress} hitSlop={8}>
+      {canAct && (
+        <TouchableOpacity
+          style={styles.rowRemove}
+          onPress={onActionPress}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={isInvite ? 'Revoke invite' : 'Remove member'}
+        >
           <Icon name="close" size={14} color={colors.danger} strokeWidth={2.1} />
         </TouchableOpacity>
       )}
