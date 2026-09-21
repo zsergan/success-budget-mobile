@@ -37,6 +37,8 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
       backgroundStyle={styles.background}
       handleComponent={null}
       onDismiss={onDismiss}
+      keyboardBehavior="interactive"
+      android_keyboardInputMode="adjustResize"
     >
       {dynamicSizing ? (
         // Dynamic sizing needs the content itself as the measured root; an extra BottomSheetView here would compete with it.
