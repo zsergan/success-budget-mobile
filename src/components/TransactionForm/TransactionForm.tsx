@@ -26,14 +26,6 @@ import styles from './style';
 export const TRANSACTION_FORM_SNAP_POINT = '86%';
 const SNAP_FRACTION = parseFloat(TRANSACTION_FORM_SNAP_POINT) / 100;
 
-const isValidAmount = (value?: string) => {
-  if (!value) return false;
-
-  const normalized = Number(value.replace(',', '.'));
-
-  return Number.isFinite(normalized) && normalized > 0;
-};
-
 interface Props {
   initialWalletId: number;
   transactionType?: TransactionType;
@@ -47,10 +39,11 @@ const TransactionForm = ({ initialWalletId, transactionType = TransactionType.EX
   const { categoryLimits } = useAppSelector(selectLimit);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
-  const { control, watch, resetField, onSubmit, isSubmitDisabled, closeBottomSheet } = useTransactionForm({
-    transactionType,
-    initialWalletId,
-  });
+  const { control, watch, resetField, onSubmit, isSubmitDisabled, isValid, errors, closeBottomSheet } =
+    useTransactionForm({
+      transactionType,
+      initialWalletId,
+    });
 
   const selectedWalletId = watch('wallet_id');
   const selectedTransactionType = watch('transaction_type');
@@ -74,11 +67,12 @@ const TransactionForm = ({ initialWalletId, transactionType = TransactionType.EX
   const categories = isIncome ? incomes : expenses;
   const selectedWallet = wallets.find(({ wallet: { id } }) => id === selectedWalletId)?.wallet;
 
-  const readyAmount = isValidAmount(amount);
-  const readyCategory = categories.some(({ id }) => id === selectedCategoryId);
-  const ready = readyAmount && readyCategory;
-
-  const helperText = !readyCategory ? 'Pick a category to save' : !readyAmount ? 'Enter an amount to save' : undefined;
+  const ready = isValid;
+  const helperText = errors.category_id
+    ? 'Pick a category to save'
+    : errors.amount
+      ? 'Enter an amount to save'
+      : undefined;
 
   const matchedLimit =
     !isIncome && selectedCategoryId !== undefined
@@ -150,7 +144,7 @@ const TransactionForm = ({ initialWalletId, transactionType = TransactionType.EX
                   placeholder="Add a note…"
                   placeholderTextColor={colors.muted}
                   multiline
-                  maxLength={160}
+                  maxLength={140}
                   blurOnSubmit
                   returnKeyType="done"
                 />
