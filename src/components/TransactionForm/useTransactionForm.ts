@@ -42,6 +42,7 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
     handleSubmit,
     watch,
     resetField,
+    reset,
     formState: { isSubmitting, isSubmitSuccessful },
   } = useForm({
     resolver: yupResolver(schema),
@@ -73,6 +74,7 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
     onSuccess: () => close(),
     getInvalidMessage: (errors) =>
       [errors.amount && 'Enter an amount', errors.category_id && 'Select a category'].filter(Boolean).join('\n'),
+    reset,
   });
 
   return {

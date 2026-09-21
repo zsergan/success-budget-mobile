@@ -43,6 +43,7 @@ const useCategoryEditorForm = ({ category, defaultTransactionType }: UseCategory
     control,
     handleSubmit,
     watch,
+    reset,
     formState: { isSubmitting, isSubmitSuccessful },
   } = useForm({
     resolver: yupResolver(schema),
@@ -79,6 +80,7 @@ const useCategoryEditorForm = ({ category, defaultTransactionType }: UseCategory
     },
     onSuccess: () => close(),
     getInvalidMessage: (errors) => [errors.name && 'Enter a category name'].filter(Boolean).join('\n'),
+    reset,
   });
 
   return {
