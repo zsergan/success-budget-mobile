@@ -8,6 +8,7 @@ export const selectTransaction = (state: RootState) => state.transaction;
 export const selectRangeTransactions = (state: RootState) => state.transaction.rangeTransactions;
 export const selectIsLoadingRange = (state: RootState) => state.transaction.isLoadingRange;
 export const selectLatestTransaction = (state: RootState) => state.transaction.latest;
+export const selectDataRevision = (state: RootState) => state.transaction.dataRevision;
 
 // A space has exactly one currency, so every transaction in it is already in
 // that currency — no cross-currency filtering needed.

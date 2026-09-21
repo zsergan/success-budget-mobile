@@ -24,6 +24,11 @@ interface InitialState {
   isLoadingLatest: boolean;
   latestRequestId?: string;
   isCreating: boolean;
+  // Bumped on every successful addTransaction, regardless of which screen
+  // it ran from. useTransactionsData watches this to refetch the currently
+  // active range even when the mutation didn't originate on the
+  // Transactions screen (e.g. Home's quick-add).
+  dataRevision: number;
   error?: ErrorResponse;
 }
 
@@ -39,6 +44,7 @@ const initialState: InitialState = {
   isLoadingLatest: false,
   latestRequestId: undefined,
   isCreating: false,
+  dataRevision: 0,
 };
 
 export default initialState;

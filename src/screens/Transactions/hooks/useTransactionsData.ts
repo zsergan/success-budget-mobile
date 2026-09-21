@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import {
+  selectDataRevision,
   selectIsLoadingRange,
   selectLatestTransaction,
   selectPeriodTotals,
@@ -32,12 +33,17 @@ const useTransactionsData = ({ range }: UseTransactionsDataProps) => {
   const latest = useAppSelector(selectLatestTransaction);
   const { income, expense, currencyCode } = useAppSelector(selectPeriodTotals);
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
+  const dataRevision = useAppSelector(selectDataRevision);
 
   const refetch = () => dispatch(fetchTransactionsInRange({ from: range.from, to: range.to }));
 
+  // Re-fires whenever a transaction is added anywhere in the app
+  // (dataRevision), not just when the period or space changes -- otherwise
+  // a transaction added from Home wouldn't show up here until something
+  // else happened to trigger a refetch.
   useEffect(() => {
     dispatch(fetchTransactionsInRange({ from: range.from, to: range.to }));
-  }, [dispatch, range, currentSpaceId]);
+  }, [dispatch, range, currentSpaceId, dataRevision]);
 
   useEffect(() => {
     dispatch(fetchLatestTransaction());

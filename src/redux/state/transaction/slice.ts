@@ -87,6 +87,7 @@ const transactionSlice = createSlice({
 
     builder.addCase(addTransaction.fulfilled, (state) => {
       state.isCreating = false;
+      state.dataRevision += 1;
     });
 
     builder.addMatcher(
