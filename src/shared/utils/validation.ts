@@ -13,3 +13,11 @@ export const amountSchema = yup
     // isFinite, not just !isNaN: Number("Infinity") is not NaN.
     (value) => value !== undefined && value.trim() !== '' && Number.isFinite(Number(value)),
   );
+
+// amountSchema alone allows 0 (a wallet can legitimately start at 0); a
+// transaction amount cannot, hence this separate variant for that one case.
+export const positiveAmountSchema = amountSchema.test(
+  'is-positive',
+  'Enter an amount greater than zero',
+  (value) => Number(value) > 0,
+);

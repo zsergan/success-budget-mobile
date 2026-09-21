@@ -1,4 +1,4 @@
-import { amountSchema } from './validation';
+import { amountSchema, positiveAmountSchema } from './validation';
 
 describe('amountSchema', () => {
   it('accepts a plain integer', async () => {
@@ -32,5 +32,20 @@ describe('amountSchema', () => {
 
   it('rejects whitespace-only input', async () => {
     await expect(amountSchema.validate('   ')).rejects.toThrow('Enter a valid number');
+  });
+});
+
+describe('positiveAmountSchema', () => {
+  it('accepts a normal positive amount', async () => {
+    await expect(positiveAmountSchema.validate('12.50')).resolves.toBe('12.50');
+  });
+
+  it('rejects zero -- unlike plain amountSchema, which must allow it for a starting wallet balance', async () => {
+    await expect(amountSchema.validate('0')).resolves.toBe('0');
+    await expect(positiveAmountSchema.validate('0')).rejects.toThrow('Enter an amount greater than zero');
+  });
+
+  it('rejects a negative amount', async () => {
+    await expect(positiveAmountSchema.validate('-5')).rejects.toThrow('Enter an amount greater than zero');
   });
 });

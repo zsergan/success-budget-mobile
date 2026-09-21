@@ -7,10 +7,10 @@ import type { CreateTransactionRequest } from '@api/dto';
 import { TransactionType } from '@shared/enums';
 import { useAppDispatch } from '@redux/hooks';
 import { addTransaction } from '@redux/state/transaction/thunks';
-import { amountSchema } from '@shared/utils';
+import { positiveAmountSchema } from '@shared/utils';
 import { useFormSubmitHandler } from '@hooks';
 
-interface TransactionFormData {
+export interface TransactionFormData {
   amount: string;
   wallet_id: number;
   transaction_type: TransactionType;
@@ -20,7 +20,7 @@ interface TransactionFormData {
 }
 
 const schema = yup.object().shape({
-  amount: amountSchema,
+  amount: positiveAmountSchema,
   wallet_id: yup.number().required(),
   transaction_type: yup.mixed<TransactionType>().oneOf([TransactionType.EXPENSE, TransactionType.INCOME]).required(),
   category_id: yup.number().required(),
@@ -31,9 +31,10 @@ const schema = yup.object().shape({
 interface UseTransactionFormProps {
   transactionType: TransactionType;
   initialWalletId: number;
+  onSaved?: () => void;
 }
 
-const useTransactionForm = ({ transactionType, initialWalletId }: UseTransactionFormProps) => {
+const useTransactionForm = ({ transactionType, initialWalletId, onSaved }: UseTransactionFormProps) => {
   const dispatch = useAppDispatch();
   const { close } = useBottomSheet();
 
@@ -43,9 +44,10 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
     watch,
     resetField,
     reset,
-    formState: { isSubmitting, isSubmitSuccessful },
+    formState: { isSubmitting, isSubmitSuccessful, isValid, errors },
   } = useForm({
     resolver: yupResolver(schema),
+    mode: 'onChange',
     defaultValues: {
       amount: '',
       wallet_id: initialWalletId,
@@ -71,7 +73,10 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
 
       return dispatch(addTransaction(payload)).unwrap();
     },
-    onSuccess: () => close(),
+    onSuccess: () => {
+      close();
+      onSaved?.();
+    },
     getInvalidMessage: (errors) =>
       [errors.amount && 'Enter an amount', errors.category_id && 'Select a category'].filter(Boolean).join('\n'),
     reset,
@@ -83,6 +88,8 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
     resetField,
     onSubmit,
     isSubmitDisabled,
+    isValid,
+    errors,
     closeBottomSheet: close,
   };
 };

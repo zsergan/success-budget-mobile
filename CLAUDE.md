@@ -20,8 +20,11 @@ categories, spending limits, multi-currency support.
   `src/api/dto/*.ts` and must match the backend's actual DTOs (see
   "Backend contract" below).
 - Navigation: `src/navigation/` (React Navigation stack + bottom tabs).
-- Screens: `src/screens/**`, usually paired with a `use<Name>Form.ts` hook
-  (react-hook-form + yup) for form logic.
+- Screens: `src/screens/**`. A non-trivial screen decomposes into
+  `<Screen>/components/<Name>/{<Name>.tsx,style.ts}` and
+  `<Screen>/hooks/use<Name>.ts` (see "Screen organization" below); a
+  screen still paired with a single `use<Name>Form.ts` hook
+  (react-hook-form + yup) for its form logic has not outgrown that.
 - Reusable UI: `src/components/**`, grouped by concern, typically
   `<Name>.tsx` + `style.ts`.
 - Barrel `index.ts` rule (applies to both `screens/**` and `components/**`):
@@ -40,6 +43,37 @@ categories, spending limits, multi-currency support.
 - No test runner is currently wired up. If you add tests, use
   `jest` + `@testing-library/react-native` and add a `test` script to
   `package.json` — don't invent a different toolchain.
+
+## Screen organization
+
+When a screen grows past a single file, decompose it along these
+lines rather than reaching for a features/entities/widgets layer:
+
+- **Local by default.** A component, hook, or function stays inside
+  its screen until a second screen genuinely needs it. Only then does
+  it move to `src/components/` or `src/shared/`.
+- **Shared code does not have to be generic UI.** An app-specific but
+  multi-screen piece (e.g. `TransactionForm`, `TransactionComposer`)
+  belongs in `src/components/` once more than one screen uses it —
+  it does not need to be reusable outside this app to qualify.
+- **The screen owns composition.** Navigation, section layout, and
+  passing values between sibling sections (e.g. selected wallet into
+  a transaction form) happen in `<Screen>Screen.tsx`; extracted
+  sections stay ignorant of their siblings.
+- **Hooks split by meaning, not by screen.** Prefer
+  `useTransactionRange` + `useTransactionsData` over one
+  `useTransactionsScreen` that does both.
+- **Data placement follows its source**: server data goes through
+  Redux/selectors, local UI state lives next to the component that
+  owns it, and pure transforms are plain functions (tested directly
+  when it is cheap to do so).
+- **Folders are created as needed** — no pre-emptive empty
+  `components/`/`hooks/` for a screen that has not outgrown a single
+  file.
+
+Example: `src/screens/Home/components/WalletsSection/{WalletsSection.tsx,style.ts}`
+plus `src/screens/Home/hooks/useWalletActions.ts`, extracted only once
+`HomeScreen.tsx` needed the split.
 
 ## Backend contract
 

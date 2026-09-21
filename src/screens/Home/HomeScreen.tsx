@@ -1,68 +1,40 @@
 import { useRef, useState } from 'react';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { Text, TouchableOpacity, View } from 'react-native';
 
-import {
-  BottomSheetModal as BottomModal,
-  EmptyState,
-  Fab,
-  Icon,
-  RootLayout,
-  SectionTitle,
-  SpaceSwitcher,
-  TinyButton,
-  TransactionCard,
-  TransactionForm,
-} from '@components';
-import { TRANSACTION_FORM_SNAP_POINT } from '@components/TransactionForm/TransactionForm';
+import type { TransactionComposerHandle } from '@components';
+import { Fab, RootLayout, SpaceSwitcher, TransactionComposer } from '@components';
 import { useAppSelector } from '@redux/hooks';
 import { selectTotalBalance, selectWallet } from '@redux/state/wallet/selectors';
 import { selectTransaction } from '@redux/state/transaction/selectors';
 import { useBalanceVisibility } from '@hooks';
-import { ScreenNames, TransactionType } from '@shared/enums';
+import type { ScreenNames } from '@shared/enums';
 import type { ScreenProps } from '@shared/types';
-import { colors } from '@shared/theme';
 import { FAB_SCROLL_CLEARANCE } from '@shared/constants';
-import { formatNumber, groupTransactionsByDay } from '@shared/utils';
-import Wallets from './Wallets/Wallets';
+import BalanceOverview from './components/BalanceOverview/BalanceOverview';
+import RecentActivity from './components/RecentActivity/RecentActivity';
+import WalletsSection from './components/WalletsSection/WalletsSection';
 
 import styles from './style';
-
-const RECENT_TRANSACTIONS_LIMIT = 5;
 
 interface Props extends ScreenProps<ScreenNames.HOME_TAB> {}
 
 const HomeScreen = ({ navigation }: Props) => {
-  const [currentWalletIndex, setCurrentWalletIndex] = useState<number>(0);
-
-  const expenseBottomSheetRef = useRef<BottomSheetModal>(null);
-  const incomeBottomSheetRef = useRef<BottomSheetModal>(null);
-
-  const handlePresentExpenseModalPress = () => expenseBottomSheetRef.current?.present();
-  const handlePresentIncomeModalPress = () => incomeBottomSheetRef.current?.present();
+  const [focusedWalletId, setFocusedWalletId] = useState<number | undefined>(undefined);
+  const composerRef = useRef<TransactionComposerHandle>(null);
 
   const { total, currencyCode, walletsCount, deltaPercent } = useAppSelector(selectTotalBalance);
   const { wallets } = useAppSelector(selectWallet);
   const { transactions } = useAppSelector(selectTransaction);
   const { isHidden, toggle } = useBalanceVisibility();
 
-  const hasWallets = wallets.length > 0;
-  const deltaPositive = deltaPercent > 0;
-  const deltaNeutral = deltaPercent === 0;
-  const deltaFg = deltaNeutral ? colors.muted : deltaPositive ? colors.ok : colors.danger;
-  const deltaBg = deltaNeutral ? colors.track : `${deltaFg}26`;
-
-  const recentGroups = groupTransactionsByDay(transactions.slice(0, RECENT_TRANSACTIONS_LIMIT), currencyCode);
+  // The focused wallet can disappear (deleted, or a space switch replaced the list), so fall back to the first one.
+  const composerWalletId =
+    focusedWalletId !== undefined && wallets.some(({ wallet }) => wallet.id === focusedWalletId)
+      ? focusedWalletId
+      : (wallets[0]?.wallet.id ?? -1);
 
   return (
     <>
-      <BottomModal ref={expenseBottomSheetRef} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
-        <TransactionForm initialWalletIndex={currentWalletIndex} />
-      </BottomModal>
-
-      <BottomModal ref={incomeBottomSheetRef} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
-        <TransactionForm initialWalletIndex={currentWalletIndex} transactionType={TransactionType.INCOME} />
-      </BottomModal>
+      <TransactionComposer ref={composerRef} initialWalletId={composerWalletId} />
 
       <RootLayout
         style={styles.container}
@@ -72,112 +44,26 @@ const HomeScreen = ({ navigation }: Props) => {
       >
         <SpaceSwitcher navigation={navigation} />
 
-        <View style={styles.hero}>
-          <View style={styles.heroRow}>
-            <View style={styles.heroInfo}>
-              <View style={styles.heroLabelRow}>
-                <Text style={styles.heroLabel}>Total balance</Text>
-
-                <TouchableOpacity onPress={toggle} hitSlop={8}>
-                  <Icon name={isHidden ? 'eye-off' : 'eye'} size={15} color={colors.muted} />
-                </TouchableOpacity>
-              </View>
-
-              <Text style={styles.heroTotal}>
-                {isHidden
-                  ? `••• •••${currencyCode ? ` ${currencyCode}` : ''}`
-                  : `${formatNumber(total)}${currencyCode ? ` ${currencyCode}` : ''}`}
-              </Text>
-
-              {currencyCode && (
-                <Text
-                  style={styles.heroSub}
-                >{`${walletsCount} wallet${walletsCount === 1 ? '' : 's'} · ${currencyCode}`}</Text>
-              )}
-            </View>
-
-            {currencyCode && (
-              <View style={[styles.deltaBadge, { backgroundColor: deltaBg }]}>
-                {!deltaNeutral && (
-                  <Icon name={deltaPositive ? 'trend-up' : 'trend-down'} size={11} color={deltaFg} strokeWidth={2.3} />
-                )}
-
-                <Text style={[styles.deltaText, { color: deltaFg }]}>{`${Math.abs(deltaPercent).toFixed(1)}%`}</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        <SectionTitle
-          style={styles.walletsTitle}
-          title="Your wallets"
-          button={
-            <TinyButton
-              title="Add Wallet"
-              icon="plus"
-              iconWrap={false}
-              strokeWidth={2.2}
-              onPress={() => navigation.navigate(ScreenNames.ADD_WALLET_SCREEN, { id: 'new' })}
-            />
-          }
+        <BalanceOverview
+          total={total}
+          currencyCode={currencyCode}
+          walletsCount={walletsCount}
+          deltaPercent={deltaPercent}
+          isHidden={isHidden}
+          onToggleVisibility={toggle}
         />
 
-        <View style={styles.walletsSection}>
-          <Wallets navigation={navigation} onScrollEnd={(index: number) => setCurrentWalletIndex(index)} />
-        </View>
+        <WalletsSection navigation={navigation} onFocusedWalletChange={setFocusedWalletId} />
 
-        <SectionTitle
-          style={styles.activityTitle}
-          title="Recent activity"
-          button={
-            <TinyButton
-              title="See all"
-              variant="plain"
-              onPress={() => navigation.navigate(ScreenNames.TRANSACTIONS_TAB)}
-            />
-          }
+        <RecentActivity
+          navigation={navigation}
+          transactions={transactions}
+          currencyCode={currencyCode}
+          hasWallets={wallets.length > 0}
         />
-
-        <View style={styles.activitySection}>
-          {transactions.length === 0 ? (
-            <EmptyState
-              icon="list"
-              title="Nothing here yet"
-              description={
-                hasWallets
-                  ? 'Tap + to record your first income or expense.'
-                  : 'Transactions will appear here once you add a wallet.'
-              }
-            />
-          ) : (
-            <View style={styles.activity}>
-              {recentGroups.map((group) => (
-                <View key={group.label}>
-                  <View style={styles.groupHeader}>
-                    <Text style={styles.groupLabel}>{group.label}</Text>
-
-                    {group.total !== undefined && (
-                      <Text style={styles.groupTotal}>
-                        {`${group.total >= 0 ? '+' : '-'}${formatNumber(Math.abs(group.total))}${
-                          group.currencyCode ? ` ${group.currencyCode}` : ''
-                        }`}
-                      </Text>
-                    )}
-                  </View>
-
-                  <View style={styles.groupItems}>
-                    {group.items.map((transaction) => (
-                      <TransactionCard key={transaction.id} transaction={transaction} currencyCode={currencyCode} />
-                    ))}
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
       </RootLayout>
 
-      <Fab onExpense={handlePresentExpenseModalPress} onIncome={handlePresentIncomeModalPress} />
+      <Fab onExpense={() => composerRef.current?.openExpense()} onIncome={() => composerRef.current?.openIncome()} />
     </>
   );
 };

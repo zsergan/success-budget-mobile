@@ -5,6 +5,10 @@ export const formatNumber = (num: number | string) => Number(num).toLocaleString
 export const formatCurrencyAmount = (amount: number | string, currencyCode?: string) =>
   currencyCode ? `${formatNumber(amount)} ${currencyCode}` : formatNumber(amount);
 
+/** Always sign-prefixed, for day totals that can net out either way. */
+export const formatSignedAmount = (amount: number, currencyCode?: string) =>
+  `${amount >= 0 ? '+' : '-'}${formatCurrencyAmount(Math.abs(amount), currencyCode)}`;
+
 export const hexToRgba = (hex: string, alpha: number) => {
   const value = hex.replace('#', '');
   const r = parseInt(value.substring(0, 2), 16);
