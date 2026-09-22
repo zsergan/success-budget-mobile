@@ -192,48 +192,10 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.bodyLg,
     color: colors.muted,
   },
-  colorRow: {
-    flexDirection: 'row',
-    columnGap: theme.spacing.sm,
-  },
-  colorSwatch: {
-    flex: 1,
-    height: 44,
-    borderRadius: theme.radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  colorSwatchSelected: {
-    borderWidth: 2,
-    borderColor: colors.text,
-  },
   iconNote: {
     fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.micro,
     color: colors.muted,
-  },
-  iconGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  iconCellWrap: {
-    width: `${100 / 6}%`,
-    aspectRatio: 1,
-    marginBottom: 9,
-    paddingHorizontal: 4.5,
-  },
-  iconCell: {
-    flex: 1,
-    borderRadius: theme.radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconCellUnselected: {
-    borderWidth: 1,
-    borderColor: colors.hairline,
-  },
-  iconCellSelected: {
-    borderWidth: 2,
   },
   deleteButton: {
     height: 50,
