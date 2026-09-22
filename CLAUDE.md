@@ -7,14 +7,15 @@ with the user happens in.
 
 ## Project
 
-`success-budget-mobile` is a React Native (Expo SDK 54, React 19, RN 0.81)
+`success-budget-mobile` is a React Native (Expo SDK 57, React 19, RN 0.86)
 personal-finance app written in TypeScript: wallets, transactions,
-categories, spending limits, multi-currency support.
+categories, spending limits, multi-currency support, shared spaces with
+members.
 
 - State: Redux Toolkit. Each domain lives under
   `src/redux/state/<domain>/{initialState,selectors,slice,thunks}.ts`
   (domains: `auth`, `wallet`, `transaction`, `category`, `limit`,
-  `currency`, `profile`).
+  `currency`, `profile`, `space`, `member`).
 - API layer: `src/api/<resource>.api.ts` wraps a single axios instance
   (`src/api/instance.ts`); request/response shapes are declared in
   `src/api/dto/*.ts` and must match the backend's actual DTOs (see
@@ -29,7 +30,7 @@ categories, spending limits, multi-currency support.
   `<Name>.tsx` + `style.ts`.
 - Barrel `index.ts` rule (applies to both `screens/**` and `components/**`):
   add one only for a folder that groups more than one thing meant to be
-  imported from outside it (e.g. `screens/Auth/` bundles three screens,
+  imported from outside it (e.g. `screens/Auth/` bundles multiple screens,
   `components/Wallets/` bundles `TinyWallet` + `WalletCard`). A folder
   that is just one component/screen does not get its own `index.ts` — the
   parent barrel (`@screens`, `@components`) imports straight from its file.
@@ -40,9 +41,9 @@ categories, spending limits, multi-currency support.
 - Import aliases: `@<segment>/...` maps to `src/<segment>/...` (see
   `tsconfig.json`). Use the alias form everywhere; do not fall back to deep
   relative imports (`../../..`) for anything under `src/`.
-- No test runner is currently wired up. If you add tests, use
-  `jest` + `@testing-library/react-native` and add a `test` script to
-  `package.json` — don't invent a different toolchain.
+- Tests use `jest` + `jest-expo` + `@testing-library/react-native`, run via
+  `npm test`. Co-locate new test files next to the code they cover
+  (`*.test.ts`/`*.test.tsx`), matching existing examples.
 
 ## Screen organization
 
@@ -69,23 +70,20 @@ lines rather than reaching for a features/entities/widgets layer:
   when it is cheap to do so).
 - **Folders are created as needed** — no pre-emptive empty
   `components/`/`hooks/` for a screen that has not outgrown a single
-  file.
+  file. A hook used only by one section can live inside that
+  section's own folder instead of a screen-level `hooks/` dir.
 
-Example: `src/screens/Home/components/WalletsSection/{WalletsSection.tsx,style.ts}`
-plus `src/screens/Home/hooks/useWalletActions.ts`, extracted only once
-`HomeScreen.tsx` needed the split.
+Example: `src/screens/Transactions/hooks/{useTransactionRange.ts,useTransactionsData.ts}`,
+split by meaning once `TransactionsScreen.tsx` needed more than one
+data concern.
 
 ## Backend contract
 
-The backend is a separate, actively evolving project. It went through a
-recent modernization (global `/api/v1` prefix + versioning, uniform error
-shape, whitelist-validated request bodies, ownership checks on
-`category_id`, JWT with a real 90-day TTL and revocation on user deletion,
-global rate limiting, several field renames on the wallet endpoint). Before
-assuming the mobile client's DTOs (`src/api/dto/*.ts`) are correct, check
-them against the backend's Swagger (`/docs`, `/docs-json`) or whatever
-changelog/spec the user provides — do not assume the existing client code
-already matches the current backend.
+The backend is a separate, actively evolving project. Before assuming the
+mobile client's DTOs (`src/api/dto/*.ts`) are correct, check them against
+the backend's Swagger (`/docs`, `/docs-json`) or whatever changelog/spec
+the user provides — do not assume the existing client code already
+matches the current backend.
 
 If a `.private/` directory exists at the repo root, it is gitignored and
 never pushed anywhere. It may hold working notes such as a staged
@@ -119,10 +117,6 @@ exists or is up to date without checking.
   permission to commit it — leave changes in the working tree and say so.
   This holds even if the user approved committing earlier in the same
   session; each commit/push needs its own explicit go-ahead.
-- **English only in anything that reaches the repository**: code,
-  identifiers, comments, commit messages, PR/MR descriptions, and any
-  Markdown docs committed to the repo. Conversation with the user can be
-  in whatever language they use.
 - **Never put a Claude Code session link (`claude.ai/code/session_...`) in
   anything pushed to this repository** — not in commit messages, PR/MR
   descriptions, code, or docs. This repo may go public; nothing should let
