@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import type { SpaceInviteRow, SpaceMemberRow } from '@api/dto';
 import type { MemberActionTarget } from '../../types';
@@ -11,6 +11,11 @@ interface Props {
   inviteRows: SpaceInviteRow[];
   ownUserId?: number;
   isRefreshing: boolean;
+  // A background refresh (list already has data) that failed -- distinct
+  // from the initial/full-screen error, which is handled a level up
+  // because it replaces the whole section instead of sitting under it.
+  refreshFailed: boolean;
+  onRetry: () => void;
   onActionPress: (target: MemberActionTarget) => void;
 }
 
@@ -21,7 +26,15 @@ interface Props {
 // row" instead, regardless of what the server's own can_remove said.
 const hasUsableUserId = (userId: unknown): userId is number => typeof userId === 'number';
 
-const MembersList = ({ memberRows, inviteRows, ownUserId, isRefreshing, onActionPress }: Props) => {
+const MembersList = ({
+  memberRows,
+  inviteRows,
+  ownUserId,
+  isRefreshing,
+  refreshFailed,
+  onRetry,
+  onActionPress,
+}: Props) => {
   const memberCount = memberRows.length;
   const countLabel = [
     `${memberCount} member${memberCount === 1 ? '' : 's'}`,
@@ -76,6 +89,15 @@ const MembersList = ({ memberRows, inviteRows, ownUserId, isRefreshing, onAction
       )}
 
       {isRefreshing && <Text style={styles.hint}>Refreshing…</Text>}
+
+      {refreshFailed && !isRefreshing && (
+        <View style={styles.refreshErrorRow}>
+          <Text style={styles.hint}>Couldn&apos;t refresh the list.</Text>
+          <TouchableOpacity onPress={onRetry} hitSlop={8}>
+            <Text style={styles.retryLink}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };

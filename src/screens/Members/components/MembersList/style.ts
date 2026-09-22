@@ -32,6 +32,16 @@ const styles = StyleSheet.create({
   rows: {
     rowGap: theme.spacing.sm - 2,
   },
+  refreshErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: theme.spacing.xs,
+  },
+  retryLink: {
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.caption,
+    color: colors.accent,
+  },
 });
 
 export default styles;

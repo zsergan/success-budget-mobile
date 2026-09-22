@@ -3,14 +3,16 @@ import { useState } from 'react';
 import type { GetWalletsResponse } from '@api/dto';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectWallet } from '@redux/state/wallet/selectors';
-import { removeWallet } from '@redux/state/wallet/thunks';
+import { fetchWallets, removeWallet } from '@redux/state/wallet/thunks';
 
 const useWalletActions = () => {
   const dispatch = useAppDispatch();
   const [selectedWallet, setSelectedWallet] = useState<GetWalletsResponse | undefined>(undefined);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isConfirmVisible, setIsConfirmVisible] = useState(false);
-  const { wallets } = useAppSelector(selectWallet);
+  const { wallets, isLoading, error } = useAppSelector(selectWallet);
+
+  const retry = () => dispatch(fetchWallets());
 
   const onWalletLongPress = (wallet: GetWalletsResponse) => {
     setSelectedWallet(wallet);
@@ -40,6 +42,13 @@ const useWalletActions = () => {
 
   return {
     wallets,
+    // Both a space switch (isLoading set synchronously by the context
+    // reset) and the true first load flow through this -- WalletsSection
+    // must not render "no wallets yet" while either is still in flight, or
+    // after a fetch failed, only once it's genuinely empty.
+    isLoading,
+    error,
+    retry,
     selectedWallet,
     isModalVisible,
     isConfirmVisible,

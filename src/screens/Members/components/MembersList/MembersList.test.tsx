@@ -18,7 +18,14 @@ describe('MembersList', () => {
     const onActionPress = jest.fn();
 
     render(
-      <MembersList memberRows={[withUserId]} inviteRows={[]} isRefreshing={false} onActionPress={onActionPress} />,
+      <MembersList
+        memberRows={[withUserId]}
+        inviteRows={[]}
+        isRefreshing={false}
+        refreshFailed={false}
+        onRetry={jest.fn()}
+        onActionPress={onActionPress}
+      />,
     );
 
     fireEvent.press(screen.getByRole('button'));
@@ -33,7 +40,14 @@ describe('MembersList', () => {
     const withoutUserId = { ...withUserId, user_id: undefined } as unknown as SpaceMemberRow;
 
     render(
-      <MembersList memberRows={[withoutUserId]} inviteRows={[]} isRefreshing={false} onActionPress={onActionPress} />,
+      <MembersList
+        memberRows={[withoutUserId]}
+        inviteRows={[]}
+        isRefreshing={false}
+        refreshFailed={false}
+        onRetry={jest.fn()}
+        onActionPress={onActionPress}
+      />,
     );
 
     expect(screen.queryByRole('button')).toBeNull();
@@ -45,7 +59,14 @@ describe('MembersList', () => {
     const withoutUserId = { ...withUserId, id: 999, user_id: undefined } as unknown as SpaceMemberRow;
 
     render(
-      <MembersList memberRows={[withoutUserId]} inviteRows={[]} isRefreshing={false} onActionPress={onActionPress} />,
+      <MembersList
+        memberRows={[withoutUserId]}
+        inviteRows={[]}
+        isRefreshing={false}
+        refreshFailed={false}
+        onRetry={jest.fn()}
+        onActionPress={onActionPress}
+      />,
     );
 
     // No button is rendered (previous test), so nothing to press -- this
@@ -66,9 +87,53 @@ describe('MembersList', () => {
     };
 
     render(
-      <MembersList memberRows={[withUserId]} inviteRows={[invite]} isRefreshing={false} onActionPress={jest.fn()} />,
+      <MembersList
+        memberRows={[withUserId]}
+        inviteRows={[invite]}
+        isRefreshing={false}
+        refreshFailed={false}
+        onRetry={jest.fn()}
+        onActionPress={jest.fn()}
+      />,
     );
 
     expect(screen.getByText('1 member · 1 pending')).toBeTruthy();
+  });
+
+  it('shows a retry hint for a failed background refresh without hiding the already-loaded list', () => {
+    const onRetry = jest.fn();
+
+    render(
+      <MembersList
+        memberRows={[withUserId]}
+        inviteRows={[]}
+        isRefreshing={false}
+        refreshFailed
+        onRetry={onRetry}
+        onActionPress={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Alex')).toBeTruthy();
+    expect(screen.getByText("Couldn't refresh the list.")).toBeTruthy();
+
+    fireEvent.press(screen.getByText('Retry'));
+
+    expect(onRetry).toHaveBeenCalled();
+  });
+
+  it('does not show the refresh-failed hint while still refreshing', () => {
+    render(
+      <MembersList
+        memberRows={[withUserId]}
+        inviteRows={[]}
+        isRefreshing
+        refreshFailed
+        onRetry={jest.fn()}
+        onActionPress={jest.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("Couldn't refresh the list.")).toBeNull();
   });
 });

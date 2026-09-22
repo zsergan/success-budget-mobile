@@ -93,6 +93,8 @@ const MembersScreen = ({ navigation }: Props) => {
               inviteRows={inviteRows}
               ownUserId={ownRow?.user_id}
               isRefreshing={isRefreshing}
+              refreshFailed={!!error && !isInitialLoading}
+              onRetry={retry}
               onActionPress={requestAction}
             />
 

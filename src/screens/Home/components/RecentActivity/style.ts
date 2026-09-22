@@ -33,6 +33,11 @@ const styles = StyleSheet.create({
   groupItems: {
     rowGap: theme.spacing.sm,
   },
+  loadingContainer: {
+    height: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 
 export default styles;

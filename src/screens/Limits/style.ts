@@ -15,6 +15,11 @@ const styles = StyleSheet.create({
     paddingBottom: FAB_SCROLL_CLEARANCE,
     rowGap: theme.spacing.lg,
   },
+  loadingContainer: {
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   fab: {
     position: 'absolute',
     right: theme.spacing.xl,

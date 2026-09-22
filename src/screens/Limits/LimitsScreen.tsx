@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { ScrollView, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { LimitModel } from '@api/models';
-import { BottomSheetModal as BottomModal, Icon } from '@components';
-import { useAppSelector } from '@redux/hooks';
+import { BottomSheetModal as BottomModal, EmptyState, Icon } from '@components';
+import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectLimit } from '@redux/state/limit/selectors';
+import { fetchLimits } from '@redux/state/limit/thunks';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import { colors } from '@shared/theme';
 import LimitEditorSheet, { LIMIT_EDITOR_SNAP_POINT } from './components/LimitEditor/LimitEditorSheet';
@@ -20,7 +21,8 @@ import useLimitEditor from './hooks/useLimitEditor';
 import styles from './style';
 
 const LimitsScreen = () => {
-  const { total, categoryLimits, overAllocation } = useAppSelector(selectLimit);
+  const dispatch = useAppDispatch();
+  const { total, categoryLimits, overAllocation, isLoading, error } = useAppSelector(selectLimit);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
   const { editorTarget, editorKey, openEditor, editorRef } = useLimitEditor();
@@ -50,7 +52,19 @@ const LimitsScreen = () => {
 
         <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
           <View style={styles.container}>
-            {isFullyEmpty ? (
+            {isLoading && isFullyEmpty ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator color={colors.accent} />
+              </View>
+            ) : !isLoading && error && isFullyEmpty ? (
+              <EmptyState
+                icon="limit"
+                title="Couldn't load limits"
+                description="Check your connection and try again."
+                actionLabel="Retry"
+                onActionPress={() => dispatch(fetchLimits())}
+              />
+            ) : isFullyEmpty ? (
               <LimitsEmptyState
                 onSetTotalLimit={() => openEditor({ scope: 'total' })}
                 onAddCategoryLimit={() => openEditor({ scope: 'category' })}
