@@ -9,8 +9,8 @@ import { TransactionType } from '@shared/enums';
 import { CATEGORY_COLOR_NAMES } from '@shared/categoryColors';
 import { colors } from '@shared/theme';
 import CategoryIconBox from '../CategoryIconBox/CategoryIconBox';
-import ColorPicker from './ColorPicker';
-import IconPicker from './IconPicker';
+import ColorPicker from './ColorPicker/ColorPicker';
+import IconPicker from './IconPicker/IconPicker';
 import useCategoryEditorForm, { NAME_MAX_LENGTH } from './useCategoryEditorForm';
 
 import styles from './style';

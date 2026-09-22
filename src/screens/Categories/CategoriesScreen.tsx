@@ -1,7 +1,6 @@
-import { useRef, useState } from 'react';
-import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import DraggableFlatList from 'react-native-draggable-flatlist';
 
 import { BottomSheetModal as BottomModal, EmptyState, Icon } from '@components';
@@ -9,12 +8,14 @@ import type { CategoryModel } from '@api/models';
 import type { ScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
 import { colors } from '@shared/theme';
-import CategoryEditorSheet, { CATEGORY_EDITOR_SNAP_POINT } from './CategoryEditor/CategoryEditorSheet';
-import DeleteCategoryDialog from './DeleteCategoryDialog/DeleteCategoryDialog';
-import CategoryRow from './CategoryRow/CategoryRow';
-import SegmentedControl from './SegmentedControl/SegmentedControl';
-import type { CategorySegment } from './useCategories';
-import useCategories from './useCategories';
+import CategoriesEmptyState from './components/CategoriesEmptyState/CategoriesEmptyState';
+import CategoryEditorSheet, { CATEGORY_EDITOR_SNAP_POINT } from './components/CategoryEditor/CategoryEditorSheet';
+import DeleteCategoryDialog from './components/DeleteCategoryDialog/DeleteCategoryDialog';
+import CategoryRow from './components/CategoryRow/CategoryRow';
+import SegmentedControl from './components/SegmentedControl/SegmentedControl';
+import useCategoryEditor from './hooks/useCategoryEditor';
+import type { CategorySegment } from './hooks/useCategoryList';
+import useCategoryList from './hooks/useCategoryList';
 
 import styles from './style';
 
@@ -24,8 +25,6 @@ const ARCHIVE_FOOTNOTE =
   'Restoring puts a category back into the picker. It does not re-join limits automatically — add it to a limit again if you want it counted.';
 
 const CategoriesScreen = ({ navigation }: Props) => {
-  const editorRef = useRef<BottomSheetModal>(null);
-  const [editingCategory, setEditingCategory] = useState<CategoryModel | undefined>(undefined);
   const [deletingCategory, setDeletingCategory] = useState<CategoryModel | null>(null);
 
   const {
@@ -39,22 +38,17 @@ const CategoriesScreen = ({ navigation }: Props) => {
     isSearching,
     resultNote,
     list,
+    isLoading,
+    error,
+    retry,
     handleReorder,
     handleRestore,
     defaultTransactionType,
-  } = useCategories();
+  } = useCategoryList();
+
+  const { editorRef, editingCategory, openCreate, openEdit } = useCategoryEditor();
 
   const isManual = sortMode === 'manual' && segment !== 'archived';
-
-  const openCreate = () => {
-    setEditingCategory(undefined);
-    editorRef.current?.present();
-  };
-
-  const openEdit = (category: CategoryModel) => {
-    setEditingCategory(category);
-    editorRef.current?.present();
-  };
 
   const handleRequestDelete = (category: CategoryModel) => {
     editorRef.current?.dismiss();
@@ -137,22 +131,20 @@ const CategoriesScreen = ({ navigation }: Props) => {
           <SegmentedControl options={segmentOptions} value={segment} onChange={changeSegment} />
         </View>
 
-        {list.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            {segment === 'archived' ? (
-              <EmptyState
-                icon="trash"
-                title="Nothing archived"
-                description="Delete a category that already has transactions and it lands here instead of disappearing. History stays intact, and you can bring it back with one tap."
-              />
-            ) : (
-              <EmptyState
-                icon="search"
-                title={isSearching ? 'No matches' : 'No categories yet'}
-                description={isSearching ? 'Try a different search term.' : 'Add your first category to get started.'}
-              />
-            )}
+        {isLoading && list.length === 0 ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator color={colors.accent} />
           </View>
+        ) : !isLoading && error && list.length === 0 ? (
+          <EmptyState
+            icon="list"
+            title="Couldn't load categories"
+            description="Check your connection and try again."
+            actionLabel="Retry"
+            onActionPress={retry}
+          />
+        ) : list.length === 0 ? (
+          <CategoriesEmptyState segment={segment} isSearching={isSearching} />
         ) : isManual ? (
           <DraggableFlatList
             style={styles.body}
