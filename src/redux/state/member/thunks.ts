@@ -8,6 +8,7 @@ import {
 } from '@api/member.api';
 import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
+import { isSessionActive } from '../auth/thunks';
 import { activateSpace, fetchSpaces, isSpaceContextCurrent } from '../space/thunks';
 
 export const fetchMembers = createAppAsyncThunk('member/fetchMembers', async (_: void, thunkAPI) => {
@@ -26,6 +27,7 @@ export const fetchMembers = createAppAsyncThunk('member/fetchMembers', async (_:
 
 export const inviteMember = createAppAsyncThunk('member/inviteMember', async (email: string, thunkAPI) => {
   const { currentSpaceId: spaceId, contextKey } = thunkAPI.getState().space;
+  const sessionKey = thunkAPI.getState().auth.sessionKey;
 
   if (spaceId === null) {
     return thunkAPI.rejectWithValue(undefined);
@@ -44,7 +46,13 @@ export const inviteMember = createAppAsyncThunk('member/inviteMember', async (em
 
     return invite;
   } catch (error: unknown) {
-    return thunkAPI.rejectWithValue(getRejectValue(error));
+    // A logout while this was in flight must not let a late 429 start a
+    // cooldown a future session would inherit -- unlike contextKey, which
+    // also (correctly) changes on an ordinary space switch, sessionKey
+    // only changes when the session itself ends.
+    const isSessionStale = thunkAPI.getState().auth.sessionKey !== sessionKey;
+
+    return thunkAPI.rejectWithValue({ ...getRejectValue(error), isStale: isSessionStale });
   }
 });
 
@@ -104,6 +112,8 @@ export const leaveSpace = createAppAsyncThunk('member/leaveSpace', async (_: voi
     return thunkAPI.rejectWithValue(getRejectValue(error));
   }
 
+  if (!isSessionActive(thunkAPI.getState)) return;
+
   // The space we just left is invalid the instant the DELETE succeeds --
   // don't wait on the spaces refresh (which can itself fail) to stop
   // treating it as the active context. Only touch the active space if the
@@ -132,16 +142,20 @@ export const acceptInvite = createAppAsyncThunk('member/acceptInvite', async (co
     return thunkAPI.rejectWithValue(getRejectValue(error));
   }
 
-  // The response carries the joined space's real id -- use that directly
-  // rather than diffing the space list before/after, which breaks the
-  // moment two joins race or the list order isn't stable.
-  thunkAPI.dispatch(activateSpace(space.id));
+  // A logout that happened while this accept was in flight must not go on
+  // to select the joined space for a session that no longer exists.
+  if (isSessionActive(thunkAPI.getState)) {
+    // The response carries the joined space's real id -- use that directly
+    // rather than diffing the space list before/after, which breaks the
+    // moment two joins race or the list order isn't stable.
+    thunkAPI.dispatch(activateSpace(space.id));
 
-  try {
-    await thunkAPI.dispatch(fetchSpaces()).unwrap();
-  } catch {
-    // The invite was accepted and the space is already selected; a failed
-    // list refresh doesn't undo that and shouldn't fail this thunk.
+    try {
+      await thunkAPI.dispatch(fetchSpaces()).unwrap();
+    } catch {
+      // The invite was accepted and the space is already selected; a failed
+      // list refresh doesn't undo that and shouldn't fail this thunk.
+    }
   }
 
   return space;

@@ -54,6 +54,22 @@ describe('member slice', () => {
     expect(state.inviteCooldownUntil).toBeGreaterThanOrEqual(before + INVITE_RATE_LIMIT_COOLDOWN_MS);
   });
 
+  it('does not set a cooldown from a stale 429 (thunk detected a logout while it was in flight)', () => {
+    const state = memberReducer(
+      initialState,
+      inviteMember.rejected(new Error('rate limited'), 'req-1', 'a@b.com', {
+        message: 'Too many requests',
+        statusCode: 429,
+        path: '/spaces/1/invites',
+        timestamp: '2026-01-01T00:00:00.000Z',
+        retryAfterMs: 30_000,
+        isStale: true,
+      }),
+    );
+
+    expect(state.inviteCooldownUntil).toBeNull();
+  });
+
   it('does not set a cooldown for a non-429 rejection', () => {
     const state = memberReducer(
       initialState,

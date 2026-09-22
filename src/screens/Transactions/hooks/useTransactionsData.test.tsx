@@ -65,6 +65,24 @@ describe('useTransactionsData viewState', () => {
     unmount();
   });
 
+  it('shows latestError (not trueEmpty) for a genuine network failure with no HTTP response at all', async () => {
+    const store = createTestStore();
+
+    store.dispatch(activateSpace(1));
+    mockedGetTransactions.mockResolvedValue([]);
+    // A real network failure (offline, DNS, timeout) has no `.response` at
+    // all -- unlike a 500, which still carries one.
+    mockedGetLatestTransaction.mockRejectedValue({ message: 'Network Error', code: 'ERR_NETWORK' });
+
+    const { result, unmount } = renderHook(() => useTransactionsData({ range }), { wrapper: wrapperFor(store) });
+
+    await waitFor(() => expect(result.current.viewState).not.toBe('loading'));
+
+    expect(result.current.viewState).toBe('latestError');
+
+    unmount();
+  });
+
   it('shows trueEmpty once an empty range and a confirmed-empty latest both settle', async () => {
     const store = createTestStore();
 

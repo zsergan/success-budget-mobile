@@ -69,6 +69,11 @@ const useInviteMember = ({ canInvite, cooldownRemaining }: UseInviteMemberProps)
     } catch (error: unknown) {
       const errorResponse = error as ErrorResponse | undefined;
 
+      // The thunk itself detected the session/context had already moved on
+      // (e.g. a logout while this was in flight) -- nothing here is still
+      // relevant to show.
+      if (errorResponse?.isStale) return false;
+
       // A 429 already surfaces through the cooldown UI (and the global
       // request interceptor's own alert) -- an extra alert here would be a
       // second notification for the same rejection.

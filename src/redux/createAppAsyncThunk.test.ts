@@ -1,3 +1,4 @@
+import { NETWORK_ERROR_MESSAGE } from '@shared/utils/error';
 import { getRejectValue } from './createAppAsyncThunk';
 
 const errorBody = {
@@ -12,8 +13,12 @@ const axiosErrorWithHeaders = (headers: Record<string, string>) => ({
 });
 
 describe('getRejectValue', () => {
-  it('returns undefined for a network failure with no response', () => {
-    expect(getRejectValue({})).toBeUndefined();
+  it('returns a truthy synthetic error for a network failure with no response, not undefined', () => {
+    const result = getRejectValue({});
+
+    expect(result).not.toBeUndefined();
+    expect(result.statusCode).toBe(0);
+    expect(result.message).toBe(NETWORK_ERROR_MESSAGE);
   });
 
   it('passes the body through unchanged when there is no Retry-After header', () => {

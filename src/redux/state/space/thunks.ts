@@ -5,6 +5,7 @@ import { getSpaces, createSpace, deleteSpace } from '@api/space.api';
 import { SpaceType } from '@shared/enums';
 import type { AppThunk, RootState } from '@redux/Store';
 import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
+import { isSessionActive } from '../auth/thunks';
 
 // The one event that means "the active space identity changed". wallet,
 // category, limit, transaction and member all listen for this (not just
@@ -73,8 +74,12 @@ export const addSpace = createAppAsyncThunk('space/addSpace', async (data: Creat
   try {
     const space = await createSpace(data);
 
-    thunkAPI.dispatch(activateSpace(space.id));
-    thunkAPI.dispatch(fetchSpaces());
+    // A logout that happened while this create was in flight must not be
+    // undone by activating the space it just made.
+    if (isSessionActive(thunkAPI.getState)) {
+      thunkAPI.dispatch(activateSpace(space.id));
+      thunkAPI.dispatch(fetchSpaces());
+    }
 
     return space;
   } catch (error: unknown) {
@@ -86,7 +91,9 @@ export const removeSpace = createAppAsyncThunk('space/removeSpace', async (space
   try {
     await deleteSpace(spaceId);
 
-    thunkAPI.dispatch(fetchSpaces());
+    if (isSessionActive(thunkAPI.getState)) {
+      thunkAPI.dispatch(fetchSpaces());
+    }
   } catch (error: unknown) {
     return thunkAPI.rejectWithValue(getRejectValue(error));
   }

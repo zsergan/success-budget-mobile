@@ -59,6 +59,7 @@ const memberSlice = createSlice({
     });
 
     builder.addCase(inviteMember.rejected, (state, action) => {
+      if (action.payload?.isStale) return;
       if (action.payload?.statusCode !== 429) return;
 
       state.inviteCooldownUntil = Date.now() + (action.payload.retryAfterMs ?? INVITE_RATE_LIMIT_COOLDOWN_MS);

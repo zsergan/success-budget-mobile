@@ -5,6 +5,7 @@ import * as memberApi from '@api/member.api';
 import { getSpaces } from '@api/space.api';
 import { SpaceType } from '@shared/enums';
 import authReducer from '../auth/slice';
+import { loginMe, logoutMe } from '../auth/thunks';
 import categoryReducer from '../category/slice';
 import currencyReducer from '../currency/slice';
 import limitReducer from '../limit/slice';
@@ -15,13 +16,14 @@ import transactionReducer from '../transaction/slice';
 import walletReducer from '../wallet/slice';
 import { fetchProfile } from '../profile/thunks';
 import memberReducer from './slice';
-import { acceptInvite, leaveSpace, removeMember } from './thunks';
+import { acceptInvite, inviteMember, leaveSpace, removeMember } from './thunks';
 
 jest.mock('@api/member.api');
 jest.mock('@api/space.api');
 
 const mockedRemoveMember = jest.mocked(memberApi.removeMember);
 const mockedAcceptInvite = jest.mocked(memberApi.acceptInvite);
+const mockedInviteMember = jest.mocked(memberApi.inviteMember);
 const mockedGetSpaces = jest.mocked(getSpaces);
 
 const testReducer = {
@@ -36,7 +38,17 @@ const testReducer = {
   wallet: walletReducer,
 };
 
-const createTestStore = () => configureStore({ reducer: testReducer });
+// Every thunk under test here only ever runs while signed in -- these
+// thunks' own isSessionActive guards would otherwise treat a test store
+// (which starts signed out, like a fresh app launch) as a logged-out
+// session and silently skip their space-activation side effects.
+const createTestStore = () => {
+  const store = configureStore({ reducer: testReducer });
+
+  store.dispatch(loginMe.fulfilled('test-token', 'req-login', { email: 'me@example.com', password: 'password1' }));
+
+  return store;
+};
 
 const createTestStoreAsUser = (profileId: number) => {
   const store = createTestStore();
@@ -181,5 +193,45 @@ describe('acceptInvite', () => {
 
     expect(action.type).toBe('member/acceptInvite/rejected');
     expect(store.getState().space.currentSpaceId).toBe(1);
+  });
+});
+
+describe('inviteMember', () => {
+  it('marks a 429 that outlived a logout as stale, so it cannot set a cooldown a future session inherits', async () => {
+    const store = createTestStore();
+
+    store.dispatch(activateSpace(1));
+
+    let rejectInvite!: (reason: unknown) => void;
+    mockedInviteMember.mockReturnValue(new Promise((_resolve, reject) => (rejectInvite = reject)));
+
+    const pending = store.dispatch(inviteMember('a@b.com'));
+
+    store.dispatch(logoutMe.fulfilled(undefined, 'req-logout', undefined));
+    rejectInvite({
+      response: {
+        data: { message: 'Too many requests', statusCode: 429, path: '/spaces/1/invites', timestamp: '' },
+        headers: {},
+      },
+    });
+    await pending;
+
+    expect(store.getState().member.inviteCooldownUntil).toBeNull();
+  });
+
+  it('still sets a cooldown from a 429 within the same session', async () => {
+    const store = createTestStore();
+
+    store.dispatch(activateSpace(1));
+    mockedInviteMember.mockRejectedValue({
+      response: {
+        data: { message: 'Too many requests', statusCode: 429, path: '/spaces/1/invites', timestamp: '' },
+        headers: {},
+      },
+    });
+
+    await store.dispatch(inviteMember('a@b.com'));
+
+    expect(store.getState().member.inviteCooldownUntil).not.toBeNull();
   });
 });

@@ -1,10 +1,10 @@
 import { configureStore } from '@reduxjs/toolkit';
 
 import type { Space } from '@api/dto';
-import { getSpaces } from '@api/space.api';
+import { createSpace, getSpaces } from '@api/space.api';
 import { SpaceType } from '@shared/enums';
 import authReducer from '../auth/slice';
-import { logoutMe } from '../auth/thunks';
+import { loginMe, logoutMe } from '../auth/thunks';
 import categoryReducer from '../category/slice';
 import currencyReducer from '../currency/slice';
 import limitReducer from '../limit/slice';
@@ -14,11 +14,12 @@ import transactionReducer from '../transaction/slice';
 import walletReducer from '../wallet/slice';
 import { fetchWallets } from '../wallet/thunks';
 import spaceReducer from './slice';
-import { activateSpace, fetchSpaces } from './thunks';
+import { activateSpace, addSpace, fetchSpaces } from './thunks';
 
 jest.mock('@api/space.api');
 
 const mockedGetSpaces = jest.mocked(getSpaces);
+const mockedCreateSpace = jest.mocked(createSpace);
 
 const testReducer = {
   auth: authReducer,
@@ -233,5 +234,37 @@ describe('logout / login contextKey uniqueness', () => {
     store.dispatch(activateSpace(1));
 
     expect(store.getState().space.contextKey).toBeGreaterThan(keyBeforeLogout);
+  });
+});
+
+describe('addSpace session guard', () => {
+  it('activates the newly created space when the session is still active', async () => {
+    const store = createTestStore();
+
+    store.dispatch(loginMe.fulfilled('test-token', 'req-login', { email: 'a@b.com', password: 'password1' }));
+    mockedCreateSpace.mockResolvedValue(space({ id: 7 }));
+    mockedGetSpaces.mockResolvedValue([space({ id: 7 })]);
+
+    await store.dispatch(addSpace({ name: 'New', currency_id: 1, type: SpaceType.PERSONAL }));
+
+    expect(store.getState().space.currentSpaceId).toBe(7);
+  });
+
+  it('does not activate a space created by a request that outlived a logout', async () => {
+    const store = createTestStore();
+
+    store.dispatch(loginMe.fulfilled('test-token', 'req-login', { email: 'a@b.com', password: 'password1' }));
+
+    let resolveCreate!: (value: Space) => void;
+    mockedCreateSpace.mockReturnValue(new Promise((resolve) => (resolveCreate = resolve)));
+
+    const pending = store.dispatch(addSpace({ name: 'New', currency_id: 1, type: SpaceType.PERSONAL }));
+
+    store.dispatch(logoutMe.fulfilled(undefined, 'req-logout', undefined));
+    resolveCreate(space({ id: 7 }));
+    await pending;
+
+    expect(store.getState().space.currentSpaceId).toBeNull();
+    expect(mockedGetSpaces).not.toHaveBeenCalled();
   });
 });

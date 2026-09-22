@@ -15,6 +15,7 @@ const logout = (state: typeof initialState) => {
   state.isSignedIn = false;
   state.isLoading = false;
   state.userToken = null;
+  state.sessionKey += 1;
 };
 
 const authSlice = createSlice({
