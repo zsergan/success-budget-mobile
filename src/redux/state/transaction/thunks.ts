@@ -76,7 +76,10 @@ export const addTransaction = createAppAsyncThunk(
         thunkAPI.dispatch(fetchTransactions());
         thunkAPI.dispatch(fetchWallets());
         thunkAPI.dispatch(fetchLimits());
-        thunkAPI.dispatch(fetchLatestTransaction());
+        // latest's own refresh is owned solely by useTransactionsData's
+        // dataRevision-watching effect (dispatching it here too, on top of
+        // that, used to double-fetch it on every add) -- this only needs
+        // to mark it (and range) dirty.
         thunkAPI.dispatch(transactionsInvalidated({ contextKey }));
       }
 

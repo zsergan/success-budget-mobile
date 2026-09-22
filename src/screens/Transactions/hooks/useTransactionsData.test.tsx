@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import * as transactionApi from '@api/transaction.api';
 import authReducer from '@redux/state/auth/slice';
@@ -12,6 +12,7 @@ import memberReducer from '@redux/state/member/slice';
 import profileReducer from '@redux/state/profile/slice';
 import { activateSpace } from '@redux/state/space/thunks';
 import spaceReducer from '@redux/state/space/slice';
+import { transactionsInvalidated } from '@redux/state/transaction/actions';
 import transactionReducer from '@redux/state/transaction/slice';
 import walletReducer from '@redux/state/wallet/slice';
 import type { DateRange } from '@shared/utils';
@@ -121,6 +122,29 @@ describe('useTransactionsData viewState', () => {
     const { result, unmount } = renderHook(() => useTransactionsData({ range }), { wrapper: wrapperFor(store) });
 
     await waitFor(() => expect(result.current.viewState).toBe('ready'));
+
+    unmount();
+  });
+});
+
+describe('latest refresh ownership', () => {
+  it('refetches latest when dataRevision bumps while already mounted -- the only trigger, since addTransaction no longer dispatches it directly', async () => {
+    const store = createTestStore();
+
+    store.dispatch(activateSpace(1));
+    mockedGetTransactions.mockResolvedValue([]);
+    mockedGetLatestTransaction.mockResolvedValue(null);
+
+    const { unmount } = renderHook(() => useTransactionsData({ range }), { wrapper: wrapperFor(store) });
+
+    await waitFor(() => expect(mockedGetLatestTransaction).toHaveBeenCalledTimes(1));
+
+    // Simulates what addTransaction/addWallet do on a successful mutation.
+    act(() => {
+      store.dispatch(transactionsInvalidated({ contextKey: store.getState().space.contextKey }));
+    });
+
+    await waitFor(() => expect(mockedGetLatestTransaction).toHaveBeenCalledTimes(2));
 
     unmount();
   });

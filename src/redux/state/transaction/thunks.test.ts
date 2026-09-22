@@ -62,7 +62,7 @@ beforeEach(() => {
 });
 
 describe('addTransaction', () => {
-  it('refreshes recent/wallets/limits/latest and bumps dataRevision when the space is unchanged', async () => {
+  it('refreshes recent/wallets/limits and bumps dataRevision when the space is unchanged', async () => {
     const store = createTestStore();
 
     store.dispatch(activateSpace(1));
@@ -73,8 +73,18 @@ describe('addTransaction', () => {
     expect(mockedGetTransactions).toHaveBeenCalledWith(1);
     expect(mockedGetWallets).toHaveBeenCalledWith(1);
     expect(mockedGetLimits).toHaveBeenCalledWith(1);
-    expect(mockedGetLatestTransaction).toHaveBeenCalledWith(1);
     expect(store.getState().transaction.dataRevision).toBe(1);
+  });
+
+  it('does not fetch latest itself -- that refresh is solely owned by useTransactionsData watching dataRevision', async () => {
+    const store = createTestStore();
+
+    store.dispatch(activateSpace(1));
+    mockedCreateTransaction.mockResolvedValue({ id: 'tx-1' } as never);
+
+    await store.dispatch(addTransaction(payload));
+
+    expect(mockedGetLatestTransaction).not.toHaveBeenCalled();
   });
 
   it('a mutation in the old space must not refresh the newly selected space', async () => {
