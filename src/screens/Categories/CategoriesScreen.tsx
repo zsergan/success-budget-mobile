@@ -9,10 +9,10 @@ import type { CategoryModel } from '@api/models';
 import type { ScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
 import { colors } from '@shared/theme';
-import CategoryEditorSheet, { CATEGORY_EDITOR_SNAP_POINT } from './CategoryEditor/CategoryEditorSheet';
-import DeleteCategoryDialog from './DeleteCategoryDialog/DeleteCategoryDialog';
-import CategoryRow from './CategoryRow/CategoryRow';
-import SegmentedControl from './SegmentedControl/SegmentedControl';
+import CategoryEditorSheet, { CATEGORY_EDITOR_SNAP_POINT } from './components/CategoryEditor/CategoryEditorSheet';
+import DeleteCategoryDialog from './components/DeleteCategoryDialog/DeleteCategoryDialog';
+import CategoryRow from './components/CategoryRow/CategoryRow';
+import SegmentedControl from './components/SegmentedControl/SegmentedControl';
 import type { CategorySegment } from './useCategories';
 import useCategories from './useCategories';
 
