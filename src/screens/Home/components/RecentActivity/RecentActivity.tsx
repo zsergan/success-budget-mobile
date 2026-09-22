@@ -1,9 +1,11 @@
-import { Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 
 import { EmptyState, SectionTitle, TinyButton, TransactionCard } from '@components';
+import type { ErrorResponse } from '@api/dto';
 import type { TransactionModel } from '@api/models';
 import type { NavigationType } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
+import { colors } from '@shared/theme';
 import { formatSignedAmount, groupTransactionsByDay } from '@shared/utils';
 
 import styles from './style';
@@ -15,9 +17,12 @@ interface Props {
   transactions: TransactionModel[];
   currencyCode?: string;
   hasWallets: boolean;
+  isLoading: boolean;
+  error?: ErrorResponse;
+  onRetry: () => void;
 }
 
-const RecentActivity = ({ navigation, transactions, currencyCode, hasWallets }: Props) => {
+const RecentActivity = ({ navigation, transactions, currencyCode, hasWallets, isLoading, error, onRetry }: Props) => {
   const groups = groupTransactionsByDay(transactions.slice(0, RECENT_TRANSACTIONS_LIMIT), currencyCode);
 
   return (
@@ -35,7 +40,19 @@ const RecentActivity = ({ navigation, transactions, currencyCode, hasWallets }: 
       />
 
       <View style={styles.section}>
-        {transactions.length === 0 ? (
+        {isLoading && transactions.length === 0 ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator color={colors.accent} />
+          </View>
+        ) : !isLoading && error && transactions.length === 0 ? (
+          <EmptyState
+            icon="list"
+            title="Couldn't load recent activity"
+            description="Check your connection and try again."
+            actionLabel="Retry"
+            onActionPress={onRetry}
+          />
+        ) : transactions.length === 0 ? (
           <EmptyState
             icon="list"
             title="Nothing here yet"

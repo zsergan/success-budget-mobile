@@ -1,14 +1,20 @@
 import type { SpaceType } from '@shared/enums';
 import type { Currency } from './currencyDto';
 
-export interface Space {
+// The shape POST /spaces and POST /spaces/invites/accept actually return --
+// the bare space entity, with no caller-specific `role`/`member_count`.
+// Those two fields only come from GET /spaces (the list).
+export interface SpaceSummary {
   id: number;
   name: string;
   type: SpaceType;
   currency: Currency;
+  created_at: string;
+}
+
+export interface Space extends SpaceSummary {
   role: 'owner' | 'member';
   member_count: number;
-  created_at: string;
 }
 
 export interface CreateSpaceRequest {

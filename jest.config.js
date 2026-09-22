@@ -2,6 +2,15 @@ module.exports = {
   preset: 'jest-expo',
   moduleNameMapper: {
     '^@(api|components|hooks|navigation|redux|screens|shared)/(.*)$': '<rootDir>/src/$1/$2',
+    // The bare form (e.g. `@components`, importing a barrel's index.ts
+    // directly) isn't covered by the pattern above, which requires a
+    // sub-path after the segment.
+    '^@(api|components|hooks|navigation|redux|screens|shared)$': '<rootDir>/src/$1',
+    // react-redux's package.json "react-native" field points at its ESM
+    // build, which jest-expo's RN-style resolution picks up and then fails
+    // to parse (no test here goes through Metro) -- force the CJS dev
+    // build instead, same as any other node_modules package under test.
+    '^react-redux$': '<rootDir>/node_modules/react-redux/dist/cjs/react-redux.development.cjs',
   },
   // jest-expo's own transformIgnorePatterns (its allowlist of node_modules
   // packages that need Babel transforming) does not include `immer`, which

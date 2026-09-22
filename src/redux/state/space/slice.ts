@@ -2,24 +2,27 @@ import { createSlice, isPending, isRejected } from '@reduxjs/toolkit';
 
 import { logoutMe } from '../auth/thunks';
 import initialState from './initialState';
-import { addSpace, fetchSpaces, removeSpace, setCurrentSpaceId } from './thunks';
+import { addSpace, fetchSpaces, removeSpace, spaceContextChanged } from './thunks';
 
 const spaceSlice = createSlice({
   name: 'space',
   initialState,
   reducers: {},
   extraReducers: (builder) => {
-    builder.addCase(logoutMe.fulfilled, () => initialState);
+    // contextKey must never repeat, including across a logout/login cycle
+    // (a request from the ended session must not be able to match a fresh
+    // one) -- keep counting forward rather than resetting to 0.
+    builder.addCase(logoutMe.fulfilled, (state) => ({ ...initialState, contextKey: state.contextKey + 1 }));
 
-    builder.addCase(setCurrentSpaceId, (state, action) => {
-      state.currentSpaceId = action.payload;
+    builder.addCase(spaceContextChanged, (state, action) => {
+      state.currentSpaceId = action.payload.spaceId;
+      state.contextKey = action.payload.contextKey;
     });
 
     builder.addCase(fetchSpaces.fulfilled, (state, action) => {
       if (action.meta.requestId !== state.requestId) return;
 
-      state.spaces = action.payload.spaces;
-      state.currentSpaceId = action.payload.currentSpaceId;
+      state.spaces = action.payload;
       state.isLoading = false;
     });
 

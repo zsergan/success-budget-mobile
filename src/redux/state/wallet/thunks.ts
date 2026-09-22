@@ -2,6 +2,9 @@ import type { CreateWalletRequest, UpdateWalletRequest } from '@api/dto';
 import { getWallets, createWallet, updateWallet, deleteWallet } from '@api/wallet.api';
 import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
+import { isSpaceContextCurrent } from '../space/thunks';
+import { transactionsInvalidated } from '../transaction/actions';
+
 export const fetchWallets = createAppAsyncThunk('wallet/fetchWallets', async (_: void, thunkAPI) => {
   const spaceId = thunkAPI.getState().space.currentSpaceId;
 
@@ -17,7 +20,7 @@ export const fetchWallets = createAppAsyncThunk('wallet/fetchWallets', async (_:
 });
 
 export const addWallet = createAppAsyncThunk('wallet/addWallet', async (data: CreateWalletRequest, thunkAPI) => {
-  const spaceId = thunkAPI.getState().space.currentSpaceId;
+  const { currentSpaceId: spaceId, contextKey } = thunkAPI.getState().space;
 
   if (spaceId === null) {
     return thunkAPI.rejectWithValue(undefined);
@@ -26,7 +29,16 @@ export const addWallet = createAppAsyncThunk('wallet/addWallet', async (data: Cr
   try {
     const response = await createWallet(spaceId, data);
 
-    thunkAPI.dispatch(fetchWallets());
+    if (isSpaceContextCurrent(thunkAPI.getState, contextKey)) {
+      thunkAPI.dispatch(fetchWallets());
+
+      // A positive starting balance creates a real transaction on the
+      // backend -- history needs to know about it too, not just the
+      // wallet list.
+      if (response.transaction) {
+        thunkAPI.dispatch(transactionsInvalidated({ contextKey }));
+      }
+    }
 
     return response;
   } catch (error: unknown) {
@@ -37,7 +49,7 @@ export const addWallet = createAppAsyncThunk('wallet/addWallet', async (data: Cr
 export const editWallet = createAppAsyncThunk(
   'wallet/editWallet',
   async (data: { walletId: number; walletData: UpdateWalletRequest }, thunkAPI) => {
-    const spaceId = thunkAPI.getState().space.currentSpaceId;
+    const { currentSpaceId: spaceId, contextKey } = thunkAPI.getState().space;
 
     if (spaceId === null) {
       return thunkAPI.rejectWithValue(undefined);
@@ -46,7 +58,12 @@ export const editWallet = createAppAsyncThunk(
     try {
       const response = await updateWallet(spaceId, data.walletId, data.walletData);
 
-      thunkAPI.dispatch(fetchWallets());
+      if (isSpaceContextCurrent(thunkAPI.getState, contextKey)) {
+        thunkAPI.dispatch(fetchWallets());
+        // The wallet's name/design changed, which is embedded in every
+        // already-loaded transaction row that references it.
+        thunkAPI.dispatch(transactionsInvalidated({ contextKey }));
+      }
 
       return response;
     } catch (error: unknown) {
@@ -56,7 +73,7 @@ export const editWallet = createAppAsyncThunk(
 );
 
 export const removeWallet = createAppAsyncThunk('wallet/removeWallet', async (walletId: number, thunkAPI) => {
-  const spaceId = thunkAPI.getState().space.currentSpaceId;
+  const { currentSpaceId: spaceId, contextKey } = thunkAPI.getState().space;
 
   if (spaceId === null) {
     return thunkAPI.rejectWithValue(undefined);
@@ -65,7 +82,12 @@ export const removeWallet = createAppAsyncThunk('wallet/removeWallet', async (wa
   try {
     await deleteWallet(spaceId, walletId);
 
-    thunkAPI.dispatch(fetchWallets());
+    if (isSpaceContextCurrent(thunkAPI.getState, contextKey)) {
+      thunkAPI.dispatch(fetchWallets());
+      // Already-loaded transaction rows for this wallet need to pick up
+      // wallet: null (deleted), same as a fresh fetch would return.
+      thunkAPI.dispatch(transactionsInvalidated({ contextKey }));
+    }
   } catch (error: unknown) {
     return thunkAPI.rejectWithValue(getRejectValue(error));
   }

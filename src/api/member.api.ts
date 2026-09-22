@@ -1,4 +1,4 @@
-import type { InviteRequest, InviteResponse, SpaceMember } from './dto';
+import type { InviteRequest, InviteResponse, SpaceMember, SpaceSummary } from './dto';
 import { ApiClient } from './instance';
 
 const api = ApiClient();
@@ -24,5 +24,7 @@ export const removeMember = async (spaceId: number, userId: number) => {
 };
 
 export const acceptInvite = async (code: string) => {
-  await api.post(`/spaces/invites/accept`, { code });
+  const response = await api.post<SpaceSummary>(`/spaces/invites/accept`, { code });
+
+  return response.data;
 };

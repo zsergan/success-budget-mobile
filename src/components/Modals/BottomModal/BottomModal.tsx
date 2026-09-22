@@ -12,31 +12,45 @@ interface Props {
   isVisible: boolean;
   onClose: () => void;
   content: ReactNode;
-  actions?: { title: string; onPress: () => void }[];
+  actions?: { title: string; onPress: () => void; disabled?: boolean }[];
+  // Blocks the backdrop, Android back and Cancel from closing the modal,
+  // and disables every action -- for a short in-flight request the user
+  // shouldn't be able to dismiss or resubmit mid-way.
+  disabled?: boolean;
 }
 
-const BottomModal = ({ isVisible, onClose, content, actions }: Props) => (
-  <ModalContainer isVisible={isVisible} animationType="fade" onClose={onClose}>
-    <View style={styles.container}>
-      <TouchableWithoutFeedback>
-        <View style={styles.contentContainer}>
-          <View style={styles.content}>{content}</View>
+const BottomModal = ({ isVisible, onClose, content, actions, disabled }: Props) => {
+  const handleClose = disabled ? () => {} : onClose;
 
-          {actions?.map(({ title, onPress }) => (
-            <Fragment key={title}>
-              <Divider style={styles.divider} />
+  return (
+    <ModalContainer isVisible={isVisible} animationType="fade" onClose={handleClose}>
+      <View style={styles.container}>
+        <TouchableWithoutFeedback>
+          <View style={styles.contentContainer}>
+            <View style={styles.content}>{content}</View>
 
-              <Button title={title} variant="tertiary" onPress={onPress} style={styles.action} />
-            </Fragment>
-          ))}
-        </View>
-      </TouchableWithoutFeedback>
+            {actions?.map(({ title, onPress, disabled: actionDisabled }) => (
+              <Fragment key={title}>
+                <Divider style={styles.divider} />
 
-      <TouchableWithoutFeedback>
-        <Button title="Cancel" onPress={onClose} style={styles.cancel} />
-      </TouchableWithoutFeedback>
-    </View>
-  </ModalContainer>
-);
+                <Button
+                  title={title}
+                  variant="tertiary"
+                  onPress={onPress}
+                  disabled={disabled || actionDisabled}
+                  style={styles.action}
+                />
+              </Fragment>
+            ))}
+          </View>
+        </TouchableWithoutFeedback>
+
+        <TouchableWithoutFeedback>
+          <Button title="Cancel" onPress={handleClose} disabled={disabled} style={styles.cancel} />
+        </TouchableWithoutFeedback>
+      </View>
+    </ModalContainer>
+  );
+};
 
 export default BottomModal;

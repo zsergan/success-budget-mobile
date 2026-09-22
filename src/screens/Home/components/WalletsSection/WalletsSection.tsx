@@ -1,4 +1,4 @@
-import { Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 import type { WalletCardProps } from '@components';
@@ -18,6 +18,7 @@ import type { NavigationType } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
+import { colors } from '@shared/theme';
 import useWalletActions from './useWalletActions';
 
 import styles from './style';
@@ -51,6 +52,9 @@ interface Props {
 const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
   const {
     wallets,
+    isLoading,
+    error,
+    retry,
     selectedWallet,
     isModalVisible,
     isConfirmVisible,
@@ -111,7 +115,23 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
           actions={[{ title: 'Delete', onPress: onConfirm }]}
         />
 
-        {wallets.length === 0 && (
+        {isLoading && wallets.length === 0 && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator color={colors.accent} />
+          </View>
+        )}
+
+        {!isLoading && error && wallets.length === 0 && (
+          <EmptyState
+            icon="wallet"
+            title="Couldn't load wallets"
+            description="Check your connection and try again."
+            actionLabel="Retry"
+            onActionPress={retry}
+          />
+        )}
+
+        {!isLoading && !error && wallets.length === 0 && (
           <EmptyState
             icon="wallet"
             title="No wallets yet"

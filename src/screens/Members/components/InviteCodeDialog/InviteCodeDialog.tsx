@@ -2,6 +2,8 @@ import { Share, Text, View } from 'react-native';
 
 import type { InviteResponse } from '@api/dto';
 import { BottomModal } from '@components';
+import { getErrorMessage } from '@shared/utils';
+import { useAlert } from '@hooks';
 
 import styles from './style';
 
@@ -12,10 +14,19 @@ interface Props {
 }
 
 const InviteCodeDialog = ({ invite, spaceName, onClose }: Props) => {
+  const { addAlert } = useAlert();
+
   const handleShare = () => {
     if (!invite) return;
 
-    Share.share({ message: `Join "${spaceName}" on Success Budget -- use invite code ${invite.code}` }).catch(() => {});
+    // A user dismissing the share sheet resolves the promise (with a
+    // dismissedAction), it doesn't reject it -- only a genuine failure
+    // (no share targets, OS-level error) reaches this catch, so it's
+    // shown, not swallowed. The code stays available either way; nothing
+    // here closes the dialog.
+    Share.share({ message: `Join "${spaceName}" on Success Budget -- use invite code ${invite.code}` }).catch(
+      (error: unknown) => addAlert(getErrorMessage(error)),
+    );
   };
 
   return (

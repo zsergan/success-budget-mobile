@@ -22,6 +22,11 @@ const styles = StyleSheet.create({
   longPressedItem: {
     width: '100%',
   },
+  loadingContainer: {
+    height: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 
 export default styles;

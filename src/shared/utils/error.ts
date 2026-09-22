@@ -1,6 +1,10 @@
 import type { ErrorResponse } from '@api/dto';
 
-const NETWORK_ERROR_MESSAGE = 'Could not reach the server. Check your connection and try again.';
+// Exported so getRejectValue can stamp the same wording onto the
+// synthetic ErrorResponse it builds for a response-less failure, instead
+// of leaving redux state's error field undefined (indistinguishable from
+// "no error yet").
+export const NETWORK_ERROR_MESSAGE = 'Could not reach the server. Check your connection and try again.';
 const SERVER_ERROR_MESSAGE = 'Something went wrong on our end. Please try again later.';
 const FALLBACK_ERROR_MESSAGE = 'Something went wrong. Please try again.';
 

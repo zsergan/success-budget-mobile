@@ -1,4 +1,4 @@
-import type { CreateSpaceRequest, Space } from './dto';
+import type { CreateSpaceRequest, Space, SpaceSummary } from './dto';
 import { ApiClient } from './instance';
 
 const api = ApiClient();
@@ -10,7 +10,7 @@ export const getSpaces = async () => {
 };
 
 export const createSpace = async (data: CreateSpaceRequest) => {
-  const response = await api.post<Space>('/spaces', data);
+  const response = await api.post<SpaceSummary>('/spaces', data);
 
   return response.data;
 };

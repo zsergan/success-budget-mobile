@@ -3,7 +3,14 @@ import * as SecureStore from 'expo-secure-store';
 import type { LoginPayload, RegisterPayload, VerifyEmailPayload } from '@api/dto';
 import { login, register, verifyEmail } from '@api/auth.api';
 import { AUTH_TOKEN_KEY } from '@shared/constants';
+import type { RootState } from '@redux/Store';
 import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
+
+// For a thunk that captured this before an await: after logout, a
+// create/accept/etc. that was already in flight must not go on to select
+// a space, populate a dialog, or otherwise act as though the session that
+// started it is still the one running.
+export const isSessionActive = (getState: () => RootState) => getState().auth.isSignedIn;
 
 export const registerMe = createAppAsyncThunk('auth/registerMe', async (payload: RegisterPayload, thunkAPI) => {
   try {

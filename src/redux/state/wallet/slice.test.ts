@@ -89,4 +89,17 @@ describe('wallet slice', () => {
 
     expect(state.wallets).toEqual([wallet]);
   });
+
+  it('an old rejected fetchWallets must not overwrite a newer request in flight', () => {
+    const oldPending = walletReducer(initialState, fetchWallets.pending('old', undefined));
+    const newPending = walletReducer(oldPending, fetchWallets.pending('new', undefined));
+
+    const afterStaleReject = walletReducer(
+      newPending,
+      fetchWallets.rejected(new Error('old failed'), 'old', undefined, errorResponse),
+    );
+
+    expect(afterStaleReject.isLoading).toBe(true);
+    expect(afterStaleReject.error).toBeUndefined();
+  });
 });

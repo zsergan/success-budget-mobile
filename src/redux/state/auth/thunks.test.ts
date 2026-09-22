@@ -81,7 +81,7 @@ describe('loginMe', () => {
 
 describe('registerMe', () => {
   const registerPayload = { name: 'Alex', base_currency_id: 1, email: 'a@b.com', password: 'password1' };
-  const profileResponse = { id: '1', email: 'a@b.com', name: 'Alex' };
+  const profileResponse = { id: 1, email: 'a@b.com', name: 'Alex' };
 
   it('records the registered email on success without signing the user in yet', async () => {
     mockedRegister.mockResolvedValue(profileResponse);
@@ -174,7 +174,7 @@ describe('logoutMe', () => {
     mockedDeleteItemAsync.mockRejectedValue(new Error('Keystore is corrupted'));
 
     const store = createTestStore({
-      auth: { isLoading: false, isSignedIn: true, userToken: 'a-token', userEmail: null },
+      auth: { isLoading: false, isSignedIn: true, userToken: 'a-token', userEmail: null, sessionKey: 0 },
     });
 
     const action = await store.dispatch(logoutMe());
@@ -182,5 +182,15 @@ describe('logoutMe', () => {
     expect(action.type).toBe('auth/logoutMe/fulfilled');
     expect(store.getState().auth.isSignedIn).toBe(false);
     expect(store.getState().auth.userToken).toBeNull();
+  });
+
+  it('bumps sessionKey so a stale request from before logout can be told apart from a new one', async () => {
+    const store = createTestStore({
+      auth: { isLoading: false, isSignedIn: true, userToken: 'a-token', userEmail: null, sessionKey: 3 },
+    });
+
+    await store.dispatch(logoutMe());
+
+    expect(store.getState().auth.sessionKey).toBe(4);
   });
 });
