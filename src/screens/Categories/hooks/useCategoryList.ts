@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import type { CategoryModel } from '@api/models';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectCategory } from '@redux/state/category/selectors';
-import { editCategory, reorderCategories } from '@redux/state/category/thunks';
+import { editCategory, fetchCategories, reorderCategories } from '@redux/state/category/thunks';
 import { TransactionType } from '@shared/enums';
 import { getErrorMessage } from '@shared/utils';
 import { useAlert } from '@hooks';
@@ -16,10 +16,10 @@ const SEGMENT_TO_TRANSACTION_TYPE: Record<Exclude<CategorySegment, 'archived'>, 
   income: TransactionType.INCOME,
 };
 
-const useCategories = () => {
+const useCategoryList = () => {
   const dispatch = useAppDispatch();
   const { addAlert } = useAlert();
-  const { incomes, expenses, archived, isLoading } = useAppSelector(selectCategory);
+  const { incomes, expenses, archived, isLoading, error } = useAppSelector(selectCategory);
 
   const [segment, setSegment] = useState<CategorySegment>('expenses');
   const [sortMode, setSortMode] = useState<SortMode>('most-used');
@@ -80,6 +80,8 @@ const useCategories = () => {
       .catch((error: unknown) => addAlert(getErrorMessage(error)));
   };
 
+  const retry = () => dispatch(fetchCategories());
+
   return {
     segment,
     changeSegment,
@@ -92,10 +94,12 @@ const useCategories = () => {
     resultNote,
     list: filteredList,
     isLoading,
+    error,
+    retry,
     handleReorder,
     handleRestore,
     defaultTransactionType: segment === 'archived' ? TransactionType.EXPENSE : SEGMENT_TO_TRANSACTION_TYPE[segment],
   };
 };
 
-export default useCategories;
+export default useCategoryList;

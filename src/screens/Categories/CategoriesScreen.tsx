@@ -1,7 +1,6 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import DraggableFlatList from 'react-native-draggable-flatlist';
 
 import { BottomSheetModal as BottomModal, EmptyState, Icon } from '@components';
@@ -13,8 +12,9 @@ import CategoryEditorSheet, { CATEGORY_EDITOR_SNAP_POINT } from './components/Ca
 import DeleteCategoryDialog from './components/DeleteCategoryDialog/DeleteCategoryDialog';
 import CategoryRow from './components/CategoryRow/CategoryRow';
 import SegmentedControl from './components/SegmentedControl/SegmentedControl';
-import type { CategorySegment } from './useCategories';
-import useCategories from './useCategories';
+import useCategoryEditor from './hooks/useCategoryEditor';
+import type { CategorySegment } from './hooks/useCategoryList';
+import useCategoryList from './hooks/useCategoryList';
 
 import styles from './style';
 
@@ -24,8 +24,6 @@ const ARCHIVE_FOOTNOTE =
   'Restoring puts a category back into the picker. It does not re-join limits automatically — add it to a limit again if you want it counted.';
 
 const CategoriesScreen = ({ navigation }: Props) => {
-  const editorRef = useRef<BottomSheetModal>(null);
-  const [editingCategory, setEditingCategory] = useState<CategoryModel | undefined>(undefined);
   const [deletingCategory, setDeletingCategory] = useState<CategoryModel | null>(null);
 
   const {
@@ -42,19 +40,11 @@ const CategoriesScreen = ({ navigation }: Props) => {
     handleReorder,
     handleRestore,
     defaultTransactionType,
-  } = useCategories();
+  } = useCategoryList();
+
+  const { editorRef, editingCategory, openCreate, openEdit } = useCategoryEditor();
 
   const isManual = sortMode === 'manual' && segment !== 'archived';
-
-  const openCreate = () => {
-    setEditingCategory(undefined);
-    editorRef.current?.present();
-  };
-
-  const openEdit = (category: CategoryModel) => {
-    setEditingCategory(category);
-    editorRef.current?.present();
-  };
 
   const handleRequestDelete = (category: CategoryModel) => {
     editorRef.current?.dismiss();
