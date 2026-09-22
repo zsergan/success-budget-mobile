@@ -110,9 +110,10 @@ const styles = StyleSheet.create({
     lineHeight: theme.lineHeights.caption,
     color: colors.muted,
   },
-  emptyContainer: {
-    marginTop: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.xl,
+  loadingContainer: {
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   fabRoot: {
     position: 'absolute',

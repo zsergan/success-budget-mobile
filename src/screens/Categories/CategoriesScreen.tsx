@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DraggableFlatList from 'react-native-draggable-flatlist';
 
@@ -8,6 +8,7 @@ import type { CategoryModel } from '@api/models';
 import type { ScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
 import { colors } from '@shared/theme';
+import CategoriesEmptyState from './components/CategoriesEmptyState/CategoriesEmptyState';
 import CategoryEditorSheet, { CATEGORY_EDITOR_SNAP_POINT } from './components/CategoryEditor/CategoryEditorSheet';
 import DeleteCategoryDialog from './components/DeleteCategoryDialog/DeleteCategoryDialog';
 import CategoryRow from './components/CategoryRow/CategoryRow';
@@ -37,6 +38,9 @@ const CategoriesScreen = ({ navigation }: Props) => {
     isSearching,
     resultNote,
     list,
+    isLoading,
+    error,
+    retry,
     handleReorder,
     handleRestore,
     defaultTransactionType,
@@ -127,22 +131,20 @@ const CategoriesScreen = ({ navigation }: Props) => {
           <SegmentedControl options={segmentOptions} value={segment} onChange={changeSegment} />
         </View>
 
-        {list.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            {segment === 'archived' ? (
-              <EmptyState
-                icon="trash"
-                title="Nothing archived"
-                description="Delete a category that already has transactions and it lands here instead of disappearing. History stays intact, and you can bring it back with one tap."
-              />
-            ) : (
-              <EmptyState
-                icon="search"
-                title={isSearching ? 'No matches' : 'No categories yet'}
-                description={isSearching ? 'Try a different search term.' : 'Add your first category to get started.'}
-              />
-            )}
+        {isLoading && list.length === 0 ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator color={colors.accent} />
           </View>
+        ) : !isLoading && error && list.length === 0 ? (
+          <EmptyState
+            icon="list"
+            title="Couldn't load categories"
+            description="Check your connection and try again."
+            actionLabel="Retry"
+            onActionPress={retry}
+          />
+        ) : list.length === 0 ? (
+          <CategoriesEmptyState segment={segment} isSearching={isSearching} />
         ) : isManual ? (
           <DraggableFlatList
             style={styles.body}
