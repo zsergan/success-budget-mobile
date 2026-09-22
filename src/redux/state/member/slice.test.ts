@@ -108,6 +108,14 @@ describe('member slice', () => {
     expect(state.members).toEqual([]);
   });
 
+  it('resets hasLoaded on a space switch, unlike wallet/category/limit/transaction -- member is not part of the app bootstrap gate', () => {
+    const loaded = { ...initialState, members: [member], hasLoaded: true };
+
+    const state = memberReducer(loaded, spaceContextChanged({ spaceId: 2, contextKey: 1 }));
+
+    expect(state.hasLoaded).toBe(false);
+  });
+
   it('clears inviteCooldownUntil on logout', () => {
     const cooling = { ...initialState, inviteCooldownUntil: Date.now() + 30_000 };
 

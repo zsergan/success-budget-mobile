@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { leaveSpace, removeMember, revokeInvite } from '@redux/state/member/thunks';
@@ -27,6 +27,16 @@ const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
   // computed during render rather than in an effect -- see the block below.
   const [seenSpaceId, setSeenSpaceId] = useState(currentSpaceId);
 
+  // A synchronous re-entrancy guard -- `isPending` state updates are
+  // batched and not visible to a second confirm() call that fires before
+  // the next render (a fast double tap, or Enter plus a tap).
+  const isPendingRef = useRef(false);
+  const currentSpaceIdRef = useRef(currentSpaceId);
+
+  useEffect(() => {
+    currentSpaceIdRef.current = currentSpaceId;
+  }, [currentSpaceId]);
+
   // A space switch invalidates whatever this dialog was about to confirm.
   if (currentSpaceId !== seenSpaceId) {
     setSeenSpaceId(currentSpaceId);
@@ -34,37 +44,48 @@ const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
   }
 
   const requestAction = (nextTarget: MemberActionTarget) => {
-    if (isPending) return;
+    if (isPendingRef.current) return;
 
     setTarget(nextTarget);
   };
 
   const cancel = () => {
-    if (isPending) return;
+    if (isPendingRef.current) return;
 
     setTarget(null);
   };
 
   const confirm = async () => {
-    if (!target || isPending) return;
+    if (!target || isPendingRef.current) return;
 
+    const originSpaceId = currentSpaceId;
+
+    isPendingRef.current = true;
     setIsPending(true);
 
     try {
       if (target.kind === 'revoke') {
         await dispatch(revokeInvite(target.inviteId)).unwrap();
-        setTarget(null);
       } else if (target.kind === 'remove') {
         await dispatch(removeMember(target.userId)).unwrap();
-        setTarget(null);
       } else {
         await dispatch(leaveSpace()).unwrap();
-        setTarget(null);
-        onLeft();
       }
+
+      // The space changed while this was in flight -- the switch's own
+      // handling above already cleared `target`; don't navigate away from
+      // (or close a dialog belonging to) a space the user isn't on anymore.
+      if (currentSpaceIdRef.current !== originSpaceId) return;
+
+      setTarget(null);
+
+      if (target.kind === 'leave') onLeft();
     } catch (error: unknown) {
-      addAlert(getErrorMessage(error));
+      if (currentSpaceIdRef.current === originSpaceId) {
+        addAlert(getErrorMessage(error));
+      }
     } finally {
+      isPendingRef.current = false;
       setIsPending(false);
     }
   };

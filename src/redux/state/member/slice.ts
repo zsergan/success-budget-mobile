@@ -16,11 +16,15 @@ const memberSlice = createSlice({
     // Drop the previous space's members immediately -- before its own
     // fetchMembers has even been dispatched -- and forget any in-flight
     // request for it (clearing requestId means a late response can no
-    // longer match). inviteCooldownUntil survives -- the invite rate limit
-    // isn't scoped to one space.
+    // longer match). Unlike wallet/category/limit/transaction, hasLoaded
+    // does NOT survive here: those four preserve it so useLoadInitData
+    // doesn't mistake a switch for the app's first load, but member isn't
+    // part of that bootstrap gate, and useMembersData needs hasLoaded back
+    // at false so it reports the new space's list as loading (not
+    // refreshing) until it has actually loaded once. inviteCooldownUntil
+    // does survive -- the invite rate limit isn't scoped to one space.
     builder.addCase(spaceContextChanged, (state) => ({
       ...initialState,
-      hasLoaded: state.hasLoaded,
       inviteCooldownUntil: state.inviteCooldownUntil,
     }));
 
