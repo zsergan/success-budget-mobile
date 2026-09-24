@@ -1,15 +1,14 @@
 import { createAppStore } from '@redux/Store';
 import type { Space } from '@api/dto';
 import * as memberApi from '@api/member.api';
-import { getSpaces } from '@api/space.api';
 import { SpaceType } from '@shared/enums';
 import { loginMe, logoutMe } from '../auth/thunks';
 import { activateSpace } from '../space/thunks';
 import { profileApi } from '../profile/api';
+import { spaceApi } from '../space/api';
 import { acceptInvite, inviteMember, leaveSpace, removeMember } from './thunks';
 
 jest.mock('@api/member.api');
-jest.mock('@api/space.api');
 
 // RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
 jest.useFakeTimers();
@@ -17,7 +16,6 @@ jest.useFakeTimers();
 const mockedRemoveMember = jest.mocked(memberApi.removeMember);
 const mockedAcceptInvite = jest.mocked(memberApi.acceptInvite);
 const mockedInviteMember = jest.mocked(memberApi.inviteMember);
-const mockedGetSpaces = jest.mocked(getSpaces);
 
 // Every thunk under test here only ever runs while signed in -- these
 // thunks' own isSessionActive guards would otherwise treat a test store
@@ -43,6 +41,9 @@ const createTestStoreAsUser = (profileId: number) => {
   return store;
 };
 
+const seedSpaces = (store: ReturnType<typeof createAppStore>, spaces: Space[]) =>
+  store.dispatch(spaceApi.util.upsertQueryEntries([{ endpointName: 'getSpaces', arg: undefined, value: spaces }]));
+
 const currency = { id: 1, code: 'USD', name: 'US Dollar' };
 
 const space = (overrides: Partial<Space>): Space => ({
@@ -64,19 +65,19 @@ describe('leaveSpace', () => {
 
     store.dispatch(activateSpace(10));
     mockedRemoveMember.mockResolvedValue(undefined);
-    mockedGetSpaces.mockResolvedValue([space({ id: 20, type: SpaceType.PERSONAL })]);
+    seedSpaces(store, [space({ id: 20, type: SpaceType.PERSONAL })]);
 
     await store.dispatch(leaveSpace());
 
     expect(mockedRemoveMember).toHaveBeenCalledWith(10, 777);
   });
 
-  it('does not fetchMembers for the space just left -- it activates the fallback instead', async () => {
+  it('does not fetchMembers for the space just left -- it selects the fallback instead', async () => {
     const store = createTestStoreAsUser(777);
 
     store.dispatch(activateSpace(10));
     mockedRemoveMember.mockResolvedValue(undefined);
-    mockedGetSpaces.mockResolvedValue([space({ id: 20, type: SpaceType.PERSONAL })]);
+    seedSpaces(store, [space({ id: 20, type: SpaceType.PERSONAL })]);
 
     await store.dispatch(leaveSpace());
 
@@ -95,12 +96,11 @@ describe('leaveSpace', () => {
     expect(mockedRemoveMember).not.toHaveBeenCalled();
   });
 
-  it('invalidates the left space immediately even when the follow-up GET spaces fails', async () => {
+  it('moves off the left space even with no other space cached yet', async () => {
     const store = createTestStoreAsUser(777);
 
     store.dispatch(activateSpace(10));
     mockedRemoveMember.mockResolvedValue(undefined);
-    mockedGetSpaces.mockRejectedValue({ response: { data: { statusCode: 500 } } });
 
     await store.dispatch(leaveSpace());
 
@@ -114,7 +114,7 @@ describe('leaveSpace', () => {
 
     let resolveRemove!: () => void;
     mockedRemoveMember.mockReturnValue(new Promise((resolve) => (resolveRemove = () => resolve(undefined))));
-    mockedGetSpaces.mockResolvedValue([space({ id: 30, type: SpaceType.GROUP })]);
+    seedSpaces(store, [space({ id: 30, type: SpaceType.GROUP })]);
 
     const pending = store.dispatch(leaveSpace());
 
@@ -132,7 +132,7 @@ describe('removeMember (owner removes someone else)', () => {
 
     store.dispatch(activateSpace(10));
     mockedRemoveMember.mockResolvedValue(undefined);
-    mockedGetSpaces.mockResolvedValue([space({ id: 10, type: SpaceType.GROUP, member_count: 2 })]);
+    seedSpaces(store, [space({ id: 10, type: SpaceType.GROUP, member_count: 2 })]);
 
     await store.dispatch(removeMember(42));
 
@@ -146,18 +146,17 @@ describe('acceptInvite', () => {
     const store = createTestStore();
 
     mockedAcceptInvite.mockResolvedValue(space({ id: 55, type: SpaceType.GROUP }) as never);
-    mockedGetSpaces.mockResolvedValue([space({ id: 55, type: SpaceType.GROUP })]);
+    seedSpaces(store, [space({ id: 55, type: SpaceType.GROUP })]);
 
     await store.dispatch(acceptInvite('ABC123'));
 
     expect(store.getState().space.currentSpaceId).toBe(55);
   });
 
-  it('still resolves as fulfilled when the accept succeeds but the follow-up spaces refresh fails', async () => {
+  it('resolves as fulfilled without waiting for the spaces list', async () => {
     const store = createTestStore();
 
     mockedAcceptInvite.mockResolvedValue(space({ id: 55, type: SpaceType.GROUP }) as never);
-    mockedGetSpaces.mockRejectedValue({ response: { data: { statusCode: 500 } } });
 
     const action = await store.dispatch(acceptInvite('ABC123'));
 

@@ -4,7 +4,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 
 import { useAppDispatch } from '@redux/hooks';
 import { useGetCurrenciesQuery } from '@redux/state/currency/api';
-import { addSpace } from '@redux/state/space/thunks';
+import { createSpaceAndSelect } from '@redux/state/space/thunks';
 import type { ScreenNames } from '@shared/enums';
 import { SpaceType } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
@@ -50,13 +50,13 @@ const useCreateSpaceForm = ({ navigation }: UseCreateSpaceFormProps) => {
     formState: { isSubmitting, isSubmitSuccessful },
     onSubmit: (formData) =>
       dispatch(
-        addSpace({
+        createSpaceAndSelect({
           name: formData.name,
           currency_id: Number(formData.currency),
           type: formData.type,
           invites: formData.type === SpaceType.GROUP && formData.invites.length > 0 ? formData.invites : undefined,
         }),
-      ).unwrap(),
+      ),
     onSuccess: () => navigation.goBack(),
     getInvalidMessage: (errors) =>
       [errors.name && 'Enter a space name', errors.currency && 'Choose a currency'].filter(Boolean).join('\n'),

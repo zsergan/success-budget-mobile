@@ -1,8 +1,8 @@
-import { createSlice, isPending, isRejected } from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit';
 
 import { logoutMe } from '../auth/thunks';
 import initialState from './initialState';
-import { addSpace, fetchSpaces, removeSpace, spaceContextChanged } from './thunks';
+import { spaceContextChanged } from './thunks';
 
 const spaceSlice = createSlice({
   name: 'space',
@@ -17,27 +17,7 @@ const spaceSlice = createSlice({
     builder.addCase(spaceContextChanged, (state, action) => {
       state.currentSpaceId = action.payload.spaceId;
       state.contextKey = action.payload.contextKey;
-    });
-
-    builder.addCase(fetchSpaces.fulfilled, (state, action) => {
-      if (action.meta.requestId !== state.requestId) return;
-
-      state.spaces = action.payload;
-      state.isLoading = false;
-    });
-
-    builder.addCase(fetchSpaces.pending, (state, action) => {
-      state.requestId = action.meta.requestId;
-    });
-
-    builder.addMatcher(isPending(fetchSpaces, addSpace, removeSpace), (state) => {
-      state.isLoading = true;
-      state.error = undefined;
-    });
-
-    builder.addMatcher(isRejected(fetchSpaces, addSpace, removeSpace), (state, action) => {
-      state.isLoading = false;
-      state.error = action.payload;
+      state.selectedAt = action.payload.selectedAt;
     });
   },
 });

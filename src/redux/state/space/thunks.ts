@@ -1,17 +1,17 @@
 import { createAction } from '@reduxjs/toolkit';
 
-import type { CreateSpaceRequest } from '@api/dto';
-import { getSpaces, createSpace, deleteSpace } from '@api/space.api';
-import { SpaceType } from '@shared/enums';
+import type { CreateSpaceRequest, SpaceSummary } from '@api/dto';
 import type { AppThunk, RootState } from '@redux/Store';
-import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
-import { isSessionActive } from '../auth/thunks';
+import { spaceApi } from './api';
 
 // The one event that means "the active space identity changed". Slices that
 // still hold space data (member) listen for this (not just `currentSpaceId`)
 // to synchronously drop the previous space's data and reject in-flight
 // responses that belong to it -- see `contextKey` on space/initialState.
-export const spaceContextChanged = createAction<{ spaceId: number | null; contextKey: number }>('space/contextChanged');
+export const spaceContextChanged = createAction(
+  'space/contextChanged',
+  (payload: { spaceId: number | null; contextKey: number }) => ({ payload: { ...payload, selectedAt: Date.now() } }),
+);
 
 // The only way `currentSpaceId` should change. Selecting the space that's
 // already active is a deliberate no-op: it must not reset forms/dialogs or
@@ -28,72 +28,22 @@ export const activateSpace =
 
 // For a mutation thunk that captured space.contextKey before its request:
 // after the await, this tells it whether the space is still the one the
-// request actually ran against -- false means the user switched (or
-// logged out) while it was in flight, so its result must not drive a
-// refresh, revision bump, or any other now-irrelevant side effect.
+// request actually ran against.
 export const isSpaceContextCurrent = (getState: () => RootState, contextKey: number) =>
   getState().space.contextKey === contextKey;
 
-const pickFallbackSpaceId = (spaces: { id: number; type: SpaceType }[]): number | null => {
-  if (spaces.length === 0) return null;
+// Creating a space selects it, but only for the session that asked: a
+// request that outlived a logout must not pick a space for the next one.
+// The spaces list refreshes separately, through the Spaces tag.
+export const createSpaceAndSelect =
+  (data: CreateSpaceRequest): AppThunk<Promise<SpaceSummary>> =>
+  async (dispatch, getState) => {
+    const { sessionKey } = getState().auth;
+    const space = await dispatch(spaceApi.endpoints.createSpace.initiate(data, { track: false })).unwrap();
 
-  const personalSpace = spaces.find((space) => space.type === SpaceType.PERSONAL);
-
-  if (personalSpace) return personalSpace.id;
-
-  // No personal space (a group-only account, or it was just left/deleted) --
-  // fall back to the lowest id so the pick is deterministic rather than
-  // whatever order the backend happened to return.
-  return spaces.reduce((lowest, space) => (space.id < lowest.id ? space : lowest)).id;
-};
-
-export const fetchSpaces = createAppAsyncThunk('space/fetchSpaces', async (_: void, thunkAPI) => {
-  try {
-    const spaces = await getSpaces();
-
-    // A newer fetchSpaces (or an explicit activateSpace the user made
-    // directly) may have already superseded this one -- only the request
-    // the slice still considers "current" gets to decide the fallback
-    // activation. Otherwise this response is stale data (it may not even
-    // include a space the user has since switched to) and must not act.
-    if (thunkAPI.getState().space.requestId === thunkAPI.requestId) {
-      const { currentSpaceId } = thunkAPI.getState().space;
-      const stillValid = currentSpaceId !== null && spaces.some((space) => space.id === currentSpaceId);
-
-      thunkAPI.dispatch(activateSpace(stillValid ? currentSpaceId : pickFallbackSpaceId(spaces)));
-    }
-
-    return spaces;
-  } catch (error: unknown) {
-    return thunkAPI.rejectWithValue(getRejectValue(error));
-  }
-});
-
-export const addSpace = createAppAsyncThunk('space/addSpace', async (data: CreateSpaceRequest, thunkAPI) => {
-  try {
-    const space = await createSpace(data);
-
-    // A logout that happened while this create was in flight must not be
-    // undone by activating the space it just made.
-    if (isSessionActive(thunkAPI.getState)) {
-      thunkAPI.dispatch(activateSpace(space.id));
-      thunkAPI.dispatch(fetchSpaces());
+    if (getState().auth.sessionKey === sessionKey) {
+      dispatch(activateSpace(space.id));
     }
 
     return space;
-  } catch (error: unknown) {
-    return thunkAPI.rejectWithValue(getRejectValue(error));
-  }
-});
-
-export const removeSpace = createAppAsyncThunk('space/removeSpace', async (spaceId: number, thunkAPI) => {
-  try {
-    await deleteSpace(spaceId);
-
-    if (isSessionActive(thunkAPI.getState)) {
-      thunkAPI.dispatch(fetchSpaces());
-    }
-  } catch (error: unknown) {
-    return thunkAPI.rejectWithValue(getRejectValue(error));
-  }
-});
+  };

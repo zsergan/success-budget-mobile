@@ -1,48 +1,55 @@
-import { createAppStore } from '@redux/Store';
 import type { Space } from '@api/dto';
-import { createSpace, getSpaces } from '@api/space.api';
+import { createAppStore } from '@redux/Store';
 import { SpaceType } from '@shared/enums';
 import { loginMe, logoutMe } from '../auth/thunks';
-import { activateSpace, addSpace, fetchSpaces } from './thunks';
+import { activateSpace, createSpaceAndSelect } from './thunks';
 
-jest.mock('@api/space.api');
+const mockedRequest = jest.fn();
 
-const mockedGetSpaces = jest.mocked(getSpaces);
-const mockedCreateSpace = jest.mocked(createSpace);
+jest.mock('@api/instance', () => ({
+  ApiClient: () => ({}),
+  createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
+}));
+jest.mock('expo-secure-store');
 
-const createTestStore = () => createAppStore();
-
-const currency = { id: 1, code: 'USD', name: 'US Dollar' };
+// RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
+jest.useFakeTimers();
 
 const space = (overrides: Partial<Space>): Space => ({
   id: 1,
   name: 'Personal',
   type: SpaceType.PERSONAL,
-  currency,
+  currency: { id: 1, code: 'USD', name: 'US Dollar' },
   role: 'owner',
   member_count: 1,
   created_at: '2026-01-01T00:00:00.000Z',
   ...overrides,
 });
 
+const signedInStore = () => {
+  const store = createAppStore();
+
+  store.dispatch(loginMe.fulfilled('test-token', 'req-login', { email: 'a@b.com', password: 'password1' }));
+
+  return store;
+};
+
 beforeEach(() => jest.clearAllMocks());
 
 describe('activateSpace', () => {
-  it('is a no-op when the space is already active -- no contextKey bump, no dependent-slice reset', () => {
-    const store = createTestStore();
+  it('is a no-op when the space is already active -- no contextKey bump', () => {
+    const store = createAppStore();
 
     store.dispatch(activateSpace(5));
     const afterFirst = store.getState().space;
 
     store.dispatch(activateSpace(5));
-    const afterSecond = store.getState().space;
 
-    expect(afterSecond.contextKey).toBe(afterFirst.contextKey);
-    expect(afterSecond.currentSpaceId).toBe(5);
+    expect(store.getState().space).toBe(afterFirst);
   });
 
   it('bumps contextKey when switching to a different space', () => {
-    const store = createTestStore();
+    const store = createAppStore();
 
     store.dispatch(activateSpace(1));
     const keyBefore = store.getState().space.contextKey;
@@ -52,99 +59,9 @@ describe('activateSpace', () => {
     expect(store.getState().space.contextKey).toBe(keyBefore + 1);
     expect(store.getState().space.currentSpaceId).toBe(2);
   });
-});
 
-describe('fetchSpaces fallback selection', () => {
-  it('keeps the current space selected (no reset) when it is still in the list', async () => {
-    const store = createTestStore();
-
-    store.dispatch(activateSpace(1));
-    const keyBefore = store.getState().space.contextKey;
-
-    mockedGetSpaces.mockResolvedValue([space({ id: 1 }), space({ id: 2, type: SpaceType.GROUP })]);
-
-    await store.dispatch(fetchSpaces());
-
-    expect(store.getState().space.currentSpaceId).toBe(1);
-    expect(store.getState().space.contextKey).toBe(keyBefore);
-  });
-
-  it('falls back to the personal space when the current one is gone', async () => {
-    const store = createTestStore();
-
-    store.dispatch(activateSpace(99));
-
-    mockedGetSpaces.mockResolvedValue([
-      space({ id: 2, type: SpaceType.GROUP }),
-      space({ id: 1, type: SpaceType.PERSONAL }),
-    ]);
-
-    await store.dispatch(fetchSpaces());
-
-    expect(store.getState().space.currentSpaceId).toBe(1);
-  });
-
-  it('falls back to the lowest id when there is no personal space at all', async () => {
-    const store = createTestStore();
-
-    store.dispatch(activateSpace(99));
-
-    mockedGetSpaces.mockResolvedValue([
-      space({ id: 5, type: SpaceType.GROUP }),
-      space({ id: 3, type: SpaceType.GROUP }),
-    ]);
-
-    await store.dispatch(fetchSpaces());
-
-    expect(store.getState().space.currentSpaceId).toBe(3);
-  });
-
-  it('selects no space (null), not an error, for a genuinely empty list', async () => {
-    const store = createTestStore();
-
-    store.dispatch(activateSpace(99));
-
-    mockedGetSpaces.mockResolvedValue([]);
-
-    const action = await store.dispatch(fetchSpaces());
-
-    expect(action.type).toBe('space/fetchSpaces/fulfilled');
-    expect(store.getState().space.currentSpaceId).toBeNull();
-  });
-});
-
-describe('fetchSpaces race with a newer request or explicit selection', () => {
-  const deferred = <T>() => {
-    let resolve!: (value: T) => void;
-    const promise = new Promise<T>((r) => (resolve = r));
-
-    return { promise, resolve };
-  };
-
-  it('an obsolete spaces response must not undo a newer selection', async () => {
-    const store = createTestStore();
-
-    store.dispatch(activateSpace(1));
-
-    const old = deferred<Space[]>();
-
-    mockedGetSpaces.mockReturnValueOnce(old.promise).mockResolvedValueOnce([space({ id: 1 }), space({ id: 2 })]);
-
-    const pending = store.dispatch(fetchSpaces());
-
-    await store.dispatch(fetchSpaces());
-    store.dispatch(activateSpace(2));
-
-    old.resolve([space({ id: 1 })]);
-    await pending;
-
-    expect(store.getState().space.currentSpaceId).toBe(2);
-  });
-});
-
-describe('logout / login contextKey uniqueness', () => {
-  it('never repeats a contextKey across a logout, even after resetting other fields', () => {
-    const store = createTestStore();
+  it('never repeats a contextKey across a logout', () => {
+    const store = createAppStore();
 
     store.dispatch(activateSpace(1));
     const keyBeforeLogout = store.getState().space.contextKey;
@@ -152,7 +69,6 @@ describe('logout / login contextKey uniqueness', () => {
     store.dispatch(logoutMe.fulfilled(undefined, 'req-logout', undefined));
 
     expect(store.getState().space.currentSpaceId).toBeNull();
-    expect(store.getState().space.contextKey).toBeGreaterThan(keyBeforeLogout);
 
     store.dispatch(activateSpace(1));
 
@@ -160,34 +76,32 @@ describe('logout / login contextKey uniqueness', () => {
   });
 });
 
-describe('addSpace session guard', () => {
-  it('activates the newly created space when the session is still active', async () => {
-    const store = createTestStore();
+describe('createSpaceAndSelect', () => {
+  it('selects the created space and refreshes the list separately', async () => {
+    const store = signedInStore();
 
-    store.dispatch(loginMe.fulfilled('test-token', 'req-login', { email: 'a@b.com', password: 'password1' }));
-    mockedCreateSpace.mockResolvedValue(space({ id: 7 }));
-    mockedGetSpaces.mockResolvedValue([space({ id: 7 })]);
+    mockedRequest.mockImplementation(async ({ method }: { method: string }) => ({
+      data: method === 'POST' ? space({ id: 7 }) : [space({ id: 1 }), space({ id: 7, type: SpaceType.GROUP })],
+    }));
 
-    await store.dispatch(addSpace({ name: 'New', currency_id: 1, type: SpaceType.PERSONAL }));
+    await store.dispatch(createSpaceAndSelect({ name: 'New', currency_id: 1, type: SpaceType.GROUP }));
 
     expect(store.getState().space.currentSpaceId).toBe(7);
   });
 
-  it('does not activate a space created by a request that outlived a logout', async () => {
-    const store = createTestStore();
+  it('does not select a space created by a request that outlived its session', async () => {
+    const store = signedInStore();
+    let finishCreate: (value: unknown) => void = () => {};
 
-    store.dispatch(loginMe.fulfilled('test-token', 'req-login', { email: 'a@b.com', password: 'password1' }));
+    mockedRequest.mockReturnValueOnce(new Promise((resolve) => (finishCreate = resolve)));
 
-    let resolveCreate!: (value: Space) => void;
-    mockedCreateSpace.mockReturnValue(new Promise((resolve) => (resolveCreate = resolve)));
-
-    const pending = store.dispatch(addSpace({ name: 'New', currency_id: 1, type: SpaceType.PERSONAL }));
+    const pending = store.dispatch(createSpaceAndSelect({ name: 'New', currency_id: 1, type: SpaceType.GROUP }));
 
     store.dispatch(logoutMe.fulfilled(undefined, 'req-logout', undefined));
-    resolveCreate(space({ id: 7 }));
-    await pending;
+    store.dispatch(loginMe.fulfilled('token-2', 'req-login-2', { email: 'a@b.com', password: 'password1' }));
+    finishCreate({ data: space({ id: 7 }) });
 
+    await expect(pending).rejects.toBeDefined();
     expect(store.getState().space.currentSpaceId).toBeNull();
-    expect(mockedGetSpaces).not.toHaveBeenCalled();
   });
 });

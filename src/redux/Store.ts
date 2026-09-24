@@ -4,6 +4,7 @@ import { combineReducers, configureStore, createListenerMiddleware } from '@redu
 import { baseApi } from './api/baseApi';
 import authReducer from './state/auth/slice';
 import { logoutMe } from './state/auth/thunks';
+import { startSpaceSelectionListener } from './state/space/listeners';
 import memberReducer from './state/member/slice';
 import spaceReducer from './state/space/slice';
 
@@ -27,6 +28,8 @@ export const createAppStore = (preloadedState?: Partial<RootState>) => {
       dispatch(baseApi.util.resetApiState());
     },
   });
+
+  startSpaceSelectionListener(sessionListener);
 
   return configureStore({
     reducer: rootReducer,

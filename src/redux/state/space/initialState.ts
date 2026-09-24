@@ -1,28 +1,20 @@
-import type { ErrorResponse, Space } from '@api/dto';
-
 interface InitialState {
-  spaces: Space[];
   currentSpaceId: number | null;
-  // Bumped on every real space activation (switch, fallback pick, create,
-  // accept, leave-with-fallback) and on logout -- never reused, including
-  // across a logout/login cycle. Slice-held space data (member) records the
-  // value it was last told about and uses it to reject a response that
-  // belongs to a context that is no longer current. RTK Query data needs no
-  // such guard: its cache entries are keyed by spaceId. See
-  // `spaceContextChanged`/`activateSpace`.
+  // Bumped on every real space activation and on logout -- never reused,
+  // including across a logout/login cycle. Slice-held space data (member)
+  // records the value it was last told about and uses it to reject a
+  // response that belongs to a context that is no longer current. RTK Query
+  // data needs no such guard: its cache entries are keyed by spaceId.
   contextKey: number;
-  isLoading: boolean;
-  // Guards against an older fetchSpaces resolving after a newer one (e.g.
-  // two quick space creations) and clobbering currentSpaceId.
-  requestId?: string;
-  error?: ErrorResponse;
+  // When currentSpaceId was last chosen (ms since epoch); a spaces list
+  // requested before that can't tell whether the selection is still valid.
+  selectedAt: number;
 }
 
 const initialState: InitialState = {
-  spaces: [],
   currentSpaceId: null,
   contextKey: 0,
-  isLoading: false,
+  selectedAt: 0,
 };
 
 export default initialState;

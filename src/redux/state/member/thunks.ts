@@ -10,7 +10,9 @@ import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk'
 
 import { isSessionActive } from '../auth/thunks';
 import { selectProfileId } from '../profile/selectors';
-import { activateSpace, fetchSpaces, isSpaceContextCurrent } from '../space/thunks';
+import { baseApi } from '@redux/api/baseApi';
+import { pickFallbackSpaceId, selectSpaces } from '../space/selectors';
+import { activateSpace, isSpaceContextCurrent } from '../space/thunks';
 
 export const fetchMembers = createAppAsyncThunk('member/fetchMembers', async (_: void, thunkAPI) => {
   const spaceId = thunkAPI.getState().space.currentSpaceId;
@@ -92,7 +94,7 @@ export const removeMember = createAppAsyncThunk('member/removeMember', async (us
 
     if (isSpaceContextCurrent(thunkAPI.getState, contextKey)) {
       thunkAPI.dispatch(fetchMembers());
-      thunkAPI.dispatch(fetchSpaces());
+      thunkAPI.dispatch(baseApi.util.invalidateTags(['Spaces']));
     }
   } catch (error: unknown) {
     return thunkAPI.rejectWithValue(getRejectValue(error));
@@ -121,17 +123,12 @@ export const leaveSpace = createAppAsyncThunk('member/leaveSpace', async (_: voi
   // user is still on the one just left; if they'd already switched away
   // while this was in flight, leave their current selection alone.
   if (thunkAPI.getState().space.currentSpaceId === currentSpaceId) {
-    thunkAPI.dispatch(activateSpace(null));
+    const remaining = selectSpaces(thunkAPI.getState()).filter((space) => space.id !== currentSpaceId);
+
+    thunkAPI.dispatch(activateSpace(pickFallbackSpaceId(remaining)));
   }
 
-  // fetchSpaces both refreshes the list and, via its own fallback logic,
-  // activates whatever space is valid next.
-  try {
-    await thunkAPI.dispatch(fetchSpaces()).unwrap();
-  } catch {
-    // Leaving already succeeded server-side; a failed list refresh is
-    // surfaced through fetchSpaces' own error state, not re-thrown here.
-  }
+  thunkAPI.dispatch(baseApi.util.invalidateTags(['Spaces']));
 });
 
 export const acceptInvite = createAppAsyncThunk('member/acceptInvite', async (code: string, thunkAPI) => {
@@ -150,13 +147,7 @@ export const acceptInvite = createAppAsyncThunk('member/acceptInvite', async (co
     // rather than diffing the space list before/after, which breaks the
     // moment two joins race or the list order isn't stable.
     thunkAPI.dispatch(activateSpace(space.id));
-
-    try {
-      await thunkAPI.dispatch(fetchSpaces()).unwrap();
-    } catch {
-      // The invite was accepted and the space is already selected; a failed
-      // list refresh doesn't undo that and shouldn't fail this thunk.
-    }
+    thunkAPI.dispatch(baseApi.util.invalidateTags(['Spaces']));
   }
 
   return space;

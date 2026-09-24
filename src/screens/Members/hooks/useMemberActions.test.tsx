@@ -4,13 +4,11 @@ import { createAppStore } from '@redux/Store';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import * as memberApi from '@api/member.api';
-import * as spaceApi from '@api/space.api';
 import { profileApi } from '@redux/state/profile/api';
 import { activateSpace } from '@redux/state/space/thunks';
 import useMemberActions from './useMemberActions';
 
 jest.mock('@api/member.api');
-jest.mock('@api/space.api');
 
 const mockedAddAlert = jest.fn();
 
@@ -19,7 +17,6 @@ jest.mock('@hooks', () => ({
 }));
 
 const mockedRemoveMember = jest.mocked(memberApi.removeMember);
-const mockedGetSpaces = jest.mocked(spaceApi.getSpaces);
 
 const createTestStore = () => {
   const store = createAppStore();
@@ -42,7 +39,6 @@ const wrapperFor = (store: ReturnType<typeof createTestStore>) => {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockedGetSpaces.mockResolvedValue([]);
 });
 
 describe('useMemberActions confirm()', () => {

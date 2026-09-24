@@ -3,7 +3,7 @@ import { Provider } from 'react-redux';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import type { Space } from '@api/dto';
-import { getSpaces } from '@api/space.api';
+import { useAppSelector } from '@redux/hooks';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { activateSpace } from '@redux/state/space/thunks';
 import { createAppStore } from '@redux/Store';
@@ -16,7 +16,6 @@ jest.mock('@api/instance', () => ({
   ApiClient: () => ({}),
   createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
 }));
-jest.mock('@api/space.api');
 jest.mock('expo-secure-store');
 
 // RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
@@ -33,6 +32,7 @@ const space = (id: number): Space => ({
 });
 
 const respond = (url: string) => {
+  if (url === '/spaces') return { data: [space(1), space(2)] };
   if (url === '/users/profile') return { data: { id: 1, email: 'me@example.com', name: 'Me' } };
   if (url.endsWith('/wallets'))
     return { data: { wallets: [], total_balance: 0, total_balance_currency: 'USD', delta_percent: 0 } };
@@ -42,26 +42,26 @@ const respond = (url: string) => {
   return { data: [] };
 };
 
-let holdRequests: boolean;
+// Holds a space's own data (wallets, categories, ...), not the spaces list or profile.
+let holdSpaceData: boolean;
 
 const signIn = (store: ReturnType<typeof createAppStore>) =>
   store.dispatch(loginMe.fulfilled('token', 'req-login', { email: 'me@example.com', password: 'password1' }));
 
 beforeEach(() => {
   jest.clearAllMocks();
-  holdRequests = false;
-  jest.mocked(getSpaces).mockResolvedValue([space(1), space(2)]);
+  holdSpaceData = false;
   mockedRequest.mockImplementation(({ url }: { url: string }) =>
-    holdRequests ? new Promise(() => {}) : Promise.resolve(respond(url)),
+    holdSpaceData && url.startsWith('/spaces/') ? new Promise(() => {}) : Promise.resolve(respond(url)),
   );
 });
 
 const renderGate = (store: ReturnType<typeof createAppStore>) => {
   const wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
 
-  return renderHook(({ isSignedIn }: { isSignedIn: boolean }) => useLoadInitData({ isSignedIn }), {
+  // Like RootNavigator: isSignedIn comes from the same store update that ends the session.
+  return renderHook(() => useLoadInitData({ isSignedIn: useAppSelector((state) => state.auth.isSignedIn) }), {
     wrapper,
-    initialProps: { isSignedIn: true },
   });
 };
 
@@ -75,7 +75,7 @@ describe('useLoadInitData initial-load gate', () => {
     expect(result.current.isLoading).toBe(true);
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    holdRequests = true;
+    holdSpaceData = true;
     act(() => {
       store.dispatch(activateSpace(2));
     });
@@ -102,20 +102,18 @@ describe('useLoadInitData initial-load gate', () => {
     const store = createAppStore();
 
     signIn(store);
-    const { result, rerender, unmount } = renderGate(store);
+    const { result, unmount } = renderGate(store);
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     await act(async () => {
       await store.dispatch(logoutMe());
     });
-    rerender({ isSignedIn: false });
 
-    holdRequests = true;
+    holdSpaceData = true;
     act(() => {
       signIn(store);
     });
-    rerender({ isSignedIn: true });
 
     await waitFor(() => expect(store.getState().space.currentSpaceId).not.toBeNull());
     expect(result.current.isLoading).toBe(true);

@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { skipToken } from '@reduxjs/toolkit/query';
 
-import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
+import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
 import { useGetLimitsQuery } from '@redux/state/limit/api';
 import { useGetProfileQuery } from '@redux/state/profile/api';
-import { selectCurrentSpaceId, selectSpace } from '@redux/state/space/selectors';
-import { fetchSpaces } from '@redux/state/space/thunks';
+import { useGetSpacesQuery } from '@redux/state/space/api';
+import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { useGetTransactionsQuery } from '@redux/state/transaction/api';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 
@@ -14,17 +14,25 @@ interface UseLoadInitDataProps {
   isSignedIn: boolean;
 }
 
+interface QueryState {
+  currentData?: unknown;
+  isError: boolean;
+}
+
+const isSettled = (query: QueryState) => query.currentData !== undefined || query.isError;
+
+// Subscribes to the session's server data for as long as the user is signed
+// in, and reports only the first load of each session as loading.
 const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
-  const dispatch = useAppDispatch();
-  const { isLoading: isSpaceLoading } = useAppSelector(selectSpace);
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
   const sessionKey = useAppSelector((state) => state.auth.sessionKey);
 
-  // Mounted for the whole signed-in session, these subscriptions keep the
-  // active space's data loaded (and refetched on every space switch).
-  const profileQuery = useGetProfileQuery(isSignedIn ? undefined : skipToken);
+  const sessionArg = isSignedIn ? undefined : skipToken;
   const spaceArg = useSpaceArg();
   const sessionSpaceArg = isSignedIn ? spaceArg : skipToken;
+
+  const spacesQuery = useGetSpacesQuery(sessionArg);
+  const profileQuery = useGetProfileQuery(sessionArg);
   const spaceQueries = [
     useGetWalletsQuery(sessionSpaceArg),
     useGetCategoriesQuery(sessionSpaceArg),
@@ -32,36 +40,21 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
     useGetTransactionsQuery(sessionSpaceArg),
   ];
 
-  useEffect(() => {
-    if (isSignedIn) {
-      dispatch(fetchSpaces());
-    }
-  }, [dispatch, isSignedIn]);
+  // A space is selected as soon as the spaces list arrives, so with none
+  // selected there is no space data to wait for (no spaces, or loading failed).
+  const areSessionQueriesSettled =
+    isSettled(spacesQuery) && isSettled(profileQuery) && (currentSpaceId === null || spaceQueries.every(isSettled));
 
-  // isSpaceLoading also flips true for background refreshes unrelated to an
-  // explicit navigation (addSpace/removeSpace/acceptInvite/leaving a
-  // member all re-dispatch fetchSpaces) -- only the initial bootstrap,
-  // before any space is selected yet, should hold the whole app on
-  // LOADING_SCREEN for it.
-  const isInitialSpaceLoad = isSpaceLoading && currentSpaceId === null;
-
-  // Holds the app on LOADING_SCREEN only until the profile and the first
-  // space's data have settled (loaded or failed) once per session: gating on
-  // a space switch or a background refetch would remount the whole signed-in
-  // navigator.
-  const isProfileSettled = profileQuery.currentData !== undefined || profileQuery.isError;
-  const areSpaceQueriesSettled = spaceQueries.every((query) => query.currentData !== undefined || query.isError);
+  // Latched once per session: a space switch or a background refetch must
+  // never bring LOADING_SCREEN back, which would remount the navigator.
   const [settledSessionKey, setSettledSessionKey] = useState<number | null>(null);
 
-  if (isProfileSettled && areSpaceQueriesSettled && settledSessionKey !== sessionKey) {
+  if (areSessionQueriesSettled && settledSessionKey !== sessionKey) {
     setSettledSessionKey(sessionKey);
   }
 
-  const isInitialSessionDataLoad =
-    settledSessionKey !== sessionKey && (!isProfileSettled || (currentSpaceId !== null && !areSpaceQueriesSettled));
-
   return {
-    isLoading: isSignedIn && (isInitialSpaceLoad || isInitialSessionDataLoad),
+    isLoading: isSignedIn && settledSessionKey !== sessionKey && !areSessionQueriesSettled,
   };
 };
 

@@ -1,3 +1,4 @@
+import type { TagDescription } from '@reduxjs/toolkit/query';
 import { createApi } from '@reduxjs/toolkit/query/react';
 
 import { httpBaseQuery } from './baseQuery';
@@ -35,7 +36,7 @@ export const spaceTags = (spaceId: number, ...types: TagType[]) => types.map((ty
 // A failed mutation (including one that outlived its session) leaves the cache
 // alone; a success without a body arrives as null and still invalidates.
 export const invalidatesOnSuccess =
-  <Result, Arg>(getTags: (result: Result, arg: Arg) => ReturnType<typeof spaceTags>) =>
+  <Result, Arg>(getTags: (result: Result, arg: Arg) => TagDescription<TagType>[]) =>
   (result: Result | undefined, error: unknown, arg: Arg) =>
     error ? [] : getTags(result as Result, arg);
 
