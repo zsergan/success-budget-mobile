@@ -41,7 +41,11 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
   const { control, watch, setScope, toggleCategory, onNameChange, onSubmit, isSubmitDisabled, closeBottomSheet } =
-    useLimitEditorForm({ limit, initialScope });
+    useLimitEditorForm({
+      limit,
+      initialScope,
+      activeCategoryIds: categories && expenses.map((category) => category.id),
+    });
 
   const scope = watch('scope');
   const categoryIds = watch('categoryIds');
