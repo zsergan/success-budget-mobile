@@ -40,26 +40,16 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
   const { total, categoryLimits } = useGetLimitsQuery(spaceArg).currentData ?? EMPTY_LIMITS;
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
-  const {
-    control,
-    watch,
-    setScope,
-    toggleCategory,
-    onNameChange,
-    onSubmit,
-    isSubmitDisabled,
-    errors,
-    closeBottomSheet,
-  } = useLimitEditorForm({
-    limit,
-    initialScope,
-    activeCategoryIds: categories && expenses.map((category) => category.id),
-  });
+  const { control, watch, setScope, toggleCategory, onNameChange, onSubmit, canSubmit, errors, closeBottomSheet } =
+    useLimitEditorForm({
+      limit,
+      initialScope,
+      activeCategoryIds: categories && expenses.map((category) => category.id),
+    });
 
   const scope = watch('scope');
   const categoryIds = watch('categoryIds');
   const name = watch('name');
-  const amount = watch('amount');
 
   const namesById = Object.fromEntries(expenses.map((category) => [category.id, category.name]));
   const claimedElsewhere = new Set(
@@ -83,10 +73,6 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
 
   const isTotal = scope === 'total';
   const isGroup = scope === 'group';
-  const readyCategories = isTotal || categoryIds.length > 0;
-  const readyName = !isGroup || name.trim().length > 0;
-  const readyAmount = Number(amount.replace(',', '.')) > 0;
-  const ready = readyCategories && readyName && readyAmount;
 
   const committedTotal = getCommittedTotal(categoryLimits);
   const overCommitted = isOverCommitted(committedTotal, total ?? undefined);
@@ -166,8 +152,7 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
               }
             : undefined
         }
-        ready={ready}
-        isSubmitDisabled={isSubmitDisabled}
+        canSubmit={canSubmit}
         saveLabel={isEdit ? 'Save changes' : isTotal ? 'Set monthly total' : 'Create limit'}
         onSubmit={onSubmit}
       />

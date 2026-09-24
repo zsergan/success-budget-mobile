@@ -83,11 +83,11 @@ it('sends the values the schema normalized', async () => {
   });
 });
 
-describe('isValid', () => {
+describe('canSubmit', () => {
   it('holds for an unchanged saved limit', async () => {
     const { result } = await renderForm([1, 2, 3]);
 
-    expect(result.current.isValid).toBe(true);
+    expect(result.current.canSubmit).toBe(true);
   });
 
   it('follows a type switch', async () => {
@@ -95,29 +95,29 @@ describe('isValid', () => {
 
     await act(async () => result.current.setScope('category'));
     expect(result.current.watch('categoryIds')).toEqual([1]);
-    expect(result.current.isValid).toBe(true);
+    expect(result.current.canSubmit).toBe(true);
 
     await act(async () => result.current.setScope('group'));
-    expect(result.current.isValid).toBe(false);
+    expect(result.current.canSubmit).toBe(false);
   });
 
   it('follows a category pick together with the auto-filled name', async () => {
     const { result } = await renderForm([1, 2, 3], SINGLE);
 
     await act(async () => result.current.setScope('group'));
-    expect(result.current.isValid).toBe(false);
+    expect(result.current.canSubmit).toBe(false);
 
     await act(async () => result.current.toggleCategory(2, NAMES));
     expect(result.current.watch('name')).toBe('C1, C2');
-    expect(result.current.isValid).toBe(true);
+    expect(result.current.canSubmit).toBe(true);
   });
 
   it('follows an archived category leaving the selection', async () => {
     const { result, rerender } = await renderForm([1, 2, 3]);
-    expect(result.current.isValid).toBe(true);
+    expect(result.current.canSubmit).toBe(true);
 
     await act(async () => rerender({ activeCategoryIds: [1, 3] }));
-    expect(result.current.isValid).toBe(false);
+    expect(result.current.canSubmit).toBe(false);
   });
 });
 
@@ -130,7 +130,7 @@ describe('group name', () => {
     await act(async () => result.current.toggleCategory(2, longNames));
 
     expect(result.current.control.getFieldState('name').error?.message).toBe('Keep the name to 60 characters');
-    expect(result.current.isValid).toBe(false);
+    expect(result.current.canSubmit).toBe(false);
   });
 
   it('stops following the categories once edited by hand', async () => {

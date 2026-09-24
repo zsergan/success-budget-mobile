@@ -99,7 +99,6 @@ const useLimitEditorForm = ({ limit, initialScope = 'category', activeCategoryId
         : createLimit({ spaceId: requireSpaceId(spaceId), data: payload }).unwrap();
     },
     onSuccess: () => close(),
-    getInvalidMessage: (errors) => errors.amount?.message ?? errors.categoryIds?.message ?? errors.name?.message ?? '',
     reset,
   });
 
@@ -110,9 +109,8 @@ const useLimitEditorForm = ({ limit, initialScope = 'category', activeCategoryId
     toggleCategory,
     onNameChange,
     onSubmit,
-    isValid: formState.isValid,
+    canSubmit: formState.isValid && !formState.isValidating && !isSubmitDisabled,
     errors: formState.errors,
-    isSubmitDisabled,
     closeBottomSheet: close,
   };
 };
