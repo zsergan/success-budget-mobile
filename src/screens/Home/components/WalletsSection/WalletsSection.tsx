@@ -64,7 +64,7 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
     retry,
     selectedWallet,
     isModalVisible,
-    isConfirmVisible,
+    walletToDelete,
     isDeleting,
     deleteError,
     onWalletLongPress,
@@ -114,13 +114,13 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
         />
 
         <BottomModal
-          isVisible={isConfirmVisible}
+          isVisible={!!walletToDelete}
           onClose={onConfirmCancel}
           disabled={isDeleting}
           content={renderBottomModalContent(
-            selectedWallet?.wallet.wallet_name || '',
+            walletToDelete?.wallet.wallet_name || '',
             currencyCode,
-            selectedWallet?.wallet.design,
+            walletToDelete?.wallet.design,
             deleteError,
           )}
           actions={[{ title: isDeleting ? 'Deleting…' : 'Delete', onPress: onConfirm }]}

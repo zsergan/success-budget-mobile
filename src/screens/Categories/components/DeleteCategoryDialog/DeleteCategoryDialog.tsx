@@ -3,13 +3,10 @@ import { ActivityIndicator, Text, TouchableOpacity, TouchableWithoutFeedback, Vi
 import { Icon } from '@components';
 import ModalContainer from '@components/Modals/ModalContainer/ModalContainer';
 import type { CategoryModel } from '@api/models';
-import { requireSpaceId } from '@redux/api/baseApi';
-import { useAppSelector } from '@redux/hooks';
 import { useDeleteCategoryMutation } from '@redux/state/category/api';
-import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
-import { useConfirmAction } from '@hooks';
+import type { ConfirmAction } from '@hooks';
 
 import styles from './style';
 
@@ -19,14 +16,12 @@ const TYPE_LABEL: Record<TransactionType, string> = {
 };
 
 interface Props {
-  category: CategoryModel | null;
-  onClose: () => void;
+  deletion: ConfirmAction<CategoryModel>;
 }
 
-const DeleteCategoryDialog = ({ category, onClose }: Props) => {
-  const spaceId = useAppSelector(selectCurrentSpaceId);
+const DeleteCategoryDialog = ({ deletion }: Props) => {
+  const { target: category, isPending, error, cancel, confirm } = deletion;
   const [deleteCategory] = useDeleteCategoryMutation();
-  const { run, isPending, error, resetError } = useConfirmAction();
 
   if (!category) {
     return null;
@@ -38,19 +33,12 @@ const DeleteCategoryDialog = ({ category, onClose }: Props) => {
   const confirmLabel = willDelete ? 'Delete category' : 'Archive category';
   const pendingLabel = willDelete ? 'Deleting…' : 'Archiving…';
 
-  const handleClose = () => {
-    if (isPending) return;
-
-    resetError();
-    onClose();
-  };
-
   const handleConfirm = () => {
-    run(() => deleteCategory({ spaceId: requireSpaceId(spaceId), categoryId: category.id }), onClose);
+    confirm((target, spaceId) => deleteCategory({ spaceId, categoryId: target.id }));
   };
 
   return (
-    <ModalContainer isVisible={!!category} onClose={handleClose} animationType="fade">
+    <ModalContainer isVisible={!!category} onClose={cancel} animationType="fade">
       <TouchableWithoutFeedback>
         <View style={styles.card}>
           <View style={styles.headerRow}>
@@ -130,7 +118,7 @@ const DeleteCategoryDialog = ({ category, onClose }: Props) => {
 
             <TouchableOpacity
               style={[styles.cancelButton, isPending && styles.buttonDisabled]}
-              onPress={handleClose}
+              onPress={cancel}
               disabled={isPending}
               activeOpacity={0.7}
             >

@@ -3,7 +3,8 @@ import { Provider } from 'react-redux';
 import { act, renderHook } from '@testing-library/react-native';
 
 import { createAppStore } from '@redux/Store';
-import { logoutMe } from '@redux/state/auth/thunks';
+import { loginMe, logoutMe } from '@redux/state/auth/thunks';
+import { activateSpace } from '@redux/state/space/thunks';
 import useConfirmAction from './useConfirmAction';
 
 jest.mock('@api/instance', () => ({
@@ -12,6 +13,10 @@ jest.mock('@api/instance', () => ({
 }));
 jest.mock('expo-secure-store');
 
+interface Item {
+  id: number;
+}
+
 const deferred = () => {
   let resolve!: () => void;
   let reject!: (reason: unknown) => void;
@@ -19,138 +24,212 @@ const deferred = () => {
     resolve = res;
     reject = rej;
   });
+  const action = jest.fn((_target: Item, _spaceId: number) => ({ unwrap: () => promise }));
 
-  return { action: jest.fn(() => ({ unwrap: () => promise })), resolve, reject };
+  return { action, resolve, reject };
 };
 
 const renderConfirmAction = () => {
   const store = createAppStore();
+
+  store.dispatch(activateSpace(1));
+
   const Wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
-  const { result } = renderHook(() => useConfirmAction(), { wrapper: Wrapper });
+  const { result } = renderHook(() => useConfirmAction<Item>(), { wrapper: Wrapper });
 
   return { store, result };
 };
 
-it('stays pending until the action settles and then calls onSuccess', async () => {
-  const { action, resolve } = deferred();
-  const onSuccess = jest.fn();
-  const { result } = renderConfirmAction();
-
+const startConfirm = (result: { current: ReturnType<typeof useConfirmAction<Item>> }, action: jest.Mock) => {
   let running!: Promise<void>;
 
   act(() => {
-    running = result.current.run(action, onSuccess);
+    running = result.current.confirm(action);
   });
 
+  return running;
+};
+
+it('stays open and locked until the action succeeds, then closes', async () => {
+  const { action, resolve } = deferred();
+  const { result } = renderConfirmAction();
+
+  act(() => result.current.open({ id: 7 }));
+
+  const running = startConfirm(result, action);
+
+  expect(action).toHaveBeenCalledWith({ id: 7 }, 1);
   expect(result.current.isPending).toBe(true);
-  expect(onSuccess).not.toHaveBeenCalled();
+
+  act(() => result.current.cancel());
+
+  expect(result.current.target).toEqual({ id: 7 });
 
   await act(async () => {
     resolve();
     await running;
   });
 
-  expect(onSuccess).toHaveBeenCalledTimes(1);
+  expect(result.current.target).toBeNull();
   expect(result.current.isPending).toBe(false);
-  expect(result.current.error).toBeNull();
 });
 
-it('keeps the error instead of calling onSuccess and allows a retry', async () => {
+it('keeps the dialog open with the error, clears it on retry and on reopening', async () => {
   const failing = deferred();
-  const onSuccess = jest.fn();
   const { result } = renderConfirmAction();
 
+  act(() => result.current.open({ id: 7 }));
+
   await act(async () => {
-    const running = result.current.run(failing.action, onSuccess);
+    const running = result.current.confirm(failing.action);
 
     failing.reject({ message: 'Wallet has transactions', statusCode: 409 });
     await running;
   });
 
-  expect(onSuccess).not.toHaveBeenCalled();
+  expect(result.current.target).toEqual({ id: 7 });
   expect(result.current.isPending).toBe(false);
   expect(result.current.error).toBe('Wallet has transactions');
 
   const retry = deferred();
-  let running!: Promise<void>;
-
-  act(() => {
-    running = result.current.run(retry.action, onSuccess);
-  });
+  const running = startConfirm(result, retry.action);
 
   expect(result.current.error).toBeNull();
 
   await act(async () => {
-    retry.resolve();
+    retry.reject({ message: 'Still failing', statusCode: 409 });
     await running;
   });
 
-  expect(onSuccess).toHaveBeenCalledTimes(1);
+  act(() => result.current.cancel());
+  act(() => result.current.open({ id: 7 }));
+
+  expect(result.current.error).toBeNull();
 });
 
-it('ignores a second run while the first is still in flight', async () => {
+it('ignores a second confirm while the first is in flight', async () => {
   const { action, resolve } = deferred();
-  const onSuccess = jest.fn();
   const { result } = renderConfirmAction();
 
+  act(() => result.current.open({ id: 7 }));
+
   await act(async () => {
-    const first = result.current.run(action, onSuccess);
-    const second = result.current.run(action, onSuccess);
+    const first = result.current.confirm(action);
+    const second = result.current.confirm(action);
 
     resolve();
     await Promise.all([first, second]);
   });
 
   expect(action).toHaveBeenCalledTimes(1);
-  expect(onSuccess).toHaveBeenCalledTimes(1);
 });
 
-it('turns a synchronous throw into an error', async () => {
-  const { result } = renderConfirmAction();
+describe('a space switch during the request', () => {
+  it('drops the dialog and does not bring it back when switching back', () => {
+    const { action } = deferred();
+    const { store, result } = renderConfirmAction();
 
-  await act(() =>
-    result.current.run(() => {
-      throw { message: 'No active space' };
-    }, jest.fn()),
-  );
+    act(() => result.current.open({ id: 7 }));
+    startConfirm(result, action);
 
-  expect(result.current.error).toBe('No active space');
-  expect(result.current.isPending).toBe(false);
-});
+    act(() => store.dispatch(activateSpace(2)));
 
-it('clears the error on resetError', async () => {
-  const { action, reject } = deferred();
-  const { result } = renderConfirmAction();
+    expect(result.current.target).toBeNull();
+    expect(result.current.isPending).toBe(false);
 
-  await act(async () => {
-    const running = result.current.run(action, jest.fn());
+    act(() => store.dispatch(activateSpace(1)));
 
-    reject({ message: 'Not found', statusCode: 404 });
-    await running;
+    expect(result.current.target).toBeNull();
   });
 
-  act(() => result.current.resetError());
+  const outcomes = [
+    ['succeeds', (old: ReturnType<typeof deferred>) => old.resolve()],
+    ['fails', (old: ReturnType<typeof deferred>) => old.reject({ message: 'Server error', statusCode: 500 })],
+  ] as const;
+  const cases = [2, 1].flatMap((nextSpaceId) =>
+    outcomes.map(([outcome, settle]) => [nextSpaceId, outcome, settle] as const),
+  );
 
-  expect(result.current.error).toBeNull();
+  it.each(cases)(
+    'leaves the next dialog in space %s alone when the old request %s',
+    async (nextSpaceId, _outcome, settle) => {
+      const old = deferred();
+      const next = deferred();
+      const { store, result } = renderConfirmAction();
+
+      act(() => result.current.open({ id: 7 }));
+
+      const oldRunning = startConfirm(result, old.action);
+
+      act(() => store.dispatch(activateSpace(2)));
+      act(() => store.dispatch(activateSpace(nextSpaceId)));
+      act(() => result.current.open({ id: 8 }));
+      startConfirm(result, next.action);
+
+      expect(next.action).toHaveBeenCalledWith({ id: 8 }, nextSpaceId);
+
+      await act(async () => {
+        settle(old);
+        await oldRunning;
+      });
+
+      expect(result.current.target).toEqual({ id: 8 });
+      expect(result.current.isPending).toBe(true);
+      expect(result.current.error).toBeNull();
+    },
+  );
+});
+
+it('does not send the request once the store has moved to another space, even before a render', () => {
+  const { action } = deferred();
+  const { store, result } = renderConfirmAction();
+
+  act(() => result.current.open({ id: 7 }));
+
+  const { confirm } = result.current;
+
+  store.dispatch(activateSpace(2));
+  act(() => {
+    confirm(action);
+  });
+
+  expect(action).not.toHaveBeenCalled();
 });
 
 it.each([
-  ['succeeds', (settle: ReturnType<typeof deferred>) => settle.resolve()],
-  ['fails', (settle: ReturnType<typeof deferred>) => settle.reject({ message: 'Server error', statusCode: 500 })],
-])('stays silent when the action %s after a logout', async (_outcome, settle) => {
+  ['succeeds', (old: ReturnType<typeof deferred>) => old.resolve()],
+  ['fails', (old: ReturnType<typeof deferred>) => old.reject({ message: 'Server error', statusCode: 500 })],
+])('clears a locked dialog on logout and ignores the request when it %s', async (_outcome, settle) => {
   const pending = deferred();
-  const onSuccess = jest.fn();
   const { store, result } = renderConfirmAction();
 
-  await act(async () => {
-    const running = result.current.run(pending.action, onSuccess);
+  act(() => result.current.open({ id: 7 }));
 
+  const running = startConfirm(result, pending.action);
+
+  await act(async () => {
     await store.dispatch(logoutMe());
+  });
+
+  expect(result.current.target).toBeNull();
+  expect(result.current.isPending).toBe(false);
+
+  await act(async () => {
+    store.dispatch(loginMe.fulfilled('token-2', 'req-login-2', { email: 'a@b.com', password: 'password1' }));
+    store.dispatch(activateSpace(1));
     settle(pending);
     await running;
   });
 
-  expect(onSuccess).not.toHaveBeenCalled();
+  expect(result.current.target).toBeNull();
   expect(result.current.error).toBeNull();
-  expect(result.current.isPending).toBe(false);
+});
+
+it('does not open without an active space', () => {
+  const { store, result } = renderConfirmAction();
+
+  act(() => store.dispatch(activateSpace(null)));
+  act(() => result.current.open({ id: 7 }));
+
+  expect(result.current.target).toBeNull();
 });

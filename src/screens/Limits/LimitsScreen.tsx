@@ -1,9 +1,9 @@
-import { useState } from 'react';
 import { ActivityIndicator, ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { LimitModel } from '@api/models';
 import { BottomSheetModal as BottomModal, EmptyState, Icon } from '@components';
+import { useConfirmAction } from '@hooks';
 import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetLimitsQuery } from '@redux/state/limit/api';
@@ -29,7 +29,7 @@ const LimitsScreen = () => {
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
   const { editorTarget, editorKey, openEditor, editorRef } = useLimitEditor();
-  const [deletingLimit, setDeletingLimit] = useState<LimitModel | undefined>(undefined);
+  const limitDeletion = useConfirmAction<LimitModel>();
 
   const isFullyEmpty = !total && categoryLimits.length === 0;
 
@@ -40,15 +40,11 @@ const LimitsScreen = () => {
           key={editorKey}
           limit={editorTarget.limit}
           initialScope={editorTarget.scope}
-          onRequestDelete={(limit) => setDeletingLimit(limit)}
+          onRequestDelete={limitDeletion.open}
         />
       </BottomModal>
 
-      <DeleteLimitDialog
-        limit={deletingLimit}
-        currencyCode={currencyCode}
-        onClose={() => setDeletingLimit(undefined)}
-      />
+      <DeleteLimitDialog deletion={limitDeletion} currencyCode={currencyCode} />
 
       <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
         <LimitsHeader />

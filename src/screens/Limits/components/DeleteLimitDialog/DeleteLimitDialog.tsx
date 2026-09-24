@@ -2,38 +2,24 @@ import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 
 import type { LimitModel } from '@api/models';
 import { Icon, ModalContainer } from '@components';
-import { useConfirmAction } from '@hooks';
-import { requireSpaceId } from '@redux/api/baseApi';
-import { useAppSelector } from '@redux/hooks';
+import type { ConfirmAction } from '@hooks';
 import { useDeleteLimitMutation } from '@redux/state/limit/api';
-import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { formatCurrencyAmount } from '@shared/utils';
 import { colors } from '@shared/theme';
 
 import styles from './style';
 
 interface Props {
-  limit: LimitModel | undefined;
+  deletion: ConfirmAction<LimitModel>;
   currencyCode?: string;
-  onClose: () => void;
 }
 
-const DeleteLimitDialog = ({ limit, currencyCode, onClose }: Props) => {
-  const spaceId = useAppSelector(selectCurrentSpaceId);
+const DeleteLimitDialog = ({ deletion, currencyCode }: Props) => {
+  const { target: limit, isPending, error, cancel, confirm } = deletion;
   const [deleteLimit] = useDeleteLimitMutation();
-  const { run, isPending, error, resetError } = useConfirmAction();
-
-  const handleClose = () => {
-    if (isPending) return;
-
-    resetError();
-    onClose();
-  };
 
   const handleDelete = () => {
-    if (!limit) return;
-
-    run(() => deleteLimit({ spaceId: requireSpaceId(spaceId), limitId: limit.id }), onClose);
+    confirm((target, spaceId) => deleteLimit({ spaceId, limitId: target.id }));
   };
 
   const isGroup = (limit?.categories.length ?? 0) > 1;
@@ -43,7 +29,7 @@ const DeleteLimitDialog = ({ limit, currencyCode, onClose }: Props) => {
     : 'Only the threshold goes away. Every expense keeps being recorded exactly as before.';
 
   return (
-    <ModalContainer isVisible={!!limit} onClose={handleClose} animationType="fade">
+    <ModalContainer isVisible={!!limit} onClose={cancel} animationType="fade">
       {limit && (
         <View style={styles.card}>
           <View style={styles.iconBox}>
@@ -90,7 +76,7 @@ const DeleteLimitDialog = ({ limit, currencyCode, onClose }: Props) => {
 
             <TouchableOpacity
               style={[styles.keepButton, isPending && styles.buttonDisabled]}
-              onPress={handleClose}
+              onPress={cancel}
               disabled={isPending}
               activeOpacity={0.8}
             >
