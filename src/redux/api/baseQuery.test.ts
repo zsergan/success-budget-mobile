@@ -41,6 +41,14 @@ describe('httpBaseQuery', () => {
     expect(result).toEqual({ data: { ok: true } });
   });
 
+  it('turns an empty body into null so RTK Query accepts it as a result', async () => {
+    mockedRequest.mockResolvedValue({ data: undefined });
+
+    const result = await httpBaseQuery({ url: '/x', method: 'PUT' }, apiWithSession([1]), {});
+
+    expect(result).toEqual({ data: null });
+  });
+
   it('returns the backend error body with Retry-After parsed', async () => {
     const body = { message: 'Too many', statusCode: 429, path: '/x', timestamp: 't' };
 
