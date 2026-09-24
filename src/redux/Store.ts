@@ -10,7 +10,6 @@ import memberReducer from './state/member/slice';
 import profileReducer from './state/profile/slice';
 import spaceReducer from './state/space/slice';
 import transactionReducer from './state/transaction/slice';
-import walletReducer from './state/wallet/slice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -19,7 +18,6 @@ const rootReducer = combineReducers({
   profile: profileReducer,
   space: spaceReducer,
   transaction: transactionReducer,
-  wallet: walletReducer,
   [baseApi.reducerPath]: baseApi.reducer,
 });
 

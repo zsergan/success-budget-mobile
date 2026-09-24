@@ -3,7 +3,6 @@ import type { Space } from '@api/dto';
 import { createSpace, getSpaces } from '@api/space.api';
 import { SpaceType } from '@shared/enums';
 import { loginMe, logoutMe } from '../auth/thunks';
-import { fetchWallets } from '../wallet/thunks';
 import { activateSpace, addSpace, fetchSpaces } from './thunks';
 
 jest.mock('@api/space.api');
@@ -42,70 +41,16 @@ describe('activateSpace', () => {
     expect(afterSecond.currentSpaceId).toBe(5);
   });
 
-  it('bumps contextKey and clears wallets when switching to a different space', () => {
+  it('bumps contextKey when switching to a different space', () => {
     const store = createTestStore();
 
     store.dispatch(activateSpace(1));
-    store.dispatch(fetchWallets.pending('req-space-1', undefined));
-    store.dispatch(
-      fetchWallets.fulfilled(
-        { total_balance: 500, total_balance_currency: 'USD', delta_percent: 0, wallets: [{ id: 1 } as never] },
-        'req-space-1',
-        undefined,
-      ),
-    );
-
-    expect(store.getState().wallet.wallets).toHaveLength(1);
-
     const keyBefore = store.getState().space.contextKey;
 
     store.dispatch(activateSpace(2));
 
     expect(store.getState().space.contextKey).toBe(keyBefore + 1);
     expect(store.getState().space.currentSpaceId).toBe(2);
-    expect(store.getState().wallet.wallets).toEqual([]);
-  });
-
-  it('ignores a fulfilled response for the previous space that arrives after the switch', () => {
-    const store = createTestStore();
-
-    store.dispatch(activateSpace(1));
-    store.dispatch(fetchWallets.pending('req-space-1', undefined));
-
-    // Switch away before the space-1 request resolves.
-    store.dispatch(activateSpace(2));
-
-    store.dispatch(
-      fetchWallets.fulfilled(
-        { total_balance: 999, total_balance_currency: 'USD', delta_percent: 0, wallets: [{ id: 1 } as never] },
-        'req-space-1',
-        undefined,
-      ),
-    );
-
-    expect(store.getState().wallet.wallets).toEqual([]);
-    expect(store.getState().wallet.totalBalance).toBe(0);
-  });
-
-  it('preserves hasLoaded across a switch so the app-wide bootstrap loader does not reappear', () => {
-    const store = createTestStore();
-
-    store.dispatch(activateSpace(1));
-    store.dispatch(fetchWallets.pending('req-1', undefined));
-    store.dispatch(
-      fetchWallets.fulfilled(
-        { total_balance: 0, total_balance_currency: 'USD', delta_percent: 0, wallets: [] },
-        'req-1',
-        undefined,
-      ),
-    );
-
-    expect(store.getState().wallet.hasLoaded).toBe(true);
-
-    store.dispatch(activateSpace(2));
-
-    expect(store.getState().wallet.hasLoaded).toBe(true);
-    expect(store.getState().wallet.isLoading).toBe(true);
   });
 });
 

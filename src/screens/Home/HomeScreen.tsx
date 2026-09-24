@@ -2,8 +2,9 @@ import { useRef, useState } from 'react';
 
 import type { TransactionComposerHandle } from '@components';
 import { Fab, RootLayout, SpaceSwitcher, TransactionComposer } from '@components';
-import { useAppDispatch, useAppSelector } from '@redux/hooks';
-import { selectTotalBalance, selectWallet } from '@redux/state/wallet/selectors';
+import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
+import { useGetWalletsQuery } from '@redux/state/wallet/api';
+import { EMPTY_WALLETS, getTotalBalance } from '@redux/state/wallet/selectors';
 import { selectTransaction } from '@redux/state/transaction/selectors';
 import { fetchTransactions } from '@redux/state/transaction/thunks';
 import { useBalanceVisibility } from '@hooks';
@@ -23,8 +24,9 @@ const HomeScreen = ({ navigation }: Props) => {
   const [focusedWalletId, setFocusedWalletId] = useState<number | undefined>(undefined);
   const composerRef = useRef<TransactionComposerHandle>(null);
 
-  const { total, currencyCode, walletsCount, deltaPercent } = useAppSelector(selectTotalBalance);
-  const { wallets } = useAppSelector(selectWallet);
+  const { currentData: walletsOverview } = useGetWalletsQuery(useSpaceArg());
+  const { total, currencyCode, walletsCount, deltaPercent } = getTotalBalance(walletsOverview);
+  const wallets = walletsOverview?.wallets ?? EMPTY_WALLETS;
   const {
     transactions,
     isLoading: isLoadingTransactions,

@@ -2,6 +2,7 @@ import type { ListenerEffectAPI, ListenerMiddlewareInstance, ThunkDispatch, Unkn
 
 import type { RootState } from '@redux/Store';
 import { categoryApi } from '@redux/state/category/api';
+import { walletApi } from '@redux/state/wallet/api';
 import { transactionsInvalidated } from '@redux/state/transaction/actions';
 import { fetchTransactions } from '@redux/state/transaction/thunks';
 
@@ -34,5 +35,21 @@ export const startLegacyBridge = (listener: ListenerMiddlewareInstance<RootState
     matcher: categoryApi.endpoints.deleteCategory.matchFulfilled,
     effect: (action, api) =>
       refresh(api, action.meta.arg.originalArgs.spaceId, action.payload.archived ? ['Transactions'] : []),
+  });
+
+  listener.startListening({
+    matcher: walletApi.endpoints.createWallet.matchFulfilled,
+    effect: (action, api) =>
+      refresh(api, action.meta.arg.originalArgs.spaceId, action.payload.transaction ? ['Transactions'] : []),
+  });
+
+  listener.startListening({
+    matcher: walletApi.endpoints.updateWallet.matchFulfilled,
+    effect: (action, api) => refresh(api, action.meta.arg.originalArgs.spaceId, ['Transactions']),
+  });
+
+  listener.startListening({
+    matcher: walletApi.endpoints.deleteWallet.matchFulfilled,
+    effect: (action, api) => refresh(api, action.meta.arg.originalArgs.spaceId, ['Transactions']),
   });
 };

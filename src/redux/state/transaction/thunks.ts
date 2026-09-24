@@ -4,7 +4,6 @@ import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
 import { isSpaceContextCurrent } from '../space/thunks';
-import { fetchWallets } from '../wallet/thunks';
 import { transactionsInvalidated } from './actions';
 
 export const fetchTransactions = createAppAsyncThunk('transaction/fetchTransactions', async (_: void, thunkAPI) => {
@@ -67,7 +66,7 @@ export const addTransaction = createAppAsyncThunk(
     try {
       const response = await createTransaction(spaceId, payload);
 
-      thunkAPI.dispatch(baseApi.util.invalidateTags(spaceTags(spaceId, 'Categories', 'Limits')));
+      thunkAPI.dispatch(baseApi.util.invalidateTags(spaceTags(spaceId, 'Categories', 'Limits', 'Wallets')));
 
       // The user may have switched (or logged out of) this space while the
       // create was in flight. The space that's now active already has its
@@ -76,7 +75,6 @@ export const addTransaction = createAppAsyncThunk(
       // different space would be wrong, not just redundant.
       if (isSpaceContextCurrent(thunkAPI.getState, contextKey)) {
         thunkAPI.dispatch(fetchTransactions());
-        thunkAPI.dispatch(fetchWallets());
         // latest's own refresh is owned solely by useTransactionsData's
         // dataRevision-watching effect (dispatching it here too, on top of
         // that, used to double-fetch it on every add) -- this only needs

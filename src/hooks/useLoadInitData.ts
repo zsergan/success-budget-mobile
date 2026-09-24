@@ -2,11 +2,10 @@ import { useEffect, useRef } from 'react';
 import { skipToken } from '@reduxjs/toolkit/query';
 
 import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
-import { fetchWallets } from '@redux/state/wallet/thunks';
 import { fetchTransactions } from '@redux/state/transaction/thunks';
 import { fetchProfile } from '@redux/state/profile/thunks';
 import { fetchSpaces } from '@redux/state/space/thunks';
-import { selectWallet } from '@redux/state/wallet/selectors';
+import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { useGetLimitsQuery } from '@redux/state/limit/api';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
 import { selectTransaction } from '@redux/state/transaction/selectors';
@@ -21,7 +20,6 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   const dispatch = useAppDispatch();
   const { isLoading: isSpaceLoading } = useAppSelector(selectSpace);
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
-  const { isLoading: isWalletLoading, hasLoaded: hasWalletsLoaded } = useAppSelector(selectWallet);
   const { isLoading: isTransactionLoading, hasLoaded: hasTransactionsLoaded } = useAppSelector(selectTransaction);
   const { isLoading: isProfileLoading } = useAppSelector(selectProfile);
   const sessionKey = useAppSelector((state) => state.auth.sessionKey);
@@ -30,7 +28,11 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   // active space's data loaded (and refetched on every space switch).
   const spaceArg = useSpaceArg();
   const sessionSpaceArg = isSignedIn ? spaceArg : skipToken;
-  const spaceQueries = [useGetCategoriesQuery(sessionSpaceArg), useGetLimitsQuery(sessionSpaceArg)];
+  const spaceQueries = [
+    useGetWalletsQuery(sessionSpaceArg),
+    useGetCategoriesQuery(sessionSpaceArg),
+    useGetLimitsQuery(sessionSpaceArg),
+  ];
 
   useEffect(() => {
     if (isSignedIn) {
@@ -45,7 +47,6 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   // gate stops it flashing the previous space's transactions on switch.
   useEffect(() => {
     if (isSignedIn && currentSpaceId !== null) {
-      dispatch(fetchWallets());
       dispatch(fetchTransactions());
     }
   }, [dispatch, isSignedIn, currentSpaceId]);
@@ -65,7 +66,6 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   // Gating the whole app on any of these raw flags would tear down and
   // remount the entire signed-in navigator mid-mutation, breaking any
   // pending navigation.goBack() or dropping the user back on the Home tab.
-  const isInitialWalletLoad = isWalletLoading && !hasWalletsLoaded;
 
   // Holds the app on LOADING_SCREEN only until the first space's data has
   // settled (loaded or failed) once per session, never again on a switch.
@@ -82,12 +82,7 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
 
   return {
     isLoading:
-      isSignedIn &&
-      (isInitialSpaceLoad ||
-        isInitialWalletLoad ||
-        isInitialSpaceDataLoad ||
-        isInitialTransactionLoad ||
-        isProfileLoading),
+      isSignedIn && (isInitialSpaceLoad || isInitialSpaceDataLoad || isInitialTransactionLoad || isProfileLoading),
   };
 };
 
