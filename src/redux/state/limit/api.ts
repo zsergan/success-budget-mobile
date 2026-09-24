@@ -2,7 +2,7 @@ import type { CreateLimitRequest, GetLimitsResponse, LimitEntity, UpdateLimitReq
 import type { LimitsModel } from '@api/models';
 import { mapLimitsResponse } from '@api/models';
 import type { SpaceArg } from '@redux/api/baseApi';
-import { baseApi, spaceTags } from '@redux/api/baseApi';
+import { baseApi, invalidatesOnSuccess, spaceTags } from '@redux/api/baseApi';
 
 interface LimitArg extends SpaceArg {
   limitId: number;
@@ -20,7 +20,7 @@ export const limitApi = baseApi.injectEndpoints({
     }),
     createLimit: build.mutation<LimitEntity, SpaceArg & { data: CreateLimitRequest }>({
       query: ({ spaceId, data }) => ({ url: `/spaces/${spaceId}/limits`, method: 'POST', body: data }),
-      invalidatesTags: (_result, _error, { spaceId }) => limitWriteTags(spaceId),
+      invalidatesTags: invalidatesOnSuccess((_result, { spaceId }) => limitWriteTags(spaceId)),
     }),
     updateLimit: build.mutation<LimitEntity, LimitArg & { data: UpdateLimitRequest }>({
       query: ({ spaceId, limitId, data }) => ({
@@ -28,11 +28,11 @@ export const limitApi = baseApi.injectEndpoints({
         method: 'PUT',
         body: data,
       }),
-      invalidatesTags: (_result, _error, { spaceId }) => limitWriteTags(spaceId),
+      invalidatesTags: invalidatesOnSuccess((_result, { spaceId }) => limitWriteTags(spaceId)),
     }),
     deleteLimit: build.mutation<void, LimitArg>({
       query: ({ spaceId, limitId }) => ({ url: `/spaces/${spaceId}/limits/${limitId}`, method: 'DELETE' }),
-      invalidatesTags: (_result, _error, { spaceId }) => limitWriteTags(spaceId),
+      invalidatesTags: invalidatesOnSuccess((_result, { spaceId }) => limitWriteTags(spaceId)),
     }),
   }),
 });

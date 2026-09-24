@@ -9,6 +9,8 @@ Wallets, categories, limits and history now follow the "Stale" column
 through RTK Query tags (`src/redux/state/<domain>/api.ts`, checked by
 `src/redux/api/invalidation.test.ts`); the "Refreshed today" and "Gap"
 columns and the lifecycle section record the thunk-era behavior.
+Invalidation happens only after a successful mutation (an empty body
+counts as success), so a failed or session-stale write refreshes nothing.
 
 ## Cached resources
 

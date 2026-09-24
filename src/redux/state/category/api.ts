@@ -8,7 +8,7 @@ import type {
 import type { CategoriesModel, CategoryModel } from '@api/models';
 import { mapCategoriesResponse, mapCategory } from '@api/models';
 import type { SpaceArg } from '@redux/api/baseApi';
-import { baseApi, spaceTags } from '@redux/api/baseApi';
+import { baseApi, invalidatesOnSuccess, spaceTags } from '@redux/api/baseApi';
 
 interface CategoryArg extends SpaceArg {
   categoryId: number;
@@ -24,7 +24,7 @@ export const categoryApi = baseApi.injectEndpoints({
     createCategory: build.mutation<CategoryModel, SpaceArg & { data: CreateCategoryRequest }>({
       query: ({ spaceId, data }) => ({ url: `/spaces/${spaceId}/categories`, method: 'POST', body: data }),
       transformResponse: (response: Category) => mapCategory(response),
-      invalidatesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Categories'),
+      invalidatesTags: invalidatesOnSuccess((_result, { spaceId }) => spaceTags(spaceId, 'Categories')),
     }),
     // Covers archive/restore too: archiving unlinks the category from its limit.
     updateCategory: build.mutation<CategoryModel, CategoryArg & { data: UpdateCategoryRequest }>({
@@ -34,14 +34,17 @@ export const categoryApi = baseApi.injectEndpoints({
         body: data,
       }),
       transformResponse: (response: Category) => mapCategory(response),
-      invalidatesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Categories', 'Limits', 'Transactions'),
+      invalidatesTags: invalidatesOnSuccess((_result, { spaceId }) =>
+        spaceTags(spaceId, 'Categories', 'Limits', 'Transactions'),
+      ),
     }),
     deleteCategory: build.mutation<DeleteCategoryResponse, CategoryArg>({
       query: ({ spaceId, categoryId }) => ({ url: `/spaces/${spaceId}/categories/${categoryId}`, method: 'DELETE' }),
-      invalidatesTags: (result, _error, { spaceId }) =>
-        result?.archived === false
-          ? spaceTags(spaceId, 'Categories', 'Limits')
-          : spaceTags(spaceId, 'Categories', 'Limits', 'Transactions'),
+      invalidatesTags: invalidatesOnSuccess((result, { spaceId }) =>
+        result.archived
+          ? spaceTags(spaceId, 'Categories', 'Limits', 'Transactions')
+          : spaceTags(spaceId, 'Categories', 'Limits'),
+      ),
     }),
     reorderCategories: build.mutation<void, SpaceArg & { categoryIds: number[] }>({
       query: ({ spaceId, categoryIds }) => ({
@@ -49,7 +52,7 @@ export const categoryApi = baseApi.injectEndpoints({
         method: 'PUT',
         body: { category_ids: categoryIds },
       }),
-      invalidatesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Categories'),
+      invalidatesTags: invalidatesOnSuccess((_result, { spaceId }) => spaceTags(spaceId, 'Categories')),
     }),
   }),
 });

@@ -2,7 +2,7 @@ import type { CreateTransactionRequest, CreateTransactionResponse, Transaction }
 import type { TransactionModel } from '@api/models';
 import { mapTransaction } from '@api/models';
 import type { SpaceArg } from '@redux/api/baseApi';
-import { baseApi, spaceTags } from '@redux/api/baseApi';
+import { baseApi, invalidatesOnSuccess, spaceTags } from '@redux/api/baseApi';
 
 // Without a period the backend returns the current month (Home's recent activity).
 export interface TransactionsArg extends SpaceArg {
@@ -25,8 +25,9 @@ export const transactionApi = baseApi.injectEndpoints({
     // Changes balances, limit spending and each category's transaction count.
     createTransaction: build.mutation<CreateTransactionResponse, SpaceArg & { data: CreateTransactionRequest }>({
       query: ({ spaceId, data }) => ({ url: `/spaces/${spaceId}/transactions`, method: 'POST', body: data }),
-      invalidatesTags: (_result, _error, { spaceId }) =>
+      invalidatesTags: invalidatesOnSuccess((_result, { spaceId }) =>
         spaceTags(spaceId, 'Transactions', 'Wallets', 'Limits', 'Categories'),
+      ),
     }),
   }),
 });

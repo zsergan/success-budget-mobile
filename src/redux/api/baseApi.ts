@@ -32,6 +32,13 @@ export interface SpaceArg {
 
 export const spaceTags = (spaceId: number, ...types: TagType[]) => types.map((type) => ({ type, id: spaceId }));
 
+// A failed mutation (including one that outlived its session) leaves the cache
+// alone; a success without a body arrives as null and still invalidates.
+export const invalidatesOnSuccess =
+  <Result, Arg>(getTags: (result: Result, arg: Arg) => ReturnType<typeof spaceTags>) =>
+  (result: Result | undefined, error: unknown, arg: Arg) =>
+    error ? [] : getTags(result as Result, arg);
+
 // Screens that write space data are only reachable with an active space, so a
 // null here fails the submit instead of sending a request to /spaces/null.
 export const requireSpaceId = (spaceId: number | null): number => {
