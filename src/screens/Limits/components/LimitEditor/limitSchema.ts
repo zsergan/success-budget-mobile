@@ -1,6 +1,7 @@
 import * as yup from 'yup';
 
 import type { CreateLimitRequest } from '@api/dto';
+import { positiveAmountSchema } from '@shared/utils';
 import type { LimitScope } from './types';
 
 export const MAX_LIMIT_AMOUNT = '99999999.99';
@@ -8,12 +9,8 @@ export const MAX_LIMIT_NAME_LENGTH = 60;
 
 const MONEY_FORMAT = /^\d+(\.\d{1,2})?$/;
 
-const amount = yup
-  .string()
-  .transform((value: unknown) => (typeof value === 'string' ? value.trim().replace(/,/g, '.') : value))
-  .required('Enter an amount')
+const amount = positiveAmountSchema
   .matches(MONEY_FORMAT, 'Enter an amount with at most two decimal places')
-  .test('is-positive', 'Enter an amount greater than zero', (value) => Number(value) > 0)
   .test(
     'is-within-max',
     `Enter an amount up to ${MAX_LIMIT_AMOUNT}`,

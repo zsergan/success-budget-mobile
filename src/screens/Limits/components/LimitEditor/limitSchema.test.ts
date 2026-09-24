@@ -19,19 +19,23 @@ describe('amount', () => {
     await expect(limitSchema.validate(values({ amount }))).resolves.toMatchObject({ amount });
   });
 
-  it('normalizes a comma and surrounding spaces', async () => {
-    await expect(limitSchema.validate(values({ amount: ' 12,5 ' }))).resolves.toMatchObject({ amount: '12.5' });
+  it('normalizes a comma', async () => {
+    await expect(limitSchema.validate(values({ amount: '12,5' }))).resolves.toMatchObject({ amount: '12.5' });
   });
 
   it('requires an amount', async () => {
     await expect(errorOf({ amount: '' })).resolves.toBe('Enter an amount');
   });
 
-  it.each(['0', '0.00'])('rejects %s', async (amount) => {
+  it.each(['0', '0.00', '-5'])('rejects %s', async (amount) => {
     await expect(errorOf({ amount })).resolves.toBe('Enter an amount greater than zero');
   });
 
-  it.each(['1.234', '-5', '1e3', '.5', 'abc', '1,234,56'])('rejects the format of %s', async (amount) => {
+  it.each(['abc', '1,234,56'])('rejects %s as not a number', async (amount) => {
+    await expect(errorOf({ amount })).resolves.toBe('Enter a valid number');
+  });
+
+  it.each(['1.234', '1e3', '.5', ' 5'])('rejects the format of %j', async (amount) => {
     await expect(errorOf({ amount })).resolves.toBe('Enter an amount with at most two decimal places');
   });
 
