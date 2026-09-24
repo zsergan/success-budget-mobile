@@ -11,6 +11,11 @@ now follows the "Stale" column through RTK Query tags (`src/redux/state/<domain>
 columns and the lifecycle section record the thunk-era behavior.
 Invalidation happens only after a successful mutation (an empty body
 counts as success), so a failed or session-stale write refreshes nothing.
+`History.Recent` is no longer a separate request: Home asks for the
+current month by the same client-local bounds as the Transactions tab's
+default period (`periodArg`), so both read one `History.Range` entry.
+`src/redux/api/scenarios.test.tsx` covers the user-visible scenarios
+end to end.
 
 ## Cached resources
 

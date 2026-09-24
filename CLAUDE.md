@@ -28,8 +28,11 @@ members.
 - Space-scoped endpoints take `spaceId` in their argument (`useSpaceArg()`
   gives `skipToken` when there is no active space), periods are ISO
   strings, and views read `currentData` so a changed argument never shows
-  the previous space's or period's data. Mutations invalidate only on
-  success.
+  the previous space's or period's data. Loading and error states come
+  from `getLoadState` (`src/redux/api/loadState.ts`), so a background
+  refetch, failed or not, keeps the last result on screen. Build a
+  transactions period with `periodArg` so equal periods share one cache
+  entry. Mutations invalidate only on success.
 - API layer: `src/api/instance.ts` builds the shared axios client (auth
   header, 401 and 429 handling); sign-in/up still call it through
   `src/api/auth.api.ts`. Request/response shapes are declared in
