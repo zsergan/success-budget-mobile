@@ -3,12 +3,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, GradientBackground, Icon } from '@components';
 import { ScreenNames } from '@shared/enums';
-import type { IconType, ScreenProps } from '@shared/types';
+import type { IconType, RootStackScreenProps } from '@shared/types';
 import { colors } from '@shared/theme';
 
 import styles from './style';
 
-interface Props extends ScreenProps<ScreenNames.WELCOME_SCREEN> {}
+interface Props extends RootStackScreenProps<ScreenNames.WELCOME_SCREEN> {}
 
 const FEATURE_POINTS: { icon: IconType; label: string }[] = [
   { icon: 'wallet', label: 'Wallets and transfers between them' },

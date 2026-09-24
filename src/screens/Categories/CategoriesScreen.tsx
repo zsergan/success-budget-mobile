@@ -5,7 +5,7 @@ import DraggableFlatList from 'react-native-draggable-flatlist';
 
 import { BottomSheetModal as BottomModal, EmptyState, Icon } from '@components';
 import type { CategoryModel } from '@api/models';
-import type { ScreenProps } from '@shared/types';
+import type { RootStackScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
 import { colors } from '@shared/theme';
 import CategoriesEmptyState from './components/CategoriesEmptyState/CategoriesEmptyState';
@@ -19,7 +19,7 @@ import useCategoryList from './hooks/useCategoryList';
 
 import styles from './style';
 
-interface Props extends ScreenProps<ScreenNames.CATEGORIES_SCREEN> {}
+interface Props extends RootStackScreenProps<ScreenNames.CATEGORIES_SCREEN> {}
 
 const ARCHIVE_FOOTNOTE =
   'Restoring puts a category back into the picker. It does not re-join limits automatically — add it to a limit again if you want it counted.';

@@ -7,7 +7,7 @@ import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { registerMe } from '@redux/state/auth/thunks';
 import { selectCurrency } from '@redux/state/currency/selectors';
 import { fetchCurrencies } from '@redux/state/currency/thunks';
-import type { ScreenProps } from '@shared/types';
+import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { selectAuth } from '@redux/state/auth/selectors';
 
@@ -34,7 +34,7 @@ interface FormData {
   passwordConfirm: string;
 }
 
-type UseSignInFormProps = Pick<ScreenProps<ScreenNames.SIGN_UP_SCREEN>, 'navigation'>;
+type UseSignInFormProps = Pick<RootStackScreenProps<ScreenNames.SIGN_UP_SCREEN>, 'navigation'>;
 
 const useSignInForm = ({ navigation }: UseSignInFormProps) => {
   const { currencies } = useAppSelector(selectCurrency);

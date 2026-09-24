@@ -8,7 +8,7 @@ import { selectTransaction } from '@redux/state/transaction/selectors';
 import { fetchTransactions } from '@redux/state/transaction/thunks';
 import { useBalanceVisibility } from '@hooks';
 import type { ScreenNames } from '@shared/enums';
-import type { ScreenProps } from '@shared/types';
+import type { MainTabScreenProps } from '@shared/types';
 import { FAB_SCROLL_CLEARANCE } from '@shared/constants';
 import BalanceOverview from './components/BalanceOverview/BalanceOverview';
 import RecentActivity from './components/RecentActivity/RecentActivity';
@@ -16,7 +16,7 @@ import WalletsSection from './components/WalletsSection/WalletsSection';
 
 import styles from './style';
 
-interface Props extends ScreenProps<ScreenNames.HOME_TAB> {}
+interface Props extends MainTabScreenProps<ScreenNames.HOME_TAB> {}
 
 const HomeScreen = ({ navigation }: Props) => {
   const dispatch = useAppDispatch();

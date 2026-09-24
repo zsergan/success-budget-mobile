@@ -14,7 +14,7 @@ import {
 } from '@components';
 import type { GetWalletsResponse } from '@api/dto';
 import type { AppColor } from '@shared/enums';
-import type { NavigationType } from '@shared/types';
+import type { MainTabNavigationProp } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
@@ -44,7 +44,7 @@ const toWalletCardProps = (
 });
 
 interface Props {
-  navigation: NavigationType<ScreenNames.HOME_TAB>;
+  navigation: MainTabNavigationProp<ScreenNames.HOME_TAB>;
   /** The wallet the carousel is currently resting on — seeds the transaction form's default wallet. */
   onFocusedWalletChange: (walletId: number) => void;
 }

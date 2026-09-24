@@ -5,7 +5,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useAppSelector, useAppDispatch } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import type { ScreenNames } from '@shared/enums';
-import type { ScreenProps } from '@shared/types';
+import type { RootStackScreenProps } from '@shared/types';
 import { AppColor } from '@shared/enums';
 import { addWallet, editWallet } from '@redux/state/wallet/thunks';
 import { useFormSubmitHandler } from '@hooks';
@@ -23,7 +23,7 @@ const schema = yup.object().shape({
   design: yup.mixed<AppColor>().oneOf(Object.values(AppColor)).required(),
 });
 
-interface UseCreateWalletFormProps extends ScreenProps<ScreenNames.ADD_WALLET_SCREEN> {}
+interface UseCreateWalletFormProps extends RootStackScreenProps<ScreenNames.ADD_WALLET_SCREEN> {}
 
 const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) => {
   const isNewWallet = route.params.id === 'new';

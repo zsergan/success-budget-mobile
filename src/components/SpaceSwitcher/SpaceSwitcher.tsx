@@ -8,14 +8,14 @@ import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectCurrentSpace, selectSpace } from '@redux/state/space/selectors';
 import { activateSpace } from '@redux/state/space/thunks';
 import { ScreenNames, SpaceType } from '@shared/enums';
-import type { NavigationType } from '@shared/types';
+import type { MainTabNavigationProp } from '@shared/types';
 import { colors } from '@shared/theme';
 
 import SpacesSheet from './SpacesSheet';
 import styles from './style';
 
 interface Props {
-  navigation: NavigationType<ScreenNames.HOME_TAB>;
+  navigation: MainTabNavigationProp<ScreenNames.HOME_TAB>;
 }
 
 const SpaceSwitcher = ({ navigation }: Props) => {

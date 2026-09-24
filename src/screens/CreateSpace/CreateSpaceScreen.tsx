@@ -2,7 +2,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
 import { Button, Icon, Input, InputPicker, RootLayout, SectionTitle } from '@components';
-import type { IconType, ScreenProps } from '@shared/types';
+import type { IconType, RootStackScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
 import { SpaceType } from '@shared/enums';
 import { colors } from '@shared/theme';
@@ -16,7 +16,7 @@ const SPACE_TYPES: { value: SpaceType; label: string; icon: IconType }[] = [
   { value: SpaceType.GROUP, label: 'Group', icon: 'users' },
 ];
 
-interface Props extends ScreenProps<ScreenNames.CREATE_SPACE_SCREEN> {}
+interface Props extends RootStackScreenProps<ScreenNames.CREATE_SPACE_SCREEN> {}
 
 const CreateSpaceScreen = ({ navigation }: Props) => {
   const { currencies, control, watch, onSubmit, isSubmitDisabled } = useCreateSpaceForm({ navigation });

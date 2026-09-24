@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
 import { Button, H, Input, InputPicker, PasswordInput } from '@components';
-import type { ScreenProps } from '@shared/types';
+import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { useAppSelector } from '@redux/hooks';
 import { selectAuth } from '@redux/state/auth/selectors';
@@ -14,7 +14,7 @@ import useSignUpForm from './useSignUpForm';
 
 import styles from '../style';
 
-interface Props extends ScreenProps<ScreenNames.SIGN_UP_SCREEN> {}
+interface Props extends RootStackScreenProps<ScreenNames.SIGN_UP_SCREEN> {}
 
 const SignUpScreen = ({ navigation }: Props) => {
   const { error } = useAppSelector(selectAuth);
@@ -124,7 +124,11 @@ const SignUpScreen = ({ navigation }: Props) => {
       <View style={styles.bottomContainer}>
         <Text style={styles.bottomText}>Already have an account?</Text>
 
-        <Button title="Sign in" onPress={() => navigation.navigate(ScreenNames.SIGN_IN_SCREEN)} variant="tertiary" />
+        <Button
+          title="Sign in"
+          onPress={() => navigation.navigate(ScreenNames.SIGN_IN_SCREEN, undefined, { pop: true })}
+          variant="tertiary"
+        />
       </View>
     </AuthLayout>
   );

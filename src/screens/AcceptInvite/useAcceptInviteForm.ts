@@ -5,7 +5,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useAppDispatch } from '@redux/hooks';
 import { acceptInvite } from '@redux/state/member/thunks';
 import type { ScreenNames } from '@shared/enums';
-import type { ScreenProps } from '@shared/types';
+import type { RootStackScreenProps } from '@shared/types';
 import { useFormSubmitHandler } from '@hooks';
 
 interface AcceptInviteFormData {
@@ -16,7 +16,7 @@ const schema = yup.object().shape({
   code: yup.string().required().length(6, 'Enter the 6-character code'),
 });
 
-type UseAcceptInviteFormProps = Pick<ScreenProps<ScreenNames.ACCEPT_INVITE_SCREEN>, 'navigation'>;
+type UseAcceptInviteFormProps = Pick<RootStackScreenProps<ScreenNames.ACCEPT_INVITE_SCREEN>, 'navigation'>;
 
 const useAcceptInviteForm = ({ navigation }: UseAcceptInviteFormProps) => {
   const dispatch = useAppDispatch();

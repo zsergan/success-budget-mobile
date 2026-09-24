@@ -3,7 +3,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { EmptyState, RootLayout, SectionTitle } from '@components';
 import { SpaceType } from '@shared/enums';
 import type { ScreenNames } from '@shared/enums';
-import type { ScreenProps } from '@shared/types';
+import type { RootStackScreenProps } from '@shared/types';
 import { colors } from '@shared/theme';
 import InviteCodeDialog from './components/InviteCodeDialog/InviteCodeDialog';
 import InviteMemberSection from './components/InviteMemberSection/InviteMemberSection';
@@ -18,7 +18,7 @@ import useMembersData from './hooks/useMembersData';
 
 import styles from './style';
 
-interface Props extends ScreenProps<ScreenNames.MEMBERS_SCREEN> {}
+interface Props extends RootStackScreenProps<ScreenNames.MEMBERS_SCREEN> {}
 
 const MembersScreen = ({ navigation }: Props) => {
   const {

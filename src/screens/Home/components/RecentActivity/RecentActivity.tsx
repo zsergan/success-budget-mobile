@@ -3,7 +3,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { EmptyState, SectionTitle, TinyButton, TransactionCard } from '@components';
 import type { ErrorResponse } from '@api/dto';
 import type { TransactionModel } from '@api/models';
-import type { NavigationType } from '@shared/types';
+import type { MainTabNavigationProp } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { colors } from '@shared/theme';
 import { formatSignedAmount, groupTransactionsByDay } from '@shared/utils';
@@ -13,7 +13,7 @@ import styles from './style';
 const RECENT_TRANSACTIONS_LIMIT = 5;
 
 interface Props {
-  navigation: NavigationType<ScreenNames.HOME_TAB>;
+  navigation: MainTabNavigationProp<ScreenNames.HOME_TAB>;
   transactions: TransactionModel[];
   currencyCode?: string;
   hasWallets: boolean;
