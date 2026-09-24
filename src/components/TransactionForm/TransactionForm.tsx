@@ -1,12 +1,13 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { TextInput } from 'react-native';
 import { Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { Controller } from 'react-hook-form';
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 
 import Icon from '@components/Icon/Icon';
-import { useAppSelector } from '@redux/hooks';
-import { selectActiveCategories } from '@redux/state/category/selectors';
+import { useAppSelector, useSpaceArg } from '@redux/hooks';
+import { useGetCategoriesQuery } from '@redux/state/category/api';
+import { getActiveCategories } from '@redux/state/category/selectors';
 import { findLimitForCategory, selectLimit } from '@redux/state/limit/selectors';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import { selectWallet } from '@redux/state/wallet/selectors';
@@ -36,7 +37,9 @@ const TransactionForm = ({ initialWalletId, transactionType = TransactionType.EX
   const { height: windowHeight } = useWindowDimensions();
   const amountRef = useRef<TextInput>(null);
   const { wallets } = useAppSelector(selectWallet);
-  const { expenses, incomes } = useAppSelector(selectActiveCategories);
+  const spaceArg = useSpaceArg();
+  const { currentData: allCategories } = useGetCategoriesQuery(spaceArg);
+  const { expenses, incomes } = useMemo(() => getActiveCategories(allCategories), [allCategories]);
   const { categoryLimits } = useAppSelector(selectLimit);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 

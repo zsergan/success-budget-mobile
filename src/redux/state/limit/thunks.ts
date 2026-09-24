@@ -1,5 +1,6 @@
 import type { CreateLimitRequest, UpdateLimitRequest } from '@api/dto';
 import { getLimits, createLimit, updateLimit, deleteLimit } from '@api/limit.api';
+import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
 import { isSpaceContextCurrent } from '../space/thunks';
@@ -28,6 +29,8 @@ export const addLimit = createAppAsyncThunk('limit/addLimit', async (data: Creat
   try {
     const response = await createLimit(spaceId, data);
 
+    thunkAPI.dispatch(baseApi.util.invalidateTags(spaceTags(spaceId, 'Categories')));
+
     if (isSpaceContextCurrent(thunkAPI.getState, contextKey)) {
       thunkAPI.dispatch(fetchLimits());
     }
@@ -50,6 +53,8 @@ export const editLimit = createAppAsyncThunk(
     try {
       const response = await updateLimit(spaceId, data.limitId, data.limitData);
 
+      thunkAPI.dispatch(baseApi.util.invalidateTags(spaceTags(spaceId, 'Categories')));
+
       if (isSpaceContextCurrent(thunkAPI.getState, contextKey)) {
         thunkAPI.dispatch(fetchLimits());
       }
@@ -70,6 +75,8 @@ export const removeLimit = createAppAsyncThunk('limit/removeLimit', async (limit
 
   try {
     await deleteLimit(spaceId, limitId);
+
+    thunkAPI.dispatch(baseApi.util.invalidateTags(spaceTags(spaceId, 'Categories')));
 
     if (isSpaceContextCurrent(thunkAPI.getState, contextKey)) {
       thunkAPI.dispatch(fetchLimits());

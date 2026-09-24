@@ -1,5 +1,6 @@
 import type { CreateTransactionRequest } from '@api/dto';
 import { getTransactions, createTransaction, getLatestTransaction } from '@api/transaction.api';
+import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
 import { isSpaceContextCurrent } from '../space/thunks';
@@ -66,6 +67,8 @@ export const addTransaction = createAppAsyncThunk(
 
     try {
       const response = await createTransaction(spaceId, payload);
+
+      thunkAPI.dispatch(baseApi.util.invalidateTags(spaceTags(spaceId, 'Categories')));
 
       // The user may have switched (or logged out of) this space while the
       // create was in flight. The space that's now active already has its

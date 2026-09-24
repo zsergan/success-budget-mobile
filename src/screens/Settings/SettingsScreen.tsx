@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { RootLayout, SectionTitle } from '@components';
-import { useAppDispatch, useAppSelector } from '@redux/hooks';
+import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
 import { logoutMe } from '@redux/state/auth/thunks';
-import { selectCategory } from '@redux/state/category/selectors';
+import { useGetCategoriesQuery } from '@redux/state/category/api';
+import { EMPTY_CATEGORIES } from '@redux/state/category/selectors';
 import { selectTotalBalance } from '@redux/state/wallet/selectors';
 import { selectCurrentSpace } from '@redux/state/space/selectors';
 import { useAlert, useThemePreference } from '@hooks';
@@ -31,7 +32,7 @@ const SettingsScreen = ({ navigation }: Props) => {
   const { preference, setThemePreference } = useThemePreference();
 
   const currentSpace = useAppSelector(selectCurrentSpace);
-  const { incomes, expenses, archived } = useAppSelector(selectCategory);
+  const { incomes, expenses, archived } = useGetCategoriesQuery(useSpaceArg()).currentData ?? EMPTY_CATEGORIES;
   const { walletsCount } = useAppSelector(selectTotalBalance);
 
   const [isLogoutConfirmVisible, setIsLogoutConfirmVisible] = useState(false);

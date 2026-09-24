@@ -6,8 +6,10 @@ import { useBottomSheet } from '@gorhom/bottom-sheet';
 import type { CreateCategoryRequest, UpdateCategoryRequest } from '@api/dto';
 import type { CategoryModel } from '@api/models';
 import { toBackendIcon } from '@api/models';
-import { useAppDispatch } from '@redux/hooks';
-import { addCategory, editCategory } from '@redux/state/category/thunks';
+import { requireSpaceId } from '@redux/api/baseApi';
+import { useAppSelector } from '@redux/hooks';
+import { useCreateCategoryMutation, useUpdateCategoryMutation } from '@redux/state/category/api';
+import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { AppColor, TransactionType } from '@shared/enums';
 import type { IconType } from '@shared/types';
 import { CATEGORY_ICON_LIST } from '@shared/icons';
@@ -36,7 +38,9 @@ interface UseCategoryEditorFormProps {
 
 const useCategoryEditorForm = ({ category, defaultTransactionType }: UseCategoryEditorFormProps) => {
   const isNewCategory = !category;
-  const dispatch = useAppDispatch();
+  const spaceId = useAppSelector(selectCurrentSpaceId);
+  const [createCategory] = useCreateCategoryMutation();
+  const [updateCategory] = useUpdateCategoryMutation();
   const { close } = useBottomSheet();
 
   const {
@@ -58,7 +62,7 @@ const useCategoryEditorForm = ({ category, defaultTransactionType }: UseCategory
   const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<CategoryEditorFormData>({
     handleSubmit,
     formState: { isSubmitting, isSubmitSuccessful },
-    onSubmit: (formData) => {
+    onSubmit: async (formData) => {
       if (isNewCategory) {
         const payload: CreateCategoryRequest = {
           name: formData.name.trim(),
@@ -67,7 +71,7 @@ const useCategoryEditorForm = ({ category, defaultTransactionType }: UseCategory
           color: formData.color,
         };
 
-        return dispatch(addCategory(payload)).unwrap();
+        return createCategory({ spaceId: requireSpaceId(spaceId), data: payload }).unwrap();
       }
 
       const payload: UpdateCategoryRequest = {
@@ -76,7 +80,7 @@ const useCategoryEditorForm = ({ category, defaultTransactionType }: UseCategory
         color: formData.color,
       };
 
-      return dispatch(editCategory({ categoryId: category.id, categoryData: payload })).unwrap();
+      return updateCategory({ spaceId: requireSpaceId(spaceId), categoryId: category.id, data: payload }).unwrap();
     },
     onSuccess: () => close(),
     getInvalidMessage: (errors) => [errors.name && 'Enter a category name'].filter(Boolean).join('\n'),

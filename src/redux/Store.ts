@@ -2,9 +2,9 @@ import type { Action, ThunkAction } from '@reduxjs/toolkit';
 import { combineReducers, configureStore, createListenerMiddleware } from '@reduxjs/toolkit';
 
 import { baseApi } from './api/baseApi';
+import { startLegacyBridge } from './api/legacyBridge';
 import authReducer from './state/auth/slice';
 import { logoutMe } from './state/auth/thunks';
-import categoryReducer from './state/category/slice';
 import currencyReducer from './state/currency/slice';
 import limitReducer from './state/limit/slice';
 import memberReducer from './state/member/slice';
@@ -15,7 +15,6 @@ import walletReducer from './state/wallet/slice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
-  category: categoryReducer,
   currency: currencyReducer,
   limit: limitReducer,
   member: memberReducer,
@@ -29,7 +28,7 @@ const rootReducer = combineReducers({
 export type RootState = ReturnType<typeof rootReducer>;
 
 export const createAppStore = (preloadedState?: Partial<RootState>) => {
-  const sessionListener = createListenerMiddleware();
+  const sessionListener = createListenerMiddleware<RootState>();
 
   // Runs right after the slices reset, before React unmounts the signed-in
   // screens; resetApiState also aborts every running query and mutation.
@@ -39,6 +38,8 @@ export const createAppStore = (preloadedState?: Partial<RootState>) => {
       dispatch(baseApi.util.resetApiState());
     },
   });
+
+  startLegacyBridge(sessionListener);
 
   return configureStore({
     reducer: rootReducer,

@@ -3,8 +3,9 @@ import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
 import type { LimitModel } from '@api/models';
 import { Icon } from '@components';
-import { useAppSelector } from '@redux/hooks';
-import { selectActiveCategories } from '@redux/state/category/selectors';
+import { useAppSelector, useSpaceArg } from '@redux/hooks';
+import { useGetCategoriesQuery } from '@redux/state/category/api';
+import { getActiveCategories } from '@redux/state/category/selectors';
 import { findLimitForCategory, selectLimit } from '@redux/state/limit/selectors';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import { formatCurrencyAmount } from '@shared/utils';
@@ -32,7 +33,8 @@ interface Props {
 
 const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
   const { height: windowHeight } = useWindowDimensions();
-  const { expenses } = useAppSelector(selectActiveCategories);
+  const { currentData: categories } = useGetCategoriesQuery(useSpaceArg());
+  const { expenses } = getActiveCategories(categories);
   const { total, categoryLimits } = useAppSelector(selectLimit);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 

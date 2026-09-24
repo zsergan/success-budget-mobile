@@ -1,9 +1,15 @@
 import { useMemo, useState } from 'react';
 
 import type { CategoryModel } from '@api/models';
-import { useAppDispatch, useAppSelector } from '@redux/hooks';
-import { selectCategory } from '@redux/state/category/selectors';
-import { editCategory, fetchCategories, reorderCategories } from '@redux/state/category/thunks';
+import { requireSpaceId } from '@redux/api/baseApi';
+import { useAppSelector, useSpaceArg } from '@redux/hooks';
+import {
+  useGetCategoriesQuery,
+  useReorderCategoriesMutation,
+  useUpdateCategoryMutation,
+} from '@redux/state/category/api';
+import { EMPTY_CATEGORIES } from '@redux/state/category/selectors';
+import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { TransactionType } from '@shared/enums';
 import { getErrorMessage } from '@shared/utils';
 import { useAlert } from '@hooks';
@@ -17,9 +23,12 @@ const SEGMENT_TO_TRANSACTION_TYPE: Record<Exclude<CategorySegment, 'archived'>, 
 };
 
 const useCategoryList = () => {
-  const dispatch = useAppDispatch();
   const { addAlert } = useAlert();
-  const { incomes, expenses, archived, isLoading, error } = useAppSelector(selectCategory);
+  const spaceId = useAppSelector(selectCurrentSpaceId);
+  const { currentData, isFetching, error, refetch } = useGetCategoriesQuery(useSpaceArg());
+  const { incomes, expenses, archived } = currentData ?? EMPTY_CATEGORIES;
+  const [reorderCategories] = useReorderCategoriesMutation();
+  const [updateCategory] = useUpdateCategoryMutation();
 
   const [segment, setSegment] = useState<CategorySegment>('expenses');
   const [sortMode, setSortMode] = useState<SortMode>('most-used');
@@ -68,19 +77,28 @@ const useCategoryList = () => {
     setSortMode((mode) => (mode === 'manual' ? 'most-used' : 'manual'));
   };
 
-  const handleReorder = (orderedCategories: CategoryModel[]) => {
-    dispatch(reorderCategories(orderedCategories.map((category) => category.id)))
-      .unwrap()
-      .catch((error: unknown) => addAlert(getErrorMessage(error)));
+  const handleReorder = async (orderedCategories: CategoryModel[]) => {
+    try {
+      await reorderCategories({
+        spaceId: requireSpaceId(spaceId),
+        categoryIds: orderedCategories.map((category) => category.id),
+      }).unwrap();
+    } catch (error: unknown) {
+      addAlert(getErrorMessage(error));
+    }
   };
 
-  const handleRestore = (category: CategoryModel) => {
-    dispatch(editCategory({ categoryId: category.id, categoryData: { is_active: 1 } }))
-      .unwrap()
-      .catch((error: unknown) => addAlert(getErrorMessage(error)));
+  const handleRestore = async (category: CategoryModel) => {
+    try {
+      await updateCategory({
+        spaceId: requireSpaceId(spaceId),
+        categoryId: category.id,
+        data: { is_active: 1 },
+      }).unwrap();
+    } catch (error: unknown) {
+      addAlert(getErrorMessage(error));
+    }
   };
-
-  const retry = () => dispatch(fetchCategories());
 
   return {
     segment,
@@ -93,9 +111,9 @@ const useCategoryList = () => {
     isSearching,
     resultNote,
     list: filteredList,
-    isLoading,
+    isLoading: isFetching,
     error,
-    retry,
+    retry: refetch,
     handleReorder,
     handleRestore,
     defaultTransactionType: segment === 'archived' ? TransactionType.EXPENSE : SEGMENT_TO_TRANSACTION_TYPE[segment],
