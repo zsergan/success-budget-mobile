@@ -27,9 +27,10 @@ interface RequestConfig {
 
 let mutationResponse: unknown;
 let mutationFails: boolean;
+let mutationError: unknown;
 
 const respond = ({ url, method }: RequestConfig) => {
-  if (method !== 'GET' && mutationFails) throw { response: { data: { statusCode: 400, message: 'Rejected' } } };
+  if (method !== 'GET' && mutationFails) throw { response: { data: mutationError } };
   if (method !== 'GET') return { data: mutationResponse };
   if (url.endsWith('/wallets'))
     return { data: { wallets: [], total_balance: 0, total_balance_currency: 'USD', delta_percent: 0 } };
@@ -93,6 +94,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mutationResponse = undefined;
   mutationFails = false;
+  mutationError = { statusCode: 400, message: 'Rejected' };
   mockedRequest.mockImplementation(async (config: RequestConfig) => respond(config));
 });
 
@@ -224,6 +226,32 @@ describe('invalidation rules (docs/server-data.md)', () => {
     mutationFails = true;
 
     expect(await refetchedAfter(mutate)).toEqual([]);
+  });
+
+  it.each([
+    [
+      'create',
+      (store: ReturnType<typeof createAppStore>) =>
+        store.dispatch(
+          limitApi.endpoints.createLimit.initiate({ spaceId: 1, data: { amount: '100', category_ids: [1] } }),
+        ),
+    ],
+    [
+      'edit',
+      (store: ReturnType<typeof createAppStore>) =>
+        store.dispatch(
+          limitApi.endpoints.updateLimit.initiate({
+            spaceId: 1,
+            limitId: 1,
+            data: { amount: '200', category_ids: [1] },
+          }),
+        ),
+    ],
+  ])('a limit %s rejected for an archived category refreshes categories and limits', async (_write, mutate) => {
+    mutationFails = true;
+    mutationError = { statusCode: 400, message: 'An archived category cannot be added to a limit' };
+
+    expect(await refetchedAfter(mutate)).toEqual(['1:categories', '1:limits']);
   });
 
   it('treats a success without a response body as a success', async () => {
