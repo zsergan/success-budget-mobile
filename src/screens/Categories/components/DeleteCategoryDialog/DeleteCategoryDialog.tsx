@@ -33,6 +33,20 @@ const DeleteCategoryDialog = ({ deletion }: Props) => {
   const confirmLabel = willDelete ? 'Delete category' : 'Archive category';
   const pendingLabel = willDelete ? 'Deleting…' : 'Archiving…';
 
+  // Only group limits carry a name, and a limit is deleted along with its last category.
+  const limitName = category.limit?.name;
+  const limitNotice = !category.limit
+    ? null
+    : limitName
+      ? {
+          title: `Removed from the «${limitName}» limit`,
+          body: `The «${limitName}» limit stops counting this category and keeps its others; if this was the last one, the limit is deleted.${willDelete ? '' : ' Spending already logged here stays in this month’s total.'}`,
+        }
+      : {
+          title: 'Its limit is deleted too',
+          body: 'This category has a limit of its own, and the limit goes away with it.',
+        };
+
   const handleConfirm = () => {
     confirm((target, spaceId) => deleteCategory({ spaceId, categoryId: target.id }));
   };
@@ -71,17 +85,14 @@ const DeleteCategoryDialog = ({ deletion }: Props) => {
               : `${category.transactionCount} transactions already reference this category. Deleting it would rewrite your history, so the category is archived instead: it leaves the picker when you add a transaction, and every past transaction keeps showing «${category.name}» exactly as it is.`}
           </Text>
 
-          {!willDelete && category.limit && (
+          {limitNotice && (
             <View style={styles.noticeBox}>
               <Icon name="limit" size={17} color={colors.warn} strokeWidth={1.9} />
 
               <View style={styles.noticeText}>
-                <Text style={styles.noticeTitle}>Excluded from the «{category.limit.name ?? 'group'}» limit</Text>
+                <Text style={styles.noticeTitle}>{limitNotice.title}</Text>
 
-                <Text style={styles.noticeBody}>
-                  The «{category.limit.name ?? 'group'}» limit will no longer count transactions from this category.
-                  Spending already logged here stays in this month&apos;s total.
-                </Text>
+                <Text style={styles.noticeBody}>{limitNotice.body}</Text>
               </View>
             </View>
           )}

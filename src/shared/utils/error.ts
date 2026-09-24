@@ -8,6 +8,12 @@ export const NETWORK_ERROR_MESSAGE = 'Could not reach the server. Check your con
 const SERVER_ERROR_MESSAGE = 'Something went wrong on our end. Please try again later.';
 const FALLBACK_ERROR_MESSAGE = 'Something went wrong. Please try again.';
 
+export const isApiError = (error: unknown, statusCode: number, message?: string): boolean => {
+  const response = error as Partial<ErrorResponse> | null | undefined;
+
+  return response?.statusCode === statusCode && (message === undefined || response.message === message);
+};
+
 // 4xx messages are written for the user and passed through as-is; network
 // failures and 5xx get a friendly message instead of a raw body or nothing.
 export const getErrorMessage = (error: unknown): string => {

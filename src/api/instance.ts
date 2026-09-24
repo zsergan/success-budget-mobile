@@ -8,6 +8,11 @@ import { BASE_API_URL, AUTH_TOKEN_KEY } from '@shared/constants';
 import { endHttpSession, getHttpSessionKey } from './session';
 
 declare module 'axios' {
+  interface AxiosRequestConfig {
+    // A caller that handles this 429 body itself keeps the generic alert quiet.
+    isHandledRateLimit?: (body: unknown) => boolean;
+  }
+
   interface InternalAxiosRequestConfig {
     sessionKey?: number;
   }
@@ -44,7 +49,7 @@ export const createHttpClient = () => {
         endHttpSession();
       }
 
-      if (status === 429 && isSessionCurrent) {
+      if (status === 429 && isSessionCurrent && !error.config?.isHandledRateLimit?.(error.response?.data)) {
         showGlobalAlert('Too many requests. Please wait a moment and try again.');
       }
 
@@ -60,7 +65,7 @@ export const ApiClient = () => {
 
   const get = <T>(url: string, config?: AxiosRequestConfig) => api.get<T>(url, config);
 
-  const post = <T, U = unknown>(url: string, data: U) => api.post<T>(url, data);
+  const post = <T, U = unknown>(url: string, data: U, config?: AxiosRequestConfig) => api.post<T>(url, data, config);
 
   const put = <T, U = unknown>(url: string, data?: U) => api.put<T>(url, data);
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as yup from 'yup';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -34,16 +34,18 @@ const scopeForLimit = (limit: LimitModel): LimitScope =>
 interface UseLimitEditorFormProps {
   limit?: LimitModel;
   initialScope?: LimitScope;
+  // Undefined until the categories have loaded.
+  activeCategoryIds?: number[];
 }
 
-const useLimitEditorForm = ({ limit, initialScope = 'category' }: UseLimitEditorFormProps) => {
+const useLimitEditorForm = ({ limit, initialScope = 'category', activeCategoryIds }: UseLimitEditorFormProps) => {
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const [createLimit] = useCreateLimitMutation();
   const [updateLimit] = useUpdateLimitMutation();
   const { close } = useBottomSheet();
   const [nameTouched, setNameTouched] = useState(false);
 
-  const { control, handleSubmit, watch, setValue, reset, formState } = useForm({
+  const { control, handleSubmit, watch, getValues, setValue, reset, formState } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
       scope: limit ? scopeForLimit(limit) : initialScope,
@@ -52,6 +54,16 @@ const useLimitEditorForm = ({ limit, initialScope = 'category' }: UseLimitEditor
       amount: limit?.amount ?? '',
     },
   });
+
+  // A category archived since the editor opened can no longer be sent; the picker only shows active ones.
+  useEffect(() => {
+    if (!activeCategoryIds) return;
+
+    const selected = getValues('categoryIds');
+    const stillActive = selected.filter((id) => activeCategoryIds.includes(id));
+
+    if (stillActive.length !== selected.length) setValue('categoryIds', stillActive);
+  }, [activeCategoryIds, getValues, setValue]);
 
   const setScope = (scope: LimitScope) => {
     setValue('scope', scope);

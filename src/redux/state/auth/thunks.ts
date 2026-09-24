@@ -1,15 +1,24 @@
 import * as SecureStore from 'expo-secure-store';
 
 import type { LoginPayload, RegisterPayload, VerifyEmailPayload } from '@api/dto';
-import { login, register, verifyEmail } from '@api/auth.api';
+import { isConfirmationAlreadyRequested, login, register, verifyEmail } from '@api/auth.api';
 import { AUTH_TOKEN_KEY } from '@shared/constants';
 import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
 export const registerMe = createAppAsyncThunk('auth/registerMe', async (payload: RegisterPayload, thunkAPI) => {
   try {
-    return await register(payload);
+    const { email } = await register(payload);
+
+    return { email };
   } catch (error: unknown) {
-    return thunkAPI.rejectWithValue(getRejectValue(error));
+    const rejectValue = getRejectValue(error);
+
+    // The account exists and its code is on the way, so this sign-up continues to verification.
+    if (isConfirmationAlreadyRequested(rejectValue)) {
+      return { email: payload.email };
+    }
+
+    return thunkAPI.rejectWithValue(rejectValue);
   }
 });
 
