@@ -37,6 +37,7 @@ const useWalletActions = () => {
 
   const onConfirmCancel = () => {
     setIsConfirmVisible(false);
+    setSelectedWallet(undefined);
   };
 
   const onConfirm = () => {
