@@ -3,7 +3,7 @@ import { Provider } from 'react-redux';
 import { createAppStore } from '@redux/Store';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
-import { logoutMe } from '@redux/state/auth/thunks';
+import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { profileApi } from '@redux/state/profile/api';
 import { activateSpace } from '@redux/state/space/thunks';
 import useMemberActions from './useMemberActions';
@@ -155,6 +155,41 @@ describe('useMemberActions confirm()', () => {
       await confirming;
     });
 
+    expect(mockedAddAlert).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['success', (resolve: (value: unknown) => void) => resolve({ data: undefined })],
+    [
+      'failure',
+      (_: unknown, reject: (reason: unknown) => void) =>
+        reject({ response: { data: { message: 'Server error', statusCode: 500 } } }),
+    ],
+  ] as const)('ignores a leave from before a logout and a new login (%s)', async (_, respond) => {
+    const store = createTestStore();
+    const onLeft = jest.fn();
+    let settle!: () => void;
+
+    mockedRequest.mockReturnValue(new Promise((resolve, reject) => (settle = () => respond(resolve, reject))));
+
+    const { result } = renderHook(() => useMemberActions({ onLeft }), { wrapper: wrapperFor(store) });
+
+    act(() => {
+      result.current.requestAction({ kind: 'leave' });
+    });
+
+    await act(async () => {
+      const confirming = result.current.confirm();
+
+      await store.dispatch(logoutMe());
+      store.dispatch(loginMe.fulfilled('token-2', 'req-login-2', { email: 'a@b.com', password: 'password1' }));
+      store.dispatch(activateSpace(99));
+      settle();
+      await confirming;
+    });
+
+    expect(store.getState().space.currentSpaceId).toBe(99);
+    expect(onLeft).not.toHaveBeenCalled();
     expect(mockedAddAlert).not.toHaveBeenCalled();
   });
 });

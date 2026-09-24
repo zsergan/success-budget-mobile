@@ -2,6 +2,8 @@ import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
+import { createAppStore } from '@redux/Store';
+import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { createHttpClient } from './instance';
 import { bindHttpSession } from './session';
 
@@ -98,4 +100,28 @@ it('passes other errors through without side effects', async () => {
 
   expect(endSession).not.toHaveBeenCalled();
   expect(mockedShowGlobalAlert).not.toHaveBeenCalled();
+});
+
+describe('a late response after a logout and a new login', () => {
+  const signIn = (store: ReturnType<typeof createAppStore>, token: string) =>
+    store.dispatch(loginMe.fulfilled(token, 'req-login', { email: 'a@b.com', password: 'password1' }));
+
+  it.each([401, 429])('leaves the new session alone on a %i', async (status) => {
+    const store = createAppStore();
+    const end = jest.fn();
+
+    bindHttpSession({ getKey: () => store.getState().auth.sessionKey, end });
+    signIn(store, 'token-1');
+
+    await sendAndFail(status, {
+      beforeResponse: () => {
+        store.dispatch(logoutMe.fulfilled(undefined, 'req-logout'));
+        signIn(store, 'token-2');
+      },
+    });
+
+    expect(end).not.toHaveBeenCalled();
+    expect(mockedShowGlobalAlert).not.toHaveBeenCalled();
+    expect(store.getState().auth.isSignedIn).toBe(true);
+  });
 });

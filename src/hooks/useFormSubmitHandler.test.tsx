@@ -4,8 +4,9 @@ import { Provider } from 'react-redux';
 import { act, renderHook } from '@testing-library/react-native';
 
 import { createAppStore } from '@redux/Store';
-import { logoutMe } from '@redux/state/auth/thunks';
+import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { spaceApi } from '@redux/state/space/api';
+import { acceptInviteAndSelect, activateSpace, createSpaceAndSelect } from '@redux/state/space/thunks';
 import { SpaceType } from '@shared/enums';
 import useFormSubmitHandler from './useFormSubmitHandler';
 
@@ -110,4 +111,43 @@ it('does not count a submit that resolves after the session ended as a save', as
   expect(onSuccess).not.toHaveBeenCalled();
   expect(reset).not.toHaveBeenCalled();
   expect(result.current.formState.isSubmitSuccessful).toBe(false);
+});
+
+describe('a space form submitted before a logout and a new login', () => {
+  const submits = {
+    create: (store: AppStore) =>
+      store.dispatch(createSpaceAndSelect({ name: 'New', currency_id: 1, type: SpaceType.GROUP })),
+    accept: (store: AppStore) => store.dispatch(acceptInviteAndSelect('123456')),
+  };
+  const oldResponses = {
+    success: (resolve: (value: unknown) => void) => resolve({ data: { id: 7 } }),
+    failure: (_: unknown, reject: (reason: unknown) => void) =>
+      reject({ response: { data: { message: 'Server error', statusCode: 500 } } }),
+  };
+  const cases = Object.entries(submits).flatMap(([form, submit]) =>
+    Object.entries(oldResponses).map(([outcome, respond]) => [form, outcome, submit, respond] as const),
+  );
+
+  it.each(cases)('%s (%s): no space switch, navigation or alert', async (_form, _outcome, submit, respond) => {
+    let settle!: () => void;
+
+    mockedRequest.mockReturnValue(new Promise((resolve, reject) => (settle = () => respond(resolve, reject))));
+
+    const { store, result, onSuccess, reset } = renderSubmitHandler(submit);
+
+    await act(async () => {
+      const submitting = result.current.onSubmit();
+
+      await store.dispatch(logoutMe());
+      store.dispatch(loginMe.fulfilled('token-2', 'req-login-2', { email: 'a@b.com', password: 'password1' }));
+      store.dispatch(activateSpace(99));
+      settle();
+      await submitting;
+    });
+
+    expect(store.getState().space.currentSpaceId).toBe(99);
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(reset).not.toHaveBeenCalled();
+    expect(mockedAddAlert).not.toHaveBeenCalled();
+  });
 });
