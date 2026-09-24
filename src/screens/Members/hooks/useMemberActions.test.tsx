@@ -3,6 +3,7 @@ import { Provider } from 'react-redux';
 import { createAppStore } from '@redux/Store';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
+import { logoutMe } from '@redux/state/auth/thunks';
 import { profileApi } from '@redux/state/profile/api';
 import { activateSpace } from '@redux/state/space/thunks';
 import useMemberActions from './useMemberActions';
@@ -13,6 +14,7 @@ jest.mock('@api/instance', () => ({
   ApiClient: () => ({}),
   createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
 }));
+jest.mock('expo-secure-store');
 
 // RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
 jest.useFakeTimers();
@@ -117,5 +119,42 @@ describe('useMemberActions confirm()', () => {
 
     expect(onLeft).toHaveBeenCalledTimes(1);
     expect(store.getState().space.currentSpaceId).not.toBe(10);
+  });
+
+  it('alerts a failed removal of the current session', async () => {
+    const store = createTestStore();
+
+    mockedRequest.mockRejectedValue({ response: { data: { message: 'Not allowed', statusCode: 403 } } });
+
+    const { result } = renderHook(() => useMemberActions({ onLeft: jest.fn() }), { wrapper: wrapperFor(store) });
+
+    act(() => {
+      result.current.requestAction({ kind: 'remove', userId: 42, label: 'Alex' });
+    });
+
+    await act(() => result.current.confirm());
+
+    expect(mockedAddAlert).toHaveBeenCalledWith('Not allowed');
+  });
+
+  it('stays silent when a logout aborts a removal', async () => {
+    const store = createTestStore();
+
+    mockedRequest.mockReturnValue(new Promise(() => {}));
+
+    const { result } = renderHook(() => useMemberActions({ onLeft: jest.fn() }), { wrapper: wrapperFor(store) });
+
+    act(() => {
+      result.current.requestAction({ kind: 'remove', userId: 42, label: 'Alex' });
+    });
+
+    await act(async () => {
+      const confirming = result.current.confirm();
+
+      await store.dispatch(logoutMe());
+      await confirming;
+    });
+
+    expect(mockedAddAlert).not.toHaveBeenCalled();
   });
 });

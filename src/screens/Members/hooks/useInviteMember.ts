@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { ErrorResponse, InviteResponse } from '@api/dto';
 import { requireSpaceId } from '@redux/api/baseApi';
-import { useAppSelector } from '@redux/hooks';
+import { useAppSelector, useSessionGuard } from '@redux/hooks';
 import { useInviteMemberMutation } from '@redux/state/member/api';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { getErrorMessage } from '@shared/utils';
@@ -24,6 +24,7 @@ interface UseInviteMemberProps {
 const useInviteMember = ({ canInvite, cooldownRemaining }: UseInviteMemberProps) => {
   const [inviteMember] = useInviteMemberMutation();
   const { addAlert } = useAlert();
+  const captureSession = useSessionGuard();
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,6 +53,7 @@ const useInviteMember = ({ canInvite, cooldownRemaining }: UseInviteMemberProps)
     }
 
     const originSpaceId = currentSpaceId;
+    const isSessionCurrent = captureSession();
 
     isSubmittingRef.current = true;
     setIsSubmitting(true);
@@ -68,11 +70,10 @@ const useInviteMember = ({ canInvite, cooldownRemaining }: UseInviteMemberProps)
 
       return true;
     } catch (error: unknown) {
-      const errorResponse = error as ErrorResponse | undefined;
+      // A logout while this was in flight (a stale response or the abort) leaves nothing to show.
+      if (!isSessionCurrent()) return false;
 
-      // The request outlived its session (e.g. a logout while it was in
-      // flight) -- nothing here is still relevant to show.
-      if (errorResponse?.isStale) return false;
+      const errorResponse = error as ErrorResponse | undefined;
 
       // A 429 already surfaces through the cooldown UI (and the global
       // request interceptor's own alert) -- an extra alert here would be a
