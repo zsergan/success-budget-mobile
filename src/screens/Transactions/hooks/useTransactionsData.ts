@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { skipToken } from '@reduxjs/toolkit/query';
 
+import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { useGetLatestTransactionQuery, useGetTransactionsQuery } from '@redux/state/transaction/api';
@@ -40,10 +41,8 @@ const useTransactionsData = ({ range }: UseTransactionsDataProps) => {
   const latest = latestQuery.currentData;
   const { income, expense } = useMemo(() => getPeriodTotals(transactions), [transactions]);
 
-  const isLoadingRange = rangeQuery.currentData === undefined && !rangeQuery.isError;
-  const rangeError = rangeQuery.currentData === undefined && rangeQuery.isError;
-  const isLoadingLatest = latest === undefined && !latestQuery.isError;
-  const latestError = latest === undefined && latestQuery.isError;
+  const { isLoading: isLoadingRange, hasError: rangeError } = getLoadState(rangeQuery);
+  const { isLoading: isLoadingLatest, hasError: latestError } = getLoadState(latestQuery);
 
   let viewState: TransactionsViewState;
 

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 
 import type { CategoryModel } from '@api/models';
 import { requireSpaceId } from '@redux/api/baseApi';
+import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import {
   useGetCategoriesQuery,
@@ -25,7 +26,9 @@ const SEGMENT_TO_TRANSACTION_TYPE: Record<Exclude<CategorySegment, 'archived'>, 
 const useCategoryList = () => {
   const { addAlert } = useAlert();
   const spaceId = useAppSelector(selectCurrentSpaceId);
-  const { currentData, isFetching, error, refetch } = useGetCategoriesQuery(useSpaceArg());
+  const categoriesQuery = useGetCategoriesQuery(useSpaceArg());
+  const { currentData, refetch } = categoriesQuery;
+  const { isLoading, hasError } = getLoadState(categoriesQuery);
   const { incomes, expenses, archived } = currentData ?? EMPTY_CATEGORIES;
   const [reorderCategories] = useReorderCategoriesMutation();
   const [updateCategory] = useUpdateCategoryMutation();
@@ -111,8 +114,8 @@ const useCategoryList = () => {
     isSearching,
     resultNote,
     list: filteredList,
-    isLoading: isFetching,
-    error,
+    isLoading,
+    hasError,
     retry: refetch,
     handleReorder,
     handleRestore,

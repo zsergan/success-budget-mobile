@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import type { GetWalletsResponse } from '@api/dto';
+import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { useDeleteWalletMutation, useGetWalletsQuery } from '@redux/state/wallet/api';
@@ -11,8 +12,9 @@ const useWalletActions = () => {
   const [selectedWallet, setSelectedWallet] = useState<GetWalletsResponse | undefined>(undefined);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isConfirmVisible, setIsConfirmVisible] = useState(false);
-  const { currentData, isFetching, error, refetch } = useGetWalletsQuery(useSpaceArg());
-  const wallets = currentData?.wallets ?? EMPTY_WALLETS;
+  const walletsQuery = useGetWalletsQuery(useSpaceArg());
+  const wallets = walletsQuery.currentData?.wallets ?? EMPTY_WALLETS;
+  const { isLoading, hasError } = getLoadState(walletsQuery);
   const [deleteWallet] = useDeleteWalletMutation();
 
   const onWalletLongPress = (wallet: GetWalletsResponse) => {
@@ -43,11 +45,9 @@ const useWalletActions = () => {
 
   return {
     wallets,
-    // A space switch has no currentData until the new space's wallets arrive,
-    // so WalletsSection shows loading rather than "no wallets yet" meanwhile.
-    isLoading: isFetching,
-    error,
-    retry: refetch,
+    isLoading,
+    hasError,
+    retry: walletsQuery.refetch,
     selectedWallet,
     isModalVisible,
     isConfirmVisible,

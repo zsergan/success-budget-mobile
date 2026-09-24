@@ -53,7 +53,7 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
   const {
     wallets,
     isLoading,
-    error,
+    hasError,
     retry,
     selectedWallet,
     isModalVisible,
@@ -115,13 +115,13 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
           actions={[{ title: 'Delete', onPress: onConfirm }]}
         />
 
-        {isLoading && wallets.length === 0 && (
+        {isLoading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator color={colors.accent} />
           </View>
         )}
 
-        {!isLoading && error && wallets.length === 0 && (
+        {hasError && (
           <EmptyState
             icon="wallet"
             title="Couldn't load wallets"
@@ -131,7 +131,7 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
           />
         )}
 
-        {!isLoading && !error && wallets.length === 0 && (
+        {!isLoading && !hasError && wallets.length === 0 && (
           <EmptyState
             icon="wallet"
             title="No wallets yet"

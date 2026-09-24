@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { LimitModel } from '@api/models';
 import { BottomSheetModal as BottomModal, EmptyState, Icon } from '@components';
+import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetLimitsQuery } from '@redux/state/limit/api';
 import { EMPTY_LIMITS } from '@redux/state/limit/selectors';
@@ -21,7 +22,9 @@ import useLimitEditor from './hooks/useLimitEditor';
 import styles from './style';
 
 const LimitsScreen = () => {
-  const { currentData, isFetching: isLoading, error, refetch } = useGetLimitsQuery(useSpaceArg());
+  const limitsQuery = useGetLimitsQuery(useSpaceArg());
+  const { currentData, refetch } = limitsQuery;
+  const { isLoading, hasError } = getLoadState(limitsQuery);
   const { total, categoryLimits, overAllocation } = currentData ?? EMPTY_LIMITS;
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
@@ -52,11 +55,11 @@ const LimitsScreen = () => {
 
         <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
           <View style={styles.container}>
-            {isLoading && isFullyEmpty ? (
+            {isLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator color={colors.accent} />
               </View>
-            ) : !isLoading && error && isFullyEmpty ? (
+            ) : hasError ? (
               <EmptyState
                 icon="limit"
                 title="Couldn't load limits"

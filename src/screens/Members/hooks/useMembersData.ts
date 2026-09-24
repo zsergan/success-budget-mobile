@@ -1,4 +1,5 @@
 import type { SpaceMember } from '@api/dto';
+import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetMembersQuery } from '@redux/state/member/api';
 import { selectProfileId } from '@redux/state/profile/selectors';
@@ -16,7 +17,8 @@ const EMPTY_MEMBERS: SpaceMember[] = [];
  */
 const useMembersData = () => {
   const currentSpace = useAppSelector(selectCurrentSpace);
-  const { currentData, isFetching, isError, error, refetch } = useGetMembersQuery(useSpaceArg());
+  const membersQuery = useGetMembersQuery(useSpaceArg());
+  const { currentData, isFetching, isError, error, refetch } = membersQuery;
   const members = currentData ?? EMPTY_MEMBERS;
   const hasLoaded = currentData !== undefined;
   const profileId = useAppSelector(selectProfileId);
@@ -34,7 +36,7 @@ const useMembersData = () => {
     currentSpace,
     // currentData belongs to the active space only, so a switch reads as a
     // first load; a failed refresh keeps the rows and reports the error.
-    isInitialLoading: !hasLoaded && !isError,
+    isInitialLoading: getLoadState(membersQuery).isLoading,
     isRefreshing: hasLoaded && isFetching,
     // A retry in flight clears the previous failure, as a fresh request would.
     error: isError ? error : undefined,

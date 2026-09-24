@@ -39,7 +39,7 @@ const CategoriesScreen = ({ navigation }: Props) => {
     resultNote,
     list,
     isLoading,
-    error,
+    hasError,
     retry,
     handleReorder,
     handleRestore,
@@ -131,11 +131,11 @@ const CategoriesScreen = ({ navigation }: Props) => {
           <SegmentedControl options={segmentOptions} value={segment} onChange={changeSegment} />
         </View>
 
-        {isLoading && list.length === 0 ? (
+        {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator color={colors.accent} />
           </View>
-        ) : !isLoading && error && list.length === 0 ? (
+        ) : hasError ? (
           <EmptyState
             icon="list"
             title="Couldn't load categories"

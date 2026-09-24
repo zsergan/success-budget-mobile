@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 
 import type { TransactionComposerHandle } from '@components';
 import { Fab, RootLayout, SpaceSwitcher, TransactionComposer } from '@components';
+import { getLoadState } from '@redux/api/loadState';
 import { useSpaceArg } from '@redux/hooks';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { EMPTY_WALLETS, getTotalBalance } from '@redux/state/wallet/selectors';
@@ -27,12 +28,8 @@ const HomeScreen = ({ navigation }: Props) => {
   const { currentData: walletsOverview } = useGetWalletsQuery(spaceArg);
   const { total, currencyCode, walletsCount, deltaPercent } = getTotalBalance(walletsOverview);
   const wallets = walletsOverview?.wallets ?? EMPTY_WALLETS;
-  const {
-    currentData: recentTransactions,
-    isFetching: isLoadingTransactions,
-    isError: hasTransactionsError,
-    refetch: refetchTransactions,
-  } = useGetTransactionsQuery(spaceArg);
+  const recentQuery = useGetTransactionsQuery(spaceArg);
+  const { isLoading: isLoadingTransactions, hasError: hasTransactionsError } = getLoadState(recentQuery);
   const { isHidden, toggle } = useBalanceVisibility();
 
   // The focused wallet can disappear (deleted, or a space switch replaced the list), so fall back to the first one.
@@ -66,12 +63,12 @@ const HomeScreen = ({ navigation }: Props) => {
 
         <RecentActivity
           navigation={navigation}
-          transactions={recentTransactions ?? EMPTY_TRANSACTIONS}
+          transactions={recentQuery.currentData ?? EMPTY_TRANSACTIONS}
           currencyCode={currencyCode}
           hasWallets={wallets.length > 0}
           isLoading={isLoadingTransactions}
           hasError={hasTransactionsError}
-          onRetry={refetchTransactions}
+          onRetry={recentQuery.refetch}
         />
       </RootLayout>
 
