@@ -1,6 +1,8 @@
 export { default as useAlert } from './useAlert';
 export { default as useAuth } from './useAuth';
 export { default as useBalanceVisibility } from './useBalanceVisibility';
+export { default as useConfirmAction } from './useConfirmAction';
+export type { ConfirmAction } from './useConfirmAction';
 export { default as useFormSubmitHandler } from './useFormSubmitHandler';
 export { default as useLoadInitData } from './useLoadInitData';
 export { default as useSwipe } from './useSwipe';

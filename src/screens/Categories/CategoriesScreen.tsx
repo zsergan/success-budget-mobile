@@ -1,9 +1,9 @@
-import { useState } from 'react';
 import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DraggableFlatList from 'react-native-draggable-flatlist';
 
 import { BottomSheetModal as BottomModal, EmptyState, Icon } from '@components';
+import { useConfirmAction } from '@hooks';
 import type { CategoryModel } from '@api/models';
 import type { RootStackScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
@@ -25,7 +25,7 @@ const ARCHIVE_FOOTNOTE =
   'Restoring puts a category back into the picker. It does not re-join limits automatically — add it to a limit again if you want it counted.';
 
 const CategoriesScreen = ({ navigation }: Props) => {
-  const [deletingCategory, setDeletingCategory] = useState<CategoryModel | null>(null);
+  const categoryDeletion = useConfirmAction<CategoryModel>();
 
   const {
     segment,
@@ -52,7 +52,7 @@ const CategoriesScreen = ({ navigation }: Props) => {
 
   const handleRequestDelete = (category: CategoryModel) => {
     editorRef.current?.dismiss();
-    setDeletingCategory(category);
+    categoryDeletion.open(category);
   };
 
   const segmentOptions = (
@@ -74,7 +74,7 @@ const CategoriesScreen = ({ navigation }: Props) => {
         />
       </BottomModal>
 
-      <DeleteCategoryDialog category={deletingCategory} onClose={() => setDeletingCategory(null)} />
+      <DeleteCategoryDialog deletion={categoryDeletion} />
 
       <SafeAreaView style={styles.root}>
         <View style={styles.header}>

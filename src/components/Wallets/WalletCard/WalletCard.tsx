@@ -49,7 +49,12 @@ const WalletCard = ({
         </View>
 
         {onMorePress && (
-          <TouchableOpacity onPress={onMorePress} hitSlop={8}>
+          <TouchableOpacity
+            onPress={onMorePress}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`${walletName} options`}
+          >
             <Icon name="more" size={18} color={dim} />
           </TouchableOpacity>
         )}

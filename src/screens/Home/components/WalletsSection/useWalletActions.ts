@@ -1,21 +1,20 @@
 import { useState } from 'react';
 
 import type { GetWalletsResponse } from '@api/dto';
+import { useConfirmAction } from '@hooks';
 import { getLoadState } from '@redux/api/loadState';
-import { useAppSelector, useSpaceArg } from '@redux/hooks';
-import { selectCurrentSpaceId } from '@redux/state/space/selectors';
+import { useSpaceArg } from '@redux/hooks';
 import { useDeleteWalletMutation, useGetWalletsQuery } from '@redux/state/wallet/api';
 import { EMPTY_WALLETS } from '@redux/state/wallet/selectors';
 
 const useWalletActions = () => {
-  const spaceId = useAppSelector(selectCurrentSpaceId);
   const [selectedWallet, setSelectedWallet] = useState<GetWalletsResponse | undefined>(undefined);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isConfirmVisible, setIsConfirmVisible] = useState(false);
   const walletsQuery = useGetWalletsQuery(useSpaceArg());
   const wallets = walletsQuery.currentData?.wallets ?? EMPTY_WALLETS;
   const { isLoading, hasError } = getLoadState(walletsQuery);
   const [deleteWallet] = useDeleteWalletMutation();
+  const deletion = useConfirmAction<GetWalletsResponse>();
 
   const onWalletLongPress = (wallet: GetWalletsResponse) => {
     setSelectedWallet(wallet);
@@ -24,23 +23,16 @@ const useWalletActions = () => {
 
   const onDeletePress = () => {
     setIsModalVisible(false);
-    setIsConfirmVisible(true);
+
+    if (selectedWallet) deletion.open(selectedWallet);
   };
 
   const onDeleteCancel = () => {
     setIsModalVisible(false);
   };
 
-  const onConfirmCancel = () => {
-    setIsConfirmVisible(false);
-  };
-
   const onConfirm = () => {
-    if (selectedWallet && spaceId !== null) {
-      deleteWallet({ spaceId, walletId: selectedWallet.wallet.id });
-    }
-
-    onConfirmCancel();
+    deletion.confirm((wallet, spaceId) => deleteWallet({ spaceId, walletId: wallet.wallet.id }));
   };
 
   return {
@@ -50,12 +42,14 @@ const useWalletActions = () => {
     retry: walletsQuery.refetch,
     selectedWallet,
     isModalVisible,
-    isConfirmVisible,
+    walletToDelete: deletion.target,
+    isDeleting: deletion.isPending,
+    deleteError: deletion.error,
     onWalletLongPress,
     onDeletePress,
     onDeleteCancel,
     onConfirm,
-    onConfirmCancel,
+    onConfirmCancel: deletion.cancel,
   };
 };
 

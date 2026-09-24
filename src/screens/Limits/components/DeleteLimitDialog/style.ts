@@ -77,6 +77,14 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.caption,
     color: colors.muted,
   },
+  error: {
+    marginTop: theme.spacing.md,
+    fontFamily: theme.fonts.medium,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    textAlign: 'center',
+    color: colors.danger,
+  },
   actions: {
     marginTop: theme.spacing.lg,
     width: '100%',
@@ -85,6 +93,8 @@ const styles = StyleSheet.create({
   deleteButton: {
     height: 50,
     borderRadius: theme.radius.md,
+    flexDirection: 'row',
+    columnGap: 8,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.danger,
@@ -106,6 +116,9 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.bodyLg,
     color: colors.text,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
 });
 

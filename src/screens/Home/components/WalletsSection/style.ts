@@ -19,6 +19,14 @@ const styles = StyleSheet.create({
     lineHeight: theme.lineHeights.caption,
     color: colors.text,
   },
+  confirmError: {
+    paddingHorizontal: theme.spacing.lg,
+    fontFamily: theme.fonts.medium,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    textAlign: 'center',
+    color: colors.danger,
+  },
   longPressedItem: {
     width: '100%',
   },
