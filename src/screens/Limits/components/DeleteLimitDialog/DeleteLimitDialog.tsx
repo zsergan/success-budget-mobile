@@ -1,7 +1,9 @@
-import { Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 
 import type { LimitModel } from '@api/models';
 import { Icon, ModalContainer } from '@components';
+import { useConfirmAction } from '@hooks';
+import { requireSpaceId } from '@redux/api/baseApi';
 import { useAppSelector } from '@redux/hooks';
 import { useDeleteLimitMutation } from '@redux/state/limit/api';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
@@ -19,12 +21,19 @@ interface Props {
 const DeleteLimitDialog = ({ limit, currencyCode, onClose }: Props) => {
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const [deleteLimit] = useDeleteLimitMutation();
+  const { run, isPending, error, resetError } = useConfirmAction();
+
+  const handleClose = () => {
+    if (isPending) return;
+
+    resetError();
+    onClose();
+  };
 
   const handleDelete = () => {
-    if (!limit || spaceId === null) return;
+    if (!limit) return;
 
-    deleteLimit({ spaceId, limitId: limit.id });
-    onClose();
+    run(() => deleteLimit({ spaceId: requireSpaceId(spaceId), limitId: limit.id }), onClose);
   };
 
   const isGroup = (limit?.categories.length ?? 0) > 1;
@@ -34,7 +43,7 @@ const DeleteLimitDialog = ({ limit, currencyCode, onClose }: Props) => {
     : 'Only the threshold goes away. Every expense keeps being recorded exactly as before.';
 
   return (
-    <ModalContainer isVisible={!!limit} onClose={onClose} animationType="fade">
+    <ModalContainer isVisible={!!limit} onClose={handleClose} animationType="fade">
       {limit && (
         <View style={styles.card}>
           <View style={styles.iconBox}>
@@ -65,12 +74,26 @@ const DeleteLimitDialog = ({ limit, currencyCode, onClose }: Props) => {
             </View>
           </View>
 
+          {error && <Text style={styles.error}>{error}</Text>}
+
           <View style={styles.actions}>
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} activeOpacity={0.8}>
-              <Text style={styles.deleteButtonText}>Delete limit</Text>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDelete}
+              disabled={isPending}
+              activeOpacity={0.8}
+            >
+              {isPending && <ActivityIndicator size="small" color="#FFFDFA" />}
+
+              <Text style={styles.deleteButtonText}>{isPending ? 'Deleting…' : 'Delete limit'}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.keepButton} onPress={onClose} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={[styles.keepButton, isPending && styles.buttonDisabled]}
+              onPress={handleClose}
+              disabled={isPending}
+              activeOpacity={0.8}
+            >
               <Text style={styles.keepButtonText}>Keep it</Text>
             </TouchableOpacity>
           </View>
