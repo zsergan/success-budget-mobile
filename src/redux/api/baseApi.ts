@@ -10,3 +10,9 @@ export const baseApi = createApi({
   tagTypes: ['Spaces', 'Profile', 'Currencies', 'Wallets', 'Categories', 'Limits', 'Transactions', 'Members'],
   endpoints: () => ({}),
 });
+
+// Every space-scoped endpoint takes the space explicitly, so its cache entry
+// and tags belong to that space; with no active space the caller passes skipToken.
+export interface SpaceArg {
+  spaceId: number;
+}
