@@ -83,6 +83,12 @@ described in the lifecycle section.
 - `PUT /wallets/:id` responds with an empty body (the service returns
   `void`), while `updateWallet` types the response as `Wallet`. Nothing
   reads the value today.
+- Other wallet DTO gaps against `docs/type-contract.md` in the backend:
+  `Wallet.balance` is a `number` (the client types it as `string` all the
+  way into `WalletCard` and the edit-wallet route params), embedded
+  `wallet` objects in history rows carry no `balance` at all, and
+  `POST /wallets` returns its starting transaction without relations and
+  with a numeric `amount`, not the `Transaction` shape the client declares.
 - Backend, found while reading, not reproduced: the "removed" branch of
   `DELETE /categories/:id` deletes the row without unlinking it from its
   limit, and `limit_categories.category_id` is `ON DELETE RESTRICT`. A
