@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import type { CategoryModel } from '@api/models';
 import { requireSpaceId } from '@redux/api/baseApi';
 import { getLoadState } from '@redux/api/loadState';
-import { useAppSelector, useSpaceArg } from '@redux/hooks';
+import { useAppSelector, useSessionGuard, useSpaceArg } from '@redux/hooks';
 import {
   useGetCategoriesQuery,
   useReorderCategoriesMutation,
@@ -25,6 +25,7 @@ const SEGMENT_TO_TRANSACTION_TYPE: Record<Exclude<CategorySegment, 'archived'>, 
 
 const useCategoryList = () => {
   const { addAlert } = useAlert();
+  const captureSession = useSessionGuard();
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const categoriesQuery = useGetCategoriesQuery(useSpaceArg());
   const { currentData, refetch } = categoriesQuery;
@@ -81,17 +82,21 @@ const useCategoryList = () => {
   };
 
   const handleReorder = async (orderedCategories: CategoryModel[]) => {
+    const isSessionCurrent = captureSession();
+
     try {
       await reorderCategories({
         spaceId: requireSpaceId(spaceId),
         categoryIds: orderedCategories.map((category) => category.id),
       }).unwrap();
     } catch (error: unknown) {
-      addAlert(getErrorMessage(error));
+      if (isSessionCurrent()) addAlert(getErrorMessage(error));
     }
   };
 
   const handleRestore = async (category: CategoryModel) => {
+    const isSessionCurrent = captureSession();
+
     try {
       await updateCategory({
         spaceId: requireSpaceId(spaceId),
@@ -99,7 +104,7 @@ const useCategoryList = () => {
         data: { is_active: 1 },
       }).unwrap();
     } catch (error: unknown) {
-      addAlert(getErrorMessage(error));
+      if (isSessionCurrent()) addAlert(getErrorMessage(error));
     }
   };
 

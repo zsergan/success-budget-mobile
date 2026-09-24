@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { requireSpaceId } from '@redux/api/baseApi';
-import { useAppDispatch, useAppSelector } from '@redux/hooks';
+import { useAppDispatch, useAppSelector, useSessionGuard } from '@redux/hooks';
 import { useRemoveMemberMutation, useRevokeInviteMutation } from '@redux/state/member/api';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { leaveCurrentSpace } from '@redux/state/space/thunks';
@@ -21,6 +21,7 @@ interface UseMemberActionsProps {
 const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
   const dispatch = useAppDispatch();
   const { addAlert } = useAlert();
+  const captureSession = useSessionGuard();
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
   const [revokeInvite] = useRevokeInviteMutation();
   const [removeMember] = useRemoveMemberMutation();
@@ -63,6 +64,7 @@ const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
     if (!target || isPendingRef.current) return;
 
     const originSpaceId = currentSpaceId;
+    const isSessionCurrent = captureSession();
 
     isPendingRef.current = true;
     setIsPending(true);
@@ -91,7 +93,7 @@ const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
 
       setTarget(null);
     } catch (error: unknown) {
-      if (currentSpaceIdRef.current === originSpaceId) {
+      if (isSessionCurrent() && currentSpaceIdRef.current === originSpaceId) {
         addAlert(getErrorMessage(error));
       }
     } finally {

@@ -4,7 +4,7 @@ import { Icon } from '@components';
 import ModalContainer from '@components/Modals/ModalContainer/ModalContainer';
 import type { CategoryModel } from '@api/models';
 import { requireSpaceId } from '@redux/api/baseApi';
-import { useAppSelector } from '@redux/hooks';
+import { useAppSelector, useSessionGuard } from '@redux/hooks';
 import { useDeleteCategoryMutation } from '@redux/state/category/api';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { TransactionType } from '@shared/enums';
@@ -28,6 +28,7 @@ const DeleteCategoryDialog = ({ category, onClose }: Props) => {
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const [deleteCategory] = useDeleteCategoryMutation();
   const { addAlert } = useAlert();
+  const captureSession = useSessionGuard();
 
   if (!category) {
     return null;
@@ -38,10 +39,12 @@ const DeleteCategoryDialog = ({ category, onClose }: Props) => {
   const handleConfirm = async () => {
     onClose();
 
+    const isSessionCurrent = captureSession();
+
     try {
       await deleteCategory({ spaceId: requireSpaceId(spaceId), categoryId: category.id }).unwrap();
     } catch (error: unknown) {
-      addAlert(getErrorMessage(error));
+      if (isSessionCurrent()) addAlert(getErrorMessage(error));
     }
   };
 

@@ -197,3 +197,91 @@ describe('leaveCurrentSpace', () => {
     expect(mockedRequest).not.toHaveBeenCalled();
   });
 });
+
+describe('a request from before a logout and a new login', () => {
+  const oldResponses = {
+    success: (value: unknown) => ({ data: value }),
+    failure: () => {
+      throw { response: { data: { statusCode: 500, message: 'Server error' } } };
+    },
+  };
+
+  // Holds the request open until the next session has signed in and picked space 99.
+  const settleInNextSession = async <T>(
+    store: ReturnType<typeof createAppStore>,
+    start: () => Promise<T>,
+    response: () => unknown,
+  ) => {
+    let finish: () => void = () => {};
+
+    mockedRequest.mockReturnValueOnce(
+      new Promise((resolve, reject) => {
+        finish = () => {
+          try {
+            resolve(response());
+          } catch (error) {
+            reject(error);
+          }
+        };
+      }),
+    );
+
+    const pending = start();
+
+    await store.dispatch(logoutMe());
+    store.dispatch(loginMe.fulfilled('token-2', 'req-login-2', { email: 'a@b.com', password: 'password1' }));
+    store.dispatch(activateSpace(99));
+    finish();
+
+    return pending;
+  };
+
+  it.each(Object.entries(oldResponses))('does not select a space created by it (%s)', async (_, respond) => {
+    const store = signedInStore();
+
+    await expect(
+      settleInNextSession(
+        store,
+        () => store.dispatch(createSpaceAndSelect({ name: 'New', currency_id: 1, type: SpaceType.GROUP })),
+        () => respond(space({ id: 7 })),
+      ),
+    ).rejects.toBeDefined();
+    expect(store.getState().space.currentSpaceId).toBe(99);
+  });
+
+  it.each(Object.entries(oldResponses))('does not select a space joined by it (%s)', async (_, respond) => {
+    const store = signedInStore();
+
+    await expect(
+      settleInNextSession(
+        store,
+        () => store.dispatch(acceptInviteAndSelect('123456')),
+        () => respond(space({ id: 55 })),
+      ),
+    ).rejects.toBeDefined();
+    expect(store.getState().space.currentSpaceId).toBe(99);
+  });
+
+  it.each(Object.entries(oldResponses))(
+    'does not move the next session off its space on leave (%s)',
+    async (_, respond) => {
+      const store = signedInStore();
+
+      store.dispatch(
+        profileApi.util.upsertQueryEntries([
+          { endpointName: 'getProfile', arg: undefined, value: { id: 777, email: 'me@example.com', name: 'Me' } },
+        ]),
+      );
+      store.dispatch(activateSpace(10));
+
+      await expect(
+        settleInNextSession(
+          store,
+          () => store.dispatch(leaveCurrentSpace()),
+          () => respond(undefined),
+        ),
+      ).rejects.toBeDefined();
+      expect(store.getState().space.currentSpaceId).toBe(99);
+    },
+  );
+});

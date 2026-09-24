@@ -1,5 +1,6 @@
 import type { FieldErrors, FieldValues, UseFormHandleSubmit } from 'react-hook-form';
 
+import { useSessionGuard } from '@redux/hooks';
 import { getErrorMessage } from '@shared/utils';
 import useAlert from './useAlert';
 
@@ -31,14 +32,23 @@ const useFormSubmitHandler = <TFormData extends FieldValues>({
   reset,
 }: UseFormSubmitHandlerOptions<TFormData>) => {
   const { addAlert } = useAlert();
+  const captureSession = useSessionGuard();
 
   const submit = async (formData: TFormData) => {
+    const isSessionCurrent = captureSession();
+
     try {
       await onSubmit(formData);
+
+      // Thrown so a result the ended session never saw doesn't mark the form as submitted.
+      if (!isSessionCurrent()) throw new Error('The session this form was submitted in has ended.');
+
       reset?.();
       onSuccess();
     } catch (error) {
-      addAlert(getErrorMessage(error));
+      // Includes the abort logout causes, which is not an isStale response.
+      if (isSessionCurrent()) addAlert(getErrorMessage(error));
+
       throw error;
     }
   };
