@@ -9,6 +9,7 @@ import {
 import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 
 import { isSessionActive } from '../auth/thunks';
+import { selectProfileId } from '../profile/selectors';
 import { activateSpace, fetchSpaces, isSpaceContextCurrent } from '../space/thunks';
 
 export const fetchMembers = createAppAsyncThunk('member/fetchMembers', async (_: void, thunkAPI) => {
@@ -100,7 +101,7 @@ export const removeMember = createAppAsyncThunk('member/removeMember', async (us
 
 export const leaveSpace = createAppAsyncThunk('member/leaveSpace', async (_: void, thunkAPI) => {
   const { currentSpaceId } = thunkAPI.getState().space;
-  const myUserId = thunkAPI.getState().profile.id;
+  const myUserId = selectProfileId(thunkAPI.getState());
 
   if (currentSpaceId === null || myUserId === undefined) {
     return thunkAPI.rejectWithValue(undefined);

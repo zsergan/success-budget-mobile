@@ -4,8 +4,7 @@ import { skipToken } from '@reduxjs/toolkit/query';
 import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
 import { useGetLimitsQuery } from '@redux/state/limit/api';
-import { selectProfile } from '@redux/state/profile/selectors';
-import { fetchProfile } from '@redux/state/profile/thunks';
+import { useGetProfileQuery } from '@redux/state/profile/api';
 import { selectCurrentSpaceId, selectSpace } from '@redux/state/space/selectors';
 import { fetchSpaces } from '@redux/state/space/thunks';
 import { useGetTransactionsQuery } from '@redux/state/transaction/api';
@@ -19,11 +18,11 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   const dispatch = useAppDispatch();
   const { isLoading: isSpaceLoading } = useAppSelector(selectSpace);
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
-  const { isLoading: isProfileLoading } = useAppSelector(selectProfile);
   const sessionKey = useAppSelector((state) => state.auth.sessionKey);
 
   // Mounted for the whole signed-in session, these subscriptions keep the
   // active space's data loaded (and refetched on every space switch).
+  const profileQuery = useGetProfileQuery(isSignedIn ? undefined : skipToken);
   const spaceArg = useSpaceArg();
   const sessionSpaceArg = isSignedIn ? spaceArg : skipToken;
   const spaceQueries = [
@@ -36,7 +35,6 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   useEffect(() => {
     if (isSignedIn) {
       dispatch(fetchSpaces());
-      dispatch(fetchProfile());
     }
   }, [dispatch, isSignedIn]);
 
@@ -47,20 +45,23 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   // LOADING_SCREEN for it.
   const isInitialSpaceLoad = isSpaceLoading && currentSpaceId === null;
 
-  // Holds the app on LOADING_SCREEN only until the first space's data has
-  // settled (loaded or failed) once per session: gating on a space switch or
-  // a background refetch would remount the whole signed-in navigator.
+  // Holds the app on LOADING_SCREEN only until the profile and the first
+  // space's data have settled (loaded or failed) once per session: gating on
+  // a space switch or a background refetch would remount the whole signed-in
+  // navigator.
+  const isProfileSettled = profileQuery.currentData !== undefined || profileQuery.isError;
   const areSpaceQueriesSettled = spaceQueries.every((query) => query.currentData !== undefined || query.isError);
   const [settledSessionKey, setSettledSessionKey] = useState<number | null>(null);
 
-  if (areSpaceQueriesSettled && settledSessionKey !== sessionKey) {
+  if (isProfileSettled && areSpaceQueriesSettled && settledSessionKey !== sessionKey) {
     setSettledSessionKey(sessionKey);
   }
 
-  const isInitialSpaceDataLoad = currentSpaceId !== null && !areSpaceQueriesSettled && settledSessionKey !== sessionKey;
+  const isInitialSessionDataLoad =
+    settledSessionKey !== sessionKey && (!isProfileSettled || (currentSpaceId !== null && !areSpaceQueriesSettled));
 
   return {
-    isLoading: isSignedIn && (isInitialSpaceLoad || isInitialSpaceDataLoad || isProfileLoading),
+    isLoading: isSignedIn && (isInitialSpaceLoad || isInitialSessionDataLoad),
   };
 };
 

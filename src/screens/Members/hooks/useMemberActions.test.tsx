@@ -5,7 +5,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import * as memberApi from '@api/member.api';
 import * as spaceApi from '@api/space.api';
-import { fetchProfile } from '@redux/state/profile/thunks';
+import { profileApi } from '@redux/state/profile/api';
 import { activateSpace } from '@redux/state/space/thunks';
 import useMemberActions from './useMemberActions';
 
@@ -25,7 +25,11 @@ const createTestStore = () => {
   const store = createAppStore();
 
   store.dispatch(activateSpace(10));
-  store.dispatch(fetchProfile.fulfilled({ id: 777, email: 'me@example.com', name: 'Me' }, 'req', undefined));
+  store.dispatch(
+    profileApi.util.upsertQueryEntries([
+      { endpointName: 'getProfile', arg: undefined, value: { id: 777, email: 'me@example.com', name: 'Me' } },
+    ]),
+  );
 
   return store;
 };

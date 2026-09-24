@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectMember } from '@redux/state/member/selectors';
 import { fetchMembers } from '@redux/state/member/thunks';
-import { selectProfile } from '@redux/state/profile/selectors';
+import { selectProfileId } from '@redux/state/profile/selectors';
 import { selectCurrentSpace, selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { SPACE_LIMITS } from '@shared/constants';
 import { SpaceType } from '@shared/enums';
@@ -20,7 +20,7 @@ const useMembersData = () => {
   const currentSpace = useAppSelector(selectCurrentSpace);
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
   const { members, isLoading, hasLoaded, error } = useAppSelector(selectMember);
-  const profileId = useAppSelector(selectProfile).id;
+  const profileId = useAppSelector(selectProfileId);
 
   useEffect(() => {
     if (currentSpaceId !== null) dispatch(fetchMembers());

@@ -9,3 +9,5 @@ export const currencyApi = baseApi.injectEndpoints({
     }),
   }),
 });
+
+export const { useGetCurrenciesQuery } = currencyApi;

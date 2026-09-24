@@ -4,16 +4,12 @@ import { combineReducers, configureStore, createListenerMiddleware } from '@redu
 import { baseApi } from './api/baseApi';
 import authReducer from './state/auth/slice';
 import { logoutMe } from './state/auth/thunks';
-import currencyReducer from './state/currency/slice';
 import memberReducer from './state/member/slice';
-import profileReducer from './state/profile/slice';
 import spaceReducer from './state/space/slice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
-  currency: currencyReducer,
   member: memberReducer,
-  profile: profileReducer,
   space: spaceReducer,
   [baseApi.reducerPath]: baseApi.reducer,
 });

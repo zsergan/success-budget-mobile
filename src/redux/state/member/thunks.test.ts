@@ -5,11 +5,14 @@ import { getSpaces } from '@api/space.api';
 import { SpaceType } from '@shared/enums';
 import { loginMe, logoutMe } from '../auth/thunks';
 import { activateSpace } from '../space/thunks';
-import { fetchProfile } from '../profile/thunks';
+import { profileApi } from '../profile/api';
 import { acceptInvite, inviteMember, leaveSpace, removeMember } from './thunks';
 
 jest.mock('@api/member.api');
 jest.mock('@api/space.api');
+
+// RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
+jest.useFakeTimers();
 
 const mockedRemoveMember = jest.mocked(memberApi.removeMember);
 const mockedAcceptInvite = jest.mocked(memberApi.acceptInvite);
@@ -31,9 +34,10 @@ const createTestStore = () => {
 const createTestStoreAsUser = (profileId: number) => {
   const store = createTestStore();
 
-  store.dispatch(fetchProfile.pending('req-profile', undefined));
   store.dispatch(
-    fetchProfile.fulfilled({ id: profileId, email: 'me@example.com', name: 'Me' }, 'req-profile', undefined),
+    profileApi.util.upsertQueryEntries([
+      { endpointName: 'getProfile', arg: undefined, value: { id: profileId, email: 'me@example.com', name: 'Me' } },
+    ]),
   );
 
   return store;

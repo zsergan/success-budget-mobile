@@ -1,11 +1,9 @@
-import { useEffect } from 'react';
 import * as yup from 'yup';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
-import { useAppDispatch, useAppSelector } from '@redux/hooks';
-import { selectCurrency } from '@redux/state/currency/selectors';
-import { fetchCurrencies } from '@redux/state/currency/thunks';
+import { useAppDispatch } from '@redux/hooks';
+import { useGetCurrenciesQuery } from '@redux/state/currency/api';
 import { addSpace } from '@redux/state/space/thunks';
 import type { ScreenNames } from '@shared/enums';
 import { SpaceType } from '@shared/enums';
@@ -29,7 +27,7 @@ const schema = yup.object().shape({
 type UseCreateSpaceFormProps = Pick<RootStackScreenProps<ScreenNames.CREATE_SPACE_SCREEN>, 'navigation'>;
 
 const useCreateSpaceForm = ({ navigation }: UseCreateSpaceFormProps) => {
-  const { currencies } = useAppSelector(selectCurrency);
+  const { currentData: currencies = [] } = useGetCurrenciesQuery();
   const dispatch = useAppDispatch();
 
   const {
@@ -46,10 +44,6 @@ const useCreateSpaceForm = ({ navigation }: UseCreateSpaceFormProps) => {
       invites: [] as string[],
     },
   });
-
-  useEffect(() => {
-    dispatch(fetchCurrencies());
-  }, [dispatch]);
 
   const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<CreateSpaceFormData>({
     handleSubmit,
