@@ -1,32 +1,16 @@
 import { useEffect, useState } from 'react';
-import * as yup from 'yup';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useBottomSheet } from '@gorhom/bottom-sheet';
 
-import type { CreateLimitRequest } from '@api/dto';
 import type { LimitModel } from '@api/models';
 import { requireSpaceId } from '@redux/api/baseApi';
 import { useAppSelector } from '@redux/hooks';
 import { useCreateLimitMutation, useUpdateLimitMutation } from '@redux/state/limit/api';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
-import { amountSchema } from '@shared/utils';
 import { useFormSubmitHandler } from '@hooks';
 import type { LimitScope } from './types';
-
-export interface LimitFormData {
-  scope: LimitScope;
-  categoryIds: number[];
-  name: string;
-  amount: string;
-}
-
-const schema = yup.object().shape({
-  scope: yup.mixed<LimitScope>().oneOf(['category', 'group', 'total']).required(),
-  categoryIds: yup.array().of(yup.number().required()).required(),
-  name: yup.string().default(''),
-  amount: amountSchema,
-});
+import { limitSchema, toLimitRequest, type LimitFormValues } from './limitSchema';
 
 const scopeForLimit = (limit: LimitModel): LimitScope =>
   limit.categories.length === 0 ? 'total' : limit.categories.length === 1 ? 'category' : 'group';
@@ -45,8 +29,9 @@ const useLimitEditorForm = ({ limit, initialScope = 'category', activeCategoryId
   const { close } = useBottomSheet();
   const [nameTouched, setNameTouched] = useState(false);
 
-  const { control, handleSubmit, watch, getValues, setValue, reset, formState } = useForm({
-    resolver: yupResolver(schema),
+  const { control, handleSubmit, watch, getValues, setValue, trigger, reset, formState } = useForm({
+    mode: 'onChange',
+    resolver: yupResolver(limitSchema),
     defaultValues: {
       scope: limit ? scopeForLimit(limit) : initialScope,
       categoryIds: limit ? limit.categories.map((category) => category.id) : [],
@@ -62,7 +47,7 @@ const useLimitEditorForm = ({ limit, initialScope = 'category', activeCategoryId
     const selected = getValues('categoryIds');
     const stillActive = selected.filter((id) => activeCategoryIds.includes(id));
 
-    if (stillActive.length !== selected.length) setValue('categoryIds', stillActive);
+    if (stillActive.length !== selected.length) setValue('categoryIds', stillActive, { shouldValidate: true });
   }, [activeCategoryIds, getValues, setValue]);
 
   const setScope = (scope: LimitScope) => {
@@ -71,6 +56,8 @@ const useLimitEditorForm = ({ limit, initialScope = 'category', activeCategoryId
     if (scope !== 'group') {
       setValue('categoryIds', scope === 'total' ? [] : watch('categoryIds').slice(0, 1));
     }
+
+    trigger(['scope', 'categoryIds']);
   };
 
   const toggleCategory = (categoryId: number, allCategoryNames: Record<number, string>) => {
@@ -90,31 +77,28 @@ const useLimitEditorForm = ({ limit, initialScope = 'category', activeCategoryId
 
     if (scope === 'group' && !nameTouched) {
       setValue('name', next.map((id) => allCategoryNames[id]).join(', '));
+      trigger(['categoryIds', 'name']);
+    } else {
+      trigger('categoryIds');
     }
   };
 
   const onNameChange = (value: string) => {
     setNameTouched(true);
-    setValue('name', value);
+    setValue('name', value, { shouldValidate: true });
   };
 
-  const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<LimitFormData>({
+  const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<LimitFormValues>({
     handleSubmit,
     formState,
     onSubmit: async (formData) => {
-      const payload: CreateLimitRequest =
-        formData.scope === 'total'
-          ? { amount: formData.amount, category_ids: [] }
-          : formData.scope === 'category'
-            ? { amount: formData.amount, category_ids: formData.categoryIds }
-            : { amount: formData.amount, category_ids: formData.categoryIds, name: formData.name };
+      const payload = toLimitRequest(formData);
 
       return limit
         ? updateLimit({ spaceId: requireSpaceId(spaceId), limitId: limit.id, data: payload }).unwrap()
         : createLimit({ spaceId: requireSpaceId(spaceId), data: payload }).unwrap();
     },
     onSuccess: () => close(),
-    getInvalidMessage: (errors) => (errors.amount ? 'Enter an amount' : ''),
     reset,
   });
 
@@ -125,7 +109,8 @@ const useLimitEditorForm = ({ limit, initialScope = 'category', activeCategoryId
     toggleCategory,
     onNameChange,
     onSubmit,
-    isSubmitDisabled,
+    canSubmit: formState.isValid && !formState.isValidating && !isSubmitDisabled,
+    errors: formState.errors,
     closeBottomSheet: close,
   };
 };

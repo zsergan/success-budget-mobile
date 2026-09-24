@@ -8,13 +8,12 @@ import styles from './style';
 
 interface Props {
   onDeletePress?: () => void;
-  ready: boolean;
-  isSubmitDisabled: boolean;
+  canSubmit: boolean;
   saveLabel: string;
   onSubmit: () => void;
 }
 
-const ActionRow = ({ onDeletePress, ready, isSubmitDisabled, saveLabel, onSubmit }: Props) => {
+const ActionRow = ({ onDeletePress, canSubmit, saveLabel, onSubmit }: Props) => {
   const insets = useSafeAreaInsets();
 
   return (
@@ -33,14 +32,14 @@ const ActionRow = ({ onDeletePress, ready, isSubmitDisabled, saveLabel, onSubmit
         )}
 
         <TouchableOpacity
-          style={[styles.saveButton, ready && styles.saveButtonReady]}
+          style={[styles.saveButton, canSubmit && styles.saveButtonReady]}
           onPress={onSubmit}
-          disabled={!ready || isSubmitDisabled}
+          disabled={!canSubmit}
           activeOpacity={0.8}
         >
-          {ready && <Icon name="check" size={17} color="#FFFDFA" strokeWidth={2.4} />}
+          {canSubmit && <Icon name="check" size={17} color="#FFFDFA" strokeWidth={2.4} />}
 
-          <Text style={[styles.saveButtonText, ready && styles.saveButtonTextReady]}>{saveLabel}</Text>
+          <Text style={[styles.saveButtonText, canSubmit && styles.saveButtonTextReady]}>{saveLabel}</Text>
         </TouchableOpacity>
       </View>
     </View>

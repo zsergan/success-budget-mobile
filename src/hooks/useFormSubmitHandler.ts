@@ -9,7 +9,7 @@ interface UseFormSubmitHandlerOptions<TFormData extends FieldValues> {
   formState: { isSubmitting: boolean; isSubmitSuccessful: boolean };
   onSubmit: (formData: TFormData) => Promise<unknown>;
   onSuccess: () => void;
-  getInvalidMessage: (errors: FieldErrors<TFormData>) => string;
+  getInvalidMessage?: (errors: FieldErrors<TFormData>) => string;
   /**
    * react-hook-form's own reset(), called right after a successful submit.
    * isSubmitSuccessful otherwise never clears on its own, so a form whose
@@ -51,9 +51,7 @@ const useFormSubmitHandler = <TFormData extends FieldValues>({
     }
   };
 
-  const onInvalid = (errors: FieldErrors<TFormData>) => {
-    addAlert(getInvalidMessage(errors));
-  };
+  const onInvalid = getInvalidMessage && ((errors: FieldErrors<TFormData>) => addAlert(getInvalidMessage(errors)));
 
   const submitForm = handleSubmit(submit, onInvalid);
 

@@ -3,12 +3,12 @@ import { Controller, type Control } from 'react-hook-form';
 
 import { Icon } from '@components';
 import { colors } from '@shared/theme';
-import type { LimitFormData } from '../useLimitEditorForm';
+import type { LimitFormValues } from '../limitSchema';
 
 import styles from './style';
 
 interface Props {
-  control: Control<LimitFormData>;
+  control: Control<LimitFormValues>;
   isGroup: boolean;
   isTotal: boolean;
   currencyCode?: string;
@@ -22,28 +22,32 @@ const NameAmountFields = ({ control, isGroup, isTotal, currencyCode, onNameChang
       <View style={styles.nameSection}>
         <Text style={styles.sectionLabel}>Limit name</Text>
 
-        <View style={styles.nameBox}>
-          <Controller
-            name="name"
-            control={control}
-            render={({ field: { value } }) => (
-              <TextInput style={styles.nameInput} value={value} onChangeText={onNameChange} />
-            )}
-          />
+        <Controller
+          name="name"
+          control={control}
+          render={({ field: { value }, fieldState: { error } }) => (
+            <>
+              <View style={[styles.nameBox, !!error && styles.nameBoxWithError]}>
+                <TextInput style={styles.nameInput} value={value} onChangeText={onNameChange} />
 
-          <Text style={styles.nameHint}>auto from categories</Text>
-        </View>
+                <Text style={styles.nameHint}>auto from categories</Text>
+              </View>
+
+              {error && <Text style={styles.nameError}>{error.message}</Text>}
+            </>
+          )}
+        />
       </View>
     )}
 
-    <View style={styles.hero}>
-      <Text style={styles.heroLabel}>{isTotal ? 'All expenses this month' : 'Monthly limit'}</Text>
+    <Controller
+      name="amount"
+      control={control}
+      render={({ field: { onChange, value }, fieldState: { error } }) => (
+        <View style={styles.hero}>
+          <Text style={styles.heroLabel}>{isTotal ? 'All expenses this month' : 'Monthly limit'}</Text>
 
-      <View style={styles.heroRow}>
-        <Controller
-          name="amount"
-          control={control}
-          render={({ field: { onChange, value } }) => (
+          <View style={styles.heroRow}>
             <TextInput
               value={value}
               onChangeText={onChange}
@@ -53,16 +57,17 @@ const NameAmountFields = ({ control, isGroup, isTotal, currencyCode, onNameChang
               style={styles.heroAmount}
               returnKeyType="done"
             />
-          )}
-        />
 
-        {currencyCode && <Text style={styles.heroCurrency}>{currencyCode}</Text>}
-      </View>
+            {currencyCode && <Text style={styles.heroCurrency}>{currencyCode}</Text>}
+          </View>
 
-      <Text style={styles.heroSub}>
-        {isTotal ? 'Cap for every expense across all wallets' : 'Counted across all wallets together'}
-      </Text>
-    </View>
+          <Text style={[styles.heroSub, !!error && styles.heroSubError]}>
+            {error?.message ??
+              (isTotal ? 'Cap for every expense across all wallets' : 'Counted across all wallets together')}
+          </Text>
+        </View>
+      )}
+    />
 
     {spentHint && (
       <View style={styles.spentContext}>
