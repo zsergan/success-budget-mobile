@@ -6,7 +6,7 @@ import type {
   UpdateCategoryRequest,
   Category,
 } from './dto';
-import { mapCategory } from './models';
+import { mapCategoriesResponse, mapCategory } from './models';
 import { ApiClient } from './instance';
 
 const api = ApiClient();
@@ -14,11 +14,7 @@ const api = ApiClient();
 export const getCategories = async (spaceId: number) => {
   const response = await api.get<GetCategoriesResponse>(`/spaces/${spaceId}/categories`);
 
-  return {
-    incomes: response.data.incomes.map(mapCategory),
-    expenses: response.data.expenses.map(mapCategory),
-    archived: response.data.archived.map(mapCategory),
-  };
+  return mapCategoriesResponse(response.data);
 };
 
 export const updateCategory = async (spaceId: number, categoryId: number, data: UpdateCategoryRequest) => {
