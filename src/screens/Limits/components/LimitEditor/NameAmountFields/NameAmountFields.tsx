@@ -22,17 +22,21 @@ const NameAmountFields = ({ control, isGroup, isTotal, currencyCode, onNameChang
       <View style={styles.nameSection}>
         <Text style={styles.sectionLabel}>Limit name</Text>
 
-        <View style={styles.nameBox}>
-          <Controller
-            name="name"
-            control={control}
-            render={({ field: { value } }) => (
-              <TextInput style={styles.nameInput} value={value} onChangeText={onNameChange} />
-            )}
-          />
+        <Controller
+          name="name"
+          control={control}
+          render={({ field: { value }, fieldState: { error } }) => (
+            <>
+              <View style={[styles.nameBox, !!error && styles.nameBoxWithError]}>
+                <TextInput style={styles.nameInput} value={value} onChangeText={onNameChange} />
 
-          <Text style={styles.nameHint}>auto from categories</Text>
-        </View>
+                <Text style={styles.nameHint}>auto from categories</Text>
+              </View>
+
+              {error && <Text style={styles.nameError}>{error.message}</Text>}
+            </>
+          )}
+        />
       </View>
     )}
 

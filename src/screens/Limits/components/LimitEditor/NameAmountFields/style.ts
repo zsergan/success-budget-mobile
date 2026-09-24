@@ -17,6 +17,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.hairline,
   },
+  nameBoxWithError: {
+    borderWidth: 1.5,
+    borderColor: colors.danger,
+  },
   nameInput: {
     flex: 1,
     fontFamily: theme.fonts.semiBold,
@@ -28,6 +32,12 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.micro,
     color: colors.muted,
+  },
+  nameError: {
+    fontFamily: theme.fonts.medium,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    color: colors.danger,
   },
   sectionLabel: {
     fontFamily: theme.fonts.semiBold,
