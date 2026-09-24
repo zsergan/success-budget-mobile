@@ -2,9 +2,11 @@ import { createAppStore } from '@redux/Store';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { categoryApi } from '@redux/state/category/api';
 import { limitApi } from '@redux/state/limit/api';
+import { memberApi } from '@redux/state/member/api';
+import { spaceApi } from '@redux/state/space/api';
 import { transactionApi } from '@redux/state/transaction/api';
 import { walletApi } from '@redux/state/wallet/api';
-import { AppColor, TransactionType } from '@shared/enums';
+import { AppColor, SpaceType, TransactionType } from '@shared/enums';
 import { baseApi } from './baseApi';
 
 const mockedRequest = jest.fn();
@@ -34,6 +36,7 @@ const respond = ({ url, method }: RequestConfig) => {
   if (url.endsWith('/categories')) return { data: { incomes: [], expenses: [], archived: [] } };
   if (url.endsWith('/limits')) return { data: { total: null, categories: [], over_allocation: null } };
   if (url.endsWith('/latest')) return { data: null };
+  if (url === '/spaces' || url.endsWith('/members')) return { data: [] };
 
   return { data: [] };
 };
@@ -253,5 +256,69 @@ describe('session isolation', () => {
     await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
 
     expect(mockedRequest).not.toHaveBeenCalled();
+  });
+});
+
+describe('member and space rules', () => {
+  const refetchedMembersAndSpaces = async (mutate: (store: ReturnType<typeof createAppStore>) => Promise<unknown>) => {
+    const store = createAppStore();
+
+    store.dispatch(spaceApi.endpoints.getSpaces.initiate());
+    store.dispatch(memberApi.endpoints.getMembers.initiate({ spaceId: 1 }));
+    store.dispatch(memberApi.endpoints.getMembers.initiate({ spaceId: 2 }));
+    await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
+    mockedRequest.mockClear();
+
+    await mutate(store);
+    await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
+
+    return mockedRequest.mock.calls
+      .map(([config]: [RequestConfig]) => config)
+      .filter((config) => config.method === 'GET')
+      .map((config) => config.url)
+      .sort();
+  };
+
+  it.each([
+    {
+      name: 'invite member',
+      mutate: (store: ReturnType<typeof createAppStore>) =>
+        store.dispatch(memberApi.endpoints.inviteMember.initiate({ spaceId: 1, email: 'a@b.com' })),
+      expected: ['/spaces/1/members'],
+    },
+    {
+      name: 'revoke invite',
+      mutate: (store: ReturnType<typeof createAppStore>) =>
+        store.dispatch(memberApi.endpoints.revokeInvite.initiate({ spaceId: 1, inviteId: 3 })),
+      expected: ['/spaces/1/members'],
+    },
+    {
+      name: 'remove another member',
+      mutate: (store: ReturnType<typeof createAppStore>) =>
+        store.dispatch(memberApi.endpoints.removeMember.initiate({ spaceId: 1, userId: 42 })),
+      expected: ['/spaces', '/spaces/1/members'],
+    },
+    {
+      name: 'leave space',
+      mutate: (store: ReturnType<typeof createAppStore>) =>
+        store.dispatch(memberApi.endpoints.leaveSpace.initiate({ spaceId: 1, userId: 7 })),
+      expected: ['/spaces'],
+    },
+    {
+      name: 'accept invite',
+      mutate: (store: ReturnType<typeof createAppStore>) =>
+        store.dispatch(memberApi.endpoints.acceptInvite.initiate('123456')),
+      expected: ['/spaces'],
+    },
+    {
+      name: 'create space',
+      mutate: (store: ReturnType<typeof createAppStore>) =>
+        store.dispatch(spaceApi.endpoints.createSpace.initiate({ name: 'New', currency_id: 1, type: SpaceType.GROUP })),
+      expected: ['/spaces'],
+    },
+  ])('$name refetches exactly $expected', async ({ mutate, expected }) => {
+    mutationResponse = { id: 9 };
+
+    expect(await refetchedMembersAndSpaces(mutate)).toEqual(expected);
   });
 });

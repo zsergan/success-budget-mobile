@@ -3,20 +3,25 @@ import { Provider } from 'react-redux';
 import { createAppStore } from '@redux/Store';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
-import * as memberApi from '@api/member.api';
 import { profileApi } from '@redux/state/profile/api';
 import { activateSpace } from '@redux/state/space/thunks';
 import useMemberActions from './useMemberActions';
 
-jest.mock('@api/member.api');
+const mockedRequest = jest.fn();
+
+jest.mock('@api/instance', () => ({
+  ApiClient: () => ({}),
+  createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
+}));
+
+// RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
+jest.useFakeTimers();
 
 const mockedAddAlert = jest.fn();
 
 jest.mock('@hooks', () => ({
   useAlert: () => ({ addAlert: mockedAddAlert }),
 }));
-
-const mockedRemoveMember = jest.mocked(memberApi.removeMember);
 
 const createTestStore = () => {
   const store = createAppStore();
@@ -46,7 +51,7 @@ describe('useMemberActions confirm()', () => {
     const store = createTestStore();
     let resolveRemove!: () => void;
 
-    mockedRemoveMember.mockReturnValue(new Promise((resolve) => (resolveRemove = () => resolve(undefined))));
+    mockedRequest.mockReturnValue(new Promise((resolve) => (resolveRemove = () => resolve({ data: undefined }))));
 
     const { result } = renderHook(() => useMemberActions({ onLeft: jest.fn() }), { wrapper: wrapperFor(store) });
 
@@ -64,7 +69,7 @@ describe('useMemberActions confirm()', () => {
     resolveRemove();
     await waitFor(() => expect(result.current.isPending).toBe(false));
 
-    expect(mockedRemoveMember).toHaveBeenCalledTimes(1);
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
   });
 
   it('does not navigate (onLeft) if the space changed before a successful leave settled', async () => {
@@ -72,7 +77,7 @@ describe('useMemberActions confirm()', () => {
     const onLeft = jest.fn();
     let resolveRemove!: () => void;
 
-    mockedRemoveMember.mockReturnValue(new Promise((resolve) => (resolveRemove = () => resolve(undefined))));
+    mockedRequest.mockReturnValue(new Promise((resolve) => (resolveRemove = () => resolve({ data: undefined }))));
 
     const { result } = renderHook(() => useMemberActions({ onLeft }), { wrapper: wrapperFor(store) });
 
@@ -94,5 +99,23 @@ describe('useMemberActions confirm()', () => {
     await act(() => confirmPromise);
 
     expect(onLeft).not.toHaveBeenCalled();
+  });
+
+  it('navigates (onLeft) after a successful leave that moved the user off the space', async () => {
+    const store = createTestStore();
+    const onLeft = jest.fn();
+
+    mockedRequest.mockResolvedValue({ data: undefined });
+
+    const { result } = renderHook(() => useMemberActions({ onLeft }), { wrapper: wrapperFor(store) });
+
+    act(() => {
+      result.current.requestAction({ kind: 'leave' });
+    });
+
+    await act(() => result.current.confirm());
+
+    expect(onLeft).toHaveBeenCalledTimes(1);
+    expect(store.getState().space.currentSpaceId).not.toBe(10);
   });
 });

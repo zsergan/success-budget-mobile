@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { requireSpaceId } from '@redux/api/baseApi';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
-import { leaveSpace, removeMember, revokeInvite } from '@redux/state/member/thunks';
+import { useRemoveMemberMutation, useRevokeInviteMutation } from '@redux/state/member/api';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
+import { leaveCurrentSpace } from '@redux/state/space/thunks';
 import { getErrorMessage } from '@shared/utils';
 import { useAlert } from '@hooks';
 import type { MemberActionTarget } from '../types';
@@ -20,6 +22,8 @@ const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
   const dispatch = useAppDispatch();
   const { addAlert } = useAlert();
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
+  const [revokeInvite] = useRevokeInviteMutation();
+  const [removeMember] = useRemoveMemberMutation();
 
   const [target, setTarget] = useState<MemberActionTarget | null>(null);
   const [isPending, setIsPending] = useState(false);
@@ -64,12 +68,20 @@ const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
     setIsPending(true);
 
     try {
+      if (target.kind === 'leave') {
+        // Leaving switches spaces by itself, so only its own result says whether
+        // the user is still on the space they left (they may have switched away).
+        const { movedOff } = await dispatch(leaveCurrentSpace());
+
+        if (movedOff) onLeft();
+
+        return;
+      }
+
       if (target.kind === 'revoke') {
-        await dispatch(revokeInvite(target.inviteId)).unwrap();
-      } else if (target.kind === 'remove') {
-        await dispatch(removeMember(target.userId)).unwrap();
+        await revokeInvite({ spaceId: requireSpaceId(originSpaceId), inviteId: target.inviteId }).unwrap();
       } else {
-        await dispatch(leaveSpace()).unwrap();
+        await removeMember({ spaceId: requireSpaceId(originSpaceId), userId: target.userId }).unwrap();
       }
 
       // The space changed while this was in flight -- the switch's own
@@ -78,8 +90,6 @@ const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
       if (currentSpaceIdRef.current !== originSpaceId) return;
 
       setTarget(null);
-
-      if (target.kind === 'leave') onLeft();
     } catch (error: unknown) {
       if (currentSpaceIdRef.current === originSpaceId) {
         addAlert(getErrorMessage(error));
