@@ -1,19 +1,9 @@
-import { configureStore } from '@reduxjs/toolkit';
-
+import { createAppStore } from '@redux/Store';
 import * as limitApi from '@api/limit.api';
 import * as transactionApi from '@api/transaction.api';
 import * as walletApi from '@api/wallet.api';
 import { TransactionType } from '@shared/enums';
-import authReducer from '../auth/slice';
-import categoryReducer from '../category/slice';
-import currencyReducer from '../currency/slice';
-import limitReducer from '../limit/slice';
-import memberReducer from '../member/slice';
-import profileReducer from '../profile/slice';
 import { activateSpace } from '../space/thunks';
-import spaceReducer from '../space/slice';
-import walletReducer from '../wallet/slice';
-import transactionReducer from './slice';
 import { addTransaction } from './thunks';
 
 jest.mock('@api/transaction.api');
@@ -26,19 +16,7 @@ const mockedGetLatestTransaction = jest.mocked(transactionApi.getLatestTransacti
 const mockedGetWallets = jest.mocked(walletApi.getWallets);
 const mockedGetLimits = jest.mocked(limitApi.getLimits);
 
-const testReducer = {
-  auth: authReducer,
-  category: categoryReducer,
-  currency: currencyReducer,
-  limit: limitReducer,
-  member: memberReducer,
-  profile: profileReducer,
-  space: spaceReducer,
-  transaction: transactionReducer,
-  wallet: walletReducer,
-};
-
-const createTestStore = () => configureStore({ reducer: testReducer });
+const createTestStore = () => createAppStore();
 
 const payload = {
   wallet_id: 1,

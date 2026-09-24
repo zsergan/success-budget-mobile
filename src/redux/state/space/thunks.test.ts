@@ -1,19 +1,9 @@
-import { configureStore } from '@reduxjs/toolkit';
-
+import { createAppStore } from '@redux/Store';
 import type { Space } from '@api/dto';
 import { createSpace, getSpaces } from '@api/space.api';
 import { SpaceType } from '@shared/enums';
-import authReducer from '../auth/slice';
 import { loginMe, logoutMe } from '../auth/thunks';
-import categoryReducer from '../category/slice';
-import currencyReducer from '../currency/slice';
-import limitReducer from '../limit/slice';
-import memberReducer from '../member/slice';
-import profileReducer from '../profile/slice';
-import transactionReducer from '../transaction/slice';
-import walletReducer from '../wallet/slice';
 import { fetchWallets } from '../wallet/thunks';
-import spaceReducer from './slice';
 import { activateSpace, addSpace, fetchSpaces } from './thunks';
 
 jest.mock('@api/space.api');
@@ -21,19 +11,7 @@ jest.mock('@api/space.api');
 const mockedGetSpaces = jest.mocked(getSpaces);
 const mockedCreateSpace = jest.mocked(createSpace);
 
-const testReducer = {
-  auth: authReducer,
-  category: categoryReducer,
-  currency: currencyReducer,
-  limit: limitReducer,
-  member: memberReducer,
-  profile: profileReducer,
-  space: spaceReducer,
-  transaction: transactionReducer,
-  wallet: walletReducer,
-};
-
-const createTestStore = () => configureStore({ reducer: testReducer });
+const createTestStore = () => createAppStore();
 
 const currency = { id: 1, code: 'USD', name: 'US Dollar' };
 

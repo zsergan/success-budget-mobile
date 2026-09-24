@@ -1,17 +1,7 @@
-import { configureStore } from '@reduxjs/toolkit';
-
+import { createAppStore } from '@redux/Store';
 import * as walletApi from '@api/wallet.api';
 import { AppColor } from '@shared/enums';
-import authReducer from '../auth/slice';
-import categoryReducer from '../category/slice';
-import currencyReducer from '../currency/slice';
-import limitReducer from '../limit/slice';
-import memberReducer from '../member/slice';
-import profileReducer from '../profile/slice';
 import { activateSpace } from '../space/thunks';
-import spaceReducer from '../space/slice';
-import transactionReducer from '../transaction/slice';
-import walletReducer from './slice';
 import { addWallet } from './thunks';
 
 jest.mock('@api/wallet.api');
@@ -19,19 +9,7 @@ jest.mock('@api/wallet.api');
 const mockedCreateWallet = jest.mocked(walletApi.createWallet);
 const mockedGetWallets = jest.mocked(walletApi.getWallets);
 
-const testReducer = {
-  auth: authReducer,
-  category: categoryReducer,
-  currency: currencyReducer,
-  limit: limitReducer,
-  member: memberReducer,
-  profile: profileReducer,
-  space: spaceReducer,
-  transaction: transactionReducer,
-  wallet: walletReducer,
-};
-
-const createTestStore = () => configureStore({ reducer: testReducer });
+const createTestStore = () => createAppStore();
 
 const payload = { wallet_name: 'Cash', initial_balance: '0', design: AppColor.SLATE };
 

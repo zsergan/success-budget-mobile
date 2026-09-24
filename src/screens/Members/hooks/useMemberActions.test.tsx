@@ -1,21 +1,12 @@
 import type { ReactNode } from 'react';
 import { Provider } from 'react-redux';
-import { configureStore } from '@reduxjs/toolkit';
+import { createAppStore } from '@redux/Store';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import * as memberApi from '@api/member.api';
 import * as spaceApi from '@api/space.api';
-import authReducer from '@redux/state/auth/slice';
-import categoryReducer from '@redux/state/category/slice';
-import currencyReducer from '@redux/state/currency/slice';
-import limitReducer from '@redux/state/limit/slice';
-import memberReducer from '@redux/state/member/slice';
 import { fetchProfile } from '@redux/state/profile/thunks';
-import profileReducer from '@redux/state/profile/slice';
 import { activateSpace } from '@redux/state/space/thunks';
-import spaceReducer from '@redux/state/space/slice';
-import transactionReducer from '@redux/state/transaction/slice';
-import walletReducer from '@redux/state/wallet/slice';
 import useMemberActions from './useMemberActions';
 
 jest.mock('@api/member.api');
@@ -30,20 +21,8 @@ jest.mock('@hooks', () => ({
 const mockedRemoveMember = jest.mocked(memberApi.removeMember);
 const mockedGetSpaces = jest.mocked(spaceApi.getSpaces);
 
-const testReducer = {
-  auth: authReducer,
-  category: categoryReducer,
-  currency: currencyReducer,
-  limit: limitReducer,
-  member: memberReducer,
-  profile: profileReducer,
-  space: spaceReducer,
-  transaction: transactionReducer,
-  wallet: walletReducer,
-};
-
 const createTestStore = () => {
-  const store = configureStore({ reducer: testReducer });
+  const store = createAppStore();
 
   store.dispatch(activateSpace(10));
   store.dispatch(fetchProfile.fulfilled({ id: 777, email: 'me@example.com', name: 'Me' }, 'req', undefined));

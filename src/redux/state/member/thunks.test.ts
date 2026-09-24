@@ -1,21 +1,11 @@
-import { configureStore } from '@reduxjs/toolkit';
-
+import { createAppStore } from '@redux/Store';
 import type { Space } from '@api/dto';
 import * as memberApi from '@api/member.api';
 import { getSpaces } from '@api/space.api';
 import { SpaceType } from '@shared/enums';
-import authReducer from '../auth/slice';
 import { loginMe, logoutMe } from '../auth/thunks';
-import categoryReducer from '../category/slice';
-import currencyReducer from '../currency/slice';
-import limitReducer from '../limit/slice';
-import profileReducer from '../profile/slice';
 import { activateSpace } from '../space/thunks';
-import spaceReducer from '../space/slice';
-import transactionReducer from '../transaction/slice';
-import walletReducer from '../wallet/slice';
 import { fetchProfile } from '../profile/thunks';
-import memberReducer from './slice';
 import { acceptInvite, inviteMember, leaveSpace, removeMember } from './thunks';
 
 jest.mock('@api/member.api');
@@ -26,24 +16,12 @@ const mockedAcceptInvite = jest.mocked(memberApi.acceptInvite);
 const mockedInviteMember = jest.mocked(memberApi.inviteMember);
 const mockedGetSpaces = jest.mocked(getSpaces);
 
-const testReducer = {
-  auth: authReducer,
-  category: categoryReducer,
-  currency: currencyReducer,
-  limit: limitReducer,
-  member: memberReducer,
-  profile: profileReducer,
-  space: spaceReducer,
-  transaction: transactionReducer,
-  wallet: walletReducer,
-};
-
 // Every thunk under test here only ever runs while signed in -- these
 // thunks' own isSessionActive guards would otherwise treat a test store
 // (which starts signed out, like a fresh app launch) as a logged-out
 // session and silently skip their space-activation side effects.
 const createTestStore = () => {
-  const store = configureStore({ reducer: testReducer });
+  const store = createAppStore();
 
   store.dispatch(loginMe.fulfilled('test-token', 'req-login', { email: 'me@example.com', password: 'password1' }));
 

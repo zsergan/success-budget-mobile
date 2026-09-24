@@ -1,20 +1,11 @@
 import type { ReactNode } from 'react';
 import { Provider } from 'react-redux';
-import { configureStore } from '@reduxjs/toolkit';
+import { createAppStore } from '@redux/Store';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import * as transactionApi from '@api/transaction.api';
-import authReducer from '@redux/state/auth/slice';
-import categoryReducer from '@redux/state/category/slice';
-import currencyReducer from '@redux/state/currency/slice';
-import limitReducer from '@redux/state/limit/slice';
-import memberReducer from '@redux/state/member/slice';
-import profileReducer from '@redux/state/profile/slice';
 import { activateSpace } from '@redux/state/space/thunks';
-import spaceReducer from '@redux/state/space/slice';
 import { transactionsInvalidated } from '@redux/state/transaction/actions';
-import transactionReducer from '@redux/state/transaction/slice';
-import walletReducer from '@redux/state/wallet/slice';
 import type { DateRange } from '@shared/utils';
 import useTransactionsData from './useTransactionsData';
 
@@ -23,19 +14,7 @@ jest.mock('@api/transaction.api');
 const mockedGetTransactions = jest.mocked(transactionApi.getTransactions);
 const mockedGetLatestTransaction = jest.mocked(transactionApi.getLatestTransaction);
 
-const testReducer = {
-  auth: authReducer,
-  category: categoryReducer,
-  currency: currencyReducer,
-  limit: limitReducer,
-  member: memberReducer,
-  profile: profileReducer,
-  space: spaceReducer,
-  transaction: transactionReducer,
-  wallet: walletReducer,
-};
-
-const createTestStore = () => configureStore({ reducer: testReducer });
+const createTestStore = () => createAppStore();
 
 const range: DateRange = { from: new Date('2026-01-01'), to: new Date('2026-01-31'), preset: 'month' };
 
