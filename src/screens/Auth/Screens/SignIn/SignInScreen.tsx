@@ -76,7 +76,11 @@ const SignInScreen = ({ navigation }: Props) => {
       <View style={styles.bottomContainer}>
         <Text style={styles.bottomText}>Don&apos;t have an account?</Text>
 
-        <Button title="Sign up" onPress={() => navigation.navigate(ScreenNames.SIGN_UP_SCREEN)} variant="tertiary" />
+        <Button
+          title="Sign up"
+          onPress={() => navigation.navigate(ScreenNames.SIGN_UP_SCREEN, undefined, { pop: true })}
+          variant="tertiary"
+        />
       </View>
     </AuthLayout>
   );
