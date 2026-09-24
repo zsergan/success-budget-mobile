@@ -49,6 +49,7 @@ bindHttpSession({
 });
 
 export default store;
+export type AppStore = typeof store;
 export type AppDispatch = typeof store.dispatch;
 // For a plain (non-async-thunk) action creator that needs dispatch/getState,
 // e.g. one that decides synchronously whether to dispatch a follow-up
