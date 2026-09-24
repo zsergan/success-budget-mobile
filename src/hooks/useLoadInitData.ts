@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { skipToken } from '@reduxjs/toolkit/query';
 
 import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
@@ -51,14 +51,13 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   // settled (loaded or failed) once per session: gating on a space switch or
   // a background refetch would remount the whole signed-in navigator.
   const areSpaceQueriesSettled = spaceQueries.every((query) => query.currentData !== undefined || query.isError);
-  const settledSessionRef = useRef<number | null>(null);
+  const [settledSessionKey, setSettledSessionKey] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (areSpaceQueriesSettled) settledSessionRef.current = sessionKey;
-  }, [areSpaceQueriesSettled, sessionKey]);
+  if (areSpaceQueriesSettled && settledSessionKey !== sessionKey) {
+    setSettledSessionKey(sessionKey);
+  }
 
-  const isInitialSpaceDataLoad =
-    currentSpaceId !== null && !areSpaceQueriesSettled && settledSessionRef.current !== sessionKey;
+  const isInitialSpaceDataLoad = currentSpaceId !== null && !areSpaceQueriesSettled && settledSessionKey !== sessionKey;
 
   return {
     isLoading: isSignedIn && (isInitialSpaceLoad || isInitialSpaceDataLoad || isProfileLoading),
