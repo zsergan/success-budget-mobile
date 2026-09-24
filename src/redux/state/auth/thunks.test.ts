@@ -6,7 +6,12 @@ import { AUTH_TOKEN_KEY } from '@shared/constants';
 import type authReducer from './slice';
 import { checkAuth, loginMe, logoutMe, registerMe, verifyEmailMe } from './thunks';
 
-jest.mock('@api/auth.api');
+jest.mock('@api/auth.api', () => ({
+  ...jest.requireActual('@api/auth.api'),
+  login: jest.fn(),
+  register: jest.fn(),
+  verifyEmail: jest.fn(),
+}));
 jest.mock('expo-secure-store');
 
 const mockedLogin = jest.mocked(login);
@@ -89,6 +94,41 @@ describe('registerMe', () => {
     expect(action.type).toBe('auth/registerMe/rejected');
     expect(action.payload).toEqual(duplicateEmailError);
     expect(store.getState().auth.error).toEqual(duplicateEmailError);
+  });
+
+  it('continues to verification when a parallel sign-up for the email is already sending the code', async () => {
+    mockedRegister.mockRejectedValue(
+      axiosErrorFor({
+        message: 'A confirmation email was already requested, please try again shortly',
+        statusCode: 429,
+        path: '/users/register',
+        timestamp: '2026-01-01T00:00:00.000Z',
+      }),
+    );
+
+    const store = createTestStore();
+    const action = await store.dispatch(registerMe(registerPayload));
+
+    expect(action.type).toBe('auth/registerMe/fulfilled');
+    expect(store.getState().auth.userEmail).toBe('a@b.com');
+    expect(store.getState().auth.error).toBeUndefined();
+  });
+
+  it('still rejects any other 429, such as the request throttle', async () => {
+    const throttled = {
+      message: 'ThrottlerException: Too Many Requests',
+      statusCode: 429,
+      path: '/users/register',
+      timestamp: '2026-01-01T00:00:00.000Z',
+    };
+
+    mockedRegister.mockRejectedValue(axiosErrorFor(throttled));
+
+    const store = createTestStore();
+    const action = await store.dispatch(registerMe(registerPayload));
+
+    expect(action.type).toBe('auth/registerMe/rejected');
+    expect(store.getState().auth.userEmail).toBeNull();
   });
 });
 

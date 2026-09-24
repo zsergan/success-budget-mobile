@@ -1,3 +1,9 @@
+// Server messages (backend ErrorMessages) the app branches on, not just displays.
+export const ApiErrorMessage = {
+  CONFIRMATION_EMAIL_RATE_LIMITED: 'A confirmation email was already requested, please try again shortly',
+  CATEGORY_ARCHIVED: 'An archived category cannot be added to a limit',
+} as const;
+
 export interface ErrorResponse {
   error?: string;
   message: string | { field: string; error: string }[];

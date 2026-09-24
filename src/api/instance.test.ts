@@ -27,13 +27,19 @@ const interceptorsOf = (instance: AxiosInstance) => {
   };
 };
 
-const sendAndFail = async (status: number, { beforeResponse }: { beforeResponse?: () => void } = {}) => {
+interface SendOptions {
+  beforeResponse?: () => void;
+  body?: unknown;
+  isHandledRateLimit?: (body: unknown) => boolean;
+}
+
+const sendAndFail = async (status: number, { beforeResponse, body, isHandledRateLimit }: SendOptions = {}) => {
   const { prepare, rejected } = interceptorsOf(createHttpClient());
-  const config = await prepare({ headers: {} } as InternalAxiosRequestConfig);
+  const config = await prepare({ headers: {}, isHandledRateLimit } as InternalAxiosRequestConfig);
 
   beforeResponse?.();
 
-  const error = { response: { status }, config };
+  const error = { response: { status, data: body }, config };
 
   await expect(rejected(error)).rejects.toBe(error);
 };
@@ -92,6 +98,18 @@ describe('429 handling', () => {
     await sendAndFail(429, { beforeResponse: () => (sessionKey += 1) });
 
     expect(mockedShowGlobalAlert).not.toHaveBeenCalled();
+  });
+
+  it('leaves a 429 the caller handles to the caller, and alerts for any other', async () => {
+    const isHandledRateLimit = (body: unknown) => (body as { message?: string }).message === 'Code already sent';
+
+    await sendAndFail(429, { body: { message: 'Code already sent' }, isHandledRateLimit });
+
+    expect(mockedShowGlobalAlert).not.toHaveBeenCalled();
+
+    await sendAndFail(429, { body: { message: 'Too Many Requests' }, isHandledRateLimit });
+
+    expect(mockedShowGlobalAlert).toHaveBeenCalledTimes(1);
   });
 });
 

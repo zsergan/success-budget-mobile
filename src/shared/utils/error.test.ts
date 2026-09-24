@@ -1,4 +1,4 @@
-import { getErrorMessage } from './error';
+import { getErrorMessage, isApiError } from './error';
 
 describe('getErrorMessage', () => {
   it('returns a connection message when there is no response at all', () => {
@@ -37,5 +37,21 @@ describe('getErrorMessage', () => {
     const error = { message: [], statusCode: 400, path: '/auth/register', timestamp: '2026-01-01' };
 
     expect(getErrorMessage(error)).toBe('Something went wrong. Please try again.');
+  });
+});
+
+describe('isApiError', () => {
+  const error = { message: 'Email is already verified', statusCode: 409 };
+
+  it('matches on the status, and on the message when one is given', () => {
+    expect(isApiError(error, 409)).toBe(true);
+    expect(isApiError(error, 409, 'Email is already verified')).toBe(true);
+    expect(isApiError(error, 409, 'Not found')).toBe(false);
+    expect(isApiError(error, 400)).toBe(false);
+  });
+
+  it('is false when there is no error body', () => {
+    expect(isApiError(undefined, 409)).toBe(false);
+    expect(isApiError(null, 409)).toBe(false);
   });
 });
