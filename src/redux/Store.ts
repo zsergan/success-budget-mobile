@@ -1,6 +1,8 @@
 import type { Action, ThunkAction } from '@reduxjs/toolkit';
 import { combineReducers, configureStore, createListenerMiddleware } from '@reduxjs/toolkit';
 
+import { bindHttpSession } from '@api/session';
+
 import { baseApi } from './api/baseApi';
 import authReducer from './state/auth/slice';
 import { logoutMe } from './state/auth/thunks';
@@ -40,6 +42,11 @@ export const createAppStore = (preloadedState?: Partial<RootState>) => {
 };
 
 const store = createAppStore();
+
+bindHttpSession({
+  getKey: () => store.getState().auth.sessionKey,
+  end: () => store.dispatch(logoutMe()),
+});
 
 export default store;
 export type AppDispatch = typeof store.dispatch;

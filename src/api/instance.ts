@@ -5,6 +5,14 @@ import * as SecureStore from 'expo-secure-store';
 import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
 import { BASE_API_URL, AUTH_TOKEN_KEY } from '@shared/constants';
 
+import { endHttpSession, getHttpSessionKey } from './session';
+
+declare module 'axios' {
+  interface InternalAxiosRequestConfig {
+    sessionKey?: number;
+  }
+}
+
 // Every client built here shares the same auth, 401 and 429 handling -- the
 // thin *.api.ts wrappers and the RTK Query base query both go through it.
 export const createHttpClient = () => {
@@ -12,6 +20,9 @@ export const createHttpClient = () => {
 
   api.interceptors.request.use(
     async (config) => {
+      // Captured before the token read, so a logout during it marks the request stale.
+      config.sessionKey = getHttpSessionKey();
+
       const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
 
       if (token) {
@@ -25,30 +36,15 @@ export const createHttpClient = () => {
 
   api.interceptors.response.use(
     (response) => response,
-    async (error: AxiosError) => {
-      if (error.response?.status === 401) {
-        // A 401 from a request sent under a token the user has since
-        // replaced (logged out and back in, or another 401 already forced
-        // a logout) must not end that newer session -- only log out if the
-        // token this specific request carried is still the one currently
-        // stored.
-        const requestAuth = error.config?.headers?.Authorization;
-        const requestToken = typeof requestAuth === 'string' ? requestAuth.replace(/^Bearer /, '') : undefined;
-        const currentToken = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+    (error: AxiosError) => {
+      const status = error.response?.status;
+      const isSessionCurrent = error.config?.sessionKey === getHttpSessionKey();
 
-        if (requestToken && requestToken === currentToken) {
-          // Lazy import: a static one here would close a load-order-dependent
-          // import cycle back through Store.ts into this same file.
-          const [{ default: store }, { logoutMe }] = await Promise.all([
-            import('@redux/Store'),
-            import('@redux/state/auth/thunks'),
-          ]);
-
-          store.dispatch(logoutMe());
-        }
+      if (status === 401 && isSessionCurrent && error.config?.headers?.Authorization) {
+        endHttpSession();
       }
 
-      if (error.response?.status === 429) {
+      if (status === 429 && isSessionCurrent) {
         showGlobalAlert('Too many requests. Please wait a moment and try again.');
       }
 

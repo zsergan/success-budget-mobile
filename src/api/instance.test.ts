@@ -1,83 +1,101 @@
-import type { AxiosInstance } from 'axios';
+import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
+import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
 import { createHttpClient } from './instance';
+import { bindHttpSession } from './session';
 
 jest.mock('expo-secure-store');
-
-const mockedDispatch = jest.fn();
-const mockedLogoutMe = jest.fn(() => ({ type: 'auth/logoutMe/pending' }));
-
-jest.mock('@redux/Store', () => ({
-  __esModule: true,
-  default: { dispatch: (...args: unknown[]) => mockedDispatch(...args) },
-}));
-
-jest.mock('@redux/state/auth/thunks', () => ({
-  logoutMe: () => mockedLogoutMe(),
-}));
+jest.mock('@components/Alert/AlertProvider/globalAlert', () => ({ showGlobalAlert: jest.fn() }));
 
 const mockedGetItemAsync = jest.mocked(SecureStore.getItemAsync);
+const mockedShowGlobalAlert = jest.mocked(showGlobalAlert);
+const endSession = jest.fn();
+let sessionKey = 0;
 
-const rejectedHandlerOf = (instance: AxiosInstance) => {
-  const handlers = instance.interceptors.response.handlers!;
+const interceptorsOf = (instance: AxiosInstance) => {
+  const requestHandlers = instance.interceptors.request.handlers!;
+  const responseHandlers = instance.interceptors.response.handlers!;
 
-  return handlers[handlers.length - 1]!.rejected!;
+  return {
+    prepare: requestHandlers[requestHandlers.length - 1]!.fulfilled! as (
+      config: InternalAxiosRequestConfig,
+    ) => Promise<InternalAxiosRequestConfig>,
+    rejected: responseHandlers[responseHandlers.length - 1]!.rejected!,
+  };
 };
 
-const unauthorizedError = (token: string) => ({
-  response: { status: 401 },
-  config: { headers: { Authorization: `Bearer ${token}` } },
+const sendAndFail = async (status: number, { beforeResponse }: { beforeResponse?: () => void } = {}) => {
+  const { prepare, rejected } = interceptorsOf(createHttpClient());
+  const config = await prepare({ headers: {} } as InternalAxiosRequestConfig);
+
+  beforeResponse?.();
+
+  const error = { response: { status }, config };
+
+  await expect(rejected(error)).rejects.toBe(error);
+};
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  sessionKey = 0;
+  mockedGetItemAsync.mockResolvedValue('token');
+  bindHttpSession({ getKey: () => sessionKey, end: endSession });
 });
 
-beforeEach(() => jest.clearAllMocks());
+afterAll(() => bindHttpSession(null));
 
-// The matching-token ("do log out") branch goes through instance.ts's
-// lazy `await import('@redux/Store')` -- a real dynamic import, kept lazy
-// on purpose to avoid a load-order cycle through Store.ts. Jest's Node/CJS
-// environment can't execute that without --experimental-vm-modules, which
-// this project doesn't enable, so only the skip branches (which return
-// before ever reaching the import) are exercised here.
 describe('401 handling', () => {
-  it('does not log out a newer session for a 401 that belongs to a replaced token', async () => {
-    mockedGetItemAsync.mockResolvedValue('new-token');
+  it('ends the session that sent the request', async () => {
+    await sendAndFail(401);
 
-    const instance = createHttpClient();
-    const rejected = rejectedHandlerOf(instance);
-
-    await rejected(unauthorizedError('stale-token')).catch(() => {});
-
-    expect(mockedLogoutMe).not.toHaveBeenCalled();
-    expect(mockedDispatch).not.toHaveBeenCalled();
+    expect(endSession).toHaveBeenCalledTimes(1);
   });
 
-  it('does not log out when the user has already logged out (no current token at all)', async () => {
+  it('does not end a newer session for a 401 from one that has since ended', async () => {
+    await sendAndFail(401, { beforeResponse: () => (sessionKey += 1) });
+
+    expect(endSession).not.toHaveBeenCalled();
+  });
+
+  it('treats a request as stale when the session ends while its token is being read', async () => {
+    mockedGetItemAsync.mockImplementation(async () => {
+      sessionKey += 1;
+
+      return 'token';
+    });
+
+    await sendAndFail(401);
+
+    expect(endSession).not.toHaveBeenCalled();
+  });
+
+  it('does not end the session for a 401 from a request sent without a token', async () => {
     mockedGetItemAsync.mockResolvedValue(null);
 
-    const instance = createHttpClient();
-    const rejected = rejectedHandlerOf(instance);
+    await sendAndFail(401);
 
-    await rejected(unauthorizedError('stale-token')).catch(() => {});
+    expect(endSession).not.toHaveBeenCalled();
+  });
+});
 
-    expect(mockedLogoutMe).not.toHaveBeenCalled();
+describe('429 handling', () => {
+  it('alerts for a request of the current session', async () => {
+    await sendAndFail(429);
+
+    expect(mockedShowGlobalAlert).toHaveBeenCalledTimes(1);
   });
 
-  it('still rejects the original error when skipping the stale-token logout', async () => {
-    mockedGetItemAsync.mockResolvedValue('new-token');
+  it('stays silent for a request whose session has ended', async () => {
+    await sendAndFail(429, { beforeResponse: () => (sessionKey += 1) });
 
-    const instance = createHttpClient();
-    const rejected = rejectedHandlerOf(instance);
-    const error = unauthorizedError('stale-token');
-
-    await expect(rejected(error)).rejects.toBe(error);
+    expect(mockedShowGlobalAlert).not.toHaveBeenCalled();
   });
+});
 
-  it('rejects a non-401 error without touching SecureStore', async () => {
-    const instance = createHttpClient();
-    const rejected = rejectedHandlerOf(instance);
-    const error = { response: { status: 500 }, config: { headers: {} } };
+it('passes other errors through without side effects', async () => {
+  await sendAndFail(500);
 
-    await expect(rejected(error)).rejects.toBe(error);
-    expect(mockedGetItemAsync).not.toHaveBeenCalled();
-  });
+  expect(endSession).not.toHaveBeenCalled();
+  expect(mockedShowGlobalAlert).not.toHaveBeenCalled();
 });
