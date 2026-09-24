@@ -16,6 +16,12 @@ members.
   `src/redux/state/<domain>/{initialState,selectors,slice,thunks}.ts`
   (domains: `auth`, `wallet`, `transaction`, `category`, `limit`,
   `currency`, `profile`, `space`, `member`).
+- Server data is moving onto RTK Query (see `docs/server-data.md` for
+  the tag and invalidation rules). One `createApi` lives in
+  `src/redux/api/baseApi.ts` over the shared axios client; each domain
+  injects its endpoints from `src/redux/state/<domain>/api.ts`.
+  Space-scoped endpoints take `spaceId` in their argument (use
+  `skipToken` when there is no active space) and periods as ISO strings.
 - API layer: `src/api/<resource>.api.ts` wraps a single axios instance
   (`src/api/instance.ts`); request/response shapes are declared in
   `src/api/dto/*.ts` and must match the backend's actual DTOs (see
