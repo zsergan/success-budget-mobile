@@ -3,12 +3,12 @@ import { Controller, type Control } from 'react-hook-form';
 
 import { Icon } from '@components';
 import { colors } from '@shared/theme';
-import type { LimitFormData } from '../useLimitEditorForm';
+import type { LimitFormValues } from '../limitSchema';
 
 import styles from './style';
 
 interface Props {
-  control: Control<LimitFormData>;
+  control: Control<LimitFormValues>;
   isGroup: boolean;
   isTotal: boolean;
   currencyCode?: string;
