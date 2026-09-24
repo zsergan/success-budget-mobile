@@ -2,9 +2,13 @@ import * as yup from 'yup';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
+import { useAlert } from '@hooks';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { verifyEmailMe } from '@redux/state/auth/thunks';
 import { selectAuth } from '@redux/state/auth/selectors';
+import { ScreenNames } from '@shared/enums';
+import type { RootStackScreenProps } from '@shared/types';
+import { isApiError } from '@shared/utils';
 
 const schema = yup.object().shape({
   code: yup
@@ -17,9 +21,12 @@ interface FormData {
   code: string;
 }
 
-const useVerifyEmailForm = () => {
+type UseVerifyEmailFormProps = Pick<RootStackScreenProps<ScreenNames.VERIFY_EMAIL_SCREEN>, 'navigation'>;
+
+const useVerifyEmailForm = ({ navigation }: UseVerifyEmailFormProps) => {
   const { userEmail } = useAppSelector(selectAuth);
   const dispatch = useAppDispatch();
+  const { addAlert } = useAlert();
 
   const {
     control,
@@ -30,8 +37,13 @@ const useVerifyEmailForm = () => {
     defaultValues: { code: '' },
   });
 
-  const onSubmit = (formData: FormData) => {
-    return dispatch(verifyEmailMe({ email: userEmail || '', code: formData.code }));
+  const onSubmit = async (formData: FormData) => {
+    const result = await dispatch(verifyEmailMe({ email: userEmail || '', code: formData.code }));
+
+    if (verifyEmailMe.rejected.match(result) && isApiError(result.payload, 409)) {
+      addAlert('This email is already verified. Sign in to continue.');
+      navigation.navigate(ScreenNames.SIGN_IN_SCREEN, undefined, { pop: true });
+    }
   };
 
   return {

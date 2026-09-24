@@ -1,5 +1,7 @@
 import { createSlice, isRejected } from '@reduxjs/toolkit';
 
+import { isApiError } from '@shared/utils/error';
+
 import initialState from './initialState';
 import { checkAuth, registerMe, loginMe, logoutMe, verifyEmailMe } from './thunks';
 
@@ -44,7 +46,10 @@ const authSlice = createSlice({
     });
 
     builder.addMatcher(isRejected(registerMe, verifyEmailMe, loginMe), (state, action) => {
-      state.error = action.payload;
+      // The verify screen sends an already verified account to sign in instead of showing this as an error.
+      const isAlreadyVerified = verifyEmailMe.rejected.match(action) && isApiError(action.payload, 409);
+
+      state.error = isAlreadyVerified ? undefined : action.payload;
     });
   },
 });

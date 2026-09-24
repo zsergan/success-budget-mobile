@@ -162,6 +162,25 @@ describe('verifyEmailMe', () => {
     expect(store.getState().auth.isSignedIn).toBe(false);
     expect(store.getState().auth.error).toEqual(invalidCodeError);
   });
+
+  it('keeps an already verified account out of the auth error, so no screen alerts it as a failure', async () => {
+    mockedVerifyEmail.mockRejectedValue(
+      axiosErrorFor({
+        message: 'Email is already verified',
+        statusCode: 409,
+        path: '/users/verify-email',
+        timestamp: '2026-01-01T00:00:00.000Z',
+      }),
+    );
+
+    const store = createTestStore();
+    const action = await store.dispatch(verifyEmailMe({ email: 'a@b.com', code: '123456' }));
+
+    expect(action.type).toBe('auth/verifyEmailMe/rejected');
+    expect(mockedSetItemAsync).not.toHaveBeenCalled();
+    expect(store.getState().auth.isSignedIn).toBe(false);
+    expect(store.getState().auth.error).toBeUndefined();
+  });
 });
 
 describe('checkAuth', () => {

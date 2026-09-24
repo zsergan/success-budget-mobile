@@ -18,7 +18,7 @@ interface Props extends RootStackScreenProps<ScreenNames.VERIFY_EMAIL_SCREEN> {}
 
 const VerifyEmailScreen = ({ navigation }: Props) => {
   const { error } = useAppSelector(selectAuth);
-  const { control, onSubmit, isSubmitting } = useVerifyEmailForm();
+  const { control, onSubmit, isSubmitting } = useVerifyEmailForm({ navigation });
   const { addAlert } = useAlert();
 
   useEffect(() => {
