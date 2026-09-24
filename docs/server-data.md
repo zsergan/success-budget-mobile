@@ -88,3 +88,109 @@ described in the lifecycle section.
   limit, and `limit_categories.category_id` is `ON DELETE RESTRICT`. A
   category with no transactions that belongs to a limit should therefore
   fail to delete with a server error.
+
+## Current lifecycle behavior
+
+What the hand-written slices and hooks do today. RTK Query replaces most of
+this machinery, so each point here is either something to keep or
+something to drop on purpose.
+
+### Loading
+
+- **Boot.** `useAuth` dispatches `checkAuth` (token from SecureStore; a
+  read failure counts as signed out). `RootNavigator` shows
+  `LOADING_SCREEN` while that runs or while `useLoadInitData` reports
+  loading.
+- **Sign-in.** `useLoadInitData` dispatches `fetchSpaces` and
+  `fetchProfile`. `fetchSpaces` keeps the current space if it is still in
+  the list, otherwise activates the personal space, otherwise the lowest
+  id. Every change of `currentSpaceId` then dispatches `fetchWallets`,
+  `fetchLimits`, `fetchCategories` and `fetchTransactions` (`History.Recent`).
+- **Initial-load gate.** The app stays on `LOADING_SCREEN` only for the
+  first load: spaces while no space is selected yet, each of wallets,
+  limits, categories and recent history while `isLoading && !hasLoaded`,
+  and profile while loading. `hasLoaded` survives space switches, so
+  background refreshes and switches never re-show the loading screen
+  (which would remount the whole signed-in navigator).
+- **Screen-owned fetches.** The Transactions tab fetches `History.Range`
+  and `History.Latest` on mount and whenever the period, the space or
+  `transaction.dataRevision` changes; `dataRevision` is bumped by
+  `transactionsInvalidated` after mutations that affect history. The
+  Members screen fetches `Members` on mount and on space change. Sign-up
+  and Create Space fetch `Currencies` on mount.
+- **No other triggers.** No refetch on screen focus, app foreground,
+  reconnect, pull-to-refresh or interval (see "Staleness with no local
+  mutation" above).
+- **Stale responses.** Each list fetch stores its `requestId` on pending
+  and ignores a fulfilled/rejected action with a different id, so an older
+  request cannot overwrite a newer one. `fetchSpaces` additionally only
+  runs its fallback activation if it is still the current request.
+  `fetchCurrencies` has no such guard.
+- **What a refresh looks like.** Home, Limits and Categories show a
+  spinner only while their list is empty; a background refresh keeps the
+  old data on screen with no indicator. `History.Range` clears its rows
+  when the period changes but keeps them for a refresh of the same period,
+  yet the Transactions screen still swaps to its skeleton for every range
+  fetch. `History.Latest` resets to `undefined` on every fetch. Members
+  exposes a separate `isRefreshing` state.
+- **Mutation state.** `isCreating` (transaction) and `isDeleting` (limit,
+  category) live in the slices; other forms track submission locally. A
+  failed wallet/category/limit mutation writes the same slice `error` the
+  list fetch uses; member mutations keep their errors local on purpose.
+
+### Errors and retry
+
+- **No automatic retries.** Every retry is a user action.
+- **Manual retry, shown only when there is no data to fall back on:**
+  Home recent activity (`fetchTransactions`), Home wallets
+  (`fetchWallets`), Limits (`fetchLimits`), Categories (`fetchCategories`),
+  Transactions period and latest (separate `rangeError` / `latestError`
+  states with their own retry), Members (`fetchMembers`). When a refresh
+  fails while data is present, the old data stays and the error is not
+  shown.
+- **No retry at all** for `fetchSpaces` or `fetchProfile`. If the initial
+  `fetchSpaces` fails, no space is ever activated and nothing space-scoped
+  loads until the next sign-in. If `fetchProfile` fails, leaving a space
+  rejects without a request because the caller's user id is unknown.
+- **Network failures** are turned into a truthy `ErrorResponse`
+  (`statusCode: 0`) by `getRejectValue`, so they never look like an empty
+  successful result.
+- **401** from the axios instance dispatches `logoutMe`, but only if the
+  request carried the token that is still stored.
+- **429** shows a global alert; `inviteMember` additionally starts a
+  cooldown from `Retry-After` that outlives space switches.
+
+### Space switch
+
+- `activateSpace(id)` is the only way to change the active space; activating
+  the current space is a no-op. Triggers: `SpaceSwitcher`, the
+  `fetchSpaces` fallback, `addSpace`, `acceptInvite`, `leaveSpace`.
+- It dispatches `spaceContextChanged` with a new, never-reused
+  `contextKey`. In the same reducer pass wallet, category, limit and
+  transaction reset to their initial state except `hasLoaded` and set
+  `isLoading: true`; member resets fully (including `hasLoaded`) except the
+  invite cooldown. Spaces, profile and currencies are kept.
+- Dropping `requestId` in that reset is what makes a late response for the
+  previous space unmatchable.
+- Mutation thunks capture `contextKey` before their request and skip their
+  follow-up refreshes and `transactionsInvalidated` if it changed while
+  the request was in flight.
+- After the switch the new space's data loads through the same effects as
+  on sign-in (`useLoadInitData`, plus the Transactions and Members screens
+  if mounted).
+
+### Sign-out
+
+- Triggered from Settings or by a 401. `logoutMe` deletes the token
+  (a storage failure still logs out) and, on fulfilled, every slice resets
+  to its initial state. `space.contextKey` keeps counting up and
+  `auth.sessionKey` is incremented, so nothing from the ended session can
+  match the next one.
+- `RootNavigator` swaps to the auth stack, unmounting every signed-in
+  screen.
+- In-flight requests: list fetches are dropped by the `requestId` reset;
+  `addSpace`, `acceptInvite` and `leaveSpace` check `isSessionActive`
+  before activating anything; `inviteMember` checks `sessionKey` so a late
+  429 can't start a cooldown in the next session.
+- There is no server-side logout call; the token is only forgotten
+  locally.
