@@ -21,8 +21,8 @@ const SettingsIcon = ({ color, size }: IconProps) => <Icon name="settings" size=
 const MainNavigator = () => {
   return (
     <Tab.Navigator
-      sceneContainerStyle={{ backgroundColor: colors.bg }}
       screenOptions={{
+        sceneStyle: { backgroundColor: colors.bg },
         tabBarStyle: { backgroundColor: colors.bg },
         tabBarActiveTintColor: colors.text,
         tabBarInactiveTintColor: colors.muted,
