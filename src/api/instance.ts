@@ -5,7 +5,9 @@ import * as SecureStore from 'expo-secure-store';
 import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
 import { BASE_API_URL, AUTH_TOKEN_KEY } from '@shared/constants';
 
-export const ApiClient = () => {
+// Every client built here shares the same auth, 401 and 429 handling -- the
+// thin *.api.ts wrappers and the RTK Query base query both go through it.
+export const createHttpClient = () => {
   const api = axios.create({ baseURL: BASE_API_URL });
 
   api.interceptors.request.use(
@@ -53,6 +55,12 @@ export const ApiClient = () => {
       return Promise.reject(error);
     },
   );
+
+  return api;
+};
+
+export const ApiClient = () => {
+  const api = createHttpClient();
 
   const get = <T>(url: string, config?: AxiosRequestConfig) => api.get<T>(url, config);
 
