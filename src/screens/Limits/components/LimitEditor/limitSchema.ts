@@ -1,5 +1,6 @@
 import * as yup from 'yup';
 
+import type { CreateLimitRequest } from '@api/dto';
 import type { LimitScope } from './types';
 
 export const MAX_LIMIT_AMOUNT = '99999999.99';
@@ -55,3 +56,7 @@ export const limitSchema = yup.object({
 });
 
 export type LimitFormValues = yup.InferType<typeof limitSchema>;
+
+// Expects values the schema has already validated and normalized.
+export const toLimitRequest = ({ scope, amount, categoryIds, name }: LimitFormValues): CreateLimitRequest =>
+  scope === 'group' ? { amount, category_ids: categoryIds, name } : { amount, category_ids: categoryIds };

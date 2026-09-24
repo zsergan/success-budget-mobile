@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useBottomSheet } from '@gorhom/bottom-sheet';
 
-import type { CreateLimitRequest } from '@api/dto';
 import type { LimitModel } from '@api/models';
 import { requireSpaceId } from '@redux/api/baseApi';
 import { useAppSelector } from '@redux/hooks';
@@ -11,7 +10,7 @@ import { useCreateLimitMutation, useUpdateLimitMutation } from '@redux/state/lim
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { useFormSubmitHandler } from '@hooks';
 import type { LimitScope } from './types';
-import { limitSchema, type LimitFormValues } from './limitSchema';
+import { limitSchema, toLimitRequest, type LimitFormValues } from './limitSchema';
 
 const scopeForLimit = (limit: LimitModel): LimitScope =>
   limit.categories.length === 0 ? 'total' : limit.categories.length === 1 ? 'category' : 'group';
@@ -87,12 +86,7 @@ const useLimitEditorForm = ({ limit, initialScope = 'category', activeCategoryId
     handleSubmit,
     formState,
     onSubmit: async (formData) => {
-      const payload: CreateLimitRequest =
-        formData.scope === 'total'
-          ? { amount: formData.amount, category_ids: [] }
-          : formData.scope === 'category'
-            ? { amount: formData.amount, category_ids: formData.categoryIds }
-            : { amount: formData.amount, category_ids: formData.categoryIds, name: formData.name };
+      const payload = toLimitRequest(formData);
 
       return limit
         ? updateLimit({ spaceId: requireSpaceId(spaceId), limitId: limit.id, data: payload }).unwrap()

@@ -1,4 +1,4 @@
-import { limitSchema, type LimitFormValues } from './limitSchema';
+import { limitSchema, toLimitRequest, type LimitFormValues } from './limitSchema';
 
 const values = (overrides: Partial<LimitFormValues>): LimitFormValues => ({
   scope: 'category',
@@ -87,5 +87,20 @@ describe('name', () => {
 
   it('ignores the name outside a group', async () => {
     await expect(errorOf({ scope: 'category', name: 'a'.repeat(61) })).resolves.toBeUndefined();
+  });
+});
+
+describe('toLimitRequest', () => {
+  it('sends the name only for a group', () => {
+    expect(toLimitRequest(values({ scope: 'group', categoryIds: [1, 2], name: 'Fun' }))).toEqual({
+      amount: '100',
+      category_ids: [1, 2],
+      name: 'Fun',
+    });
+    expect(toLimitRequest(values({ scope: 'category', name: 'Stale' }))).toEqual({ amount: '100', category_ids: [1] });
+    expect(toLimitRequest(values({ scope: 'total', categoryIds: [], name: 'Stale' }))).toEqual({
+      amount: '100',
+      category_ids: [],
+    });
   });
 });
