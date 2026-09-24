@@ -1,104 +1,133 @@
 import type { ReactNode } from 'react';
 import { Provider } from 'react-redux';
-import { createAppStore } from '@redux/Store';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
-import * as transactionApi from '@api/transaction.api';
+import type { Transaction } from '@api/dto';
+import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { activateSpace } from '@redux/state/space/thunks';
-import { transactionsInvalidated } from '@redux/state/transaction/actions';
+import { createAppStore } from '@redux/Store';
+import { AppColor, TransactionType } from '@shared/enums';
 import type { DateRange } from '@shared/utils';
 import useTransactionsData from './useTransactionsData';
 
-jest.mock('@api/transaction.api');
+const mockedRequest = jest.fn();
 
-const mockedGetTransactions = jest.mocked(transactionApi.getTransactions);
-const mockedGetLatestTransaction = jest.mocked(transactionApi.getLatestTransaction);
+jest.mock('@api/instance', () => ({
+  ApiClient: () => ({}),
+  createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
+}));
 
-const createTestStore = () => createAppStore();
+// RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
+jest.useFakeTimers();
 
-const range: DateRange = { from: new Date('2026-01-01'), to: new Date('2026-01-31'), preset: 'month' };
+interface RequestConfig {
+  url: string;
+  params?: { from?: string };
+}
 
-const wrapperFor = (store: ReturnType<typeof createTestStore>) => {
-  const Wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
+type Responder = (config: RequestConfig) => Promise<unknown>;
 
-  return Wrapper;
+let respondRange: Responder;
+let respondLatest: Responder;
+
+const serverError = () => Promise.reject({ response: { data: { statusCode: 500, message: 'boom' } } });
+const rows = (...ids: string[]) => Promise.resolve({ data: ids.map((id) => ({ ...dto, id })) });
+
+const dto: Transaction = {
+  id: 'tx-1',
+  wallet_id: 1,
+  category_id: 1,
+  transaction_type: TransactionType.EXPENSE,
+  amount: '10.00',
+  timestamp: '2026-01-05T00:00:00.000Z',
+  description: '',
+  wallet: { id: 1, wallet_name: 'Cash', design: AppColor.SLATE },
+  category: {
+    id: 1,
+    name: 'Food',
+    transaction_type: TransactionType.EXPENSE,
+    icon: 'Grocery',
+    color: AppColor.SLATE,
+    is_active: 1,
+    transaction_count: 0,
+    limit: null,
+    archived_at: null,
+  },
 };
 
-beforeEach(() => jest.clearAllMocks());
+const january: DateRange = { from: new Date('2026-01-01'), to: new Date('2026-01-31'), preset: 'month' };
+const february: DateRange = { from: new Date('2026-02-01'), to: new Date('2026-02-28'), preset: 'month' };
+
+const renderForSpace = (spaceId: number, range = january) => {
+  const store = createAppStore();
+
+  store.dispatch(activateSpace(spaceId));
+
+  const wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
+  const rendered = renderHook((props: { range: DateRange }) => useTransactionsData(props), {
+    wrapper,
+    initialProps: { range },
+  });
+
+  return { store, ...rendered };
+};
+
+const latestCalls = () =>
+  mockedRequest.mock.calls.filter(([config]: [RequestConfig]) => config.url.endsWith('/latest')).length;
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  respondRange = () => rows();
+  respondLatest = () => Promise.resolve({ data: null });
+  mockedRequest.mockImplementation((config: RequestConfig) =>
+    config.url.endsWith('/latest') ? respondLatest(config) : respondRange(config),
+  );
+});
 
 describe('useTransactionsData viewState', () => {
-  it('leaves loading forever if only isLoadingRange is watched -- regression guard for the empty-range/failed-latest case', async () => {
-    const store = createTestStore();
+  it('shows latestError when the period is empty and latest fails', async () => {
+    respondLatest = serverError;
 
-    store.dispatch(activateSpace(1));
-    mockedGetTransactions.mockResolvedValue([]);
-    mockedGetLatestTransaction.mockRejectedValue({ response: { data: { statusCode: 500 } } });
+    const { result, unmount } = renderForSpace(1);
 
-    const { result, unmount } = renderHook(() => useTransactionsData({ range }), { wrapper: wrapperFor(store) });
-
-    await waitFor(() => expect(store.getState().transaction.isLoadingLatest).toBe(false));
-    await waitFor(() => expect(store.getState().transaction.isLoadingRange).toBe(false));
-    await waitFor(() => expect(result.current.viewState).not.toBe('loading'));
-
-    expect(result.current.viewState).toBe('latestError');
+    await waitFor(() => expect(result.current.viewState).toBe('latestError'));
 
     unmount();
   });
 
-  it('shows latestError (not trueEmpty) for a genuine network failure with no HTTP response at all', async () => {
-    const store = createTestStore();
+  it('shows latestError (not trueEmpty) for a network failure with no HTTP response at all', async () => {
+    respondLatest = () => Promise.reject(new Error('Network Error'));
 
-    store.dispatch(activateSpace(1));
-    mockedGetTransactions.mockResolvedValue([]);
-    // A real network failure (offline, DNS, timeout) has no `.response` at
-    // all -- unlike a 500, which still carries one.
-    mockedGetLatestTransaction.mockRejectedValue({ message: 'Network Error', code: 'ERR_NETWORK' });
+    const { result, unmount } = renderForSpace(1);
 
-    const { result, unmount } = renderHook(() => useTransactionsData({ range }), { wrapper: wrapperFor(store) });
-
-    await waitFor(() => expect(result.current.viewState).not.toBe('loading'));
-
-    expect(result.current.viewState).toBe('latestError');
+    await waitFor(() => expect(result.current.viewState).toBe('latestError'));
 
     unmount();
   });
 
-  it('shows trueEmpty once an empty range and a confirmed-empty latest both settle', async () => {
-    const store = createTestStore();
-
-    store.dispatch(activateSpace(1));
-    mockedGetTransactions.mockResolvedValue([]);
-    mockedGetLatestTransaction.mockResolvedValue(null);
-
-    const { result, unmount } = renderHook(() => useTransactionsData({ range }), { wrapper: wrapperFor(store) });
+  it('shows trueEmpty once an empty period and a confirmed-empty latest both settle', async () => {
+    const { result, unmount } = renderForSpace(1);
 
     await waitFor(() => expect(result.current.viewState).toBe('trueEmpty'));
 
     unmount();
   });
 
-  it('shows rangeError, not a false empty state, when the range request itself fails', async () => {
-    const store = createTestStore();
+  it('shows rangeError, not a false empty state, when the period request fails', async () => {
+    respondRange = serverError;
 
-    store.dispatch(activateSpace(1));
-    mockedGetTransactions.mockRejectedValue({ response: { data: { statusCode: 500 } } });
-    mockedGetLatestTransaction.mockResolvedValue(null);
-
-    const { result, unmount } = renderHook(() => useTransactionsData({ range }), { wrapper: wrapperFor(store) });
+    const { result, unmount } = renderForSpace(1);
 
     await waitFor(() => expect(result.current.viewState).toBe('rangeError'));
 
     unmount();
   });
 
-  it('stays ready on a non-empty range even if latest fails', async () => {
-    const store = createTestStore();
+  it('stays ready on a non-empty period even if latest fails', async () => {
+    respondRange = () => rows('tx-1');
+    respondLatest = serverError;
 
-    store.dispatch(activateSpace(1));
-    mockedGetTransactions.mockResolvedValue([{ id: 'tx-1' } as never]);
-    mockedGetLatestTransaction.mockRejectedValue({ response: { data: { statusCode: 500 } } });
-
-    const { result, unmount } = renderHook(() => useTransactionsData({ range }), { wrapper: wrapperFor(store) });
+    const { result, unmount } = renderForSpace(1);
 
     await waitFor(() => expect(result.current.viewState).toBe('ready'));
 
@@ -106,24 +135,55 @@ describe('useTransactionsData viewState', () => {
   });
 });
 
-describe('latest refresh ownership', () => {
-  it('refetches latest when dataRevision bumps while already mounted -- the only trigger, since addTransaction no longer dispatches it directly', async () => {
-    const store = createTestStore();
+describe('switching arguments', () => {
+  it("never shows the previous period's rows while the new one loads", async () => {
+    respondRange = (config) => (config.params?.from?.startsWith('2026-01') ? rows('jan') : new Promise(() => {}));
 
-    store.dispatch(activateSpace(1));
-    mockedGetTransactions.mockResolvedValue([]);
-    mockedGetLatestTransaction.mockResolvedValue(null);
+    const { result, rerender, unmount } = renderForSpace(1);
 
-    const { unmount } = renderHook(() => useTransactionsData({ range }), { wrapper: wrapperFor(store) });
+    await waitFor(() => expect(result.current.transactions.map(({ id }) => id)).toEqual(['jan']));
 
-    await waitFor(() => expect(mockedGetLatestTransaction).toHaveBeenCalledTimes(1));
+    rerender({ range: february });
 
-    // Simulates what addTransaction/addWallet do on a successful mutation.
+    expect(result.current.viewState).toBe('loading');
+    expect(result.current.transactions).toEqual([]);
+
+    unmount();
+  });
+
+  it("never shows the previous space's rows while the new space loads", async () => {
+    respondRange = (config) => (config.url.startsWith('/spaces/1/') ? rows('space-1') : new Promise(() => {}));
+
+    const { store, result, unmount } = renderForSpace(1);
+
+    await waitFor(() => expect(result.current.transactions.map(({ id }) => id)).toEqual(['space-1']));
+
     act(() => {
-      store.dispatch(transactionsInvalidated({ contextKey: store.getState().space.contextKey }));
+      store.dispatch(activateSpace(2));
     });
 
-    await waitFor(() => expect(mockedGetLatestTransaction).toHaveBeenCalledTimes(2));
+    expect(result.current.viewState).toBe('loading');
+    expect(result.current.transactions).toEqual([]);
+
+    unmount();
+  });
+});
+
+describe('invalidation', () => {
+  it('refetches the period and latest when history is invalidated for this space, keeping rows meanwhile', async () => {
+    respondRange = () => rows('tx-1');
+
+    const { store, result, unmount } = renderForSpace(1);
+
+    await waitFor(() => expect(result.current.viewState).toBe('ready'));
+    const latestBefore = latestCalls();
+
+    act(() => {
+      store.dispatch(baseApi.util.invalidateTags(spaceTags(1, 'Transactions')));
+    });
+
+    expect(result.current.viewState).toBe('ready');
+    await waitFor(() => expect(latestCalls()).toBe(latestBefore + 1));
 
     unmount();
   });

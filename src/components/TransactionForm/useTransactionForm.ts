@@ -5,8 +5,10 @@ import { useBottomSheet } from '@gorhom/bottom-sheet';
 
 import type { CreateTransactionRequest } from '@api/dto';
 import { TransactionType } from '@shared/enums';
-import { useAppDispatch } from '@redux/hooks';
-import { addTransaction } from '@redux/state/transaction/thunks';
+import { requireSpaceId } from '@redux/api/baseApi';
+import { useAppSelector } from '@redux/hooks';
+import { selectCurrentSpaceId } from '@redux/state/space/selectors';
+import { useCreateTransactionMutation } from '@redux/state/transaction/api';
 import { positiveAmountSchema } from '@shared/utils';
 import { useFormSubmitHandler } from '@hooks';
 
@@ -35,7 +37,8 @@ interface UseTransactionFormProps {
 }
 
 const useTransactionForm = ({ transactionType, initialWalletId, onSaved }: UseTransactionFormProps) => {
-  const dispatch = useAppDispatch();
+  const spaceId = useAppSelector(selectCurrentSpaceId);
+  const [createTransaction] = useCreateTransactionMutation();
   const { close } = useBottomSheet();
 
   const {
@@ -61,7 +64,7 @@ const useTransactionForm = ({ transactionType, initialWalletId, onSaved }: UseTr
   const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<TransactionFormData>({
     handleSubmit,
     formState: { isSubmitting, isSubmitSuccessful },
-    onSubmit: (formData) => {
+    onSubmit: async (formData) => {
       const payload: CreateTransactionRequest = {
         amount: formData.amount,
         wallet_id: formData.wallet_id,
@@ -71,7 +74,7 @@ const useTransactionForm = ({ transactionType, initialWalletId, onSaved }: UseTr
         description: formData.notes,
       };
 
-      return dispatch(addTransaction(payload)).unwrap();
+      return createTransaction({ spaceId: requireSpaceId(spaceId), data: payload }).unwrap();
     },
     onSuccess: () => {
       close();

@@ -2,11 +2,11 @@ import { useRef, useState } from 'react';
 
 import type { TransactionComposerHandle } from '@components';
 import { Fab, RootLayout, SpaceSwitcher, TransactionComposer } from '@components';
-import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
+import { useSpaceArg } from '@redux/hooks';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { EMPTY_WALLETS, getTotalBalance } from '@redux/state/wallet/selectors';
-import { selectTransaction } from '@redux/state/transaction/selectors';
-import { fetchTransactions } from '@redux/state/transaction/thunks';
+import { useGetTransactionsQuery } from '@redux/state/transaction/api';
+import { EMPTY_TRANSACTIONS } from '@redux/state/transaction/selectors';
 import { useBalanceVisibility } from '@hooks';
 import type { ScreenNames } from '@shared/enums';
 import type { MainTabScreenProps } from '@shared/types';
@@ -20,18 +20,19 @@ import styles from './style';
 interface Props extends MainTabScreenProps<ScreenNames.HOME_TAB> {}
 
 const HomeScreen = ({ navigation }: Props) => {
-  const dispatch = useAppDispatch();
   const [focusedWalletId, setFocusedWalletId] = useState<number | undefined>(undefined);
   const composerRef = useRef<TransactionComposerHandle>(null);
 
-  const { currentData: walletsOverview } = useGetWalletsQuery(useSpaceArg());
+  const spaceArg = useSpaceArg();
+  const { currentData: walletsOverview } = useGetWalletsQuery(spaceArg);
   const { total, currencyCode, walletsCount, deltaPercent } = getTotalBalance(walletsOverview);
   const wallets = walletsOverview?.wallets ?? EMPTY_WALLETS;
   const {
-    transactions,
-    isLoading: isLoadingTransactions,
-    error: transactionsError,
-  } = useAppSelector(selectTransaction);
+    currentData: recentTransactions,
+    isFetching: isLoadingTransactions,
+    isError: hasTransactionsError,
+    refetch: refetchTransactions,
+  } = useGetTransactionsQuery(spaceArg);
   const { isHidden, toggle } = useBalanceVisibility();
 
   // The focused wallet can disappear (deleted, or a space switch replaced the list), so fall back to the first one.
@@ -65,12 +66,12 @@ const HomeScreen = ({ navigation }: Props) => {
 
         <RecentActivity
           navigation={navigation}
-          transactions={transactions}
+          transactions={recentTransactions ?? EMPTY_TRANSACTIONS}
           currencyCode={currencyCode}
           hasWallets={wallets.length > 0}
           isLoading={isLoadingTransactions}
-          error={transactionsError}
-          onRetry={() => dispatch(fetchTransactions())}
+          hasError={hasTransactionsError}
+          onRetry={refetchTransactions}
         />
       </RootLayout>
 

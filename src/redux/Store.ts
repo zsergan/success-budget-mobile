@@ -2,14 +2,12 @@ import type { Action, ThunkAction } from '@reduxjs/toolkit';
 import { combineReducers, configureStore, createListenerMiddleware } from '@reduxjs/toolkit';
 
 import { baseApi } from './api/baseApi';
-import { startLegacyBridge } from './api/legacyBridge';
 import authReducer from './state/auth/slice';
 import { logoutMe } from './state/auth/thunks';
 import currencyReducer from './state/currency/slice';
 import memberReducer from './state/member/slice';
 import profileReducer from './state/profile/slice';
 import spaceReducer from './state/space/slice';
-import transactionReducer from './state/transaction/slice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -17,7 +15,6 @@ const rootReducer = combineReducers({
   member: memberReducer,
   profile: profileReducer,
   space: spaceReducer,
-  transaction: transactionReducer,
   [baseApi.reducerPath]: baseApi.reducer,
 });
 
@@ -34,8 +31,6 @@ export const createAppStore = (preloadedState?: Partial<RootState>) => {
       dispatch(baseApi.util.resetApiState());
     },
   });
-
-  startLegacyBridge(sessionListener);
 
   return configureStore({
     reducer: rootReducer,

@@ -123,7 +123,14 @@ describe('auth stack', () => {
 });
 
 const HomeTab = ({ navigation }: MainTabScreenProps<ScreenNames.HOME_TAB>) => (
-  <RecentActivity navigation={navigation} transactions={[]} hasWallets isLoading={false} onRetry={jest.fn()} />
+  <RecentActivity
+    navigation={navigation}
+    transactions={[]}
+    hasWallets
+    isLoading={false}
+    hasError={false}
+    onRetry={jest.fn()}
+  />
 );
 
 const SettingsTab = ({ navigation }: MainTabScreenProps<ScreenNames.SETTINGS_TAB>) => (

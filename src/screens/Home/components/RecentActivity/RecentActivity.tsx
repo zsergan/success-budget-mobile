@@ -1,7 +1,6 @@
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import { EmptyState, SectionTitle, TinyButton, TransactionCard } from '@components';
-import type { ErrorResponse } from '@api/dto';
 import type { TransactionModel } from '@api/models';
 import type { MainTabNavigationProp } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
@@ -18,11 +17,19 @@ interface Props {
   currencyCode?: string;
   hasWallets: boolean;
   isLoading: boolean;
-  error?: ErrorResponse;
+  hasError: boolean;
   onRetry: () => void;
 }
 
-const RecentActivity = ({ navigation, transactions, currencyCode, hasWallets, isLoading, error, onRetry }: Props) => {
+const RecentActivity = ({
+  navigation,
+  transactions,
+  currencyCode,
+  hasWallets,
+  isLoading,
+  hasError,
+  onRetry,
+}: Props) => {
   const groups = groupTransactionsByDay(transactions.slice(0, RECENT_TRANSACTIONS_LIMIT), currencyCode);
 
   return (
@@ -44,7 +51,7 @@ const RecentActivity = ({ navigation, transactions, currencyCode, hasWallets, is
           <View style={styles.loadingContainer}>
             <ActivityIndicator color={colors.accent} />
           </View>
-        ) : !isLoading && error && transactions.length === 0 ? (
+        ) : !isLoading && hasError && transactions.length === 0 ? (
           <EmptyState
             icon="list"
             title="Couldn't load recent activity"

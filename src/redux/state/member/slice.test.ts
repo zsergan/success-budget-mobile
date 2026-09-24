@@ -108,7 +108,7 @@ describe('member slice', () => {
     expect(state.members).toEqual([]);
   });
 
-  it('resets hasLoaded on a space switch, unlike wallet/category/limit/transaction -- member is not part of the app bootstrap gate', () => {
+  it('resets hasLoaded on a space switch so the new space reads as loading, not refreshing', () => {
     const loaded = { ...initialState, members: [member], hasLoaded: true };
 
     const state = memberReducer(loaded, spaceContextChanged({ spaceId: 2, contextKey: 1 }));

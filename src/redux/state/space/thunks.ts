@@ -7,11 +7,10 @@ import type { AppThunk, RootState } from '@redux/Store';
 import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
 import { isSessionActive } from '../auth/thunks';
 
-// The one event that means "the active space identity changed". wallet,
-// category, limit, transaction and member all listen for this (not just
-// `currentSpaceId`) to synchronously drop the previous space's data and
-// reject in-flight responses that belong to it -- see `contextKey` on
-// space/initialState for why a plain id comparison isn't enough.
+// The one event that means "the active space identity changed". Slices that
+// still hold space data (member) listen for this (not just `currentSpaceId`)
+// to synchronously drop the previous space's data and reject in-flight
+// responses that belong to it -- see `contextKey` on space/initialState.
 export const spaceContextChanged = createAction<{ spaceId: number | null; contextKey: number }>('space/contextChanged');
 
 // The only way `currentSpaceId` should change. Selecting the space that's

@@ -2,15 +2,14 @@ import { useEffect, useRef } from 'react';
 import { skipToken } from '@reduxjs/toolkit/query';
 
 import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
-import { fetchTransactions } from '@redux/state/transaction/thunks';
-import { fetchProfile } from '@redux/state/profile/thunks';
-import { fetchSpaces } from '@redux/state/space/thunks';
-import { useGetWalletsQuery } from '@redux/state/wallet/api';
-import { useGetLimitsQuery } from '@redux/state/limit/api';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
-import { selectTransaction } from '@redux/state/transaction/selectors';
+import { useGetLimitsQuery } from '@redux/state/limit/api';
 import { selectProfile } from '@redux/state/profile/selectors';
+import { fetchProfile } from '@redux/state/profile/thunks';
 import { selectCurrentSpaceId, selectSpace } from '@redux/state/space/selectors';
+import { fetchSpaces } from '@redux/state/space/thunks';
+import { useGetTransactionsQuery } from '@redux/state/transaction/api';
+import { useGetWalletsQuery } from '@redux/state/wallet/api';
 
 interface UseLoadInitDataProps {
   isSignedIn: boolean;
@@ -20,7 +19,6 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   const dispatch = useAppDispatch();
   const { isLoading: isSpaceLoading } = useAppSelector(selectSpace);
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
-  const { isLoading: isTransactionLoading, hasLoaded: hasTransactionsLoaded } = useAppSelector(selectTransaction);
   const { isLoading: isProfileLoading } = useAppSelector(selectProfile);
   const sessionKey = useAppSelector((state) => state.auth.sessionKey);
 
@@ -32,6 +30,7 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
     useGetWalletsQuery(sessionSpaceArg),
     useGetCategoriesQuery(sessionSpaceArg),
     useGetLimitsQuery(sessionSpaceArg),
+    useGetTransactionsQuery(sessionSpaceArg),
   ];
 
   useEffect(() => {
@@ -41,16 +40,6 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
     }
   }, [dispatch, isSignedIn]);
 
-  // Re-fires on every space switch, not just the initial load, so wallets/
-  // limits/categories/transactions always match whichever space is
-  // currently selected -- keeping Home's "Recent activity" in this same
-  // gate stops it flashing the previous space's transactions on switch.
-  useEffect(() => {
-    if (isSignedIn && currentSpaceId !== null) {
-      dispatch(fetchTransactions());
-    }
-  }, [dispatch, isSignedIn, currentSpaceId]);
-
   // isSpaceLoading also flips true for background refreshes unrelated to an
   // explicit navigation (addSpace/removeSpace/acceptInvite/leaving a
   // member all re-dispatch fetchSpaces) -- only the initial bootstrap,
@@ -58,17 +47,9 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   // LOADING_SCREEN for it.
   const isInitialSpaceLoad = isSpaceLoading && currentSpaceId === null;
 
-  // Same problem as space, and the same fix, for every other domain whose
-  // mutation thunks re-dispatch their own list fetch in the background
-  // (addWallet/editWallet/removeWallet -> fetchWallets; addLimit/editLimit/
-  // removeLimit -> fetchLimits; addCategory/editCategory/deleteCategory/
-  // reorderCategories -> fetchCategories; addTransaction -> fetchTransactions).
-  // Gating the whole app on any of these raw flags would tear down and
-  // remount the entire signed-in navigator mid-mutation, breaking any
-  // pending navigation.goBack() or dropping the user back on the Home tab.
-
   // Holds the app on LOADING_SCREEN only until the first space's data has
-  // settled (loaded or failed) once per session, never again on a switch.
+  // settled (loaded or failed) once per session: gating on a space switch or
+  // a background refetch would remount the whole signed-in navigator.
   const areSpaceQueriesSettled = spaceQueries.every((query) => query.currentData !== undefined || query.isError);
   const settledSessionRef = useRef<number | null>(null);
 
@@ -78,11 +59,9 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
 
   const isInitialSpaceDataLoad =
     currentSpaceId !== null && !areSpaceQueriesSettled && settledSessionRef.current !== sessionKey;
-  const isInitialTransactionLoad = isTransactionLoading && !hasTransactionsLoaded;
 
   return {
-    isLoading:
-      isSignedIn && (isInitialSpaceLoad || isInitialSpaceDataLoad || isInitialTransactionLoad || isProfileLoading),
+    isLoading: isSignedIn && (isInitialSpaceLoad || isInitialSpaceDataLoad || isProfileLoading),
   };
 };
 
