@@ -182,3 +182,28 @@ it.each([
 
   expect(screen.queryByText('Category is in use')).toBeNull();
 });
+
+describe('the limit notice', () => {
+  it.each([
+    ['delete', MODES.delete.category],
+    ['archive', MODES.archive.category],
+  ])('on %s, says a group limit keeps its other categories', (_mode, category) => {
+    const { open } = renderDialog({ ...category, limit: { id: 9, name: 'Fun' } });
+
+    open();
+
+    expect(screen.getByText('Removed from the «Fun» limit')).toBeTruthy();
+    expect(screen.getByText(/stops counting this category and keeps its others/)).toBeTruthy();
+  });
+
+  it.each([
+    ['delete', MODES.delete.category],
+    ['archive', MODES.archive.category],
+  ])("on %s, says the category's own limit is deleted with it", (_mode, category) => {
+    const { open } = renderDialog({ ...category, limit: { id: 9, name: null } });
+
+    open();
+
+    expect(screen.getByText('Its limit is deleted too')).toBeTruthy();
+  });
+});
