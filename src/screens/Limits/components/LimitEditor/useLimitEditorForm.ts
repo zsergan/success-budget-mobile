@@ -29,7 +29,8 @@ const useLimitEditorForm = ({ limit, initialScope = 'category', activeCategoryId
   const { close } = useBottomSheet();
   const [nameTouched, setNameTouched] = useState(false);
 
-  const { control, handleSubmit, watch, getValues, setValue, reset, formState } = useForm({
+  const { control, handleSubmit, watch, getValues, setValue, trigger, reset, formState } = useForm({
+    mode: 'onChange',
     resolver: yupResolver(limitSchema),
     defaultValues: {
       scope: limit ? scopeForLimit(limit) : initialScope,
@@ -46,7 +47,7 @@ const useLimitEditorForm = ({ limit, initialScope = 'category', activeCategoryId
     const selected = getValues('categoryIds');
     const stillActive = selected.filter((id) => activeCategoryIds.includes(id));
 
-    if (stillActive.length !== selected.length) setValue('categoryIds', stillActive);
+    if (stillActive.length !== selected.length) setValue('categoryIds', stillActive, { shouldValidate: true });
   }, [activeCategoryIds, getValues, setValue]);
 
   const setScope = (scope: LimitScope) => {
@@ -55,6 +56,8 @@ const useLimitEditorForm = ({ limit, initialScope = 'category', activeCategoryId
     if (scope !== 'group') {
       setValue('categoryIds', scope === 'total' ? [] : watch('categoryIds').slice(0, 1));
     }
+
+    trigger(['scope', 'categoryIds']);
   };
 
   const toggleCategory = (categoryId: number, allCategoryNames: Record<number, string>) => {
@@ -74,12 +77,15 @@ const useLimitEditorForm = ({ limit, initialScope = 'category', activeCategoryId
 
     if (scope === 'group' && !nameTouched) {
       setValue('name', next.map((id) => allCategoryNames[id]).join(', '));
+      trigger(['categoryIds', 'name']);
+    } else {
+      trigger('categoryIds');
     }
   };
 
   const onNameChange = (value: string) => {
     setNameTouched(true);
-    setValue('name', value);
+    setValue('name', value, { shouldValidate: true });
   };
 
   const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<LimitFormValues>({
@@ -104,6 +110,7 @@ const useLimitEditorForm = ({ limit, initialScope = 'category', activeCategoryId
     toggleCategory,
     onNameChange,
     onSubmit,
+    isValid: formState.isValid,
     isSubmitDisabled,
     closeBottomSheet: close,
   };
