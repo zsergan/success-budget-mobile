@@ -1,11 +1,11 @@
 import type { Space } from '@api/dto';
-import type { NavigationType } from '@shared/types';
+import type { MainTabNavigationProp } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import SettingsRow from '../SettingsRow/SettingsRow';
 import SettingsSection from '../SettingsSection/SettingsSection';
 
 interface Props {
-  navigation: NavigationType<ScreenNames.SETTINGS_TAB>;
+  navigation: MainTabNavigationProp<ScreenNames.SETTINGS_TAB>;
   currentSpace?: Space;
 }
 

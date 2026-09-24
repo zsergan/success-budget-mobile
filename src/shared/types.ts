@@ -1,15 +1,20 @@
+import type { BottomTabNavigationProp, BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { CompositeNavigationProp, CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ScreenNames, AppColor } from '@shared/enums';
 
 type AddWalletParams = { id: 'new' } | { id: number; walletName: string; balance: string; design: AppColor };
 
-export type RootStackParamList = {
+export type MainTabParamList = {
   [ScreenNames.HOME_TAB]: undefined;
-  [ScreenNames.LIMITS_TAB]: undefined;
-  [ScreenNames.HOME_SCREEN]: undefined;
-  [ScreenNames.ADD_WALLET_SCREEN]: AddWalletParams;
   [ScreenNames.TRANSACTIONS_TAB]: undefined;
+  [ScreenNames.LIMITS_TAB]: undefined;
   [ScreenNames.SETTINGS_TAB]: undefined;
+};
+
+export type RootStackParamList = {
+  [ScreenNames.HOME_SCREEN]: NavigatorScreenParams<MainTabParamList>;
+  [ScreenNames.ADD_WALLET_SCREEN]: AddWalletParams;
   [ScreenNames.CATEGORIES_SCREEN]: undefined;
   [ScreenNames.CREATE_SPACE_SCREEN]: undefined;
   [ScreenNames.MEMBERS_SCREEN]: undefined;
@@ -21,8 +26,17 @@ export type RootStackParamList = {
   [ScreenNames.VERIFY_EMAIL_SCREEN]: undefined;
 };
 
-export interface ScreenProps<T extends ScreenNames> extends NativeStackScreenProps<RootStackParamList, T> {}
-export type NavigationType<T extends ScreenNames> = NativeStackNavigationProp<RootStackParamList, T>;
+export type RootStackScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<RootStackParamList, T>;
+
+export type MainTabScreenProps<T extends keyof MainTabParamList> = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, T>,
+  RootStackScreenProps<keyof RootStackParamList>
+>;
+
+export type MainTabNavigationProp<T extends keyof MainTabParamList> = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, T>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 // UI + category icon names (see `src/shared/icons.ts` for each path); legacy names are excluded here but still resolved there.
 export type IconType =

@@ -9,7 +9,7 @@ import { fetchCurrencies } from '@redux/state/currency/thunks';
 import { addSpace } from '@redux/state/space/thunks';
 import type { ScreenNames } from '@shared/enums';
 import { SpaceType } from '@shared/enums';
-import type { ScreenProps } from '@shared/types';
+import type { RootStackScreenProps } from '@shared/types';
 import { useFormSubmitHandler } from '@hooks';
 
 interface CreateSpaceFormData {
@@ -26,7 +26,7 @@ const schema = yup.object().shape({
   invites: yup.array().of(yup.string().required()).required(),
 });
 
-type UseCreateSpaceFormProps = Pick<ScreenProps<ScreenNames.CREATE_SPACE_SCREEN>, 'navigation'>;
+type UseCreateSpaceFormProps = Pick<RootStackScreenProps<ScreenNames.CREATE_SPACE_SCREEN>, 'navigation'>;
 
 const useCreateSpaceForm = ({ navigation }: UseCreateSpaceFormProps) => {
   const { currencies } = useAppSelector(selectCurrency);

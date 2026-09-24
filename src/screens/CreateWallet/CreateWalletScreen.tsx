@@ -2,7 +2,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
 import { Input, RootLayout, Button, SectionTitle, GradientBackground, WalletCard, Icon } from '@components';
-import type { ScreenProps } from '@shared/types';
+import type { RootStackScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
 import { gradients, walletTextColors } from '@shared/constants';
 import { CATEGORY_COLOR_NAMES, CATEGORY_COLOR_ORDER } from '@shared/categoryColors';
@@ -10,7 +10,7 @@ import useCreateWalletForm from './useCreateWalletForm';
 
 import styles from './style';
 
-interface Props extends ScreenProps<ScreenNames.ADD_WALLET_SCREEN> {}
+interface Props extends RootStackScreenProps<ScreenNames.ADD_WALLET_SCREEN> {}
 
 const CreateWalletScreen = ({ navigation, route }: Props) => {
   const { spaceCurrencyCode, isNewWallet, control, onSubmit, watch, isSubmitDisabled } = useCreateWalletForm({

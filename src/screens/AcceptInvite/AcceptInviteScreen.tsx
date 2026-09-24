@@ -3,12 +3,12 @@ import { Controller } from 'react-hook-form';
 
 import { Button, Input, RootLayout, SectionTitle } from '@components';
 import type { ScreenNames } from '@shared/enums';
-import type { ScreenProps } from '@shared/types';
+import type { RootStackScreenProps } from '@shared/types';
 import useAcceptInviteForm from './useAcceptInviteForm';
 
 import styles from './style';
 
-interface Props extends ScreenProps<ScreenNames.ACCEPT_INVITE_SCREEN> {}
+interface Props extends RootStackScreenProps<ScreenNames.ACCEPT_INVITE_SCREEN> {}
 
 const AcceptInviteScreen = ({ navigation }: Props) => {
   const { control, onSubmit, isSubmitDisabled } = useAcceptInviteForm({ navigation });

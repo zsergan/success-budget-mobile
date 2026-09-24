@@ -3,7 +3,7 @@ import { View, Text } from 'react-native';
 import { Controller } from 'react-hook-form';
 
 import { Button, H, Input, PasswordInput } from '@components';
-import type { ScreenProps } from '@shared/types';
+import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { useAppSelector } from '@redux/hooks';
 import { selectAuth } from '@redux/state/auth/selectors';
@@ -14,7 +14,7 @@ import useSignInForm from './useSignInForm';
 
 import styles from '../style';
 
-interface Props extends ScreenProps<ScreenNames.SIGN_IN_SCREEN> {}
+interface Props extends RootStackScreenProps<ScreenNames.SIGN_IN_SCREEN> {}
 
 const SignInScreen = ({ navigation }: Props) => {
   const { error } = useAppSelector(selectAuth);

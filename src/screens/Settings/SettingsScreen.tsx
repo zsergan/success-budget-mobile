@@ -8,7 +8,7 @@ import { selectCategory } from '@redux/state/category/selectors';
 import { selectTotalBalance } from '@redux/state/wallet/selectors';
 import { selectCurrentSpace } from '@redux/state/space/selectors';
 import { useAlert, useThemePreference } from '@hooks';
-import type { ScreenProps } from '@shared/types';
+import type { MainTabScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
 
 import DeleteAccountDialog from './components/DeleteAccountDialog/DeleteAccountDialog';
@@ -23,7 +23,7 @@ import LogoutDialog from './components/LogoutDialog/LogoutDialog';
 
 import styles from './style';
 
-interface Props extends ScreenProps<ScreenNames.SETTINGS_TAB> {}
+interface Props extends MainTabScreenProps<ScreenNames.SETTINGS_TAB> {}
 
 const SettingsScreen = ({ navigation }: Props) => {
   const dispatch = useAppDispatch();

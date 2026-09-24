@@ -4,9 +4,9 @@ import { HomeScreen, LimitsScreen, SettingsScreen, TransactionsScreen } from '@s
 import { Icon } from '@components';
 import { colors } from '@shared/theme';
 import { ScreenNames } from '@shared/enums';
-import type { RootStackParamList } from '@shared/types';
+import type { MainTabParamList } from '@shared/types';
 
-const Tab = createBottomTabNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<MainTabParamList>();
 
 interface IconProps {
   color: string;
