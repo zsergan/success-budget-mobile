@@ -83,6 +83,9 @@ const styles = StyleSheet.create({
     color: colors.muted,
     textAlign: 'center',
   },
+  heroSubError: {
+    color: colors.danger,
+  },
   spentContext: {
     borderRadius: theme.radius.md,
     padding: theme.spacing.md,

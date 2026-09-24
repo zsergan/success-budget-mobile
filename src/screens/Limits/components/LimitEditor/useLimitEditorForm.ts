@@ -111,6 +111,7 @@ const useLimitEditorForm = ({ limit, initialScope = 'category', activeCategoryId
     onNameChange,
     onSubmit,
     isValid: formState.isValid,
+    errors: formState.errors,
     isSubmitDisabled,
     closeBottomSheet: close,
   };

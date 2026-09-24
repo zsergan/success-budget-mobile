@@ -12,10 +12,11 @@ interface Props {
   categoryIds: number[];
   claimedElsewhere: Set<number>;
   isGroup: boolean;
+  error?: string;
   onToggleCategory: (categoryId: number) => void;
 }
 
-const CategoryPicker = ({ categories, categoryIds, claimedElsewhere, isGroup, onToggleCategory }: Props) => (
+const CategoryPicker = ({ categories, categoryIds, claimedElsewhere, isGroup, error, onToggleCategory }: Props) => (
   <View style={styles.section}>
     <View style={styles.sectionLabelRow}>
       <Text style={styles.sectionLabel}>{isGroup ? 'Categories in this limit' : 'Category'}</Text>
@@ -71,6 +72,8 @@ const CategoryPicker = ({ categories, categoryIds, claimedElsewhere, isGroup, on
         );
       })}
     </View>
+
+    {error && <Text style={styles.error}>{error}</Text>}
 
     {isGroup && claimedElsewhere.size > 0 && (
       <Text style={styles.takenHint}>Greyed-out categories already belong to another limit.</Text>

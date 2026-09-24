@@ -40,12 +40,21 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
   const { total, categoryLimits } = useGetLimitsQuery(spaceArg).currentData ?? EMPTY_LIMITS;
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
-  const { control, watch, setScope, toggleCategory, onNameChange, onSubmit, isSubmitDisabled, closeBottomSheet } =
-    useLimitEditorForm({
-      limit,
-      initialScope,
-      activeCategoryIds: categories && expenses.map((category) => category.id),
-    });
+  const {
+    control,
+    watch,
+    setScope,
+    toggleCategory,
+    onNameChange,
+    onSubmit,
+    isSubmitDisabled,
+    errors,
+    closeBottomSheet,
+  } = useLimitEditorForm({
+    limit,
+    initialScope,
+    activeCategoryIds: categories && expenses.map((category) => category.id),
+  });
 
   const scope = watch('scope');
   const categoryIds = watch('categoryIds');
@@ -131,6 +140,7 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
               categoryIds={categoryIds}
               claimedElsewhere={claimedElsewhere}
               isGroup={isGroup}
+              error={errors.categoryIds?.message}
               onToggleCategory={(categoryId) => toggleCategory(categoryId, namesById)}
             />
           )}

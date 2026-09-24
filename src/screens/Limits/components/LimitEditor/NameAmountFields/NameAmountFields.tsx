@@ -40,14 +40,14 @@ const NameAmountFields = ({ control, isGroup, isTotal, currencyCode, onNameChang
       </View>
     )}
 
-    <View style={styles.hero}>
-      <Text style={styles.heroLabel}>{isTotal ? 'All expenses this month' : 'Monthly limit'}</Text>
+    <Controller
+      name="amount"
+      control={control}
+      render={({ field: { onChange, value }, fieldState: { error } }) => (
+        <View style={styles.hero}>
+          <Text style={styles.heroLabel}>{isTotal ? 'All expenses this month' : 'Monthly limit'}</Text>
 
-      <View style={styles.heroRow}>
-        <Controller
-          name="amount"
-          control={control}
-          render={({ field: { onChange, value } }) => (
+          <View style={styles.heroRow}>
             <TextInput
               value={value}
               onChangeText={onChange}
@@ -57,16 +57,17 @@ const NameAmountFields = ({ control, isGroup, isTotal, currencyCode, onNameChang
               style={styles.heroAmount}
               returnKeyType="done"
             />
-          )}
-        />
 
-        {currencyCode && <Text style={styles.heroCurrency}>{currencyCode}</Text>}
-      </View>
+            {currencyCode && <Text style={styles.heroCurrency}>{currencyCode}</Text>}
+          </View>
 
-      <Text style={styles.heroSub}>
-        {isTotal ? 'Cap for every expense across all wallets' : 'Counted across all wallets together'}
-      </Text>
-    </View>
+          <Text style={[styles.heroSub, !!error && styles.heroSubError]}>
+            {error?.message ??
+              (isTotal ? 'Cap for every expense across all wallets' : 'Counted across all wallets together')}
+          </Text>
+        </View>
+      )}
+    />
 
     {spentHint && (
       <View style={styles.spentContext}>

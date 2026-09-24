@@ -90,6 +90,12 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: colors.muted,
   },
+  error: {
+    fontFamily: theme.fonts.medium,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    color: colors.danger,
+  },
 });
 
 export default styles;
