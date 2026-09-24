@@ -1,16 +1,15 @@
-import { Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { ActivityIndicator, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 
 import { Icon } from '@components';
 import ModalContainer from '@components/Modals/ModalContainer/ModalContainer';
 import type { CategoryModel } from '@api/models';
 import { requireSpaceId } from '@redux/api/baseApi';
-import { useAppSelector, useSessionGuard } from '@redux/hooks';
+import { useAppSelector } from '@redux/hooks';
 import { useDeleteCategoryMutation } from '@redux/state/category/api';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
-import { getErrorMessage } from '@shared/utils';
-import { useAlert } from '@hooks';
+import { useConfirmAction } from '@hooks';
 
 import styles from './style';
 
@@ -27,8 +26,7 @@ interface Props {
 const DeleteCategoryDialog = ({ category, onClose }: Props) => {
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const [deleteCategory] = useDeleteCategoryMutation();
-  const { addAlert } = useAlert();
-  const captureSession = useSessionGuard();
+  const { run, isPending, error, resetError } = useConfirmAction();
 
   if (!category) {
     return null;
@@ -36,20 +34,23 @@ const DeleteCategoryDialog = ({ category, onClose }: Props) => {
 
   const willDelete = category.transactionCount === 0;
 
-  const handleConfirm = async () => {
+  const confirmColor = willDelete ? '#FFFDFA' : colors.onSecondary;
+  const confirmLabel = willDelete ? 'Delete category' : 'Archive category';
+  const pendingLabel = willDelete ? 'Deleting…' : 'Archiving…';
+
+  const handleClose = () => {
+    if (isPending) return;
+
+    resetError();
     onClose();
+  };
 
-    const isSessionCurrent = captureSession();
-
-    try {
-      await deleteCategory({ spaceId: requireSpaceId(spaceId), categoryId: category.id }).unwrap();
-    } catch (error: unknown) {
-      if (isSessionCurrent()) addAlert(getErrorMessage(error));
-    }
+  const handleConfirm = () => {
+    run(() => deleteCategory({ spaceId: requireSpaceId(spaceId), categoryId: category.id }), onClose);
   };
 
   return (
-    <ModalContainer isVisible={!!category} onClose={onClose} animationType="fade">
+    <ModalContainer isVisible={!!category} onClose={handleClose} animationType="fade">
       <TouchableWithoutFeedback>
         <View style={styles.card}>
           <View style={styles.headerRow}>
@@ -107,25 +108,32 @@ const DeleteCategoryDialog = ({ category, onClose }: Props) => {
             </View>
           )}
 
+          {error && <Text style={styles.error}>{error}</Text>}
+
           <View style={styles.actions}>
             <TouchableOpacity
               style={[styles.confirmButton, { backgroundColor: willDelete ? colors.danger : colors.secondary }]}
               onPress={handleConfirm}
+              disabled={isPending}
               activeOpacity={0.8}
             >
-              <Icon
-                name={willDelete ? 'trash' : 'download'}
-                size={16}
-                color={willDelete ? '#FFFDFA' : colors.onSecondary}
-                strokeWidth={2}
-              />
+              {isPending ? (
+                <ActivityIndicator size="small" color={confirmColor} />
+              ) : (
+                <Icon name={willDelete ? 'trash' : 'download'} size={16} color={confirmColor} strokeWidth={2} />
+              )}
 
-              <Text style={[styles.confirmButtonText, { color: willDelete ? '#FFFDFA' : colors.onSecondary }]}>
-                {willDelete ? 'Delete category' : 'Archive category'}
+              <Text style={[styles.confirmButtonText, { color: confirmColor }]}>
+                {isPending ? pendingLabel : confirmLabel}
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={[styles.cancelButton, isPending && styles.buttonDisabled]}
+              onPress={handleClose}
+              disabled={isPending}
+              activeOpacity={0.7}
+            >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>

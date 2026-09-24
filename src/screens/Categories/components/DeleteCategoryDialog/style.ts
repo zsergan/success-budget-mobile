@@ -88,6 +88,12 @@ const styles = StyleSheet.create({
     lineHeight: theme.lineHeights.caption,
     color: colors.muted,
   },
+  error: {
+    fontFamily: theme.fonts.medium,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    color: colors.danger,
+  },
   actions: {
     rowGap: theme.spacing.sm + 1,
   },
@@ -115,6 +121,9 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.bodyLg,
     color: colors.text,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
 });
 
