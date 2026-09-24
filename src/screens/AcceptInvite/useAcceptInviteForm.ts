@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
 import { useAppDispatch } from '@redux/hooks';
-import { acceptInvite } from '@redux/state/member/thunks';
+import { acceptInviteAndSelect } from '@redux/state/space/thunks';
 import type { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
 import { useFormSubmitHandler } from '@hooks';
@@ -33,7 +33,7 @@ const useAcceptInviteForm = ({ navigation }: UseAcceptInviteFormProps) => {
   const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<AcceptInviteFormData>({
     handleSubmit,
     formState: { isSubmitting, isSubmitSuccessful },
-    onSubmit: (formData) => dispatch(acceptInvite(formData.code)).unwrap(),
+    onSubmit: (formData) => dispatch(acceptInviteAndSelect(formData.code)),
     onSuccess: () => navigation.goBack(),
     getInvalidMessage: () => 'Enter the 6-character code',
   });

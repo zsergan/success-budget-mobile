@@ -1,15 +1,18 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { TextInput } from 'react-native';
 import { Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { Controller } from 'react-hook-form';
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 
 import Icon from '@components/Icon/Icon';
-import { useAppSelector } from '@redux/hooks';
-import { selectActiveCategories } from '@redux/state/category/selectors';
-import { findLimitForCategory, selectLimit } from '@redux/state/limit/selectors';
+import { useAppSelector, useSpaceArg } from '@redux/hooks';
+import { useGetCategoriesQuery } from '@redux/state/category/api';
+import { getActiveCategories } from '@redux/state/category/selectors';
+import { useGetLimitsQuery } from '@redux/state/limit/api';
+import { EMPTY_LIMITS, findLimitForCategory } from '@redux/state/limit/selectors';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
-import { selectWallet } from '@redux/state/wallet/selectors';
+import { useGetWalletsQuery } from '@redux/state/wallet/api';
+import { EMPTY_WALLETS } from '@redux/state/wallet/selectors';
 import { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
 import ActionRow from './ActionRow/ActionRow';
@@ -29,22 +32,22 @@ const SNAP_FRACTION = parseFloat(TRANSACTION_FORM_SNAP_POINT) / 100;
 interface Props {
   initialWalletId: number;
   transactionType?: TransactionType;
-  onSaved?: () => void;
 }
 
-const TransactionForm = ({ initialWalletId, transactionType = TransactionType.EXPENSE, onSaved }: Props) => {
+const TransactionForm = ({ initialWalletId, transactionType = TransactionType.EXPENSE }: Props) => {
   const { height: windowHeight } = useWindowDimensions();
   const amountRef = useRef<TextInput>(null);
-  const { wallets } = useAppSelector(selectWallet);
-  const { expenses, incomes } = useAppSelector(selectActiveCategories);
-  const { categoryLimits } = useAppSelector(selectLimit);
+  const spaceArg = useSpaceArg();
+  const wallets = useGetWalletsQuery(spaceArg).currentData?.wallets ?? EMPTY_WALLETS;
+  const { currentData: allCategories } = useGetCategoriesQuery(spaceArg);
+  const { expenses, incomes } = useMemo(() => getActiveCategories(allCategories), [allCategories]);
+  const { categoryLimits } = useGetLimitsQuery(spaceArg).currentData ?? EMPTY_LIMITS;
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
   const { control, watch, resetField, onSubmit, isSubmitDisabled, isValid, errors, closeBottomSheet } =
     useTransactionForm({
       transactionType,
       initialWalletId,
-      onSaved,
     });
 
   const selectedWalletId = watch('wallet_id');

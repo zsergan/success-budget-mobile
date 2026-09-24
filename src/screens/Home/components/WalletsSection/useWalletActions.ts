@@ -1,18 +1,21 @@
 import { useState } from 'react';
 
 import type { GetWalletsResponse } from '@api/dto';
-import { useAppDispatch, useAppSelector } from '@redux/hooks';
-import { selectWallet } from '@redux/state/wallet/selectors';
-import { fetchWallets, removeWallet } from '@redux/state/wallet/thunks';
+import { getLoadState } from '@redux/api/loadState';
+import { useAppSelector, useSpaceArg } from '@redux/hooks';
+import { selectCurrentSpaceId } from '@redux/state/space/selectors';
+import { useDeleteWalletMutation, useGetWalletsQuery } from '@redux/state/wallet/api';
+import { EMPTY_WALLETS } from '@redux/state/wallet/selectors';
 
 const useWalletActions = () => {
-  const dispatch = useAppDispatch();
+  const spaceId = useAppSelector(selectCurrentSpaceId);
   const [selectedWallet, setSelectedWallet] = useState<GetWalletsResponse | undefined>(undefined);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isConfirmVisible, setIsConfirmVisible] = useState(false);
-  const { wallets, isLoading, error } = useAppSelector(selectWallet);
-
-  const retry = () => dispatch(fetchWallets());
+  const walletsQuery = useGetWalletsQuery(useSpaceArg());
+  const wallets = walletsQuery.currentData?.wallets ?? EMPTY_WALLETS;
+  const { isLoading, hasError } = getLoadState(walletsQuery);
+  const [deleteWallet] = useDeleteWalletMutation();
 
   const onWalletLongPress = (wallet: GetWalletsResponse) => {
     setSelectedWallet(wallet);
@@ -33,8 +36,8 @@ const useWalletActions = () => {
   };
 
   const onConfirm = () => {
-    if (selectedWallet) {
-      dispatch(removeWallet(selectedWallet.wallet.id));
+    if (selectedWallet && spaceId !== null) {
+      deleteWallet({ spaceId, walletId: selectedWallet.wallet.id });
     }
 
     onConfirmCancel();
@@ -42,13 +45,9 @@ const useWalletActions = () => {
 
   return {
     wallets,
-    // Both a space switch (isLoading set synchronously by the context
-    // reset) and the true first load flow through this -- WalletsSection
-    // must not render "no wallets yet" while either is still in flight, or
-    // after a fetch failed, only once it's genuinely empty.
     isLoading,
-    error,
-    retry,
+    hasError,
+    retry: walletsQuery.refetch,
     selectedWallet,
     isModalVisible,
     isConfirmVisible,

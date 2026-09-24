@@ -2,12 +2,13 @@ import * as yup from 'yup';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
-import { useAppSelector, useAppDispatch } from '@redux/hooks';
-import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
+import { requireSpaceId } from '@redux/api/baseApi';
+import { useAppSelector } from '@redux/hooks';
+import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/state/space/selectors';
 import type { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
 import { AppColor } from '@shared/enums';
-import { addWallet, editWallet } from '@redux/state/wallet/thunks';
+import { useCreateWalletMutation, useUpdateWalletMutation } from '@redux/state/wallet/api';
 import { useFormSubmitHandler } from '@hooks';
 import { amountSchema } from '@shared/utils';
 
@@ -29,7 +30,9 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
   const isNewWallet = route.params.id === 'new';
 
   const spaceCurrencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
-  const dispatch = useAppDispatch();
+  const spaceId = useAppSelector(selectCurrentSpaceId);
+  const [createWallet] = useCreateWalletMutation();
+  const [updateWallet] = useUpdateWalletMutation();
 
   const {
     control,
@@ -48,24 +51,21 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
   const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<CreateWalletFormData>({
     handleSubmit,
     formState: { isSubmitting, isSubmitSuccessful },
-    onSubmit: (formData) =>
+    onSubmit: async (formData) =>
       isNewWallet
-        ? dispatch(
-            addWallet({
+        ? createWallet({
+            spaceId: requireSpaceId(spaceId),
+            data: {
               wallet_name: formData.walletName,
               initial_balance: formData.initialBalance,
               design: formData.design,
-            }),
-          ).unwrap()
-        : dispatch(
-            editWallet({
-              walletId: route.params.id,
-              walletData: {
-                wallet_name: formData.walletName,
-                design: formData.design,
-              },
-            }),
-          ).unwrap(),
+            },
+          }).unwrap()
+        : updateWallet({
+            spaceId: requireSpaceId(spaceId),
+            walletId: route.params.id,
+            data: { wallet_name: formData.walletName, design: formData.design },
+          }).unwrap(),
     onSuccess: () => navigation.goBack(),
     getInvalidMessage: (errors) =>
       [errors.walletName && 'Enter a wallet name', errors.initialBalance && 'Enter an initial balance']

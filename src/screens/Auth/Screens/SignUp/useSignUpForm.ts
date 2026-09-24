@@ -5,8 +5,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { registerMe } from '@redux/state/auth/thunks';
-import { selectCurrency } from '@redux/state/currency/selectors';
-import { fetchCurrencies } from '@redux/state/currency/thunks';
+import { useGetCurrenciesQuery } from '@redux/state/currency/api';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { selectAuth } from '@redux/state/auth/selectors';
@@ -37,7 +36,7 @@ interface FormData {
 type UseSignInFormProps = Pick<RootStackScreenProps<ScreenNames.SIGN_UP_SCREEN>, 'navigation'>;
 
 const useSignInForm = ({ navigation }: UseSignInFormProps) => {
-  const { currencies } = useAppSelector(selectCurrency);
+  const { currentData: currencies = [] } = useGetCurrenciesQuery();
   const { userEmail } = useAppSelector(selectAuth);
   const dispatch = useAppDispatch();
 
@@ -55,10 +54,6 @@ const useSignInForm = ({ navigation }: UseSignInFormProps) => {
       passwordConfirm: '',
     },
   });
-
-  useEffect(() => {
-    dispatch(fetchCurrencies());
-  }, [dispatch]);
 
   useEffect(() => {
     if (userEmail) {

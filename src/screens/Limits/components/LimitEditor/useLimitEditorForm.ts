@@ -6,8 +6,10 @@ import { useBottomSheet } from '@gorhom/bottom-sheet';
 
 import type { CreateLimitRequest } from '@api/dto';
 import type { LimitModel } from '@api/models';
-import { useAppDispatch } from '@redux/hooks';
-import { addLimit, editLimit } from '@redux/state/limit/thunks';
+import { requireSpaceId } from '@redux/api/baseApi';
+import { useAppSelector } from '@redux/hooks';
+import { useCreateLimitMutation, useUpdateLimitMutation } from '@redux/state/limit/api';
+import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { amountSchema } from '@shared/utils';
 import { useFormSubmitHandler } from '@hooks';
 import type { LimitScope } from './types';
@@ -35,7 +37,9 @@ interface UseLimitEditorFormProps {
 }
 
 const useLimitEditorForm = ({ limit, initialScope = 'category' }: UseLimitEditorFormProps) => {
-  const dispatch = useAppDispatch();
+  const spaceId = useAppSelector(selectCurrentSpaceId);
+  const [createLimit] = useCreateLimitMutation();
+  const [updateLimit] = useUpdateLimitMutation();
   const { close } = useBottomSheet();
   const [nameTouched, setNameTouched] = useState(false);
 
@@ -85,7 +89,7 @@ const useLimitEditorForm = ({ limit, initialScope = 'category' }: UseLimitEditor
   const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<LimitFormData>({
     handleSubmit,
     formState,
-    onSubmit: (formData) => {
+    onSubmit: async (formData) => {
       const payload: CreateLimitRequest =
         formData.scope === 'total'
           ? { amount: formData.amount, category_ids: [] }
@@ -94,8 +98,8 @@ const useLimitEditorForm = ({ limit, initialScope = 'category' }: UseLimitEditor
             : { amount: formData.amount, category_ids: formData.categoryIds, name: formData.name };
 
       return limit
-        ? dispatch(editLimit({ limitId: limit.id, limitData: payload })).unwrap()
-        : dispatch(addLimit(payload)).unwrap();
+        ? updateLimit({ spaceId: requireSpaceId(spaceId), limitId: limit.id, data: payload }).unwrap()
+        : createLimit({ spaceId: requireSpaceId(spaceId), data: payload }).unwrap();
     },
     onSuccess: () => close(),
     getInvalidMessage: (errors) => (errors.amount ? 'Enter an amount' : ''),

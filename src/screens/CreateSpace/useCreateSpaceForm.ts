@@ -1,12 +1,10 @@
-import { useEffect } from 'react';
 import * as yup from 'yup';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
-import { useAppDispatch, useAppSelector } from '@redux/hooks';
-import { selectCurrency } from '@redux/state/currency/selectors';
-import { fetchCurrencies } from '@redux/state/currency/thunks';
-import { addSpace } from '@redux/state/space/thunks';
+import { useAppDispatch } from '@redux/hooks';
+import { useGetCurrenciesQuery } from '@redux/state/currency/api';
+import { createSpaceAndSelect } from '@redux/state/space/thunks';
 import type { ScreenNames } from '@shared/enums';
 import { SpaceType } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
@@ -29,7 +27,7 @@ const schema = yup.object().shape({
 type UseCreateSpaceFormProps = Pick<RootStackScreenProps<ScreenNames.CREATE_SPACE_SCREEN>, 'navigation'>;
 
 const useCreateSpaceForm = ({ navigation }: UseCreateSpaceFormProps) => {
-  const { currencies } = useAppSelector(selectCurrency);
+  const { currentData: currencies = [] } = useGetCurrenciesQuery();
   const dispatch = useAppDispatch();
 
   const {
@@ -47,22 +45,18 @@ const useCreateSpaceForm = ({ navigation }: UseCreateSpaceFormProps) => {
     },
   });
 
-  useEffect(() => {
-    dispatch(fetchCurrencies());
-  }, [dispatch]);
-
   const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<CreateSpaceFormData>({
     handleSubmit,
     formState: { isSubmitting, isSubmitSuccessful },
     onSubmit: (formData) =>
       dispatch(
-        addSpace({
+        createSpaceAndSelect({
           name: formData.name,
           currency_id: Number(formData.currency),
           type: formData.type,
           invites: formData.type === SpaceType.GROUP && formData.invites.length > 0 ? formData.invites : undefined,
         }),
-      ).unwrap(),
+      ),
     onSuccess: () => navigation.goBack(),
     getInvalidMessage: (errors) =>
       [errors.name && 'Enter a space name', errors.currency && 'Choose a currency'].filter(Boolean).join('\n'),

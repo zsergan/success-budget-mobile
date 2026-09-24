@@ -1,7 +1,7 @@
-import axios from 'axios';
+import type { AxiosInstance } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-import { ApiClient } from './instance';
+import { createHttpClient } from './instance';
 
 jest.mock('expo-secure-store');
 
@@ -19,21 +19,7 @@ jest.mock('@redux/state/auth/thunks', () => ({
 
 const mockedGetItemAsync = jest.mocked(SecureStore.getItemAsync);
 
-// ApiClient() doesn't expose the axios instance it builds, so capture it
-// off axios.create the same way the module under test obtains it.
-const buildClientAndCaptureInstance = () => {
-  const createSpy = jest.spyOn(axios, 'create');
-
-  ApiClient();
-
-  const instance = createSpy.mock.results[createSpy.mock.results.length - 1].value;
-
-  createSpy.mockRestore();
-
-  return instance;
-};
-
-const rejectedHandlerOf = (instance: ReturnType<typeof axios.create>) => {
+const rejectedHandlerOf = (instance: AxiosInstance) => {
   const handlers = instance.interceptors.response.handlers!;
 
   return handlers[handlers.length - 1]!.rejected!;
@@ -56,7 +42,7 @@ describe('401 handling', () => {
   it('does not log out a newer session for a 401 that belongs to a replaced token', async () => {
     mockedGetItemAsync.mockResolvedValue('new-token');
 
-    const instance = buildClientAndCaptureInstance();
+    const instance = createHttpClient();
     const rejected = rejectedHandlerOf(instance);
 
     await rejected(unauthorizedError('stale-token')).catch(() => {});
@@ -68,7 +54,7 @@ describe('401 handling', () => {
   it('does not log out when the user has already logged out (no current token at all)', async () => {
     mockedGetItemAsync.mockResolvedValue(null);
 
-    const instance = buildClientAndCaptureInstance();
+    const instance = createHttpClient();
     const rejected = rejectedHandlerOf(instance);
 
     await rejected(unauthorizedError('stale-token')).catch(() => {});
@@ -79,7 +65,7 @@ describe('401 handling', () => {
   it('still rejects the original error when skipping the stale-token logout', async () => {
     mockedGetItemAsync.mockResolvedValue('new-token');
 
-    const instance = buildClientAndCaptureInstance();
+    const instance = createHttpClient();
     const rejected = rejectedHandlerOf(instance);
     const error = unauthorizedError('stale-token');
 
@@ -87,7 +73,7 @@ describe('401 handling', () => {
   });
 
   it('rejects a non-401 error without touching SecureStore', async () => {
-    const instance = buildClientAndCaptureInstance();
+    const instance = createHttpClient();
     const rejected = rejectedHandlerOf(instance);
     const error = { response: { status: 500 }, config: { headers: {} } };
 

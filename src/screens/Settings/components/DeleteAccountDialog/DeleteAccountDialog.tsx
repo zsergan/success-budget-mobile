@@ -1,11 +1,14 @@
 import { Text, TouchableWithoutFeedback, View } from 'react-native';
 
 import { ModalContainer } from '@components';
-import { useAppSelector } from '@redux/hooks';
-import { selectCategory } from '@redux/state/category/selectors';
-import { selectLimit } from '@redux/state/limit/selectors';
+import { useAppSelector, useSpaceArg } from '@redux/hooks';
+import { useGetCategoriesQuery } from '@redux/state/category/api';
+import { EMPTY_CATEGORIES } from '@redux/state/category/selectors';
+import { useGetLimitsQuery } from '@redux/state/limit/api';
+import { EMPTY_LIMITS } from '@redux/state/limit/selectors';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
-import { selectTotalBalance } from '@redux/state/wallet/selectors';
+import { useGetWalletsQuery } from '@redux/state/wallet/api';
+import { getTotalBalance } from '@redux/state/wallet/selectors';
 import { formatCurrencyAmount } from '@shared/utils';
 import WarningStep from './steps/WarningStep';
 import PasswordStep from './steps/PasswordStep';
@@ -23,10 +26,11 @@ const DeleteAccountDialog = ({ isVisible, onClose }: Props) => {
   const { step, password, passwordError, goToPassword, goToWarning, setPassword, continueFromPassword, reset } =
     useDeleteAccountFlow();
 
-  const { total, walletsCount } = useAppSelector(selectTotalBalance);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
-  const { categoryLimits } = useAppSelector(selectLimit);
-  const { incomes, expenses, archived } = useAppSelector(selectCategory);
+  const spaceArg = useSpaceArg();
+  const { total, walletsCount } = getTotalBalance(useGetWalletsQuery(spaceArg).currentData);
+  const { categoryLimits } = useGetLimitsQuery(spaceArg).currentData ?? EMPTY_LIMITS;
+  const { incomes, expenses, archived } = useGetCategoriesQuery(spaceArg).currentData ?? EMPTY_CATEGORIES;
 
   const handleClose = () => {
     reset();

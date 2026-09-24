@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { ErrorResponse, InviteResponse } from '@api/dto';
-import { useAppDispatch, useAppSelector } from '@redux/hooks';
-import { inviteMember } from '@redux/state/member/thunks';
+import { requireSpaceId } from '@redux/api/baseApi';
+import { useAppSelector } from '@redux/hooks';
+import { useInviteMemberMutation } from '@redux/state/member/api';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { getErrorMessage } from '@shared/utils';
 import { useAlert } from '@hooks';
@@ -21,7 +22,7 @@ interface UseInviteMemberProps {
  * double tap can both fire before a disabled prop re-renders.
  */
 const useInviteMember = ({ canInvite, cooldownRemaining }: UseInviteMemberProps) => {
-  const dispatch = useAppDispatch();
+  const [inviteMember] = useInviteMemberMutation();
   const { addAlert } = useAlert();
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
 
@@ -56,7 +57,7 @@ const useInviteMember = ({ canInvite, cooldownRemaining }: UseInviteMemberProps)
     setIsSubmitting(true);
 
     try {
-      const invite = await dispatch(inviteMember(email)).unwrap();
+      const invite = await inviteMember({ spaceId: requireSpaceId(originSpaceId), email }).unwrap();
 
       // The space changed while this was in flight -- don't pop up an
       // invite code for a space the user isn't looking at anymore.
@@ -69,9 +70,8 @@ const useInviteMember = ({ canInvite, cooldownRemaining }: UseInviteMemberProps)
     } catch (error: unknown) {
       const errorResponse = error as ErrorResponse | undefined;
 
-      // The thunk itself detected the session/context had already moved on
-      // (e.g. a logout while this was in flight) -- nothing here is still
-      // relevant to show.
+      // The request outlived its session (e.g. a logout while it was in
+      // flight) -- nothing here is still relevant to show.
       if (errorResponse?.isStale) return false;
 
       // A 429 already surfaces through the cooldown UI (and the global

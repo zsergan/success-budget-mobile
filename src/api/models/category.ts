@@ -1,7 +1,7 @@
 import type { AppColor, TransactionType } from '@shared/enums';
 import type { IconType } from '@shared/types';
 import { ICON_PATHS } from '@shared/icons';
-import type { Category, CategoryIconApi } from '@api/dto';
+import type { Category, CategoryIconApi, GetCategoriesResponse } from '@api/dto';
 
 export interface CategoryLimitRefModel {
   id: number;
@@ -18,6 +18,12 @@ export interface CategoryModel {
   transactionCount: number;
   limit: CategoryLimitRefModel | null;
   archivedAt: string | null;
+}
+
+export interface CategoriesModel {
+  incomes: CategoryModel[];
+  expenses: CategoryModel[];
+  archived: CategoryModel[];
 }
 
 // Backend enum values are the mobile icon key with the first letter capitalized and '-' replaced by a space
@@ -42,4 +48,10 @@ export const mapCategory = (dto: Category): CategoryModel => ({
   transactionCount: dto.transaction_count,
   limit: dto.limit,
   archivedAt: dto.archived_at,
+});
+
+export const mapCategoriesResponse = (dto: GetCategoriesResponse): CategoriesModel => ({
+  incomes: dto.incomes.map(mapCategory),
+  expenses: dto.expenses.map(mapCategory),
+  archived: dto.archived.map(mapCategory),
 });

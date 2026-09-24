@@ -1,12 +1,13 @@
-import { useEffect } from 'react';
-
-import { useAppDispatch, useAppSelector } from '@redux/hooks';
-import { selectMember } from '@redux/state/member/selectors';
-import { fetchMembers } from '@redux/state/member/thunks';
-import { selectProfile } from '@redux/state/profile/selectors';
-import { selectCurrentSpace, selectCurrentSpaceId } from '@redux/state/space/selectors';
+import type { SpaceMember } from '@api/dto';
+import { getLoadState } from '@redux/api/loadState';
+import { useAppSelector, useSpaceArg } from '@redux/hooks';
+import { useGetMembersQuery } from '@redux/state/member/api';
+import { selectProfileId } from '@redux/state/profile/selectors';
+import { selectCurrentSpace } from '@redux/state/space/selectors';
 import { SPACE_LIMITS } from '@shared/constants';
 import { SpaceType } from '@shared/enums';
+
+const EMPTY_MEMBERS: SpaceMember[] = [];
 
 /**
  * Owns loading members for the active space (first load vs background
@@ -15,20 +16,12 @@ import { SpaceType } from '@shared/enums';
  * the caller's own, and whether inviting is currently possible at all.
  */
 const useMembersData = () => {
-  const dispatch = useAppDispatch();
-
   const currentSpace = useAppSelector(selectCurrentSpace);
-  const currentSpaceId = useAppSelector(selectCurrentSpaceId);
-  const { members, isLoading, hasLoaded, error } = useAppSelector(selectMember);
-  const profileId = useAppSelector(selectProfile).id;
-
-  useEffect(() => {
-    if (currentSpaceId !== null) dispatch(fetchMembers());
-  }, [dispatch, currentSpaceId]);
-
-  const retry = () => {
-    if (currentSpaceId !== null) dispatch(fetchMembers());
-  };
+  const membersQuery = useGetMembersQuery(useSpaceArg());
+  const { currentData, isFetching, isError, error, refetch } = membersQuery;
+  const members = currentData ?? EMPTY_MEMBERS;
+  const hasLoaded = currentData !== undefined;
+  const profileId = useAppSelector(selectProfileId);
 
   const memberRows = members.filter((member) => member.type === 'member');
   const inviteRows = members.filter((member) => member.type === 'invite');
@@ -41,9 +34,12 @@ const useMembersData = () => {
 
   return {
     currentSpace,
-    isInitialLoading: isLoading && !hasLoaded,
-    isRefreshing: isLoading && hasLoaded,
-    error,
+    // currentData belongs to the active space only, so a switch reads as a
+    // first load; a failed refresh keeps the rows and reports the error.
+    isInitialLoading: getLoadState(membersQuery).isLoading,
+    isRefreshing: hasLoaded && isFetching,
+    // A retry in flight clears the previous failure, as a fresh request would.
+    error: isError ? error : undefined,
     memberRows,
     inviteRows,
     ownRow,
@@ -53,7 +49,7 @@ const useMembersData = () => {
     isAtMemberCap,
     isAtInviteCap,
     canInvite,
-    retry,
+    retry: refetch,
   };
 };
 

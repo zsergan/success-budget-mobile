@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { RootLayout, SectionTitle } from '@components';
-import { useAppDispatch, useAppSelector } from '@redux/hooks';
+import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
 import { logoutMe } from '@redux/state/auth/thunks';
-import { selectCategory } from '@redux/state/category/selectors';
-import { selectTotalBalance } from '@redux/state/wallet/selectors';
+import { useGetCategoriesQuery } from '@redux/state/category/api';
+import { EMPTY_CATEGORIES } from '@redux/state/category/selectors';
+import { useGetWalletsQuery } from '@redux/state/wallet/api';
+import { getTotalBalance } from '@redux/state/wallet/selectors';
 import { selectCurrentSpace } from '@redux/state/space/selectors';
 import { useAlert, useThemePreference } from '@hooks';
 import type { MainTabScreenProps } from '@shared/types';
@@ -31,8 +33,9 @@ const SettingsScreen = ({ navigation }: Props) => {
   const { preference, setThemePreference } = useThemePreference();
 
   const currentSpace = useAppSelector(selectCurrentSpace);
-  const { incomes, expenses, archived } = useAppSelector(selectCategory);
-  const { walletsCount } = useAppSelector(selectTotalBalance);
+  const spaceArg = useSpaceArg();
+  const { incomes, expenses, archived } = useGetCategoriesQuery(spaceArg).currentData ?? EMPTY_CATEGORIES;
+  const { walletsCount } = getTotalBalance(useGetWalletsQuery(spaceArg).currentData);
 
   const [isLogoutConfirmVisible, setIsLogoutConfirmVisible] = useState(false);
   const [isDeleteAccountVisible, setIsDeleteAccountVisible] = useState(false);

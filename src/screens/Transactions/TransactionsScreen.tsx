@@ -4,8 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { TransactionComposerHandle } from '@components';
 import { BottomSheetModal as BottomModal, Fab, TransactionComposer } from '@components';
-import { useAppSelector } from '@redux/hooks';
-import { selectWallet } from '@redux/state/wallet/selectors';
+import { useSpaceArg } from '@redux/hooks';
+import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { groupTransactionsByDay } from '@shared/utils';
 import FilterBar from './components/FilterBar/FilterBar';
 import RangePickerSheet from './components/RangePicker/RangePickerSheet';
@@ -29,12 +29,12 @@ const TransactionsScreen = () => {
     range: activeRange,
   });
 
-  const { wallets } = useAppSelector(selectWallet);
-  const firstWalletId = wallets[0]?.wallet.id ?? -1;
+  const { currentData: walletsOverview } = useGetWalletsQuery(useSpaceArg());
+  const firstWalletId = walletsOverview?.wallets[0]?.wallet.id ?? -1;
 
   return (
     <>
-      <TransactionComposer ref={composerRef} initialWalletId={firstWalletId} onSaved={refetch} />
+      <TransactionComposer ref={composerRef} initialWalletId={firstWalletId} />
 
       <BottomModal ref={rangePickerRef} dynamicSizing>
         <RangePickerSheet activeRange={activeRange} onApply={setActiveRange} />

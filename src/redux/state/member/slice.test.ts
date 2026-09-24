@@ -1,165 +1,102 @@
+import { createAppStore } from '@redux/Store';
 import { INVITE_RATE_LIMIT_COOLDOWN_MS } from '@shared/constants';
-import { logoutMe } from '../auth/thunks';
-import { spaceContextChanged } from '../space/thunks';
-import initialState from './initialState';
-import memberReducer from './slice';
-import { fetchMembers, inviteMember } from './thunks';
+import { loginMe, logoutMe } from '../auth/thunks';
+import { activateSpace } from '../space/thunks';
+import { memberApi } from './api';
 
-const member = {
-  type: 'member' as const,
-  id: 1,
-  user_id: 101,
-  name: 'Me',
-  email: 'me@example.com',
-  role: 'owner' as const,
-  can_remove: false,
+const mockedRequest = jest.fn();
+
+jest.mock('@api/instance', () => ({
+  ApiClient: () => ({}),
+  createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
+}));
+jest.mock('expo-secure-store');
+
+// RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
+jest.useFakeTimers();
+
+const rateLimited = (headers: Record<string, string> = {}) => ({
+  response: {
+    data: { message: 'Too many requests', statusCode: 429, path: '/spaces/1/invites', timestamp: '' },
+    headers,
+  },
+});
+
+const signedInStore = () => {
+  const store = createAppStore();
+
+  store.dispatch(loginMe.fulfilled('token', 'req-login', { email: 'me@example.com', password: 'password1' }));
+  store.dispatch(activateSpace(1));
+
+  return store;
 };
 
-describe('member slice', () => {
-  it('returns the initial state by default', () => {
-    expect(memberReducer(undefined, { type: '@@INIT' })).toEqual(initialState);
+const invite = (store: ReturnType<typeof createAppStore>) =>
+  store.dispatch(memberApi.endpoints.inviteMember.initiate({ spaceId: 1, email: 'a@b.com' }));
+
+beforeEach(() => jest.clearAllMocks());
+
+describe('invite cooldown', () => {
+  it('starts from the Retry-After of a 429', async () => {
+    const store = signedInStore();
+
+    mockedRequest.mockRejectedValue(rateLimited({ 'retry-after': '30' }));
+    await invite(store);
+
+    expect(store.getState().member.inviteCooldownUntil).toBe(Date.now() + 30_000);
   });
 
-  it('sets inviteCooldownUntil from a 429 with a Retry-After-derived retryAfterMs', () => {
-    const before = Date.now();
+  it('falls back to the fixed window when a 429 has no Retry-After', async () => {
+    const store = signedInStore();
 
-    const state = memberReducer(
-      initialState,
-      inviteMember.rejected(new Error('rate limited'), 'req-1', 'a@b.com', {
-        message: 'Too many requests',
-        statusCode: 429,
-        path: '/spaces/1/invites',
-        timestamp: '2026-01-01T00:00:00.000Z',
-        retryAfterMs: 30_000,
-      }),
-    );
+    mockedRequest.mockRejectedValue(rateLimited());
+    await invite(store);
 
-    expect(state.inviteCooldownUntil).toBeGreaterThanOrEqual(before + 30_000);
-    expect(state.inviteCooldownUntil).toBeLessThanOrEqual(Date.now() + 30_000);
+    expect(store.getState().member.inviteCooldownUntil).toBe(Date.now() + INVITE_RATE_LIMIT_COOLDOWN_MS);
   });
 
-  it('falls back to the fixed cooldown window when a 429 has no retryAfterMs', () => {
-    const before = Date.now();
+  it('ignores a failure other than 429', async () => {
+    const store = signedInStore();
 
-    const state = memberReducer(
-      initialState,
-      inviteMember.rejected(new Error('rate limited'), 'req-1', 'a@b.com', {
-        message: 'Too many requests',
-        statusCode: 429,
-        path: '/spaces/1/invites',
-        timestamp: '2026-01-01T00:00:00.000Z',
-      }),
-    );
+    mockedRequest.mockRejectedValue({ response: { data: { message: 'Bad email', statusCode: 400 } } });
+    await invite(store);
 
-    expect(state.inviteCooldownUntil).toBeGreaterThanOrEqual(before + INVITE_RATE_LIMIT_COOLDOWN_MS);
+    expect(store.getState().member.inviteCooldownUntil).toBeNull();
   });
 
-  it('does not set a cooldown from a stale 429 (thunk detected a logout while it was in flight)', () => {
-    const state = memberReducer(
-      initialState,
-      inviteMember.rejected(new Error('rate limited'), 'req-1', 'a@b.com', {
-        message: 'Too many requests',
-        statusCode: 429,
-        path: '/spaces/1/invites',
-        timestamp: '2026-01-01T00:00:00.000Z',
-        retryAfterMs: 30_000,
-        isStale: true,
-      }),
-    );
+  it('is cleared by a successful invite', async () => {
+    const store = signedInStore();
 
-    expect(state.inviteCooldownUntil).toBeNull();
+    mockedRequest.mockRejectedValueOnce(rateLimited());
+    await invite(store);
+    mockedRequest.mockResolvedValueOnce({ data: { id: 1, email: 'a@b.com', expires_at: '', code: '123456' } });
+    await invite(store);
+
+    expect(store.getState().member.inviteCooldownUntil).toBeNull();
   });
 
-  it('does not set a cooldown for a non-429 rejection', () => {
-    const state = memberReducer(
-      initialState,
-      inviteMember.rejected(new Error('bad request'), 'req-1', 'a@b.com', {
-        message: 'Enter a valid email',
-        statusCode: 400,
-        path: '/spaces/1/invites',
-        timestamp: '2026-01-01T00:00:00.000Z',
-      }),
-    );
+  it('survives a space switch -- the rate limit is not scoped to one space', async () => {
+    const store = signedInStore();
 
-    expect(state.inviteCooldownUntil).toBeNull();
+    mockedRequest.mockRejectedValue(rateLimited());
+    await invite(store);
+    store.dispatch(activateSpace(2));
+
+    expect(store.getState().member.inviteCooldownUntil).not.toBeNull();
   });
 
-  it('clears the cooldown on a successful invite, even if the local countdown had not reached zero', () => {
-    const cooling = { ...initialState, inviteCooldownUntil: Date.now() + 30_000 };
+  it('is cleared on logout, and a 429 that outlived the session does not start one', async () => {
+    const store = signedInStore();
+    let failInvite: (reason: unknown) => void = () => {};
 
-    const state = memberReducer(
-      cooling,
-      inviteMember.fulfilled(
-        { id: 1, email: 'a@b.com', expires_at: '2026-01-08T00:00:00.000Z', code: 'ABC123' },
-        'req-1',
-        'a@b.com',
-      ),
-    );
+    mockedRequest.mockReturnValueOnce(new Promise((_, reject) => (failInvite = reject)));
+    const pending = invite(store);
 
-    expect(state.inviteCooldownUntil).toBeNull();
-  });
+    store.dispatch(logoutMe.fulfilled(undefined, 'req-logout', undefined));
+    store.dispatch(loginMe.fulfilled('token-2', 'req-login-2', { email: 'me@example.com', password: 'password1' }));
+    failInvite(rateLimited());
+    await pending;
 
-  it('preserves inviteCooldownUntil across a space switch -- the rate limit is not scoped to one space', () => {
-    const cooling = { ...initialState, members: [member], hasLoaded: true, inviteCooldownUntil: Date.now() + 30_000 };
-
-    const state = memberReducer(cooling, spaceContextChanged({ spaceId: 2, contextKey: 1 }));
-
-    expect(state.inviteCooldownUntil).toBe(cooling.inviteCooldownUntil);
-    expect(state.members).toEqual([]);
-  });
-
-  it('resets hasLoaded on a space switch, unlike wallet/category/limit/transaction -- member is not part of the app bootstrap gate', () => {
-    const loaded = { ...initialState, members: [member], hasLoaded: true };
-
-    const state = memberReducer(loaded, spaceContextChanged({ spaceId: 2, contextKey: 1 }));
-
-    expect(state.hasLoaded).toBe(false);
-  });
-
-  it('clears inviteCooldownUntil on logout', () => {
-    const cooling = { ...initialState, inviteCooldownUntil: Date.now() + 30_000 };
-
-    const state = memberReducer(cooling, logoutMe.fulfilled(undefined, 'req-1', undefined));
-
-    expect(state.inviteCooldownUntil).toBeNull();
-  });
-
-  describe('fetchMembers request identity', () => {
-    it('an old rejected members request must not stop the new context loading', () => {
-      const oldPending = memberReducer(initialState, fetchMembers.pending('old', undefined));
-      const switched = memberReducer(oldPending, spaceContextChanged({ spaceId: 2, contextKey: 1 }));
-      const newPending = memberReducer(switched, fetchMembers.pending('new', undefined));
-
-      const afterStaleReject = memberReducer(
-        newPending,
-        fetchMembers.rejected(new Error('old failed'), 'old', undefined, { statusCode: 500 } as never),
-      );
-
-      expect(afterStaleReject.isLoading).toBe(true);
-      expect(afterStaleReject.error).toBeUndefined();
-    });
-
-    it('an old fulfilled members request must not overwrite the new context list', () => {
-      const oldPending = memberReducer(initialState, fetchMembers.pending('old', undefined));
-      const switched = memberReducer(oldPending, spaceContextChanged({ spaceId: 2, contextKey: 1 }));
-      const newPending = memberReducer(switched, fetchMembers.pending('new', undefined));
-      const newApplied = memberReducer(newPending, fetchMembers.fulfilled([member], 'new', undefined));
-
-      const afterStale = memberReducer(newApplied, fetchMembers.fulfilled([], 'old', undefined));
-
-      expect(afterStale.members).toEqual([member]);
-    });
-
-    it('a mutation (invite/revoke/remove/leave/accept) settling does not toggle the members-list loading flag', () => {
-      const loadingList = memberReducer(initialState, fetchMembers.pending('req-1', undefined));
-
-      const afterInviteRejected = memberReducer(
-        loadingList,
-        inviteMember.rejected(new Error('failed'), 'invite-1', 'a@b.com', { statusCode: 400 } as never),
-      );
-
-      expect(afterInviteRejected.isLoading).toBe(true);
-      expect(afterInviteRejected.error).toBeUndefined();
-    });
+    expect(store.getState().member.inviteCooldownUntil).toBeNull();
   });
 });

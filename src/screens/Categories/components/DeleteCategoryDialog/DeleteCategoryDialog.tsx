@@ -3,8 +3,10 @@ import { Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-na
 import { Icon } from '@components';
 import ModalContainer from '@components/Modals/ModalContainer/ModalContainer';
 import type { CategoryModel } from '@api/models';
-import { useAppDispatch } from '@redux/hooks';
-import { deleteCategory } from '@redux/state/category/thunks';
+import { requireSpaceId } from '@redux/api/baseApi';
+import { useAppSelector } from '@redux/hooks';
+import { useDeleteCategoryMutation } from '@redux/state/category/api';
+import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
 import { getErrorMessage } from '@shared/utils';
@@ -23,7 +25,8 @@ interface Props {
 }
 
 const DeleteCategoryDialog = ({ category, onClose }: Props) => {
-  const dispatch = useAppDispatch();
+  const spaceId = useAppSelector(selectCurrentSpaceId);
+  const [deleteCategory] = useDeleteCategoryMutation();
   const { addAlert } = useAlert();
 
   if (!category) {
@@ -32,12 +35,14 @@ const DeleteCategoryDialog = ({ category, onClose }: Props) => {
 
   const willDelete = category.transactionCount === 0;
 
-  const handleConfirm = () => {
-    dispatch(deleteCategory(category.id))
-      .unwrap()
-      .catch((error: unknown) => addAlert(getErrorMessage(error)));
-
+  const handleConfirm = async () => {
     onClose();
+
+    try {
+      await deleteCategory({ spaceId: requireSpaceId(spaceId), categoryId: category.id }).unwrap();
+    } catch (error: unknown) {
+      addAlert(getErrorMessage(error));
+    }
   };
 
   return (

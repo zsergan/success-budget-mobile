@@ -1,18 +1,11 @@
-import { useEffect } from 'react';
+import { useMemo } from 'react';
+import { skipToken } from '@reduxjs/toolkit/query';
 
-import { useAppDispatch, useAppSelector } from '@redux/hooks';
-import {
-  selectDataRevision,
-  selectIsLoadingLatest,
-  selectIsLoadingRange,
-  selectLatestError,
-  selectLatestTransaction,
-  selectPeriodTotals,
-  selectRangeError,
-  selectRangeTransactions,
-} from '@redux/state/transaction/selectors';
-import { fetchLatestTransaction, fetchTransactionsInRange } from '@redux/state/transaction/thunks';
-import { selectCurrentSpaceId } from '@redux/state/space/selectors';
+import { getLoadState } from '@redux/api/loadState';
+import { useAppSelector, useSpaceArg } from '@redux/hooks';
+import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/state/space/selectors';
+import { periodArg, useGetLatestTransactionQuery, useGetTransactionsQuery } from '@redux/state/transaction/api';
+import { EMPTY_TRANSACTIONS, getPeriodTotals } from '@redux/state/transaction/selectors';
 import type { DateRange } from '@shared/utils';
 
 /**
@@ -34,32 +27,20 @@ interface UseTransactionsDataProps {
 }
 
 const useTransactionsData = ({ range }: UseTransactionsDataProps) => {
-  const dispatch = useAppDispatch();
+  const spaceId = useAppSelector(selectCurrentSpaceId);
+  const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
-  const transactions = useAppSelector(selectRangeTransactions);
-  const isLoadingRange = useAppSelector(selectIsLoadingRange);
-  const rangeError = useAppSelector(selectRangeError);
-  const latest = useAppSelector(selectLatestTransaction);
-  const isLoadingLatest = useAppSelector(selectIsLoadingLatest);
-  const latestError = useAppSelector(selectLatestError);
-  const { income, expense, currencyCode } = useAppSelector(selectPeriodTotals);
-  const currentSpaceId = useAppSelector(selectCurrentSpaceId);
-  const dataRevision = useAppSelector(selectDataRevision);
+  // currentData only ever belongs to this exact space and period, so a new
+  // period or space shows loading instead of the previous one's rows.
+  const rangeQuery = useGetTransactionsQuery(spaceId === null ? skipToken : periodArg(spaceId, range));
+  const latestQuery = useGetLatestTransactionQuery(useSpaceArg());
 
-  const refetch = () => dispatch(fetchTransactionsInRange({ from: range.from, to: range.to }));
-  const retryLatest = () => dispatch(fetchLatestTransaction());
+  const transactions = rangeQuery.currentData ?? EMPTY_TRANSACTIONS;
+  const latest = latestQuery.currentData;
+  const { income, expense } = useMemo(() => getPeriodTotals(transactions), [transactions]);
 
-  // Re-fires whenever a transaction is added anywhere in the app
-  // (dataRevision), not just when the period or space changes -- otherwise
-  // a transaction added from Home wouldn't show up here until something
-  // else happened to trigger a refetch.
-  useEffect(() => {
-    dispatch(fetchTransactionsInRange({ from: range.from, to: range.to }));
-  }, [dispatch, range, currentSpaceId, dataRevision]);
-
-  useEffect(() => {
-    dispatch(fetchLatestTransaction());
-  }, [dispatch, currentSpaceId, dataRevision]);
+  const { isLoading: isLoadingRange, hasError: rangeError } = getLoadState(rangeQuery);
+  const { isLoading: isLoadingLatest, hasError: latestError } = getLoadState(latestQuery);
 
   let viewState: TransactionsViewState;
 
@@ -78,10 +59,6 @@ const useTransactionsData = ({ range }: UseTransactionsDataProps) => {
     viewState = 'latestError';
   } else if (latest === null) {
     viewState = 'trueEmpty';
-  } else if (latest === undefined) {
-    // Settled with no error and no value -- shouldn't happen, but treat as
-    // still loading rather than asserting an empty state we can't confirm.
-    viewState = 'loading';
   } else {
     viewState = 'filteredEmpty';
   }
@@ -93,8 +70,8 @@ const useTransactionsData = ({ range }: UseTransactionsDataProps) => {
     income,
     expense,
     currencyCode,
-    refetch,
-    retryLatest,
+    refetch: rangeQuery.refetch,
+    retryLatest: latestQuery.refetch,
   };
 };
 

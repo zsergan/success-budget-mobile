@@ -36,7 +36,7 @@ const toWalletCardProps = (
   currencyCode: string,
 ): Omit<WalletCardProps, 'onMorePress' | 'style'> => ({
   walletName: item.wallet.wallet_name,
-  balance: item.wallet.balance,
+  balance: String(item.wallet.balance),
   currencyCode,
   totalIncome: item.total_income,
   totalSpend: item.total_spend,
@@ -53,7 +53,7 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
   const {
     wallets,
     isLoading,
-    error,
+    hasError,
     retry,
     selectedWallet,
     isModalVisible,
@@ -93,7 +93,7 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
               navigation.navigate(ScreenNames.ADD_WALLET_SCREEN, {
                 id: selectedWallet.wallet.id,
                 walletName: selectedWallet.wallet.wallet_name,
-                balance: selectedWallet.wallet.balance,
+                balance: String(selectedWallet.wallet.balance),
                 design: selectedWallet.wallet.design,
               });
             }
@@ -115,13 +115,13 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
           actions={[{ title: 'Delete', onPress: onConfirm }]}
         />
 
-        {isLoading && wallets.length === 0 && (
+        {isLoading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator color={colors.accent} />
           </View>
         )}
 
-        {!isLoading && error && wallets.length === 0 && (
+        {hasError && (
           <EmptyState
             icon="wallet"
             title="Couldn't load wallets"
@@ -131,7 +131,7 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
           />
         )}
 
-        {!isLoading && !error && wallets.length === 0 && (
+        {!isLoading && !hasError && wallets.length === 0 && (
           <EmptyState
             icon="wallet"
             title="No wallets yet"

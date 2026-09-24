@@ -1,10 +1,10 @@
 import { createSlice } from '@reduxjs/toolkit';
 
+import type { ErrorResponse } from '@api/dto';
 import { INVITE_RATE_LIMIT_COOLDOWN_MS } from '@shared/constants';
 import { logoutMe } from '../auth/thunks';
-import { spaceContextChanged } from '../space/thunks';
+import { memberApi } from './api';
 import initialState from './initialState';
-import { fetchMembers, inviteMember } from './thunks';
 
 const memberSlice = createSlice({
   name: 'member',
@@ -13,60 +13,19 @@ const memberSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(logoutMe.fulfilled, () => initialState);
 
-    // Drop the previous space's members immediately -- before its own
-    // fetchMembers has even been dispatched -- and forget any in-flight
-    // request for it (clearing requestId means a late response can no
-    // longer match). Unlike wallet/category/limit/transaction, hasLoaded
-    // does NOT survive here: those four preserve it so useLoadInitData
-    // doesn't mistake a switch for the app's first load, but member isn't
-    // part of that bootstrap gate, and useMembersData needs hasLoaded back
-    // at false so it reports the new space's list as loading (not
-    // refreshing) until it has actually loaded once. inviteCooldownUntil
-    // does survive -- the invite rate limit isn't scoped to one space.
-    builder.addCase(spaceContextChanged, (state) => ({
-      ...initialState,
-      inviteCooldownUntil: state.inviteCooldownUntil,
-    }));
-
-    // isLoading/error here describe reading the members list, nothing
-    // else -- inviteMember/revokeInvite/removeMember/leaveSpace/acceptInvite
-    // each own their own pending/error UI locally (useInviteMember,
-    // useMemberActions, useFormSubmitHandler for accept), so a mutation
-    // finishing must never flip this off mid-fetch, and a fetch's own
-    // pending/error must never look like a mutation is in flight.
-    builder.addCase(fetchMembers.pending, (state, action) => {
-      state.isLoading = true;
-      state.error = undefined;
-      state.requestId = action.meta.requestId;
-    });
-
-    builder.addCase(fetchMembers.rejected, (state, action) => {
-      if (action.meta.requestId !== state.requestId) return;
-
-      state.isLoading = false;
-      state.error = action.payload;
-    });
-
-    builder.addCase(fetchMembers.fulfilled, (state, action) => {
-      if (action.meta.requestId !== state.requestId) return;
-
-      state.members = action.payload;
-      state.isLoading = false;
-      state.hasLoaded = true;
-    });
-
-    builder.addCase(inviteMember.fulfilled, (state) => {
-      // A successful send is proof the window has actually reset, even if
-      // our own countdown (fallback or a previous Retry-After) hadn't hit
-      // zero yet.
+    // A successful send is proof the window has actually reset, even if our
+    // own countdown hadn't hit zero yet.
+    builder.addMatcher(memberApi.endpoints.inviteMember.matchFulfilled, (state) => {
       state.inviteCooldownUntil = null;
     });
 
-    builder.addCase(inviteMember.rejected, (state, action) => {
-      if (action.payload?.isStale) return;
-      if (action.payload?.statusCode !== 429) return;
+    builder.addMatcher(memberApi.endpoints.inviteMember.matchRejected, (state, action) => {
+      const error = action.payload as ErrorResponse | undefined;
 
-      state.inviteCooldownUntil = Date.now() + (action.payload.retryAfterMs ?? INVITE_RATE_LIMIT_COOLDOWN_MS);
+      // A stale 429 outlived the session that sent it; a future session must not inherit its cooldown.
+      if (error?.statusCode !== 429 || error.isStale) return;
+
+      state.inviteCooldownUntil = Date.now() + (error.retryAfterMs ?? INVITE_RATE_LIMIT_COOLDOWN_MS);
     });
   },
 });

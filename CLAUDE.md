@@ -12,14 +12,33 @@ personal-finance app written in TypeScript: wallets, transactions,
 categories, spending limits, multi-currency support, shared spaces with
 members.
 
-- State: Redux Toolkit. Each domain lives under
-  `src/redux/state/<domain>/{initialState,selectors,slice,thunks}.ts`
+- State: Redux Toolkit. Each domain lives under `src/redux/state/<domain>/`
   (domains: `auth`, `wallet`, `transaction`, `category`, `limit`,
   `currency`, `profile`, `space`, `member`).
-- API layer: `src/api/<resource>.api.ts` wraps a single axios instance
-  (`src/api/instance.ts`); request/response shapes are declared in
+- Server data lives in RTK Query (see `docs/server-data.md` for the tag
+  and invalidation rules). One `createApi` lives in
+  `src/redux/api/baseApi.ts` over the shared axios client; each domain
+  injects its endpoints from `src/redux/state/<domain>/api.ts`, and
+  derived values are pure functions or cache selectors in that domain's
+  `selectors.ts`. Slices hold client state only: `auth` (session and
+  `sessionKey`), `space` (the selected space) and `member` (the invite
+  cooldown). Selecting a space after create/accept/leave goes through
+  `space/thunks.ts`, which checks the session is still current; the
+  spaces list refreshes separately through its tag.
+- Space-scoped endpoints take `spaceId` in their argument (`useSpaceArg()`
+  gives `skipToken` when there is no active space), periods are ISO
+  strings, and views read `currentData` so a changed argument never shows
+  the previous space's or period's data. Loading and error states come
+  from `getLoadState` (`src/redux/api/loadState.ts`), so a background
+  refetch, failed or not, keeps the last result on screen. Build a
+  transactions period with `periodArg` so equal periods share one cache
+  entry. Mutations invalidate only on success.
+- API layer: `src/api/instance.ts` builds the shared axios client (auth
+  header, 401 and 429 handling); sign-in/up still call it through
+  `src/api/auth.api.ts`. Request/response shapes are declared in
   `src/api/dto/*.ts` and must match the backend's actual DTOs (see
-  "Backend contract" below).
+  "Backend contract" below); DTO-to-model mapping lives in
+  `src/api/models/`.
 - Navigation: `src/navigation/` (React Navigation stack + bottom tabs).
 - Screens: `src/screens/**`. A non-trivial screen decomposes into
   `<Screen>/components/<Name>/{<Name>.tsx,style.ts}` and

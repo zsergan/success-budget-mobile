@@ -1,13 +1,11 @@
 import { Text } from 'react-native';
 import { Provider } from 'react-redux';
-import { configureStore } from '@reduxjs/toolkit';
 import { NavigationContainer, createNavigationContainerRef, type InitialState } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
-import authReducer from '@redux/state/auth/slice';
-import currencyReducer from '@redux/state/currency/slice';
+import { createAppStore } from '@redux/Store';
 import WelcomeScreen from '@screens/Welcome/WelcomeScreen';
 import SignInScreen from '@screens/Auth/Screens/SignIn/SignInScreen';
 import SignUpScreen from '@screens/Auth/Screens/SignUp/SignUpScreen';
@@ -20,7 +18,10 @@ import type { MainTabParamList, MainTabScreenProps, RootStackParamList, RootStac
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => jest.requireActual('react-native-reanimated/mock'));
 
-jest.mock('@api/currency.api', () => ({ getCurrencies: jest.fn(() => new Promise(() => {})) }));
+jest.mock('@api/instance', () => ({
+  ApiClient: () => ({}),
+  createHttpClient: () => ({ request: jest.fn(() => new Promise(() => {})) }),
+}));
 
 jest.mock('@hooks', () => ({
   useAlert: () => ({ addAlert: jest.fn() }),
@@ -42,7 +43,7 @@ const focusedTab = () => {
 };
 
 const renderAuthStack = (initialState?: InitialState) => {
-  const store = configureStore({ reducer: { auth: authReducer, currency: currencyReducer } });
+  const store = createAppStore();
 
   render(
     <Provider store={store}>
@@ -123,7 +124,14 @@ describe('auth stack', () => {
 });
 
 const HomeTab = ({ navigation }: MainTabScreenProps<ScreenNames.HOME_TAB>) => (
-  <RecentActivity navigation={navigation} transactions={[]} hasWallets isLoading={false} onRetry={jest.fn()} />
+  <RecentActivity
+    navigation={navigation}
+    transactions={[]}
+    hasWallets
+    isLoading={false}
+    hasError={false}
+    onRetry={jest.fn()}
+  />
 );
 
 const SettingsTab = ({ navigation }: MainTabScreenProps<ScreenNames.SETTINGS_TAB>) => (

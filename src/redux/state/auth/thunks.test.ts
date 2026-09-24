@@ -1,17 +1,9 @@
-import { configureStore } from '@reduxjs/toolkit';
 import * as SecureStore from 'expo-secure-store';
 
+import { createAppStore } from '@redux/Store';
 import { login, register, verifyEmail } from '@api/auth.api';
 import { AUTH_TOKEN_KEY } from '@shared/constants';
-import categoryReducer from '../category/slice';
-import currencyReducer from '../currency/slice';
-import limitReducer from '../limit/slice';
-import memberReducer from '../member/slice';
-import profileReducer from '../profile/slice';
-import spaceReducer from '../space/slice';
-import transactionReducer from '../transaction/slice';
-import walletReducer from '../wallet/slice';
-import authReducer from './slice';
+import type authReducer from './slice';
 import { checkAuth, loginMe, logoutMe, registerMe, verifyEmailMe } from './thunks';
 
 jest.mock('@api/auth.api');
@@ -24,20 +16,7 @@ const mockedSetItemAsync = jest.mocked(SecureStore.setItemAsync);
 const mockedGetItemAsync = jest.mocked(SecureStore.getItemAsync);
 const mockedDeleteItemAsync = jest.mocked(SecureStore.deleteItemAsync);
 
-const testReducer = {
-  auth: authReducer,
-  category: categoryReducer,
-  currency: currencyReducer,
-  limit: limitReducer,
-  member: memberReducer,
-  profile: profileReducer,
-  space: spaceReducer,
-  transaction: transactionReducer,
-  wallet: walletReducer,
-};
-
-const createTestStore = (preloadedState?: { auth: ReturnType<typeof authReducer> }) =>
-  configureStore({ reducer: testReducer, preloadedState });
+const createTestStore = (preloadedState?: { auth: ReturnType<typeof authReducer> }) => createAppStore(preloadedState);
 
 const errorResponse = {
   message: 'Invalid credentials',

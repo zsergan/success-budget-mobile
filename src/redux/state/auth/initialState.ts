@@ -7,11 +7,9 @@ interface AuthState {
   userEmail: string | null;
   error?: ErrorResponse;
   // Bumped every time the signed-in session ends (explicit logout, or
-  // checkAuth finding no token at boot). A mutation thunk that captured
-  // this before an await can tell, after it resolves, whether the session
-  // it ran in is still the one that's active -- see member/thunks.ts's
-  // inviteMember for why contextKey (which also changes on an ordinary
-  // space switch) isn't the right thing to compare there.
+  // checkAuth finding no token at boot). Captured before a request, it tells
+  // afterwards whether the session that sent it is still the active one
+  // (see httpBaseQuery and the space selection thunks).
   sessionKey: number;
 }
 

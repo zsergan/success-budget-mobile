@@ -5,7 +5,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
 import Icon from '@components/Icon/Icon';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
-import { selectCurrentSpace, selectSpace } from '@redux/state/space/selectors';
+import { selectCurrentSpace, selectCurrentSpaceId, selectSpaces } from '@redux/state/space/selectors';
 import { activateSpace } from '@redux/state/space/thunks';
 import { ScreenNames, SpaceType } from '@shared/enums';
 import type { MainTabNavigationProp } from '@shared/types';
@@ -21,7 +21,8 @@ interface Props {
 const SpaceSwitcher = ({ navigation }: Props) => {
   const sheetRef = useRef<BottomSheetModal>(null);
   const dispatch = useAppDispatch();
-  const { spaces, currentSpaceId } = useAppSelector(selectSpace);
+  const spaces = useAppSelector(selectSpaces);
+  const currentSpaceId = useAppSelector(selectCurrentSpaceId);
   const currentSpace = useAppSelector(selectCurrentSpace);
 
   const handleSelect = (spaceId: number) => {

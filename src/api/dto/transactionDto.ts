@@ -1,6 +1,6 @@
 import type { TransactionType } from '@shared/enums';
 import type { Category } from './categoryDto';
-import type { Wallet } from './walletDto';
+import type { Wallet, WalletWithBalance } from './walletDto';
 
 export interface Transaction {
   id: string;
@@ -27,6 +27,6 @@ export interface CreateTransactionRequest {
 // plain create+save, no join) -- unlike GET, which eager-joins both.
 export interface CreateTransactionResponse {
   transaction: Omit<Transaction, 'wallet' | 'category'>;
-  wallet: Wallet;
+  wallet: WalletWithBalance;
   previous_balance: number;
 }
