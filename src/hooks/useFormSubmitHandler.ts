@@ -21,8 +21,6 @@ interface UseFormSubmitHandlerOptions<TFormData extends FieldValues> {
   reset?: () => void;
 }
 
-// dispatch().unwrap() resolves even on a rejected action, so we await it
-// explicitly and only call onSuccess when it actually succeeds.
 const useFormSubmitHandler = <TFormData extends FieldValues>({
   handleSubmit,
   formState,
