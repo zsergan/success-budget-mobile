@@ -5,6 +5,11 @@ data each successful mutation makes stale, based on the backend services
 (`success-budget-backend`, `main` at `fd0d717`) and on the Redux thunks in
 `src/redux/state/*/thunks.ts` at `f9cc9c1`.
 
+Wallets, categories, limits and history now follow the "Stale" column
+through RTK Query tags (`src/redux/state/<domain>/api.ts`, checked by
+`src/redux/api/invalidation.test.ts`); the "Refreshed today" and "Gap"
+columns and the lifecycle section record the thunk-era behavior.
+
 ## Cached resources
 
 Every resource except Profile and Currencies is scoped to the active space.
