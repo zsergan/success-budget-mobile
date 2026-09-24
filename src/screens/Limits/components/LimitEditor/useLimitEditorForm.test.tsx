@@ -18,11 +18,15 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 );
 jest.mock('@gorhom/bottom-sheet', () => ({ useBottomSheet: () => ({ close: jest.fn() }) }));
 
+const mockCreateLimit = jest.fn();
 const mockUpdateLimit = jest.fn();
 jest.mock('@redux/state/limit/api', () => ({
   ...jest.requireActual('@redux/state/limit/api'),
+  useCreateLimitMutation: () => [mockCreateLimit],
   useUpdateLimitMutation: () => [mockUpdateLimit],
 }));
+
+beforeEach(() => jest.clearAllMocks());
 
 const category = (id: number): LimitCategoryModel => ({ id, name: `C${id}`, icon: 'grocery', color: AppColor.SLATE });
 
@@ -37,17 +41,23 @@ const GROUP: LimitModel = {
 
 const SINGLE: LimitModel = { ...GROUP, id: 8, name: null, categories: [category(1)] };
 
+const TOTAL: LimitModel = { ...GROUP, id: 7, name: null, categories: [] };
+
 const NAMES = { 1: 'C1', 2: 'C2', 3: 'C3' };
 
-const renderForm = async (activeCategoryIds: number[] | undefined, limit = GROUP) => {
+// null opens the editor for a new limit.
+const renderForm = async (activeCategoryIds: number[] | undefined, limit: LimitModel | null = GROUP) => {
   const store = createAppStore();
   store.dispatch(spaceSelected(1));
   const Wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
 
-  const rendered = renderHook((props: { activeCategoryIds?: number[] }) => useLimitEditorForm({ limit, ...props }), {
-    wrapper: Wrapper,
-    initialProps: { activeCategoryIds },
-  });
+  const rendered = renderHook(
+    (props: { activeCategoryIds?: number[] }) => useLimitEditorForm({ limit: limit ?? undefined, ...props }),
+    {
+      wrapper: Wrapper,
+      initialProps: { activeCategoryIds },
+    },
+  );
   // Validation resolves asynchronously; let it settle inside act.
   await act(async () => {});
 
@@ -83,11 +93,59 @@ it('sends the values the schema normalized', async () => {
   });
 });
 
+it('blocks a direct submit of an invalid form', async () => {
+  const { result } = await renderForm([1, 2, 3], null);
+
+  await act(() => result.current.onSubmit());
+
+  expect(mockCreateLimit).not.toHaveBeenCalled();
+  expect(result.current.errors.amount?.message).toBe('Enter an amount');
+  expect(result.current.errors.categoryIds?.message).toBe('Pick a category');
+});
+
+it('turns a group into the monthly total without its categories or name', async () => {
+  mockUpdateLimit.mockReturnValue({ unwrap: () => Promise.resolve({}) });
+  const { result } = await renderForm([1, 2, 3], { ...GROUP, amount: '1500,50' });
+
+  await act(async () => result.current.setScope('total'));
+  await act(() => result.current.onSubmit());
+
+  expect(mockUpdateLimit).toHaveBeenCalledWith({
+    spaceId: 1,
+    limitId: 9,
+    data: { amount: '1500.50', category_ids: [] },
+  });
+});
+
 describe('canSubmit', () => {
-  it('holds for an unchanged saved limit', async () => {
-    const { result } = await renderForm([1, 2, 3]);
+  it.each([
+    ['group', GROUP],
+    ['single', SINGLE],
+    ['total', TOTAL],
+  ])('holds for an unchanged saved %s limit', async (_, limit) => {
+    const { result } = await renderForm([1, 2, 3], limit);
 
     expect(result.current.canSubmit).toBe(true);
+  });
+
+  it('stays off for a new limit until it is filled in', async () => {
+    const { result } = await renderForm([1, 2, 3], null);
+    expect(result.current.canSubmit).toBe(false);
+
+    await act(async () => result.current.toggleCategory(1, NAMES));
+    expect(result.current.canSubmit).toBe(false);
+  });
+
+  it('follows a switch to and from the monthly total', async () => {
+    const { result } = await renderForm([1, 2, 3], SINGLE);
+
+    await act(async () => result.current.setScope('total'));
+    expect(result.current.watch('categoryIds')).toEqual([]);
+    expect(result.current.canSubmit).toBe(true);
+
+    await act(async () => result.current.setScope('category'));
+    expect(result.current.canSubmit).toBe(false);
+    expect(result.current.errors.categoryIds?.message).toBe('Pick a category');
   });
 
   it('follows a type switch', async () => {
