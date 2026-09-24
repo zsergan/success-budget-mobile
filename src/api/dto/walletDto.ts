@@ -1,15 +1,18 @@
-import type { AppColor } from '@shared/enums';
-import type { Transaction } from './transactionDto';
+import type { AppColor, TransactionType } from '@shared/enums';
 
 export interface Wallet {
   id: number;
   wallet_name: string;
-  balance: string;
   design: AppColor;
 }
 
+// `balance` is computed per response (all-time, from history), never stored.
+export interface WalletWithBalance extends Wallet {
+  balance: number;
+}
+
 export interface GetWalletsResponse {
-  wallet: Wallet;
+  wallet: WalletWithBalance;
   total_spend: number;
   total_income: number;
 }
@@ -27,9 +30,18 @@ export interface CreateWalletRequest {
   design: AppColor;
 }
 
+// The starting-balance transaction, saved without relations; unlike history reads its amount is a number.
+export interface InitialBalanceTransaction {
+  id: string;
+  transaction_type: TransactionType;
+  amount: number;
+  timestamp: string;
+  description: string | null;
+}
+
 export interface CreateWalletResponse {
-  wallet: Wallet;
-  transaction: Transaction | null;
+  wallet: WalletWithBalance;
+  transaction: InitialBalanceTransaction | null;
 }
 
 export interface UpdateWalletRequest {

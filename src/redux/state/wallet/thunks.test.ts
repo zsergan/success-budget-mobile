@@ -29,7 +29,7 @@ describe('addWallet', () => {
 
     store.dispatch(activateSpace(1));
     mockedCreateWallet.mockResolvedValue({
-      wallet: { id: 10, wallet_name: 'Cash', balance: '100', design: AppColor.SLATE },
+      wallet: { id: 10, wallet_name: 'Cash', balance: 100, design: AppColor.SLATE },
       transaction: { id: 'starting-balance' } as never,
     });
 
@@ -43,7 +43,7 @@ describe('addWallet', () => {
 
     store.dispatch(activateSpace(1));
     mockedCreateWallet.mockResolvedValue({
-      wallet: { id: 10, wallet_name: 'Cash', balance: '0', design: AppColor.SLATE },
+      wallet: { id: 10, wallet_name: 'Cash', balance: 0, design: AppColor.SLATE },
       transaction: null,
     });
 
@@ -64,7 +64,7 @@ describe('addWallet', () => {
 
     store.dispatch(activateSpace(2));
     resolveCreate({
-      wallet: { id: 10, wallet_name: 'Cash', balance: '100', design: AppColor.SLATE },
+      wallet: { id: 10, wallet_name: 'Cash', balance: 100, design: AppColor.SLATE },
       transaction: { id: 'starting-balance' } as never,
     });
     await pending;

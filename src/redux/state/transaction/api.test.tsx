@@ -27,7 +27,7 @@ const dto: Transaction = {
   amount: '10.00',
   timestamp: '2026-01-01T00:00:00.000Z',
   description: '',
-  wallet: { id: 1, wallet_name: 'Cash', balance: '100.00', design: AppColor.SLATE },
+  wallet: { id: 1, wallet_name: 'Cash', design: AppColor.SLATE },
   category: {
     id: 1,
     name: 'Food',

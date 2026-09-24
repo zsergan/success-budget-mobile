@@ -36,7 +36,7 @@ const toWalletCardProps = (
   currencyCode: string,
 ): Omit<WalletCardProps, 'onMorePress' | 'style'> => ({
   walletName: item.wallet.wallet_name,
-  balance: item.wallet.balance,
+  balance: String(item.wallet.balance),
   currencyCode,
   totalIncome: item.total_income,
   totalSpend: item.total_spend,
@@ -93,7 +93,7 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
               navigation.navigate(ScreenNames.ADD_WALLET_SCREEN, {
                 id: selectedWallet.wallet.id,
                 walletName: selectedWallet.wallet.wallet_name,
-                balance: selectedWallet.wallet.balance,
+                balance: String(selectedWallet.wallet.balance),
                 design: selectedWallet.wallet.design,
               });
             }

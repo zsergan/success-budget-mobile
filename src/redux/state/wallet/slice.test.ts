@@ -9,7 +9,7 @@ const wallet: GetWalletsResponse = {
   wallet: {
     id: 1,
     wallet_name: 'Cash',
-    balance: '100',
+    balance: 100,
     design: AppColor.SLATE,
   },
   total_spend: 0,

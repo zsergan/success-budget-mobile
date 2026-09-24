@@ -1,10 +1,4 @@
-import type {
-  CreateWalletRequest,
-  UpdateWalletRequest,
-  WalletsOverviewResponse,
-  CreateWalletResponse,
-  Wallet,
-} from '@api/dto';
+import type { CreateWalletRequest, UpdateWalletRequest, WalletsOverviewResponse, CreateWalletResponse } from '@api/dto';
 import { ApiClient } from './instance';
 
 const api = ApiClient();
@@ -22,9 +16,7 @@ export const createWallet = async (spaceId: number, data: CreateWalletRequest) =
 };
 
 export const updateWallet = async (spaceId: number, walletId: number, data: UpdateWalletRequest) => {
-  const response = await api.put<Wallet>(`/spaces/${spaceId}/wallets/${walletId}`, data);
-
-  return response.data;
+  await api.put<void>(`/spaces/${spaceId}/wallets/${walletId}`, data);
 };
 
 export const deleteWallet = async (spaceId: number, walletId: number) => {

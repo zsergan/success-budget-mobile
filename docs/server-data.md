@@ -80,15 +80,12 @@ described in the lifecycle section.
   anyway is correct and cheap; no need to match on timestamps.
 - An income transaction does not change Limits; a per-type rule is
   possible but not required.
-- `PUT /wallets/:id` responds with an empty body (the service returns
-  `void`), while `updateWallet` types the response as `Wallet`. Nothing
-  reads the value today.
-- Other wallet DTO gaps against `docs/type-contract.md` in the backend:
-  `Wallet.balance` is a `number` (the client types it as `string` all the
-  way into `WalletCard` and the edit-wallet route params), embedded
-  `wallet` objects in history rows carry no `balance` at all, and
-  `POST /wallets` returns its starting transaction without relations and
-  with a numeric `amount`, not the `Transaction` shape the client declares.
+- History rows still differ from the client `Transaction` DTO: the
+  backend excludes `wallet_id` and `category_id` (so `walletId` and
+  `categoryId` on `TransactionModel` are always `undefined`), and the
+  embedded `category` is the bare entity without `transaction_count`,
+  `limit` or `archived_at`, although it is mapped as a full
+  `CategoryModel`. Nothing reads those fields from history today.
 - Backend, found while reading, not reproduced: the "removed" branch of
   `DELETE /categories/:id` deletes the row without unlinking it from its
   limit, and `limit_categories.category_id` is `ON DELETE RESTRICT`. A
