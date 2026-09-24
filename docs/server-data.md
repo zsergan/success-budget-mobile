@@ -11,6 +11,9 @@ now follows the "Stale" column through RTK Query tags (`src/redux/state/<domain>
 columns and the lifecycle section record the thunk-era behavior.
 Invalidation happens only after a successful mutation (an empty body
 counts as success), so a failed or session-stale write refreshes nothing.
+One exception: a limit create or edit rejected with `400 An archived
+category cannot be added to a limit` refreshes Limits and Categories,
+because the error itself shows a category was archived elsewhere.
 `History.Recent` is no longer a separate request: Home asks for the
 current month by the same client-local bounds as the Transactions tab's
 default period (`periodArg`), so both read one `History.Range` entry.
@@ -53,7 +56,7 @@ Space-scoped endpoints are written without their `/spaces/:id` prefix.
 | Archive category                    | `PUT /categories/:id` with `is_active: 0`                                        | Categories; Limits (category unlinked, limit deleted if it was its last category); History (embedded category)                                                           | Categories, `History.Range`, `History.Latest`                                                        | **Limits**, **`History.Recent`** |
 | Restore category                    | `PUT /categories/:id` with `is_active: 1`                                        | Categories; History (embedded category). Limit membership is not restored.                                                                                               | Categories, `History.Range`, `History.Latest`                                                        | **`History.Recent`**             |
 | Delete category → archived          | `DELETE /categories/:id`, `{archived: true}`                                     | Same as archive                                                                                                                                                          | Categories                                                                                           | **Limits**, **History**          |
-| Delete category → removed           | `DELETE /categories/:id`, `{archived: false}` (only when it has no transactions) | Categories; Limits (membership)                                                                                                                                          | Categories                                                                                           | **Limits**                       |
+| Delete category → removed           | `DELETE /categories/:id`, `{archived: false}` (only when it has no transactions) | Categories; Limits (category unlinked, limit deleted if it was its last category)                                                                                        | Categories                                                                                           | **Limits**                       |
 | Reorder categories                  | `PUT /categories/reorder`                                                        | Categories                                                                                                                                                               | Categories                                                                                           | —                                |
 | Create / edit / delete limit        | `POST`, `PUT`, `DELETE /limits[/:id]`                                            | Limits; Categories (`limit: {id, name}` of every category added, removed or renamed)                                                                                     | Limits                                                                                               | **Categories**                   |
 | Create wallet, zero start           | `POST /wallets`                                                                  | Wallets                                                                                                                                                                  | Wallets                                                                                              | —                                |
@@ -98,11 +101,6 @@ described in the lifecycle section.
   embedded `category` is the bare entity without `transaction_count`,
   `limit` or `archived_at`, although it is mapped as a full
   `CategoryModel`. Nothing reads those fields from history today.
-- Backend, found while reading, not reproduced: the "removed" branch of
-  `DELETE /categories/:id` deletes the row without unlinking it from its
-  limit, and `limit_categories.category_id` is `ON DELETE RESTRICT`. A
-  category with no transactions that belongs to a limit should therefore
-  fail to delete with a server error.
 
 ## Current lifecycle behavior
 
