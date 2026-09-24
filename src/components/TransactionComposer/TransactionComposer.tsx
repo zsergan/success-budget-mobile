@@ -12,12 +12,11 @@ export interface TransactionComposerHandle {
 
 interface Props {
   initialWalletId: number;
-  onSaved?: () => void;
 }
 
 // Home and Transactions each hand-rolled the same pair of income/expense
 // sheets plus present handlers -- this is that pairing, extracted once.
-const TransactionComposer = forwardRef<TransactionComposerHandle, Props>(({ initialWalletId, onSaved }, ref) => {
+const TransactionComposer = forwardRef<TransactionComposerHandle, Props>(({ initialWalletId }, ref) => {
   const expenseRef = useRef<BottomSheetModal>(null);
   const incomeRef = useRef<BottomSheetModal>(null);
 
@@ -29,11 +28,11 @@ const TransactionComposer = forwardRef<TransactionComposerHandle, Props>(({ init
   return (
     <>
       <BottomModal ref={expenseRef} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
-        <TransactionForm initialWalletId={initialWalletId} onSaved={onSaved} />
+        <TransactionForm initialWalletId={initialWalletId} />
       </BottomModal>
 
       <BottomModal ref={incomeRef} snapPoint={TRANSACTION_FORM_SNAP_POINT}>
-        <TransactionForm initialWalletId={initialWalletId} transactionType={TransactionType.INCOME} onSaved={onSaved} />
+        <TransactionForm initialWalletId={initialWalletId} transactionType={TransactionType.INCOME} />
       </BottomModal>
     </>
   );
