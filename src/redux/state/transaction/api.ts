@@ -4,11 +4,17 @@ import { mapTransaction } from '@api/models';
 import type { SpaceArg } from '@redux/api/baseApi';
 import { baseApi, invalidatesOnSuccess, spaceTags } from '@redux/api/baseApi';
 
-// Without a period the backend returns the current month (Home's recent activity).
 export interface TransactionsArg extends SpaceArg {
-  from?: string;
-  to?: string;
+  from: string;
+  to: string;
 }
+
+// Every caller builds the period the same way, so an equal period is one cache entry and one request.
+export const periodArg = (spaceId: number, { from, to }: { from: Date; to: Date }): TransactionsArg => ({
+  spaceId,
+  from: from.toISOString(),
+  to: to.toISOString(),
+});
 
 export const transactionApi = baseApi.injectEndpoints({
   endpoints: (build) => ({

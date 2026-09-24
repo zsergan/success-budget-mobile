@@ -22,7 +22,7 @@ jest.useFakeTimers();
 interface RequestConfig {
   url: string;
   method: string;
-  params?: { from?: string };
+  params?: { from: string };
 }
 
 let mutationResponse: unknown;
@@ -43,23 +43,29 @@ const respond = ({ url, method }: RequestConfig) => {
 
 const resourceOf = ({ url, params }: RequestConfig) => {
   const [, spaceId, resource, extra] = url.match(/^\/spaces\/(\d+)\/(\w+)(?:\/(\w+))?$/) ?? [];
-  const name = extra ?? (resource === 'transactions' ? (params?.from ? 'range' : 'recent') : resource);
+  const name = extra ?? (resource === 'transactions' ? params!.from.slice(0, 7) : resource);
 
   return `${spaceId}:${name}`;
 };
 
-const ALL_HISTORY = ['1:recent', '1:range', '1:latest'];
+const ALL_HISTORY = ['1:2026-01', '1:2026-02', '1:latest'];
 
 const subscribeToSpace = (store: ReturnType<typeof createAppStore>, spaceId: number) => {
   store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId }));
   store.dispatch(categoryApi.endpoints.getCategories.initiate({ spaceId }));
   store.dispatch(limitApi.endpoints.getLimits.initiate({ spaceId }));
-  store.dispatch(transactionApi.endpoints.getTransactions.initiate({ spaceId }));
   store.dispatch(
     transactionApi.endpoints.getTransactions.initiate({
       spaceId,
       from: '2026-01-01T00:00:00.000Z',
       to: '2026-01-31T23:59:59.999Z',
+    }),
+  );
+  store.dispatch(
+    transactionApi.endpoints.getTransactions.initiate({
+      spaceId,
+      from: '2026-02-01T00:00:00.000Z',
+      to: '2026-02-28T23:59:59.999Z',
     }),
   );
   store.dispatch(transactionApi.endpoints.getLatestTransaction.initiate({ spaceId }));

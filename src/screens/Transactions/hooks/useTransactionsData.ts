@@ -4,7 +4,7 @@ import { skipToken } from '@reduxjs/toolkit/query';
 import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/state/space/selectors';
-import { useGetLatestTransactionQuery, useGetTransactionsQuery } from '@redux/state/transaction/api';
+import { periodArg, useGetLatestTransactionQuery, useGetTransactionsQuery } from '@redux/state/transaction/api';
 import { EMPTY_TRANSACTIONS, getPeriodTotals } from '@redux/state/transaction/selectors';
 import type { DateRange } from '@shared/utils';
 
@@ -32,9 +32,7 @@ const useTransactionsData = ({ range }: UseTransactionsDataProps) => {
 
   // currentData only ever belongs to this exact space and period, so a new
   // period or space shows loading instead of the previous one's rows.
-  const rangeQuery = useGetTransactionsQuery(
-    spaceId === null ? skipToken : { spaceId, from: range.from.toISOString(), to: range.to.toISOString() },
-  );
+  const rangeQuery = useGetTransactionsQuery(spaceId === null ? skipToken : periodArg(spaceId, range));
   const latestQuery = useGetLatestTransactionQuery(useSpaceArg());
 
   const transactions = rangeQuery.currentData ?? EMPTY_TRANSACTIONS;

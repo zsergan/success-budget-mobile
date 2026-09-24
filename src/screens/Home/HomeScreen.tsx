@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 import type { TransactionComposerHandle } from '@components';
 import { Fab, RootLayout, SpaceSwitcher, TransactionComposer } from '@components';
 import { getLoadState } from '@redux/api/loadState';
-import { useSpaceArg } from '@redux/hooks';
+import { useCurrentMonthArg, useSpaceArg } from '@redux/hooks';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { EMPTY_WALLETS, getTotalBalance } from '@redux/state/wallet/selectors';
 import { useGetTransactionsQuery } from '@redux/state/transaction/api';
@@ -28,7 +28,7 @@ const HomeScreen = ({ navigation }: Props) => {
   const { currentData: walletsOverview } = useGetWalletsQuery(spaceArg);
   const { total, currencyCode, walletsCount, deltaPercent } = getTotalBalance(walletsOverview);
   const wallets = walletsOverview?.wallets ?? EMPTY_WALLETS;
-  const recentQuery = useGetTransactionsQuery(spaceArg);
+  const recentQuery = useGetTransactionsQuery(useCurrentMonthArg());
   const { isLoading: isLoadingTransactions, hasError: hasTransactionsError } = getLoadState(recentQuery);
   const { isHidden, toggle } = useBalanceVisibility();
 

@@ -76,8 +76,10 @@ describe('transactionApi', () => {
   it('refetches only the space whose tag was invalidated', async () => {
     const store = createAppStore();
 
-    store.dispatch(getTransactions.initiate({ spaceId: 1 }));
-    store.dispatch(getTransactions.initiate({ spaceId: 2 }));
+    const period = { from: '2026-01-01T00:00:00.000Z', to: '2026-01-31T23:59:59.999Z' };
+
+    store.dispatch(getTransactions.initiate({ spaceId: 1, ...period }));
+    store.dispatch(getTransactions.initiate({ spaceId: 2, ...period }));
     await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
     mockedRequest.mockClear();
 
