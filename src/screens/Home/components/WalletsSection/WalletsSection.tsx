@@ -23,11 +23,18 @@ import useWalletActions from './useWalletActions';
 
 import styles from './style';
 
-const renderBottomModalContent = (walletName: string, currencyCode: string, design?: AppColor) => (
+const renderBottomModalContent = (
+  walletName: string,
+  currencyCode: string,
+  design: AppColor | undefined,
+  error: string | null,
+) => (
   <View style={styles.confirmContainer}>
     <TinyWallet walletName={walletName} currencyCode={currencyCode} design={design} />
 
     <Text style={styles.confirmText}>{`Delete a ${walletName} permanently?`}</Text>
+
+    {error && <Text style={styles.confirmError}>{error}</Text>}
   </View>
 );
 
@@ -58,6 +65,8 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
     selectedWallet,
     isModalVisible,
     isConfirmVisible,
+    isDeleting,
+    deleteError,
     onWalletLongPress,
     onDeletePress,
     onDeleteCancel,
@@ -107,12 +116,14 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
         <BottomModal
           isVisible={isConfirmVisible}
           onClose={onConfirmCancel}
+          disabled={isDeleting}
           content={renderBottomModalContent(
             selectedWallet?.wallet.wallet_name || '',
             currencyCode,
             selectedWallet?.wallet.design,
+            deleteError,
           )}
-          actions={[{ title: 'Delete', onPress: onConfirm }]}
+          actions={[{ title: isDeleting ? 'Deleting…' : 'Delete', onPress: onConfirm }]}
         />
 
         {isLoading && (

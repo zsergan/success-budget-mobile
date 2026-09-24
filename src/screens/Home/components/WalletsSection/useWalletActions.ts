@@ -1,6 +1,8 @@
 import { useState } from 'react';
 
 import type { GetWalletsResponse } from '@api/dto';
+import { useConfirmAction } from '@hooks';
+import { requireSpaceId } from '@redux/api/baseApi';
 import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
@@ -16,6 +18,7 @@ const useWalletActions = () => {
   const wallets = walletsQuery.currentData?.wallets ?? EMPTY_WALLETS;
   const { isLoading, hasError } = getLoadState(walletsQuery);
   const [deleteWallet] = useDeleteWalletMutation();
+  const { run, isPending: isDeleting, error: deleteError, resetError } = useConfirmAction();
 
   const onWalletLongPress = (wallet: GetWalletsResponse) => {
     setSelectedWallet(wallet);
@@ -24,6 +27,7 @@ const useWalletActions = () => {
 
   const onDeletePress = () => {
     setIsModalVisible(false);
+    resetError();
     setIsConfirmVisible(true);
   };
 
@@ -36,11 +40,9 @@ const useWalletActions = () => {
   };
 
   const onConfirm = () => {
-    if (selectedWallet && spaceId !== null) {
-      deleteWallet({ spaceId, walletId: selectedWallet.wallet.id });
-    }
+    if (!selectedWallet) return;
 
-    onConfirmCancel();
+    run(() => deleteWallet({ spaceId: requireSpaceId(spaceId), walletId: selectedWallet.wallet.id }), onConfirmCancel);
   };
 
   return {
@@ -51,6 +53,8 @@ const useWalletActions = () => {
     selectedWallet,
     isModalVisible,
     isConfirmVisible,
+    isDeleting,
+    deleteError,
     onWalletLongPress,
     onDeletePress,
     onDeleteCancel,
