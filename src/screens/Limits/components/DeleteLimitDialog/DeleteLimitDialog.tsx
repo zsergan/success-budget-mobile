@@ -2,8 +2,9 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import type { LimitModel } from '@api/models';
 import { Icon, ModalContainer } from '@components';
-import { useAppDispatch } from '@redux/hooks';
-import { removeLimit } from '@redux/state/limit/thunks';
+import { useAppSelector } from '@redux/hooks';
+import { useDeleteLimitMutation } from '@redux/state/limit/api';
+import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { formatCurrencyAmount } from '@shared/utils';
 import { colors } from '@shared/theme';
 
@@ -16,12 +17,13 @@ interface Props {
 }
 
 const DeleteLimitDialog = ({ limit, currencyCode, onClose }: Props) => {
-  const dispatch = useAppDispatch();
+  const spaceId = useAppSelector(selectCurrentSpaceId);
+  const [deleteLimit] = useDeleteLimitMutation();
 
   const handleDelete = () => {
-    if (!limit) return;
+    if (!limit || spaceId === null) return;
 
-    dispatch(removeLimit(limit.id));
+    deleteLimit({ spaceId, limitId: limit.id });
     onClose();
   };
 

@@ -8,7 +8,8 @@ import Icon from '@components/Icon/Icon';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
 import { getActiveCategories } from '@redux/state/category/selectors';
-import { findLimitForCategory, selectLimit } from '@redux/state/limit/selectors';
+import { useGetLimitsQuery } from '@redux/state/limit/api';
+import { EMPTY_LIMITS, findLimitForCategory } from '@redux/state/limit/selectors';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import { selectWallet } from '@redux/state/wallet/selectors';
 import { TransactionType } from '@shared/enums';
@@ -40,7 +41,7 @@ const TransactionForm = ({ initialWalletId, transactionType = TransactionType.EX
   const spaceArg = useSpaceArg();
   const { currentData: allCategories } = useGetCategoriesQuery(spaceArg);
   const { expenses, incomes } = useMemo(() => getActiveCategories(allCategories), [allCategories]);
-  const { categoryLimits } = useAppSelector(selectLimit);
+  const { categoryLimits } = useGetLimitsQuery(spaceArg).currentData ?? EMPTY_LIMITS;
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
   const { control, watch, resetField, onSubmit, isSubmitDisabled, isValid, errors, closeBottomSheet } =

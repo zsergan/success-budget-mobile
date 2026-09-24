@@ -6,7 +6,6 @@ import { startLegacyBridge } from './api/legacyBridge';
 import authReducer from './state/auth/slice';
 import { logoutMe } from './state/auth/thunks';
 import currencyReducer from './state/currency/slice';
-import limitReducer from './state/limit/slice';
 import memberReducer from './state/member/slice';
 import profileReducer from './state/profile/slice';
 import spaceReducer from './state/space/slice';
@@ -16,7 +15,6 @@ import walletReducer from './state/wallet/slice';
 const rootReducer = combineReducers({
   auth: authReducer,
   currency: currencyReducer,
-  limit: limitReducer,
   member: memberReducer,
   profile: profileReducer,
   space: spaceReducer,

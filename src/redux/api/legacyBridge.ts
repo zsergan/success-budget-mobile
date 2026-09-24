@@ -2,11 +2,10 @@ import type { ListenerEffectAPI, ListenerMiddlewareInstance, ThunkDispatch, Unkn
 
 import type { RootState } from '@redux/Store';
 import { categoryApi } from '@redux/state/category/api';
-import { fetchLimits } from '@redux/state/limit/thunks';
 import { transactionsInvalidated } from '@redux/state/transaction/actions';
 import { fetchTransactions } from '@redux/state/transaction/thunks';
 
-type LegacyResource = 'Limits' | 'Transactions';
+type LegacyResource = 'Transactions';
 
 // Temporary, until every financial domain is on RTK Query: tags can't reach data
 // still kept in slices, so RTK Query writes re-fetch those slices here instead.
@@ -20,10 +19,6 @@ export const startLegacyBridge = (listener: ListenerMiddlewareInstance<RootState
 
     if (spaceId !== currentSpaceId) return;
 
-    if (resources.includes('Limits')) {
-      dispatch(fetchLimits());
-    }
-
     if (resources.includes('Transactions')) {
       dispatch(fetchTransactions());
       dispatch(transactionsInvalidated({ contextKey }));
@@ -32,16 +27,12 @@ export const startLegacyBridge = (listener: ListenerMiddlewareInstance<RootState
 
   listener.startListening({
     matcher: categoryApi.endpoints.updateCategory.matchFulfilled,
-    effect: (action, api) => refresh(api, action.meta.arg.originalArgs.spaceId, ['Limits', 'Transactions']),
+    effect: (action, api) => refresh(api, action.meta.arg.originalArgs.spaceId, ['Transactions']),
   });
 
   listener.startListening({
     matcher: categoryApi.endpoints.deleteCategory.matchFulfilled,
     effect: (action, api) =>
-      refresh(
-        api,
-        action.meta.arg.originalArgs.spaceId,
-        action.payload.archived ? ['Limits', 'Transactions'] : ['Limits'],
-      ),
+      refresh(api, action.meta.arg.originalArgs.spaceId, action.payload.archived ? ['Transactions'] : []),
   });
 };

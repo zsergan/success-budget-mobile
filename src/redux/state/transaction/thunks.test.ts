@@ -1,5 +1,4 @@
 import { createAppStore } from '@redux/Store';
-import * as limitApi from '@api/limit.api';
 import * as transactionApi from '@api/transaction.api';
 import * as walletApi from '@api/wallet.api';
 import { TransactionType } from '@shared/enums';
@@ -8,13 +7,11 @@ import { addTransaction } from './thunks';
 
 jest.mock('@api/transaction.api');
 jest.mock('@api/wallet.api');
-jest.mock('@api/limit.api');
 
 const mockedCreateTransaction = jest.mocked(transactionApi.createTransaction);
 const mockedGetTransactions = jest.mocked(transactionApi.getTransactions);
 const mockedGetLatestTransaction = jest.mocked(transactionApi.getLatestTransaction);
 const mockedGetWallets = jest.mocked(walletApi.getWallets);
-const mockedGetLimits = jest.mocked(limitApi.getLimits);
 
 const createTestStore = () => createAppStore();
 
@@ -36,11 +33,10 @@ beforeEach(() => {
     total_balance_currency: 'USD',
     delta_percent: 0,
   });
-  mockedGetLimits.mockResolvedValue({ total: null, categoryLimits: [], overAllocation: null } as never);
 });
 
 describe('addTransaction', () => {
-  it('refreshes recent/wallets/limits and bumps dataRevision when the space is unchanged', async () => {
+  it('refreshes recent/wallets and bumps dataRevision when the space is unchanged', async () => {
     const store = createTestStore();
 
     store.dispatch(activateSpace(1));
@@ -50,7 +46,6 @@ describe('addTransaction', () => {
 
     expect(mockedGetTransactions).toHaveBeenCalledWith(1);
     expect(mockedGetWallets).toHaveBeenCalledWith(1);
-    expect(mockedGetLimits).toHaveBeenCalledWith(1);
     expect(store.getState().transaction.dataRevision).toBe(1);
   });
 

@@ -4,9 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { LimitModel } from '@api/models';
 import { BottomSheetModal as BottomModal, EmptyState, Icon } from '@components';
-import { useAppDispatch, useAppSelector } from '@redux/hooks';
-import { selectLimit } from '@redux/state/limit/selectors';
-import { fetchLimits } from '@redux/state/limit/thunks';
+import { useAppSelector, useSpaceArg } from '@redux/hooks';
+import { useGetLimitsQuery } from '@redux/state/limit/api';
+import { EMPTY_LIMITS } from '@redux/state/limit/selectors';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import { colors } from '@shared/theme';
 import LimitEditorSheet, { LIMIT_EDITOR_SNAP_POINT } from './components/LimitEditor/LimitEditorSheet';
@@ -21,8 +21,8 @@ import useLimitEditor from './hooks/useLimitEditor';
 import styles from './style';
 
 const LimitsScreen = () => {
-  const dispatch = useAppDispatch();
-  const { total, categoryLimits, overAllocation, isLoading, error } = useAppSelector(selectLimit);
+  const { currentData, isFetching: isLoading, error, refetch } = useGetLimitsQuery(useSpaceArg());
+  const { total, categoryLimits, overAllocation } = currentData ?? EMPTY_LIMITS;
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
   const { editorTarget, editorKey, openEditor, editorRef } = useLimitEditor();
@@ -62,7 +62,7 @@ const LimitsScreen = () => {
                 title="Couldn't load limits"
                 description="Check your connection and try again."
                 actionLabel="Retry"
-                onActionPress={() => dispatch(fetchLimits())}
+                onActionPress={refetch}
               />
             ) : isFullyEmpty ? (
               <LimitsEmptyState

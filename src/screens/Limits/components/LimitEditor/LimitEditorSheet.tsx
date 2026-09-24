@@ -6,7 +6,8 @@ import { Icon } from '@components';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
 import { getActiveCategories } from '@redux/state/category/selectors';
-import { findLimitForCategory, selectLimit } from '@redux/state/limit/selectors';
+import { useGetLimitsQuery } from '@redux/state/limit/api';
+import { EMPTY_LIMITS, findLimitForCategory } from '@redux/state/limit/selectors';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import { formatCurrencyAmount } from '@shared/utils';
 import { colors } from '@shared/theme';
@@ -33,9 +34,10 @@ interface Props {
 
 const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
   const { height: windowHeight } = useWindowDimensions();
-  const { currentData: categories } = useGetCategoriesQuery(useSpaceArg());
+  const spaceArg = useSpaceArg();
+  const { currentData: categories } = useGetCategoriesQuery(spaceArg);
   const { expenses } = getActiveCategories(categories);
-  const { total, categoryLimits } = useAppSelector(selectLimit);
+  const { total, categoryLimits } = useGetLimitsQuery(spaceArg).currentData ?? EMPTY_LIMITS;
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
   const { control, watch, setScope, toggleCategory, onNameChange, onSubmit, isSubmitDisabled, closeBottomSheet } =

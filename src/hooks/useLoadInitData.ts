@@ -3,12 +3,11 @@ import { skipToken } from '@reduxjs/toolkit/query';
 
 import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
 import { fetchWallets } from '@redux/state/wallet/thunks';
-import { fetchLimits } from '@redux/state/limit/thunks';
 import { fetchTransactions } from '@redux/state/transaction/thunks';
 import { fetchProfile } from '@redux/state/profile/thunks';
 import { fetchSpaces } from '@redux/state/space/thunks';
 import { selectWallet } from '@redux/state/wallet/selectors';
-import { selectLimit } from '@redux/state/limit/selectors';
+import { useGetLimitsQuery } from '@redux/state/limit/api';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
 import { selectTransaction } from '@redux/state/transaction/selectors';
 import { selectProfile } from '@redux/state/profile/selectors';
@@ -23,7 +22,6 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   const { isLoading: isSpaceLoading } = useAppSelector(selectSpace);
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
   const { isLoading: isWalletLoading, hasLoaded: hasWalletsLoaded } = useAppSelector(selectWallet);
-  const { isLoading: isLimitsLoading, hasLoaded: hasLimitsLoaded } = useAppSelector(selectLimit);
   const { isLoading: isTransactionLoading, hasLoaded: hasTransactionsLoaded } = useAppSelector(selectTransaction);
   const { isLoading: isProfileLoading } = useAppSelector(selectProfile);
   const sessionKey = useAppSelector((state) => state.auth.sessionKey);
@@ -32,7 +30,7 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   // active space's data loaded (and refetched on every space switch).
   const spaceArg = useSpaceArg();
   const sessionSpaceArg = isSignedIn ? spaceArg : skipToken;
-  const spaceQueries = [useGetCategoriesQuery(sessionSpaceArg)];
+  const spaceQueries = [useGetCategoriesQuery(sessionSpaceArg), useGetLimitsQuery(sessionSpaceArg)];
 
   useEffect(() => {
     if (isSignedIn) {
@@ -48,7 +46,6 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   useEffect(() => {
     if (isSignedIn && currentSpaceId !== null) {
       dispatch(fetchWallets());
-      dispatch(fetchLimits());
       dispatch(fetchTransactions());
     }
   }, [dispatch, isSignedIn, currentSpaceId]);
@@ -69,7 +66,6 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   // remount the entire signed-in navigator mid-mutation, breaking any
   // pending navigation.goBack() or dropping the user back on the Home tab.
   const isInitialWalletLoad = isWalletLoading && !hasWalletsLoaded;
-  const isInitialLimitsLoad = isLimitsLoading && !hasLimitsLoaded;
 
   // Holds the app on LOADING_SCREEN only until the first space's data has
   // settled (loaded or failed) once per session, never again on a switch.
@@ -89,7 +85,6 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
       isSignedIn &&
       (isInitialSpaceLoad ||
         isInitialWalletLoad ||
-        isInitialLimitsLoad ||
         isInitialSpaceDataLoad ||
         isInitialTransactionLoad ||
         isProfileLoading),
