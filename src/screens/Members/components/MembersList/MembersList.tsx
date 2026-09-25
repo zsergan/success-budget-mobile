@@ -17,8 +17,8 @@ interface Props {
   onActionPress: (target: MemberActionTarget) => void;
 }
 
-// Older servers omit user_id. Never substitute the membership id (member.id): the row
-// is not actionable without user_id, whatever can_remove says.
+// Never substitute the membership id (member.id) for user_id: without a user_id the row
+// is not actionable, whatever can_remove says.
 const hasUsableUserId = (userId: unknown): userId is number => typeof userId === 'number';
 
 const MembersList = ({

@@ -19,7 +19,7 @@ export const AUTH_TOKEN_KEY = 'sbm-AUTH_TOKEN_KEY';
 export const BALANCE_HIDDEN_KEY = 'sbm-BALANCE_HIDDEN';
 export const THEME_PREFERENCE_KEY = 'sbm-THEME_PREFERENCE';
 
-// Mirrors the backend's temporary SPACE_LIMITS (success-budget-backend/src/shared/constants.ts) — not a considered business rule, revisit if the backend's changes.
+// Mirrors the backend's temporary SPACE_LIMITS (success-budget-backend/src/shared/constants.ts) — not a considered business rule; change both together.
 export const SPACE_LIMITS = {
   MAX_MEMBERS_PER_SPACE: 20,
   MAX_PENDING_INVITES_PER_SPACE: 10,
