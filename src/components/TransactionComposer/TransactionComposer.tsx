@@ -14,8 +14,6 @@ interface Props {
   initialWalletId: number;
 }
 
-// Home and Transactions each hand-rolled the same pair of income/expense
-// sheets plus present handlers -- this is that pairing, extracted once.
 const TransactionComposer = forwardRef<TransactionComposerHandle, Props>(({ initialWalletId }, ref) => {
   const expenseRef = useRef<BottomSheetModal>(null);
   const incomeRef = useRef<BottomSheetModal>(null);
