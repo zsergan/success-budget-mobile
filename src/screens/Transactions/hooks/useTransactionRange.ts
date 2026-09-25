@@ -5,11 +5,6 @@ import { getCurrentMonthRange, getCurrentWeekRange, getCurrentYearRange, getMont
 
 export type RangePreset = 'week' | 'month' | 'year';
 
-/**
- * Owns which period the screen is showing. Deliberately knows nothing about
- * the fetch result — jumping to the latest transaction takes its timestamp as
- * an argument rather than reaching into transaction state.
- */
 const useTransactionRange = () => {
   const [activeRange, setActiveRange] = useState<DateRange>(() => getCurrentMonthRange());
 
