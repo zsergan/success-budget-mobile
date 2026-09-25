@@ -54,8 +54,17 @@ hook (Husky + lint-staged) runs ESLint on staged files before each commit.
 
 ## Backend
 
-This app talks to a separate backend project. By default it points at a
-local backend (`http://localhost:3000/api/v1`). To point it at a deployed
-backend instead, copy [`.env.example`](./.env.example) to `.env.local` and
-set `EXPO_PUBLIC_API_BASE_URL` -- any non-local URL must use `https://`
-(enforced at startup, see `src/shared/constants.ts`).
+This app talks to a separate backend project. The backend URLs for each
+environment live in `API_BASE_URLS` in `src/shared/constants.ts`:
+
+| `EXPO_PUBLIC_API_ENV` | Backend                                            |
+| --------------------- | -------------------------------------------------- |
+| `local`               | `http://localhost:3000/api/v1`                     |
+| `dev`                 | The hosted dev backend (default in development)    |
+| `prod`                | Production (default in release builds; no URL yet) |
+
+To switch, copy [`.env.example`](./.env.example) to `.env.local`, set
+`EXPO_PUBLIC_API_ENV`, and restart with `npx expo start --clear` (env values
+are inlined at bundle time). To point at some other backend, set
+`EXPO_PUBLIC_API_BASE_URL` instead -- it wins over `EXPO_PUBLIC_API_ENV`, and
+any non-local URL must use `https://` (enforced at startup).

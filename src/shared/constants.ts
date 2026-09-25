@@ -2,9 +2,19 @@ import { AppColor } from '@shared/enums';
 import theme, { colorScheme } from '@shared/theme';
 import { resolveApiBaseUrl } from '@shared/utils/apiBaseUrl';
 
-const LOCAL_API_BASE_URL = 'http://localhost:3000/api/v1';
+const API_BASE_URLS = {
+  local: 'http://localhost:3000/api/v1',
+  dev: 'https://success-budget-backend-staging-x3dqf.ondigitalocean.app/api/v1',
+  prod: null,
+};
 
-export const BASE_API_URL = resolveApiBaseUrl(process.env.EXPO_PUBLIC_API_BASE_URL, LOCAL_API_BASE_URL);
+// Expo inlines EXPO_PUBLIC_* only when read as `process.env.NAME`, so pass them in rather than read them in the helper.
+export const BASE_API_URL = resolveApiBaseUrl({
+  urls: API_BASE_URLS,
+  env: process.env.EXPO_PUBLIC_API_ENV,
+  overrideUrl: process.env.EXPO_PUBLIC_API_BASE_URL,
+  isDevBuild: __DEV__,
+});
 export const AUTH_TOKEN_KEY = 'sbm-AUTH_TOKEN_KEY';
 export const BALANCE_HIDDEN_KEY = 'sbm-BALANCE_HIDDEN';
 export const THEME_PREFERENCE_KEY = 'sbm-THEME_PREFERENCE';
