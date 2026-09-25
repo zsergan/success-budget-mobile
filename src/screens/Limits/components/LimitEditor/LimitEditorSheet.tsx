@@ -22,7 +22,6 @@ import useLimitEditorForm from './useLimitEditorForm';
 
 import styles from './style';
 
-// Must match the snapPoint passed to the BottomModal wrapping this sheet in LimitsScreen.tsx.
 export const LIMIT_EDITOR_SNAP_POINT = '94%';
 const SNAP_FRACTION = parseFloat(LIMIT_EDITOR_SNAP_POINT) / 100;
 

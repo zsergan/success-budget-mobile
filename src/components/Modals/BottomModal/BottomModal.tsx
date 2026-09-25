@@ -13,7 +13,7 @@ interface Props {
   onClose: () => void;
   content: ReactNode;
   actions?: { title: string; onPress: () => void; disabled?: boolean }[];
-  // Also blocks dismissal (backdrop, Android back, Cancel) while a request is in flight.
+  // Disables every action and blocks dismissal (backdrop, Android back, Cancel) while a request is in flight.
   disabled?: boolean;
 }
 
