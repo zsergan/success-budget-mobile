@@ -70,9 +70,7 @@ const useInviteMember = ({ canInvite, cooldownRemaining }: UseInviteMemberProps)
 
       const errorResponse = error as ErrorResponse | undefined;
 
-      // A 429 already surfaces through the cooldown UI (and the global
-      // request interceptor's own alert) -- an extra alert here would be a
-      // second notification for the same rejection.
+      // A 429 is already shown by the cooldown UI and the request interceptor's alert.
       if (errorResponse?.statusCode !== 429) {
         addAlert(getErrorMessage(error));
       }

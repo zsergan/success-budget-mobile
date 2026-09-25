@@ -1,8 +1,6 @@
 interface InitialState {
-  // The invite endpoint's rate limit isn't scoped to one space, so this
-  // survives a space switch or leaving/reopening the Members screen -- only
-  // logout clears it. Absolute deadline (ms since epoch), not a countdown,
-  // so it stays correct across backgrounding.
+  // Epoch ms, not a countdown, so it survives backgrounding; the rate limit isn't
+  // per space, so only logout clears it.
   inviteCooldownUntil: number | null;
 }
 
