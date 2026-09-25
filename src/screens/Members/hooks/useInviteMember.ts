@@ -15,12 +15,6 @@ interface UseInviteMemberProps {
   cooldownRemaining: number;
 }
 
-/**
- * A single invite submission and its result. All the checks it performs
- * are re-checked here even though the caller (InviteMemberSection) already
- * disables its button on the same conditions -- onSubmitEditing and a fast
- * double tap can both fire before a disabled prop re-renders.
- */
 const useInviteMember = ({ canInvite, cooldownRemaining }: UseInviteMemberProps) => {
   const [inviteMember] = useInviteMemberMutation();
   const { addAlert } = useAlert();
@@ -48,6 +42,7 @@ const useInviteMember = ({ canInvite, cooldownRemaining }: UseInviteMemberProps)
       return false;
     }
 
+    // Re-checked: onSubmitEditing or a double tap can fire before the disabled button re-renders.
     if (!canInvite || cooldownRemaining > 0 || isSubmittingRef.current) {
       return false;
     }

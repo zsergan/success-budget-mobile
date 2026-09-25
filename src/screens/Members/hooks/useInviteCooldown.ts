@@ -4,13 +4,7 @@ import { AppState } from 'react-native';
 import { useAppSelector } from '@redux/hooks';
 import { selectInviteCooldownUntil } from '@redux/state/member/selectors';
 
-/**
- * Ticks a countdown down from an absolute deadline stored in redux (see
- * member.inviteCooldownUntil) rather than owning the deadline itself --
- * this component tree can mount and unmount (closing/reopening Members,
- * switching spaces) without losing or resetting a cooldown the backend is
- * still enforcing.
- */
+// The deadline lives in redux so closing Members or switching spaces doesn't reset it.
 const useInviteCooldown = () => {
   const cooldownUntil = useAppSelector(selectInviteCooldownUntil);
   const [now, setNow] = useState(() => Date.now());

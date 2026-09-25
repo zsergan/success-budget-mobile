@@ -13,11 +13,6 @@ interface UseMemberActionsProps {
   onLeft: () => void;
 }
 
-/**
- * Confirming and running a removal, an invite revoke, or leaving the space
- * -- one pending flag and one target shared across all three since only
- * one destructive confirmation can be open at a time.
- */
 const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
   const dispatch = useAppDispatch();
   const { addAlert } = useAlert();
