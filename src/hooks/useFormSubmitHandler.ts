@@ -10,14 +10,7 @@ interface UseFormSubmitHandlerOptions<TFormData extends FieldValues> {
   onSubmit: (formData: TFormData) => Promise<unknown>;
   onSuccess: () => void;
   getInvalidMessage?: (errors: FieldErrors<TFormData>) => string;
-  /**
-   * react-hook-form's own reset(), called right after a successful submit.
-   * isSubmitSuccessful otherwise never clears on its own, so a form whose
-   * instance survives the submit (e.g. a bottom sheet that stays mounted
-   * and is just re-presented) has its submit button silently stuck disabled
-   * on every later open. Screens that unmount on success (e.g. via
-   * navigation.goBack()) don't need this, but passing it is harmless.
-   */
+  // isSubmitSuccessful never clears on its own; a form that stays mounted after submit needs this.
   reset?: () => void;
 }
 
