@@ -1,26 +1,10 @@
 import { AppColor } from '@shared/enums';
 import theme, { colorScheme } from '@shared/theme';
+import { resolveApiBaseUrl } from '@shared/utils/apiBaseUrl';
 
 const LOCAL_API_BASE_URL = 'http://localhost:3000/api/v1';
 
-const isLocalUrl = (url: string) => url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1');
-
-// Fail fast on a misconfigured non-local URL rather than sending credentials over plain HTTP.
-const resolveApiBaseUrl = () => {
-  const configuredUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
-
-  if (!configuredUrl) {
-    return LOCAL_API_BASE_URL;
-  }
-
-  if (!isLocalUrl(configuredUrl) && !configuredUrl.startsWith('https://')) {
-    throw new Error('EXPO_PUBLIC_API_BASE_URL must use https:// outside of local development');
-  }
-
-  return configuredUrl;
-};
-
-export const BASE_API_URL = resolveApiBaseUrl();
+export const BASE_API_URL = resolveApiBaseUrl(process.env.EXPO_PUBLIC_API_BASE_URL, LOCAL_API_BASE_URL);
 export const AUTH_TOKEN_KEY = 'sbm-AUTH_TOKEN_KEY';
 export const BALANCE_HIDDEN_KEY = 'sbm-BALANCE_HIDDEN';
 export const THEME_PREFERENCE_KEY = 'sbm-THEME_PREFERENCE';
