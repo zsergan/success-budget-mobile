@@ -15,7 +15,7 @@ const styles = StyleSheet.create({
   gradient: {
     borderRadius: theme.radius.sm,
   },
-  // Default (grey) color; overridden inline in TinyWallet.tsx to the gradient preset's `fg` when on a dark card.
+  // Default (grey) color; overridden inline in TinyWallet.tsx to the gradient preset's `fg` on a gradient card.
   walletName: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.caption,

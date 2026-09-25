@@ -18,8 +18,7 @@ declare module 'axios' {
   }
 }
 
-// Every client built here shares the same auth, 401 and 429 handling -- the
-// thin *.api.ts wrappers and the RTK Query base query both go through it.
+// Sign-in/up (auth.api.ts) and the RTK Query base query share this auth, 401 and 429 handling.
 export const createHttpClient = () => {
   const api = axios.create({ baseURL: BASE_API_URL });
 

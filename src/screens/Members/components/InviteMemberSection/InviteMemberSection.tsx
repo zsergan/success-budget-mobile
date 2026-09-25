@@ -27,9 +27,6 @@ const InviteMemberSection = ({
   onSubmit,
 }: Props) => {
   const [email, setEmail] = useState('');
-  // Tracks the failedEmail this render should have already reacted to --
-  // lets the block below tell "a new failure just came in" from "this is
-  // just a re-render", computed during render rather than in an effect.
   const [seenFailedEmail, setSeenFailedEmail] = useState<string | null>(null);
 
   // Keep a failed attempt's email in the box so the user can fix and

@@ -47,7 +47,7 @@ export interface Category {
   id: number;
   name: string;
   transaction_type: TransactionType;
-  // Reads don't validate `icon` — old rows may still carry a pre-redesign legacy name, not necessarily one of the 35 current values.
+  // Reads don't validate `icon` — old rows may still carry a pre-redesign legacy name.
   icon: CategoryIconApi | string;
   color: AppColor;
   is_active: number;

@@ -14,8 +14,7 @@ export const amountSchema = yup
     (value) => value !== undefined && value.trim() !== '' && Number.isFinite(Number(value)),
   );
 
-// amountSchema alone allows 0 (a wallet can legitimately start at 0); a
-// transaction amount cannot, hence this separate variant for that one case.
+// amountSchema allows 0, since a starting balance may be empty; this variant requires more than zero.
 export const positiveAmountSchema = amountSchema.test(
   'is-positive',
   'Enter an amount greater than zero',

@@ -19,7 +19,7 @@ export const AUTH_TOKEN_KEY = 'sbm-AUTH_TOKEN_KEY';
 export const BALANCE_HIDDEN_KEY = 'sbm-BALANCE_HIDDEN';
 export const THEME_PREFERENCE_KEY = 'sbm-THEME_PREFERENCE';
 
-// Mirrors the backend's temporary SPACE_LIMITS (success-budget-backend/src/shared/constants.ts) — not a considered business rule, revisit if the backend's changes.
+// Mirrors the backend's temporary SPACE_LIMITS (success-budget-backend/src/shared/constants.ts) — not a considered business rule; change both together.
 export const SPACE_LIMITS = {
   MAX_MEMBERS_PER_SPACE: 20,
   MAX_PENDING_INVITES_PER_SPACE: 10,
@@ -27,10 +27,7 @@ export const SPACE_LIMITS = {
 
 export const INVITE_EXPIRY_DAYS = 7;
 
-// The invite endpoint is rate-limited to 5/60s on the backend via
-// ThrottlerGuard, which does send a Retry-After header -- prefer
-// `error.retryAfterMs` (see getRejectValue) and only fall back to this
-// fixed window when the header is missing or unparsable.
+// Fallback only: prefer the 429's `error.retryAfterMs` (see getRejectValue).
 export const INVITE_RATE_LIMIT_COOLDOWN_MS = 60_000;
 
 // Wallet-card gradient presets, paired per color scheme like the rest of the theme (angle/stops in WalletGradientBackground.tsx).
@@ -55,11 +52,7 @@ const walletGradientsByScheme: Record<'light' | 'dark', Record<AppColor, [string
 
 export const gradients: Record<AppColor, [string, string]> = walletGradientsByScheme[colorScheme];
 
-/**
- * Foreground (`fg`) / secondary (`dim`) text colors per wallet gradient
- * preset, plus `inner` — the translucent tint behind the Income/Expense
- * boxes inside the card (design stage 7, `Home Stage 2.dc.html`).
- */
+// `inner` is the translucent tint behind the Income/Expense boxes inside the card.
 const walletTextColorsByScheme: Record<
   'light' | 'dark',
   Record<AppColor, { fg: string; dim: string; inner: string }>
@@ -87,7 +80,7 @@ export const walletTextColors: Record<AppColor, { fg: string; dim: string; inner
 
 export const DEFAULT_WALLET_DESIGN = AppColor.SLATE;
 
-// Wallets saved before stage 6 may carry an old `design` value (see legacy icon aliases in shared/icons.ts); unrecognized values fall back rather than crash.
+// A missing `design`, or a color newer than this build, falls back rather than crashing.
 export const resolveAppColor = (design?: AppColor): AppColor =>
   design && design in gradients ? design : DEFAULT_WALLET_DESIGN;
 

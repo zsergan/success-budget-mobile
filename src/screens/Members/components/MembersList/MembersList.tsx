@@ -11,19 +11,14 @@ interface Props {
   inviteRows: SpaceInviteRow[];
   ownUserId?: number;
   isRefreshing: boolean;
-  // A background refresh (list already has data) that failed -- distinct
-  // from the initial/full-screen error, which is handled a level up
-  // because it replaces the whole section instead of sitting under it.
+  // Only a failed background refresh; the initial load error replaces the list a level up.
   refreshFailed: boolean;
   onRetry: () => void;
   onActionPress: (target: MemberActionTarget) => void;
 }
 
-// The type says user_id is always a number, but that's only true once the
-// backend's compat PR is deployed everywhere -- an older server still
-// omits it. Never fall back to the membership id (member.id) for a
-// destructive call; treat a missing user_id as "can't safely act on this
-// row" instead, regardless of what the server's own can_remove said.
+// Never substitute the membership id (member.id) for user_id: without a user_id the row
+// is not actionable, whatever can_remove says.
 const hasUsableUserId = (userId: unknown): userId is number => typeof userId === 'number';
 
 const MembersList = ({

@@ -29,8 +29,6 @@ export const pickFallbackSpaceId = (spaces: Pick<Space, 'id' | 'type'>[]): numbe
 
   if (personalSpace) return personalSpace.id;
 
-  // No personal space (a group-only account, or it was just left/deleted) --
-  // fall back to the lowest id so the pick is deterministic rather than
-  // whatever order the backend happened to return.
+  // Lowest id so the pick doesn't depend on the backend's ordering.
   return spaces.reduce((lowest, space) => (space.id < lowest.id ? space : lowest)).id;
 };

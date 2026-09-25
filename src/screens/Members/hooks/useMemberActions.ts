@@ -13,11 +13,6 @@ interface UseMemberActionsProps {
   onLeft: () => void;
 }
 
-/**
- * Confirming and running a removal, an invite revoke, or leaving the space
- * -- one pending flag and one target shared across all three since only
- * one destructive confirmation can be open at a time.
- */
 const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
   const dispatch = useAppDispatch();
   const { addAlert } = useAlert();
@@ -28,13 +23,9 @@ const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
 
   const [target, setTarget] = useState<MemberActionTarget | null>(null);
   const [isPending, setIsPending] = useState(false);
-  // Tracks the currentSpaceId this render should have already reacted to,
-  // computed during render rather than in an effect -- see the block below.
   const [seenSpaceId, setSeenSpaceId] = useState(currentSpaceId);
 
-  // A synchronous re-entrancy guard -- `isPending` state updates are
-  // batched and not visible to a second confirm() call that fires before
-  // the next render (a fast double tap, or Enter plus a tap).
+  // `isPending` isn't visible until the next render, so a double tap needs a synchronous guard.
   const isPendingRef = useRef(false);
   const currentSpaceIdRef = useRef(currentSpaceId);
 
@@ -86,9 +77,7 @@ const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
         await removeMember({ spaceId: requireSpaceId(originSpaceId), userId: target.userId }).unwrap();
       }
 
-      // The space changed while this was in flight -- the switch's own
-      // handling above already cleared `target`; don't navigate away from
-      // (or close a dialog belonging to) a space the user isn't on anymore.
+      // The space changed mid-request; the switch already cleared `target`.
       if (currentSpaceIdRef.current !== originSpaceId) return;
 
       setTarget(null);

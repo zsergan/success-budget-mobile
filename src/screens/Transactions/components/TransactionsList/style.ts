@@ -3,9 +3,8 @@ import { StyleSheet } from 'react-native';
 import theme, { colors } from '@shared/theme';
 import { FAB_SCROLL_CLEARANCE } from '@shared/constants';
 
-// A SectionList has no per-group wrapper to hang gaps on, so what used to be
-// three nested rowGaps is now: between days -> groupHeaderSpaced.marginTop,
-// header to first row -> groupHeader.marginBottom, between rows -> itemSeparator.
+// SectionList has no group wrapper for gaps: days use groupHeaderSpaced.marginTop,
+// header to row groupHeader.marginBottom, rows itemSeparator.
 const styles = StyleSheet.create({
   body: {
     flex: 1,

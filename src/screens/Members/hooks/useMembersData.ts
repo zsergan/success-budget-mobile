@@ -9,12 +9,6 @@ import { SpaceType } from '@shared/enums';
 
 const EMPTY_MEMBERS: SpaceMember[] = [];
 
-/**
- * Owns loading members for the active space (first load vs background
- * refresh vs error+retry) and the derived facts every other piece of the
- * screen needs: who's a member vs a pending invite, which row (if any) is
- * the caller's own, and whether inviting is currently possible at all.
- */
 const useMembersData = () => {
   const currentSpace = useAppSelector(selectCurrentSpace);
   const membersQuery = useGetMembersQuery(useSpaceArg());

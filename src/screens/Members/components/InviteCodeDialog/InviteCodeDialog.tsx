@@ -19,11 +19,7 @@ const InviteCodeDialog = ({ invite, spaceName, onClose }: Props) => {
   const handleShare = () => {
     if (!invite) return;
 
-    // A user dismissing the share sheet resolves the promise (with a
-    // dismissedAction), it doesn't reject it -- only a genuine failure
-    // (no share targets, OS-level error) reaches this catch, so it's
-    // shown, not swallowed. The code stays available either way; nothing
-    // here closes the dialog.
+    // Dismissing the share sheet resolves the promise, so only a real failure reaches the catch.
     Share.share({ message: `Join "${spaceName}" on Success Budget -- use invite code ${invite.code}` }).catch(
       (error: unknown) => addAlert(getErrorMessage(error)),
     );

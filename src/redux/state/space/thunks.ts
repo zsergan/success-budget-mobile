@@ -21,10 +21,7 @@ export const activateSpace =
     dispatch(spaceSelected(spaceId));
   };
 
-// The thunks below select a space after a create/accept/leave succeeds, but
-// only for the session that sent the request: one that outlived a logout must
-// not pick a space for the next session. The spaces list refreshes on its own,
-// through the Spaces tag.
+// A request that outlived a logout must not select a space for the next session.
 
 export const createSpaceAndSelect =
   (data: CreateSpaceRequest): AppThunk<Promise<SpaceSummary>> =>

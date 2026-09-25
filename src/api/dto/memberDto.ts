@@ -13,9 +13,7 @@ export interface SpaceMemberRow extends SpaceMemberRowBase {
   role: 'owner' | 'member';
 }
 
-// A pending invite row. `id` is the invite id, used with
-// DELETE /spaces/:id/invites/:inviteId -- there is no user yet, so
-// `user_id` is always null.
+// A pending invite: `id` is the invite id (for DELETE /spaces/:id/invites/:inviteId).
 export interface SpaceInviteRow extends SpaceMemberRowBase {
   type: 'invite';
   user_id: null;
