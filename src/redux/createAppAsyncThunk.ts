@@ -27,11 +27,7 @@ const parseRetryAfterMs = (header: unknown): number | undefined => {
   return Number.isNaN(dateMs) ? undefined : Math.max(0, dateMs - Date.now());
 };
 
-// A request that never got an HTTP response (offline, DNS failure, request
-// timeout, CORS...) must still produce a truthy ErrorResponse -- returning
-// undefined here made a network failure indistinguishable, in every
-// reducer that does `state.error = action.payload`, from "no error at
-// all", which let a failed fetch masquerade as a successful empty result.
+// Must stay truthy: the base query returns it as `error`, and a falsy one reads as success.
 const networkError = (): ErrorResponse => ({
   message: NETWORK_ERROR_MESSAGE,
   path: '',
