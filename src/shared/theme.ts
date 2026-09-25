@@ -1,7 +1,6 @@
 export const horizontalScreenPadding = 20;
 
-// "Slate & Amber" (design stage 2) — both variants defined now so stage 8's
-// theme switcher can wire in without redefining values.
+// Both schemes are defined so a theme switcher only has to change `colorScheme`.
 const colorTokens = {
   light: {
     bg: '#F6F7F9',
@@ -37,8 +36,7 @@ const colorTokens = {
   },
 } as const;
 
-// Hardcoded until stage 8 adds a real switcher; exported so other paired
-// token sets (e.g. wallet gradients in constants.ts) share the same scheme.
+// Fixed until there is a theme switcher; exported so paired token sets (e.g. wallet gradients) follow it.
 export const colorScheme: keyof typeof colorTokens = 'light';
 
 export const colors = colorTokens[colorScheme];
@@ -111,7 +109,7 @@ export const shadow: Record<string, unknown> = {
   shadowRadius: 10,
 };
 
-// Elevation 2 (modal) — not wired up anywhere yet, exists for a future modal host.
+// Elevation 2 (modal).
 export const shadowModal: Record<string, unknown> = {
   shadowColor: colors.text,
   shadowOpacity: 0.28,
