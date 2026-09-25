@@ -6,10 +6,8 @@ interface AuthState {
   userToken: string | null;
   userEmail: string | null;
   error?: ErrorResponse;
-  // Bumped every time the signed-in session ends (explicit logout, or
-  // checkAuth finding no token at boot). Captured before a request, it tells
-  // afterwards whether the session that sent it is still the active one
-  // (see httpBaseQuery and the space selection thunks).
+  // Bumped whenever the session ends; captured before a request to tell later
+  // whether the session that sent it is still active.
   sessionKey: number;
 }
 

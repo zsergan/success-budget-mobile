@@ -1,9 +1,7 @@
 import type { SpaceType } from '@shared/enums';
 import type { Currency } from './currencyDto';
 
-// The shape POST /spaces and POST /spaces/invites/accept actually return --
-// the bare space entity, with no caller-specific `role`/`member_count`.
-// Those two fields only come from GET /spaces (the list).
+// What POST /spaces and invite accept return; `role`/`member_count` come only from GET /spaces.
 export interface SpaceSummary {
   id: number;
   name: string;
