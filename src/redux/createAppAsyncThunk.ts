@@ -10,9 +10,7 @@ export const createAppAsyncThunk = createAsyncThunk.withTypes<{
   rejectValue: ErrorResponse | undefined;
 }>();
 
-// Retry-After is either delay-seconds ("120") or an HTTP-date
-// ("Wed, 21 Oct 2026 07:28:00 GMT"); an absent or malformed header isn't an
-// error on its own -- callers just fall back to their own default cooldown.
+// Retry-After is delay-seconds or an HTTP-date; without a usable one callers use their default cooldown.
 const parseRetryAfterMs = (header: unknown): number | undefined => {
   if (typeof header !== 'string' || header.trim() === '') return undefined;
 

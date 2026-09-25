@@ -52,11 +52,7 @@ const walletGradientsByScheme: Record<'light' | 'dark', Record<AppColor, [string
 
 export const gradients: Record<AppColor, [string, string]> = walletGradientsByScheme[colorScheme];
 
-/**
- * Foreground (`fg`) / secondary (`dim`) text colors per wallet gradient
- * preset, plus `inner` — the translucent tint behind the Income/Expense
- * boxes inside the card (design stage 7, `Home Stage 2.dc.html`).
- */
+// `inner` is the translucent tint behind the Income/Expense boxes inside the card.
 const walletTextColorsByScheme: Record<
   'light' | 'dark',
   Record<AppColor, { fg: string; dim: string; inner: string }>

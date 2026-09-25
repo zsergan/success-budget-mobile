@@ -26,9 +26,8 @@ export interface CategoriesModel {
   archived: CategoryModel[];
 }
 
-// Backend enum values are the mobile icon key with the first letter capitalized and '-' replaced by a space
-// (e.g. `grocery`→`Grocery`, `home-goods`→`Home goods`). Old rows may still carry a pre-redesign legacy name
-// that doesn't fit this rule at all — fall back to the raw value so `LEGACY_ICON_ALIASES` keeps resolving it.
+// Backend values are the icon key capitalized with '-' as a space (`home-goods`→`Home goods`); legacy
+// names don't follow this, so they pass through raw for `LEGACY_ICON_ALIASES` to resolve.
 export const toMobileIcon = (backendIcon: string): IconType => {
   const candidate = backendIcon.charAt(0).toLowerCase() + backendIcon.slice(1).replace(/ /g, '-');
 

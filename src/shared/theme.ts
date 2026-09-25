@@ -77,10 +77,7 @@ const theme = {
     caption: 16,
     micro: 14,
   },
-  /**
-   * Only the steps the design gives non-zero tracking for; the rest use
-   * the platform default (0), so most usages simply omit this.
-   */
+  // Only steps with non-zero tracking in the design; the rest use the platform default.
   letterSpacing: {
     display: -1.2,
     titleLg: -0.6,

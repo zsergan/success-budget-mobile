@@ -13,9 +13,7 @@ interface Props {
   onClose: () => void;
   content: ReactNode;
   actions?: { title: string; onPress: () => void; disabled?: boolean }[];
-  // Blocks the backdrop, Android back and Cancel from closing the modal,
-  // and disables every action -- for a short in-flight request the user
-  // shouldn't be able to dismiss or resubmit mid-way.
+  // Also blocks dismissal (backdrop, Android back, Cancel) while a request is in flight.
   disabled?: boolean;
 }
 
