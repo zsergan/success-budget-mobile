@@ -1,7 +1,8 @@
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { render, screen } from '@testing-library/react-native';
 
+import FrameScrollView from './FrameScrollView';
 import ScreenFrame, { useScreenTopInset } from './ScreenFrame';
 
 const metrics = {
@@ -31,5 +32,18 @@ describe('ScreenFrame', () => {
     renderFrame();
 
     expect(screen.getByText('inset 0')).toBeTruthy();
+  });
+
+  it('adds the inset on top of the scroll content padding', () => {
+    render(
+      <SafeAreaProvider initialMetrics={metrics}>
+        <ScreenFrame blurredStatusBar>
+          <FrameScrollView testID="scroll" contentContainerStyle={{ paddingTop: 12, paddingBottom: 40 }} />
+        </ScreenFrame>
+      </SafeAreaProvider>,
+    );
+
+    const contentStyle = StyleSheet.flatten(screen.getByTestId('scroll').props.contentContainerStyle);
+    expect(contentStyle).toMatchObject({ paddingTop: 74, paddingBottom: 40 });
   });
 });

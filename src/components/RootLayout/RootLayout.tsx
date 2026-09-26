@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { View, ScrollView, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Platform } from 'react-native';
+import { View, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Platform } from 'react-native';
 import type { Edge } from 'react-native-safe-area-context';
 
-import ScreenFrame, { useScreenTopInset } from '@components/ScreenFrame/ScreenFrame';
-import theme from '@shared/theme';
+import FrameScrollView from '@components/ScreenFrame/FrameScrollView';
+import ScreenFrame from '@components/ScreenFrame/ScreenFrame';
 
 import styles from './style';
 
@@ -20,21 +20,17 @@ interface Props {
 
 type ContainerProps = Pick<Props, 'children' | 'style' | 'contentContainerStyle'>;
 
-const ScrollViewContainer = ({ children, style, contentContainerStyle }: ContainerProps) => {
-  const topInset = useScreenTopInset();
-
-  return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      style={[styles.container, topInset > 0 && styles.flushTop, style]}
-      contentContainerStyle={[topInset > 0 && { paddingTop: topInset + theme.spacing.md }, contentContainerStyle]}
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag"
-    >
-      {children}
-    </ScrollView>
-  );
-};
+const ScrollViewContainer = ({ children, style, contentContainerStyle }: ContainerProps) => (
+  <FrameScrollView
+    showsVerticalScrollIndicator={false}
+    style={[styles.scroll, style]}
+    contentContainerStyle={[styles.scrollContent, contentContainerStyle]}
+    keyboardShouldPersistTaps="handled"
+    keyboardDismissMode="on-drag"
+  >
+    {children}
+  </FrameScrollView>
+);
 
 const ViewContainer = ({ children, style }: ContainerProps) => (
   <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>

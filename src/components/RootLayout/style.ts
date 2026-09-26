@@ -10,8 +10,11 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.md,
     paddingHorizontal: theme.spacing.xl,
   },
-  flushTop: {
-    paddingTop: 0,
+  scroll: {
+    paddingHorizontal: theme.spacing.xl,
+  },
+  scrollContent: {
+    paddingTop: theme.spacing.md,
   },
 });
 
