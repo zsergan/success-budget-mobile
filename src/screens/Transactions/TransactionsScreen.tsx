@@ -1,9 +1,8 @@
 import { useRef } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { TransactionComposerHandle } from '@components';
-import { BottomSheetModal as BottomModal, Fab, TransactionComposer } from '@components';
+import { BottomSheetModal as BottomModal, Fab, ScreenFrame, TransactionComposer } from '@components';
 import { useSpaceArg } from '@redux/hooks';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { groupTransactionsByDay } from '@shared/utils';
@@ -15,8 +14,6 @@ import TransactionsHeader from './components/TransactionsHeader/TransactionsHead
 import TransactionsList from './components/TransactionsList/TransactionsList';
 import useTransactionRange from './hooks/useTransactionRange';
 import useTransactionsData from './hooks/useTransactionsData';
-
-import styles from './style';
 
 const TransactionsScreen = () => {
   const composerRef = useRef<TransactionComposerHandle>(null);
@@ -40,43 +37,53 @@ const TransactionsScreen = () => {
         <RangePickerSheet activeRange={activeRange} onApply={setActiveRange} />
       </BottomModal>
 
-      <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
-        <TransactionsHeader />
-
-        <FilterBar
-          range={activeRange}
-          income={income}
-          expense={expense}
+      <ScreenFrame edges={['top', 'left', 'right']} blurredStatusBar>
+        <TransactionsList
+          groups={viewState === 'ready' ? groupTransactionsByDay(transactions, currencyCode) : []}
           currencyCode={currencyCode}
-          onPresetPress={setPresetRange}
-          onOpenPicker={handleOpenPicker}
-          onReset={resetRange}
+          header={
+            <>
+              <TransactionsHeader />
+
+              <FilterBar
+                range={activeRange}
+                income={income}
+                expense={expense}
+                currencyCode={currencyCode}
+                onPresetPress={setPresetRange}
+                onOpenPicker={handleOpenPicker}
+                onReset={resetRange}
+              />
+            </>
+          }
+          placeholder={
+            <>
+              {viewState === 'loading' && <TransactionsSkeleton />}
+
+              {viewState === 'trueEmpty' && (
+                <TransactionsEmptyState
+                  variant="trueEmpty"
+                  onAddTransaction={() => composerRef.current?.openExpense()}
+                />
+              )}
+
+              {viewState === 'filteredEmpty' && latest && (
+                <TransactionsEmptyState
+                  variant="filteredEmpty"
+                  latest={latest}
+                  activeRange={activeRange}
+                  onResetRange={resetRange}
+                  onJumpToLatest={() => jumpToMonthOf(latest.timestamp)}
+                />
+              )}
+
+              {viewState === 'rangeError' && <TransactionsEmptyState variant="rangeError" onRetry={refetch} />}
+
+              {viewState === 'latestError' && <TransactionsEmptyState variant="latestError" onRetry={retryLatest} />}
+            </>
+          }
         />
-
-        {viewState === 'loading' && <TransactionsSkeleton />}
-
-        {viewState === 'trueEmpty' && (
-          <TransactionsEmptyState variant="trueEmpty" onAddTransaction={() => composerRef.current?.openExpense()} />
-        )}
-
-        {viewState === 'filteredEmpty' && latest && (
-          <TransactionsEmptyState
-            variant="filteredEmpty"
-            latest={latest}
-            activeRange={activeRange}
-            onResetRange={resetRange}
-            onJumpToLatest={() => jumpToMonthOf(latest.timestamp)}
-          />
-        )}
-
-        {viewState === 'rangeError' && <TransactionsEmptyState variant="rangeError" onRetry={refetch} />}
-
-        {viewState === 'latestError' && <TransactionsEmptyState variant="latestError" onRetry={retryLatest} />}
-
-        {viewState === 'ready' && (
-          <TransactionsList groups={groupTransactionsByDay(transactions, currencyCode)} currencyCode={currencyCode} />
-        )}
-      </SafeAreaView>
+      </ScreenFrame>
 
       {viewState !== 'loading' && (
         <Fab onExpense={() => composerRef.current?.openExpense()} onIncome={() => composerRef.current?.openIncome()} />

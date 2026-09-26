@@ -8,7 +8,6 @@ import { FAB_SCROLL_CLEARANCE } from '@shared/constants';
 const styles = StyleSheet.create({
   body: {
     flex: 1,
-    marginTop: theme.spacing.md,
   },
   container: {
     paddingHorizontal: theme.spacing.xl,
@@ -19,6 +18,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: theme.spacing.sm,
+  },
+  groupHeaderFirst: {
+    marginTop: theme.spacing.md,
   },
   groupHeaderSpaced: {
     marginTop: theme.spacing.lg,

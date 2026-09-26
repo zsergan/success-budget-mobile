@@ -1,6 +1,7 @@
+import type { ReactElement } from 'react';
 import { SectionList, Text, View } from 'react-native';
 
-import { TransactionCard } from '@components';
+import { TransactionCard, useScreenTopInset } from '@components';
 import type { TransactionModel } from '@api/models';
 import type { TransactionGroup } from '@shared/utils';
 import { formatSignedAmount } from '@shared/utils';
@@ -11,7 +12,7 @@ interface Section {
   title: string;
   total?: number;
   currencyCode?: string;
-  /** The first header sits right under the filter bar and needs no gap above it. */
+  /** The first header sits right under the filter bar and takes a smaller gap above it. */
   isFirst: boolean;
   data: TransactionModel[];
 }
@@ -21,9 +22,13 @@ const ItemSeparator = () => <View style={styles.itemSeparator} />;
 interface Props {
   groups: TransactionGroup[];
   currencyCode?: string;
+  header: ReactElement;
+  // Shown in place of the groups while there are none (loading, empty or error states).
+  placeholder: ReactElement;
 }
 
-const TransactionsList = ({ groups, currencyCode }: Props) => {
+const TransactionsList = ({ groups, currencyCode, header, placeholder }: Props) => {
+  const topInset = useScreenTopInset();
   const sections: Section[] = groups.map((group, index) => ({
     title: group.label,
     total: group.total,
@@ -35,14 +40,16 @@ const TransactionsList = ({ groups, currencyCode }: Props) => {
   return (
     <SectionList
       style={styles.body}
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { paddingTop: topInset }]}
       sections={sections}
       keyExtractor={(item) => item.id}
       stickySectionHeadersEnabled={false}
       showsVerticalScrollIndicator={false}
       ItemSeparatorComponent={ItemSeparator}
+      ListHeaderComponent={header}
+      ListEmptyComponent={placeholder}
       renderSectionHeader={({ section }) => (
-        <View style={[styles.groupHeader, !section.isFirst && styles.groupHeaderSpaced]}>
+        <View style={[styles.groupHeader, section.isFirst ? styles.groupHeaderFirst : styles.groupHeaderSpaced]}>
           <Text style={styles.groupLabel}>{section.title}</Text>
 
           {section.total !== undefined && (
