@@ -8,19 +8,22 @@ import theme, { colorScheme } from '@shared/theme';
 
 import styles from './style';
 
-const FADE_HEIGHT = theme.spacing.xl;
+const FADE_HEIGHT = theme.spacing.lg;
 
 const StatusBarBlur = () => {
   const { top } = useSafeAreaInsets();
-  const height = top + FADE_HEIGHT;
+
+  if (top === 0) {
+    return null;
+  }
 
   return (
     <MaskedView
-      style={[styles.root, { height }]}
+      style={[styles.root, { height: top }]}
       maskElement={
         <LinearGradient
           colors={['black', 'black', 'transparent']}
-          locations={[0, top / height, 1]}
+          locations={[0, Math.max(0, top - FADE_HEIGHT) / top, 1]}
           style={StyleSheet.absoluteFill}
         />
       }
