@@ -10,6 +10,9 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.md,
     paddingHorizontal: theme.spacing.xl,
   },
+  flushTop: {
+    paddingTop: 0,
+  },
 });
 
 export default styles;
