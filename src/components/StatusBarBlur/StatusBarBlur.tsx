@@ -19,6 +19,7 @@ const StatusBarBlur = () => {
 
   return (
     <MaskedView
+      testID="status-bar-blur"
       style={[styles.root, { height: top }]}
       maskElement={
         <LinearGradient

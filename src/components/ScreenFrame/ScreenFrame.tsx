@@ -29,6 +29,7 @@ const ScreenFrame = ({ children, style, edges = ALL_EDGES, blurredStatusBar }: P
 
   return (
     <SafeAreaView
+      testID="screen-frame"
       style={[styles.root, style]}
       edges={blurredStatusBar ? edges.filter((edge) => edge !== 'top') : edges}
     >
