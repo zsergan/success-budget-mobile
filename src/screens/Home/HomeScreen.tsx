@@ -47,6 +47,7 @@ const HomeScreen = ({ navigation }: Props) => {
         contentContainerStyle={{ paddingBottom: FAB_SCROLL_CLEARANCE }}
         edges={['top', 'left', 'right']}
         scrollable
+        blurredStatusBar
       >
         <SpaceSwitcher navigation={navigation} />
 

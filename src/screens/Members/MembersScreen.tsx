@@ -60,7 +60,7 @@ const MembersScreen = ({ navigation }: Props) => {
   const removalTarget = target?.kind === 'remove' || target?.kind === 'revoke' ? target : null;
 
   return (
-    <RootLayout style={styles.root} scrollable>
+    <RootLayout style={styles.root} scrollable blurredStatusBar>
       <SectionTitle title="Members" onBackButtonPress={() => navigation.goBack()} />
 
       <View style={styles.scrollContent}>

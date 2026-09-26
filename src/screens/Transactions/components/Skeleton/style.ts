@@ -5,7 +5,6 @@ import theme, { colors } from '@shared/theme';
 const styles = StyleSheet.create({
   root: {
     marginTop: theme.spacing.md,
-    paddingHorizontal: theme.spacing.xl,
     rowGap: theme.spacing.lg,
   },
   block: {

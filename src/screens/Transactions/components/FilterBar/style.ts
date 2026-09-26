@@ -4,7 +4,6 @@ import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
-    paddingHorizontal: theme.spacing.xl,
     rowGap: theme.spacing.sm,
   },
   rangeRow: {

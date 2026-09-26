@@ -1,8 +1,7 @@
-import { ActivityIndicator, ScrollView, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
 
 import type { LimitModel } from '@api/models';
-import { BottomSheetModal as BottomModal, EmptyState, Icon } from '@components';
+import { BottomSheetModal as BottomModal, EmptyState, FrameScrollView, Icon, ScreenFrame } from '@components';
 import { useConfirmAction } from '@hooks';
 import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
@@ -46,10 +45,10 @@ const LimitsScreen = () => {
 
       <DeleteLimitDialog deletion={limitDeletion} currencyCode={currencyCode} />
 
-      <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
-        <LimitsHeader />
+      <ScreenFrame edges={['top', 'left', 'right']} blurredStatusBar>
+        <FrameScrollView style={styles.body} showsVerticalScrollIndicator={false}>
+          <LimitsHeader />
 
-        <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
           <View style={styles.container}>
             {isLoading ? (
               <View style={styles.loadingContainer}>
@@ -95,8 +94,8 @@ const LimitsScreen = () => {
               </>
             )}
           </View>
-        </ScrollView>
-      </SafeAreaView>
+        </FrameScrollView>
+      </ScreenFrame>
 
       {!isFullyEmpty && (
         <TouchableOpacity style={styles.fab} onPress={() => openEditor({ scope: 'category' })} activeOpacity={0.85}>

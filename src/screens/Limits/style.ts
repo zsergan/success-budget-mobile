@@ -4,9 +4,6 @@ import theme, { colors } from '@shared/theme';
 import { FAB_SCROLL_CLEARANCE } from '@shared/constants';
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
   body: {
     flex: 1,
   },

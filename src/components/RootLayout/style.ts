@@ -10,6 +10,12 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.md,
     paddingHorizontal: theme.spacing.xl,
   },
+  scroll: {
+    paddingHorizontal: theme.spacing.xl,
+  },
+  scrollContent: {
+    paddingTop: theme.spacing.md,
+  },
 });
 
 export default styles;

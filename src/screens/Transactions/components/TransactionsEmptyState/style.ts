@@ -5,7 +5,6 @@ import theme from '@shared/theme';
 const styles = StyleSheet.create({
   emptyContainer: {
     marginTop: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.xl,
   },
 });
 
