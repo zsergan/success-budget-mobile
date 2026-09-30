@@ -16,9 +16,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xl,
     paddingBottom: theme.spacing.xxl,
   },
-  spaced: {
-    marginTop: 22,
-  },
   cardTop: {
     paddingTop: theme.spacing.lg,
     paddingBottom: 14,

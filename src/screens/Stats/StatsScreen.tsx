@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { View } from 'react-native';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 
 import type { TransactionComposerHandle } from '@components';
@@ -17,13 +18,14 @@ import useStatsData from './hooks/useStatsData';
 import type { BreakdownMode } from './statsItems';
 import { buildStatsItems } from './statsItems';
 import { getStatsViewState } from './statsViewState';
+import styles from './style';
 
 const StatsScreen = () => {
   const rangePickerRef = useRef<BottomSheetModal>(null);
   const composerRef = useRef<TransactionComposerHandle>(null);
 
   const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod } = usePeriod();
-  const { summary, breakdown, refreshIfStale } = useStatsData(range);
+  const { summary, trend, breakdown, refreshIfStale } = useStatsData(range);
   useRefreshOnReturn(refreshIfStale);
 
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
@@ -37,6 +39,19 @@ const StatsScreen = () => {
   const breakdownScope = JSON.stringify([spaceId, range.from, range.to, mode]);
   const [expandedIn, setExpandedIn] = useState<string | null>(null);
   const isOtherExpanded = expandedIn === breakdownScope;
+
+  // A picked interval belongs to the space and period it was picked in.
+  const trendScope = JSON.stringify([spaceId, range.from, range.to]);
+  const [trendSelection, setTrendSelection] = useState<{ scope: string; key: string } | null>(null);
+  const selectedTrendKey = trendSelection?.scope === trendScope ? trendSelection.key : null;
+  const selectTrend = (key: string | null) => setTrendSelection(key === null ? null : { scope: trendScope, key });
+
+  // The chart flags its own touches first; any other touch on the screen drops the selection.
+  const touchInTrend = useRef(false);
+  const handleScreenTouch = () => {
+    if (!touchInTrend.current && selectedTrendKey !== null) selectTrend(null);
+    touchInTrend.current = false;
+  };
 
   const viewState = getStatsViewState(summary.data);
   const showsBlocks = viewState === 'data' || viewState === 'pending';
@@ -70,24 +85,32 @@ const StatsScreen = () => {
       </BottomModal>
 
       <ScreenFrame edges={['top', 'left', 'right']}>
-        <StatsHeader
-          period={period}
-          onPresetPress={selectCurrent}
-          onOpenPicker={() => rangePickerRef.current?.present()}
-          onReset={resetPeriod}
-        />
+        <View style={styles.root} onTouchStart={handleScreenTouch}>
+          <StatsHeader
+            period={period}
+            onPresetPress={selectCurrent}
+            onOpenPicker={() => rangePickerRef.current?.present()}
+            onReset={resetPeriod}
+          />
 
-        <StatsList
-          items={items}
-          summary={summary}
-          showComparison={hasComparison(period)}
-          placeholder={placeholder}
-          currencyCode={currencyCode}
-          mode={mode}
-          isOtherExpanded={isOtherExpanded}
-          onModeChange={setMode}
-          onToggleOther={() => setExpandedIn(isOtherExpanded ? null : breakdownScope)}
-        />
+          <StatsList
+            items={items}
+            summary={summary}
+            trend={trend}
+            selectedTrendKey={selectedTrendKey}
+            onSelectTrend={selectTrend}
+            onTrendTouch={() => {
+              touchInTrend.current = true;
+            }}
+            showComparison={hasComparison(period)}
+            placeholder={placeholder}
+            currencyCode={currencyCode}
+            mode={mode}
+            isOtherExpanded={isOtherExpanded}
+            onModeChange={setMode}
+            onToggleOther={() => setExpandedIn(isOtherExpanded ? null : breakdownScope)}
+          />
+        </View>
       </ScreenFrame>
     </>
   );

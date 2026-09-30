@@ -4,19 +4,24 @@ import { FlatList, Text, View } from 'react-native';
 
 import { Icon } from '@components';
 import { colors } from '@shared/theme';
-import type { StatisticsSummary } from '@api/dto';
+import type { StatisticsSummary, StatisticsTrend } from '@api/dto';
 import type { StatsBlock } from '@screens/Stats/hooks/useStatsData';
 import type { BreakdownMode, StatsItem } from '@screens/Stats/statsItems';
 import BlockPlaceholder from '../BlockPlaceholder/BlockPlaceholder';
 import BreakdownHeader from '../BreakdownHeader/BreakdownHeader';
 import BreakdownRow from '../BreakdownRow/BreakdownRow';
 import SummaryCards from '../SummaryCards/SummaryCards';
+import TrendBlock from '../TrendBlock/TrendBlock';
 
 import styles from './style';
 
 interface Props {
   items: StatsItem[];
   summary: StatsBlock<StatisticsSummary>;
+  trend: StatsBlock<StatisticsTrend>;
+  selectedTrendKey: string | null;
+  onSelectTrend: (key: string | null) => void;
+  onTrendTouch: () => void;
   showComparison: boolean;
   // Shown in place of the blocks when the period has nothing to chart.
   placeholder: ReactElement | null;
@@ -30,6 +35,10 @@ interface Props {
 const StatsList = ({
   items,
   summary,
+  trend,
+  selectedTrendKey,
+  onSelectTrend,
+  onTrendTouch,
   showComparison,
   placeholder,
   currencyCode,
@@ -43,7 +52,14 @@ const StatsList = ({
       case 'summary':
         return <SummaryCards block={summary} showComparison={showComparison} />;
       case 'trend':
-        return <BlockPlaceholder height={236} style={styles.spaced} />;
+        return (
+          <TrendBlock
+            block={trend}
+            selectedKey={selectedTrendKey}
+            onSelect={onSelectTrend}
+            onTouchInside={onTrendTouch}
+          />
+        );
       case 'breakdownHeader':
         return <BreakdownHeader mode={mode} showModes={item.hasSpending} onModeChange={onModeChange} />;
       case 'breakdownStatus':
@@ -90,7 +106,7 @@ const StatsList = ({
       data={items}
       keyExtractor={(item) => item.key}
       renderItem={renderItem}
-      extraData={[isOtherExpanded, summary, showComparison]}
+      extraData={[isOtherExpanded, summary, trend, selectedTrendKey, showComparison]}
       ListEmptyComponent={placeholder}
       showsVerticalScrollIndicator={false}
     />
