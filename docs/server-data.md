@@ -36,6 +36,7 @@ Every resource except Profile and Currencies is scoped to the active space.
 | `History.Range`  | `GET /spaces/:id/transactions?from&to`                     | `transaction.rangeTransactions` | Same row shape, for the period picked on the Transactions tab; period totals are derived from it client-side                            |
 | `History.Latest` | `GET /spaces/:id/transactions/latest`                      | `transaction.latest`            | Single most recent row (or `null`); tells "no transactions at all" apart from "none in this period"                                     |
 | `Members`        | `GET /spaces/:id/members`                                  | `member.members`                | Member rows and pending invite rows                                                                                                     |
+| `Statistics`     | `GET /spaces/:id/statistics/{summary,trend,breakdown}`     | — (RTK Query only)              | Every transaction sum and count; category and wallet names, colors, archived and deleted state                                          |
 
 "History" below means all three of `History.Recent`, `History.Range` and
 `History.Latest`.
@@ -101,6 +102,21 @@ described in the lifecycle section.
   embedded `category` is the bare entity without `transaction_count`,
   `limit` or `archived_at`, although it is mapped as a full
   `CategoryModel`. Nothing reads those fields from history today.
+
+## Statistics
+
+The three Stats blocks are one load cycle (`src/screens/Stats/hooks/useStatsData.ts`):
+the same space, period, zone and `as_of`, per the backend's
+`docs/statistics-contract.md`. Because `as_of` is part of every argument, the
+blocks provide no tags; a refetch of the same arguments would miss anything
+recorded after that `as_of`. Instead `getStatisticsRevision`, a local query with
+no request, provides the space's `Transactions`, `Wallets` and `Categories`
+tags, and each new value starts a new cycle. So does a return to the screen or
+to the app on it, when the cycle is older than 30 seconds.
+
+A new cycle for the same space and period keeps each block's last successful
+result on screen, flagged as updating or, if its request failed, as not
+updated. A new space, period or zone drops them in the same render.
 
 ## Current lifecycle behavior
 
