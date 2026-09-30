@@ -1,21 +1,20 @@
 import { Text, View } from 'react-native';
 
-import type { PeriodBarPreset } from '@components';
 import { PeriodBar } from '@components';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpace } from '@redux/state/space/selectors';
-import type { DateRange } from '@shared/utils';
+import type { Period, PeriodUnit } from '@shared/utils';
 
 import styles from './style';
 
 interface Props {
-  range: DateRange;
-  onPresetPress: (preset: PeriodBarPreset) => void;
+  period: Period;
+  onPresetPress: (unit: PeriodUnit) => void;
   onOpenPicker: () => void;
   onReset: () => void;
 }
 
-const StatsHeader = ({ range, onPresetPress, onOpenPicker, onReset }: Props) => {
+const StatsHeader = ({ period, onPresetPress, onOpenPicker, onReset }: Props) => {
   const space = useAppSelector(selectCurrentSpace);
 
   return (
@@ -30,7 +29,7 @@ const StatsHeader = ({ range, onPresetPress, onOpenPicker, onReset }: Props) => 
         )}
       </View>
 
-      <PeriodBar range={range} onPresetPress={onPresetPress} onOpenPicker={onOpenPicker} onReset={onReset} />
+      <PeriodBar period={period} onPresetPress={onPresetPress} onOpenPicker={onOpenPicker} onReset={onReset} />
     </View>
   );
 };

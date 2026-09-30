@@ -81,7 +81,7 @@ lines rather than reaching for a features/entities/widgets layer:
   a transaction form) happen in `<Screen>Screen.tsx`; extracted
   sections stay ignorant of their siblings.
 - **Hooks split by meaning, not by screen.** Prefer
-  `usePeriodRange` + `useTransactionsData` over one
+  `usePeriod` + `useTransactionsData` over one
   `useTransactionsScreen` that does both.
 - **Data placement follows its source**: server data goes through
   Redux/selectors, local UI state lives next to the component that
@@ -94,7 +94,7 @@ lines rather than reaching for a features/entities/widgets layer:
 
 Example: `src/screens/Stats/hooks/{useStatsData.ts,useRefreshOnReturn.ts}`,
 split by meaning; the period hook both Transactions and Stats use moved
-to `src/hooks/usePeriodRange.ts` once the second screen needed it.
+to `src/hooks/usePeriod.ts` once the second screen needed it.
 
 ## Backend contract
 

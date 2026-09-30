@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 
 import { BottomSheetModal as BottomModal, RangePickerSheet, ScreenFrame } from '@components';
-import { usePeriodRange } from '@hooks';
+import { usePeriod } from '@hooks';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/state/space/selectors';
 import StatsHeader from './components/StatsHeader/StatsHeader';
@@ -15,8 +15,8 @@ import { buildStatsItems } from './statsItems';
 const StatsScreen = () => {
   const rangePickerRef = useRef<BottomSheetModal>(null);
 
-  const { activeRange, setActiveRange, setPresetRange, resetRange } = usePeriodRange();
-  const { breakdown, refreshIfStale } = useStatsData(activeRange);
+  const { period, range, applyPeriod, selectCurrent, resetPeriod } = usePeriod();
+  const { breakdown, refreshIfStale } = useStatsData(range);
   useRefreshOnReturn(refreshIfStale);
 
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
@@ -25,7 +25,7 @@ const StatsScreen = () => {
   const [mode, setMode] = useState<BreakdownMode>('category');
 
   // Other stays expanded only for the breakdown it was opened in.
-  const breakdownScope = JSON.stringify([spaceId, activeRange.from, activeRange.to, mode]);
+  const breakdownScope = JSON.stringify([spaceId, range.from, range.to, mode]);
   const [expandedIn, setExpandedIn] = useState<string | null>(null);
   const isOtherExpanded = expandedIn === breakdownScope;
 
@@ -34,15 +34,15 @@ const StatsScreen = () => {
   return (
     <>
       <BottomModal ref={rangePickerRef} dynamicSizing>
-        <RangePickerSheet activeRange={activeRange} onApply={setActiveRange} />
+        <RangePickerSheet period={period} onApply={applyPeriod} />
       </BottomModal>
 
       <ScreenFrame edges={['top', 'left', 'right']}>
         <StatsHeader
-          range={activeRange}
-          onPresetPress={setPresetRange}
+          period={period}
+          onPresetPress={selectCurrent}
           onOpenPicker={() => rangePickerRef.current?.present()}
-          onReset={resetRange}
+          onReset={resetPeriod}
         />
 
         <StatsList

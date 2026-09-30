@@ -169,6 +169,9 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.bodySm,
     color: colors.muted,
   },
+  summaryError: {
+    color: colors.danger,
+  },
   applyButton: {
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.xl,
@@ -177,6 +180,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.accent,
+  },
+  applyButtonDisabled: {
+    opacity: 0.4,
   },
   applyButtonText: {
     fontFamily: theme.fonts.semiBold,

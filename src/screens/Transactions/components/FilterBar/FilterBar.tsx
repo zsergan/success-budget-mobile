@@ -1,26 +1,25 @@
 import { Text, View } from 'react-native';
 
-import type { PeriodBarPreset } from '@components';
 import { Icon, PeriodBar } from '@components';
 import { colors } from '@shared/theme';
-import type { DateRange } from '@shared/utils';
+import type { Period, PeriodUnit } from '@shared/utils';
 import { formatCurrencyAmount } from '@shared/utils';
 
 import styles from './style';
 
 interface Props {
-  range: DateRange;
+  period: Period;
   income: number;
   expense: number;
   currencyCode?: string;
-  onPresetPress: (preset: PeriodBarPreset) => void;
+  onPresetPress: (unit: PeriodUnit) => void;
   onOpenPicker: () => void;
   onReset: () => void;
 }
 
-const FilterBar = ({ range, income, expense, currencyCode, onPresetPress, onOpenPicker, onReset }: Props) => (
+const FilterBar = ({ period, income, expense, currencyCode, onPresetPress, onOpenPicker, onReset }: Props) => (
   <View style={styles.root}>
-    <PeriodBar range={range} onPresetPress={onPresetPress} onOpenPicker={onOpenPicker} onReset={onReset} />
+    <PeriodBar period={period} onPresetPress={onPresetPress} onOpenPicker={onOpenPicker} onReset={onReset} />
 
     <View style={styles.totalsRow}>
       <View style={styles.totalCard}>

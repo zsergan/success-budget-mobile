@@ -3,7 +3,7 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 
 import type { TransactionComposerHandle } from '@components';
 import { BottomSheetModal as BottomModal, Fab, RangePickerSheet, ScreenFrame, TransactionComposer } from '@components';
-import { usePeriodRange } from '@hooks';
+import { usePeriod } from '@hooks';
 import { useSpaceArg } from '@redux/hooks';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { groupTransactionsByDay } from '@shared/utils';
@@ -20,9 +20,9 @@ const TransactionsScreen = () => {
 
   const handleOpenPicker = () => rangePickerRef.current?.present();
 
-  const { activeRange, setActiveRange, setPresetRange, resetRange, jumpToMonthOf } = usePeriodRange();
+  const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod, openMonthOf } = usePeriod();
   const { transactions, viewState, latest, income, expense, currencyCode, refetch, retryLatest } = useTransactionsData({
-    range: activeRange,
+    range,
   });
 
   const { currentData: walletsOverview } = useGetWalletsQuery(useSpaceArg());
@@ -33,7 +33,7 @@ const TransactionsScreen = () => {
       <TransactionComposer ref={composerRef} initialWalletId={firstWalletId} />
 
       <BottomModal ref={rangePickerRef} dynamicSizing>
-        <RangePickerSheet activeRange={activeRange} onApply={setActiveRange} />
+        <RangePickerSheet period={period} onApply={applyPeriod} />
       </BottomModal>
 
       <ScreenFrame edges={['top', 'left', 'right']} blurredStatusBar>
@@ -45,13 +45,13 @@ const TransactionsScreen = () => {
               <TransactionsHeader />
 
               <FilterBar
-                range={activeRange}
+                period={period}
                 income={income}
                 expense={expense}
                 currencyCode={currencyCode}
-                onPresetPress={setPresetRange}
+                onPresetPress={selectCurrent}
                 onOpenPicker={handleOpenPicker}
-                onReset={resetRange}
+                onReset={resetPeriod}
               />
             </>
           }
@@ -70,9 +70,9 @@ const TransactionsScreen = () => {
                 <TransactionsEmptyState
                   variant="filteredEmpty"
                   latest={latest}
-                  activeRange={activeRange}
-                  onResetRange={resetRange}
-                  onJumpToLatest={() => jumpToMonthOf(latest.timestamp)}
+                  activeRange={range}
+                  onResetRange={canReset ? resetPeriod : undefined}
+                  onJumpToLatest={() => openMonthOf(latest.timestamp)}
                 />
               )}
 

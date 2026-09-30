@@ -5,22 +5,25 @@ import { BottomSheetScrollView, useBottomSheet } from '@gorhom/bottom-sheet';
 
 import Icon from '@components/Icon/Icon';
 import theme, { colors } from '@shared/theme';
-import type { DateRange, PeriodPreset } from '@shared/utils';
+import type { Period, PeriodUnit } from '@shared/utils';
 import {
   addMonths,
+  customPeriod,
+  currentPeriod,
   daysInRange,
-  endOfDay,
   formatDateLong,
-  getCurrentMonthRange,
-  getCurrentWeekRange,
-  getCurrentYearRange,
-  startOfDay,
+  getPeriodUnit,
+  isPeriodTooLong,
+  MAX_CUSTOM_DAYS,
+  toDateRange,
 } from '@shared/utils';
 import CalendarGrid from './CalendarGrid';
+import type { RangeField } from './pickDay';
+import { pickDay } from './pickDay';
 
 import styles from './style';
 
-const QUICK_PRESETS: { value: PeriodPreset; label: string }[] = [
+const QUICK_PRESETS: { value: PeriodUnit | 'custom'; label: string }[] = [
   { value: 'week', label: 'Week' },
   { value: 'month', label: 'Month' },
   { value: 'year', label: 'Year' },
@@ -28,72 +31,45 @@ const QUICK_PRESETS: { value: PeriodPreset; label: string }[] = [
 ];
 
 interface Props {
-  activeRange: DateRange;
-  onApply: (range: DateRange) => void;
+  period: Period;
+  onApply: (period: Period) => void;
 }
 
-const RangePickerSheet = ({ activeRange, onApply }: Props) => {
+// The modal unmounts this on close, so every opening drafts from the applied period
+// and closing without Apply leaves it untouched.
+const RangePickerSheet = ({ period, onApply }: Props) => {
   const { close } = useBottomSheet();
   const insets = useSafeAreaInsets();
 
-  const [tentativeFrom, setTentativeFrom] = useState(activeRange.from);
-  const [tentativeTo, setTentativeTo] = useState(activeRange.to);
-  const [tentativePreset, setTentativePreset] = useState<PeriodPreset>(activeRange.preset);
-  const [editingField, setEditingField] = useState<'from' | 'to'>('from');
-  const [visibleMonth, setVisibleMonth] = useState(activeRange.from);
+  const [draft, setDraft] = useState(period);
+  const [editingField, setEditingField] = useState<RangeField>('from');
+  const draftRange = toDateRange(draft);
+  const [visibleMonth, setVisibleMonth] = useState(draftRange.from);
 
-  // Resets the tentative fields whenever the committed activeRange changes
-  // (React's "adjusting state during render" pattern — no effect needed).
-  const [syncedRange, setSyncedRange] = useState(activeRange);
+  const days = daysInRange(draftRange);
+  const isTooLong = isPeriodTooLong(draft);
+  const activeQuick = getPeriodUnit(draft) ?? 'custom';
 
-  if (syncedRange !== activeRange) {
-    setSyncedRange(activeRange);
-    setTentativeFrom(activeRange.from);
-    setTentativeTo(activeRange.to);
-    setTentativePreset(activeRange.preset);
-    setEditingField('from');
-    setVisibleMonth(activeRange.from);
-  }
-
-  const handleQuickPreset = (preset: PeriodPreset) => {
-    if (preset === 'custom') {
-      setTentativePreset('custom');
+  const handleQuickPreset = (value: PeriodUnit | 'custom') => {
+    if (value === 'custom') {
+      setDraft(customPeriod(draftRange.from, draftRange.to));
       return;
     }
 
-    const range =
-      preset === 'week' ? getCurrentWeekRange() : preset === 'month' ? getCurrentMonthRange() : getCurrentYearRange();
-
-    setTentativeFrom(range.from);
-    setTentativeTo(range.to);
-    setTentativePreset(preset);
-    setVisibleMonth(range.from);
+    const next = currentPeriod(value);
+    setDraft(next);
+    setEditingField('from');
+    setVisibleMonth(toDateRange(next).from);
   };
 
   const handleSelectDay = (date: Date) => {
-    setTentativePreset('custom');
-
-    if (editingField === 'from') {
-      setTentativeFrom(startOfDay(date));
-      setEditingField('to');
-      return;
-    }
-
-    const picked = endOfDay(date);
-
-    // Swap rather than allow an inverted range if "to" lands before "from".
-    if (picked.getTime() < tentativeFrom.getTime()) {
-      setTentativeTo(endOfDay(tentativeFrom));
-      setTentativeFrom(startOfDay(date));
-    } else {
-      setTentativeTo(picked);
-    }
-
-    setEditingField('from');
+    const { period: next, nextField } = pickDay(draftRange, editingField, date);
+    setDraft(next);
+    setEditingField(nextField);
   };
 
   const handleApply = () => {
-    onApply({ from: tentativeFrom, to: tentativeTo, preset: tentativePreset });
+    onApply(draft);
     close();
   };
 
@@ -111,7 +87,7 @@ const RangePickerSheet = ({ activeRange, onApply }: Props) => {
 
       <View style={styles.quickRow}>
         {QUICK_PRESETS.map((preset) => {
-          const active = tentativePreset === preset.value;
+          const active = activeQuick === preset.value;
 
           return (
             <TouchableOpacity
@@ -133,7 +109,7 @@ const RangePickerSheet = ({ activeRange, onApply }: Props) => {
           activeOpacity={0.7}
         >
           <Text style={styles.fromToLabel}>From</Text>
-          <Text style={styles.fromToValue}>{formatDateLong(tentativeFrom)}</Text>
+          <Text style={styles.fromToValue}>{formatDateLong(draftRange.from)}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -142,22 +118,29 @@ const RangePickerSheet = ({ activeRange, onApply }: Props) => {
           activeOpacity={0.7}
         >
           <Text style={styles.fromToLabel}>To</Text>
-          <Text style={styles.fromToValue}>{formatDateLong(tentativeTo)}</Text>
+          <Text style={styles.fromToValue}>{formatDateLong(draftRange.to)}</Text>
         </TouchableOpacity>
       </View>
 
       <CalendarGrid
         month={visibleMonth}
-        range={{ from: tentativeFrom, to: tentativeTo }}
+        range={draftRange}
         onSelectDay={handleSelectDay}
         onNavigate={(delta) => setVisibleMonth(addMonths(visibleMonth, delta))}
       />
 
-      <Text style={styles.summary}>{daysInRange({ from: tentativeFrom, to: tentativeTo })} days selected</Text>
+      <Text style={[styles.summary, isTooLong && styles.summaryError]}>
+        {isTooLong ? `${days} days selected · up to ${MAX_CUSTOM_DAYS}` : `${days} days selected`}
+      </Text>
 
       <TouchableOpacity
-        style={[styles.applyButton, { marginBottom: theme.spacing.xl + insets.bottom }]}
+        style={[
+          styles.applyButton,
+          isTooLong && styles.applyButtonDisabled,
+          { marginBottom: theme.spacing.xl + insets.bottom },
+        ]}
         onPress={handleApply}
+        disabled={isTooLong}
         activeOpacity={0.85}
       >
         <Text style={styles.applyButtonText}>Apply period</Text>
