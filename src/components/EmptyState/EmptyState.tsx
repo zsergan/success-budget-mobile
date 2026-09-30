@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
 import Button from '../Buttons/Button/Button';
@@ -18,7 +19,8 @@ const ACTION_ICON_COLOR: Record<ActionVariant, string> = {
 export interface EmptyStateProps {
   icon: IconType;
   title: string;
-  description: string;
+  // A string, or text with nested <Text> for emphasis.
+  description: ReactNode;
   /** 'dashed' (default) matches the original "nothing here" card; 'solid' is for a filtered/scoped-empty state — data exists, just not in view. */
   variant?: 'dashed' | 'solid';
   actionLabel?: string;
