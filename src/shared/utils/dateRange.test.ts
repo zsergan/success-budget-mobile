@@ -7,6 +7,7 @@ import {
   getCurrentWeekRange,
   getCurrentYearRange,
   getMonthRange,
+  toLocalDateKey,
 } from './dateRange';
 
 describe('getCurrentWeekRange', () => {
@@ -124,5 +125,12 @@ describe('getCalendarMonthGrid', () => {
     expect(sep13).toMatchObject({ isRangeStart: false, isRangeEnd: false, isInRange: true });
     expect(sep15).toMatchObject({ isRangeStart: false, isRangeEnd: true, isInRange: true });
     expect(sep16).toMatchObject({ isRangeStart: false, isRangeEnd: false, isInRange: false });
+  });
+});
+
+describe('toLocalDateKey', () => {
+  it('formats the local calendar day with zero padding', () => {
+    expect(toLocalDateKey(new Date(2026, 0, 5, 23, 59))).toBe('2026-01-05');
+    expect(toLocalDateKey(new Date(2026, 11, 31, 0, 0))).toBe('2026-12-31');
   });
 });

@@ -6,5 +6,6 @@ export * from './limitDto';
 export * from './memberDto';
 export * from './profileDto';
 export * from './spaceDto';
+export * from './statisticsDto';
 export * from './transactionDto';
 export * from './walletDto';
