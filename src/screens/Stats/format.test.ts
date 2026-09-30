@@ -2,6 +2,7 @@ import {
   formatChange,
   formatComparisonLabel,
   formatDayMonth,
+  formatFlow,
   formatMoney,
   formatPeriodWord,
   getMoneySign,
@@ -24,8 +25,21 @@ describe('formatMoney', () => {
     expect(formatMoney('-0.00', 'USD', { signed: true })).toBe('$0.00');
   });
 
+  it('rounds to whole units exactly when asked', () => {
+    expect(formatMoney('3199.50', 'USD', { whole: true })).toBe('$3,200');
+    expect(formatMoney('999999999999999.49', 'USD', { whole: true })).toBe('$999,999,999,999,999');
+  });
+
   it("uses the currency's own symbol", () => {
     expect(formatMoney('10.00', 'EUR')).toBe('€10.00');
+  });
+});
+
+describe('formatFlow', () => {
+  it('signs income as a gain and expense as a loss, leaving zero unsigned', () => {
+    expect(formatFlow('850.00', 'USD', 'income')).toBe('+$850.00');
+    expect(formatFlow('882.10', 'USD', 'expense')).toBe('−$882.10');
+    expect(formatFlow('0.00', 'USD', 'expense')).toBe('$0.00');
   });
 });
 

@@ -46,15 +46,23 @@ const getCurrencyAffixes = (currency: string) => {
 };
 
 // Groups the digits of a money string without going through Number, so no amount loses cents.
-export const formatMoney = (amount: Money, currency: string, { signed = false } = {}) => {
+export const formatMoney = (amount: Money, currency: string, { signed = false, whole = false } = {}) => {
   const parsed = parseMoney(amount);
   if (!parsed) return amount;
 
   const { prefix, suffix } = getCurrencyAffixes(currency);
-  const grouped = parsed.whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const units = whole && parsed.fraction[0] >= '5' ? (BigInt(parsed.whole) + BigInt(1)).toString() : parsed.whole;
+  const grouped = units.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   const sign = parsed.sign < 0 && signed ? MINUS : parsed.sign > 0 && signed ? '+' : '';
 
-  return `${sign}${prefix}${grouped}.${parsed.fraction}${suffix}`;
+  return `${sign}${prefix}${grouped}${whole ? '' : `.${parsed.fraction}`}${suffix}`;
+};
+
+// Income as a gain and expense as a loss, whatever sign the amount arrives with; a zero has no sign.
+export const formatFlow = (amount: Money, currency: string, direction: 'income' | 'expense') => {
+  const unsigned = amount.trim().replace(/^-/, '');
+
+  return formatMoney(direction === 'expense' ? `-${unsigned}` : unsigned, currency, { signed: true });
 };
 
 // YYYY-MM-DD read as that calendar day on the device, not as UTC midnight.
@@ -67,7 +75,7 @@ export const parseDateKey = (key: string) => {
 const monthShort = (date: Date) => date.toLocaleString('en-US', { month: 'short' });
 const monthLong = (date: Date) => date.toLocaleString('en-US', { month: 'long' });
 
-const dayRange = (start: Date, end: Date, withYear: boolean) => {
+export const formatDayRange = (start: Date, end: Date, withYear: boolean) => {
   const year = withYear ? ` ${end.getFullYear()}` : '';
 
   if (start.getTime() === end.getTime()) return `${start.getDate()} ${monthShort(start)}${year}`;
@@ -91,7 +99,7 @@ export const formatPeriodWord = (
   if (period.type === 'year') return `${start.getFullYear()}`;
   if (period.type === 'month') return isThisYear ? monthLong(start) : `${monthLong(start)} ${start.getFullYear()}`;
 
-  return dayRange(start, end, !isThisYear);
+  return formatDayRange(start, end, !isThisYear);
 };
 
 // The local day an instant falls on in the period's zone.
@@ -128,7 +136,7 @@ export const formatComparisonLabel = (
     return isOtherYear ? `vs ${monthLong(start)} ${start.getFullYear()}` : `vs ${monthLong(start)}`;
   }
 
-  return `vs ${dayRange(start, end, isOtherYear)}`;
+  return `vs ${formatDayRange(start, end, isOtherYear)}`;
 };
 
 export type ChangeTone = 'good' | 'bad' | 'neutral';
