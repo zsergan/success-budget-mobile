@@ -8,6 +8,7 @@ type AddWalletParams = { id: 'new' } | { id: number; walletName: string; balance
 export type MainTabParamList = {
   [ScreenNames.HOME_TAB]: undefined;
   [ScreenNames.TRANSACTIONS_TAB]: undefined;
+  [ScreenNames.STATS_TAB]: undefined;
   [ScreenNames.LIMITS_TAB]: undefined;
   [ScreenNames.SETTINGS_TAB]: undefined;
 };
@@ -50,6 +51,8 @@ export type IconType =
   | 'forward'
   | 'chevron-down'
   | 'chevron-up'
+  | 'chevron-right'
+  | 'pie'
   | 'edit'
   | 'trash'
   | 'more'
