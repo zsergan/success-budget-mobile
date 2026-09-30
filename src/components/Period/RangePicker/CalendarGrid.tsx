@@ -1,6 +1,6 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import { Icon } from '@components';
+import Icon from '@components/Icon/Icon';
 import { colors } from '@shared/theme';
 import { formatMonthYear, getCalendarMonthGrid } from '@shared/utils';
 

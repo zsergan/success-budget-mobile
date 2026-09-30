@@ -3,7 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheetScrollView, useBottomSheet } from '@gorhom/bottom-sheet';
 
-import { Icon } from '@components';
+import Icon from '@components/Icon/Icon';
 import theme, { colors } from '@shared/theme';
 import type { DateRange, PeriodPreset } from '@shared/utils';
 import {

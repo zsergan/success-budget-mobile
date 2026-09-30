@@ -1,14 +1,13 @@
 import { useState } from 'react';
 
+import type { PeriodBarPreset } from '@components';
 import type { DateRange } from '@shared/utils';
 import { getCurrentMonthRange, getCurrentWeekRange, getCurrentYearRange, getMonthRange } from '@shared/utils';
 
-export type RangePreset = 'week' | 'month' | 'year';
-
-const useTransactionRange = () => {
+const usePeriodRange = () => {
   const [activeRange, setActiveRange] = useState<DateRange>(() => getCurrentMonthRange());
 
-  const setPresetRange = (preset: RangePreset) => {
+  const setPresetRange = (preset: PeriodBarPreset) => {
     if (preset === 'week') setActiveRange(getCurrentWeekRange());
     else if (preset === 'month') setActiveRange(getCurrentMonthRange());
     else setActiveRange(getCurrentYearRange());
@@ -27,4 +26,4 @@ const useTransactionRange = () => {
   };
 };
 
-export default useTransactionRange;
+export default usePeriodRange;

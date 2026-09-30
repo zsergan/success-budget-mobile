@@ -12,6 +12,7 @@ export { default as Icon } from './Icon/Icon';
 export { default as LimitItem } from './LimitItem/LimitItem';
 export { default as MenuItem } from './MenuItem/MenuItem';
 export * from './Modals';
+export * from './Period';
 export { default as ProgressBar } from './ProgressBar/ProgressBar';
 export { default as RootLayout } from './RootLayout/RootLayout';
 export * from './ScreenFrame';

@@ -2,17 +2,16 @@ import { useRef } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 
 import type { TransactionComposerHandle } from '@components';
-import { BottomSheetModal as BottomModal, Fab, ScreenFrame, TransactionComposer } from '@components';
+import { BottomSheetModal as BottomModal, Fab, RangePickerSheet, ScreenFrame, TransactionComposer } from '@components';
+import { usePeriodRange } from '@hooks';
 import { useSpaceArg } from '@redux/hooks';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { groupTransactionsByDay } from '@shared/utils';
 import FilterBar from './components/FilterBar/FilterBar';
-import RangePickerSheet from './components/RangePicker/RangePickerSheet';
 import TransactionsSkeleton from './components/Skeleton/TransactionsSkeleton';
 import TransactionsEmptyState from './components/TransactionsEmptyState/TransactionsEmptyState';
 import TransactionsHeader from './components/TransactionsHeader/TransactionsHeader';
 import TransactionsList from './components/TransactionsList/TransactionsList';
-import useTransactionRange from './hooks/useTransactionRange';
 import useTransactionsData from './hooks/useTransactionsData';
 
 const TransactionsScreen = () => {
@@ -21,7 +20,7 @@ const TransactionsScreen = () => {
 
   const handleOpenPicker = () => rangePickerRef.current?.present();
 
-  const { activeRange, setActiveRange, setPresetRange, resetRange, jumpToMonthOf } = useTransactionRange();
+  const { activeRange, setActiveRange, setPresetRange, resetRange, jumpToMonthOf } = usePeriodRange();
   const { transactions, viewState, latest, income, expense, currencyCode, refetch, retryLatest } = useTransactionsData({
     range: activeRange,
   });
