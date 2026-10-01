@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import type { GestureResponderEvent } from 'react-native';
+import type { AccessibilityActionEvent, GestureResponderEvent } from 'react-native';
 import { Pressable, Text, View } from 'react-native';
 import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Circle, G } from 'react-native-svg';
@@ -100,6 +100,15 @@ const DonutChart = ({
           sub: `${selected.percent.toFixed(1)}%`,
         };
 
+  // Screen readers step through the segments in order; past either end the selection clears.
+  const handleAccessibilityAction = ({ nativeEvent }: AccessibilityActionEvent) => {
+    const keys = segments.map((segment) => segment.key);
+    const index = selectedKey === null ? -1 : keys.indexOf(selectedKey);
+    const next = nativeEvent.actionName === 'increment' ? index + 1 : (index === -1 ? keys.length : index) - 1;
+
+    onSelect(keys[next] ?? null);
+  };
+
   // The selected segment is drawn last so its wider stroke sits on top of its neighbours.
   const ordered = [...segments].sort((a, b) => Number(a.key === selectedKey) - Number(b.key === selectedKey));
 
@@ -108,7 +117,11 @@ const DonutChart = ({
       style={styles.root}
       onPress={handlePress}
       onTouchStart={onTouchInside}
-      accessibilityLabel={`${center.label}, ${formatMoney(center.amount, currency)}, ${center.sub}`}
+      accessibilityRole="adjustable"
+      accessibilityLabel={mode === 'wallet' ? 'Spending by wallet' : 'Spending by category'}
+      accessibilityValue={{ text: `${center.label}, ${formatMoney(center.amount, currency)}, ${center.sub}` }}
+      accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+      onAccessibilityAction={handleAccessibilityAction}
       testID="donut-chart"
     >
       <Svg style={styles.svg} width={DONUT_SIZE} height={DONUT_SIZE} pointerEvents="none">

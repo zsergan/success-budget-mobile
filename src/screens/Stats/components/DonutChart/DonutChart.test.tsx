@@ -104,4 +104,22 @@ describe('DonutChart', () => {
     tapAt(0, 0);
     expect(screen.getByText('Spent')).toBeTruthy();
   });
+
+  it('lets a screen reader step through the segments and announces the pick', () => {
+    render(<Harness />);
+    const donut = screen.getByRole('adjustable');
+    const step = (actionName: 'increment' | 'decrement') =>
+      fireEvent(donut, 'accessibilityAction', { nativeEvent: { actionName } });
+
+    step('increment');
+    expect(screen.getByRole('adjustable').props.accessibilityValue).toEqual({
+      text: 'Category 1, $500.00, 50.0%',
+    });
+
+    step('decrement');
+    expect(screen.getByRole('adjustable').props.accessibilityValue.text).toBe('Spent, $1,000.00, 4 categories');
+
+    step('decrement');
+    expect(screen.getByRole('adjustable').props.accessibilityValue.text).toBe('Other, $250.00, 2 categories');
+  });
 });
