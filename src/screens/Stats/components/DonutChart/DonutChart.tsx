@@ -10,6 +10,7 @@ import { getBreakdownAppearance } from '@screens/Stats/breakdownAppearance';
 import { formatMoney } from '@screens/Stats/format';
 import useChartMotion from '@screens/Stats/hooks/useChartMotion';
 import type { BreakdownGroup, BreakdownMode } from '@screens/Stats/statsItems';
+import { CHART_MAX_FONT_SCALE } from '@screens/Stats/chartText';
 
 import {
   CIRCUMFERENCE,
@@ -139,13 +140,20 @@ const DonutChart = ({
       </Svg>
 
       <View style={styles.center} pointerEvents="none">
-        <Text style={styles.centerLabel} numberOfLines={1}>
+        <Text maxFontSizeMultiplier={CHART_MAX_FONT_SCALE} style={styles.centerLabel} numberOfLines={1}>
           {center.label}
         </Text>
-        <Text style={styles.centerAmount} numberOfLines={1} adjustsFontSizeToFit>
+        <Text
+          maxFontSizeMultiplier={CHART_MAX_FONT_SCALE}
+          style={styles.centerAmount}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
           {formatMoney(center.amount, currency)}
         </Text>
-        <Text style={styles.centerSub}>{center.sub}</Text>
+        <Text maxFontSizeMultiplier={CHART_MAX_FONT_SCALE} style={styles.centerSub}>
+          {center.sub}
+        </Text>
       </View>
     </Pressable>
   );

@@ -6,6 +6,7 @@ import { BarChart } from 'react-native-gifted-charts';
 import { colors } from '@shared/theme';
 import { formatFlow } from '@screens/Stats/format';
 import useChartMotion from '@screens/Stats/hooks/useChartMotion';
+import { CHART_MAX_FONT_SCALE } from '@screens/Stats/chartText';
 
 import styles, { CHART_HEIGHT, TOOLTIP_WIDTH } from './style';
 import type { TrendGroup } from './trendAdapter';
@@ -100,12 +101,17 @@ const TrendChart = ({ groups, currency, selectedKey, onSelect, onTouchInside }: 
                       )}
                     </View>
                     <Text
+                      maxFontSizeMultiplier={CHART_MAX_FONT_SCALE}
                       style={[styles.label, group.isCurrent && styles.labelCurrent, group.isFuture && styles.future]}
                       numberOfLines={1}
                     >
                       {group.label}
                     </Text>
-                    <Text style={[styles.sub, group.isFuture && styles.future]} numberOfLines={1}>
+                    <Text
+                      maxFontSizeMultiplier={CHART_MAX_FONT_SCALE}
+                      style={[styles.sub, group.isFuture && styles.future]}
+                      numberOfLines={1}
+                    >
                       {group.sub}
                     </Text>
                   </View>
@@ -168,16 +174,26 @@ const TrendChart = ({ groups, currency, selectedKey, onSelect, onTouchInside }: 
 
           {selected && (
             <View style={[styles.tooltip, { left: tooltipLeft }]} pointerEvents="none" testID="trend-tooltip">
-              <Text style={styles.tooltipTitle}>{selected.dates}</Text>
+              <Text maxFontSizeMultiplier={CHART_MAX_FONT_SCALE} style={styles.tooltipTitle}>
+                {selected.dates}
+              </Text>
               <View style={styles.tooltipRow}>
                 <View style={[styles.tooltipSwatch, { backgroundColor: colors.ok }]} />
-                <Text style={styles.tooltipLabel}>Income</Text>
-                <Text style={styles.tooltipValue}>{formatFlow(selected.income, currency, 'income')}</Text>
+                <Text maxFontSizeMultiplier={CHART_MAX_FONT_SCALE} style={styles.tooltipLabel} numberOfLines={1}>
+                  Income
+                </Text>
+                <Text maxFontSizeMultiplier={CHART_MAX_FONT_SCALE} style={styles.tooltipValue}>
+                  {formatFlow(selected.income, currency, 'income')}
+                </Text>
               </View>
               <View style={styles.tooltipRow}>
                 <View style={[styles.tooltipSwatch, { backgroundColor: colors.danger }]} />
-                <Text style={styles.tooltipLabel}>Expense</Text>
-                <Text style={styles.tooltipValue}>{formatFlow(selected.expense, currency, 'expense')}</Text>
+                <Text maxFontSizeMultiplier={CHART_MAX_FONT_SCALE} style={styles.tooltipLabel} numberOfLines={1}>
+                  Expense
+                </Text>
+                <Text maxFontSizeMultiplier={CHART_MAX_FONT_SCALE} style={styles.tooltipValue}>
+                  {formatFlow(selected.expense, currency, 'expense')}
+                </Text>
               </View>
             </View>
           )}

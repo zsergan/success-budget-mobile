@@ -76,7 +76,8 @@ const styles = StyleSheet.create({
     color: colors.danger,
   },
   chip: {
-    height: 28,
+    minHeight: 28,
+    paddingVertical: 4,
     paddingHorizontal: 11,
     borderRadius: 9,
     justifyContent: 'center',

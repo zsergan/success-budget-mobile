@@ -41,8 +41,11 @@ const styles = StyleSheet.create({
   },
   legendRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
+    columnGap: 10,
+    rowGap: 4,
   },
   legend: {
     flexDirection: 'row',
