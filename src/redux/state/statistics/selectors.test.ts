@@ -1,4 +1,6 @@
 import type { StatisticsBreakdown, StatisticsSummary, StatisticsTrend } from '@api/dto';
+import type { PeriodUnit } from '@shared/utils';
+import { toDateRange, unitPeriodOf } from '@shared/utils';
 import { areStatisticsConsistent, isAsOfRejected, toStatisticsQuery } from './selectors';
 
 const money = (amount: string, count: number) => ({ amount, count });
@@ -16,6 +18,16 @@ describe('toStatisticsQuery', () => {
       time_zone: 'Europe/Moscow',
       anchor_date: '2026-09-01',
     });
+  });
+
+  it('sends a past week, month or year as that unit with its first day, not as custom', () => {
+    const now = new Date(2026, 8, 30);
+    const query = (unit: PeriodUnit, reference: Date) =>
+      toStatisticsQuery(toDateRange(unitPeriodOf(unit, reference, now), now), 'UTC');
+
+    expect(query('month', new Date(2026, 7, 14))).toMatchObject({ period: 'month', anchor_date: '2026-08-01' });
+    expect(query('week', new Date(2026, 8, 24))).toMatchObject({ period: 'week', anchor_date: '2026-09-21' });
+    expect(query('year', new Date(2025, 4, 9))).toMatchObject({ period: 'year', anchor_date: '2025-01-01' });
   });
 
   it('sends a custom period as its first and last local days', () => {
