@@ -9,6 +9,8 @@ const UI_ICON_PATHS = {
   forward: 'M9 5l7 7-7 7',
   'chevron-down': 'M6 9l6 6 6-6',
   'chevron-up': 'M6 15l6-6 6 6',
+  'chevron-right': 'M9 6l6 6-6 6',
+  pie: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 3v9h9',
   edit: 'M4 20h4l10-10-4-4L4 16v4zM14 6l4 4',
   trash:
     'M4 7h16M9.8 7V4.6h4.4V7M6.6 7l.9 12.3a1.4 1.4 0 0 0 1.4 1.3h6.2a1.4 1.4 0 0 0 1.4-1.3L17.4 7M10.2 10.8v6.4M13.8 10.8v6.4',

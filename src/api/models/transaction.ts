@@ -6,20 +6,16 @@ import { mapCategory } from './category';
 
 export interface TransactionModel {
   id: string;
-  walletId: number;
-  categoryId: number;
   transactionType: TransactionType;
   amount: string;
   timestamp: string;
-  description: string;
+  description: string | null;
   wallet: Wallet | null;
   category: CategoryModel;
 }
 
 export const mapTransaction = (dto: Transaction): TransactionModel => ({
   id: dto.id,
-  walletId: dto.wallet_id,
-  categoryId: dto.category_id,
   transactionType: dto.transaction_type,
   amount: dto.amount,
   timestamp: dto.timestamp,

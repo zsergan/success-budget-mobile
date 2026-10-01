@@ -1,29 +1,47 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
 import type { TransactionComposerHandle } from '@components';
-import { BottomSheetModal as BottomModal, Fab, ScreenFrame, TransactionComposer } from '@components';
-import { useSpaceArg } from '@redux/hooks';
+import { BottomSheetModal as BottomModal, Fab, RangePickerSheet, ScreenFrame, TransactionComposer } from '@components';
+import { usePeriod } from '@hooks';
+import { useAppSelector, useSpaceArg } from '@redux/hooks';
+import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
+import { TransactionType } from '@shared/enums';
+import type { ScreenNames } from '@shared/enums';
+import type { MainTabNavigationProp, MainTabScreenProps } from '@shared/types';
 import { groupTransactionsByDay } from '@shared/utils';
+import AppliedFilter from './components/AppliedFilter/AppliedFilter';
 import FilterBar from './components/FilterBar/FilterBar';
-import RangePickerSheet from './components/RangePicker/RangePickerSheet';
 import TransactionsSkeleton from './components/Skeleton/TransactionsSkeleton';
 import TransactionsEmptyState from './components/TransactionsEmptyState/TransactionsEmptyState';
 import TransactionsHeader from './components/TransactionsHeader/TransactionsHeader';
 import TransactionsList from './components/TransactionsList/TransactionsList';
-import useTransactionRange from './hooks/useTransactionRange';
 import useTransactionsData from './hooks/useTransactionsData';
 
 const TransactionsScreen = () => {
+  const navigation = useNavigation<MainTabNavigationProp<ScreenNames.TRANSACTIONS_TAB>>();
+  const route = useRoute<MainTabScreenProps<ScreenNames.TRANSACTIONS_TAB>['route']>();
   const composerRef = useRef<TransactionComposerHandle>(null);
   const rangePickerRef = useRef<BottomSheetModal>(null);
 
   const handleOpenPicker = () => rangePickerRef.current?.present();
 
-  const { activeRange, setActiveRange, setPresetRange, resetRange, jumpToMonthOf } = useTransactionRange();
+  const spaceId = useAppSelector(selectCurrentSpaceId);
+  const requestedFilter = route.params?.filter;
+  const filter = requestedFilter?.spaceId === spaceId ? requestedFilter : null;
+  const clearFilter = () => navigation.setParams({ filter: undefined });
+
+  // A filter left from another space must not come back when that space is selected again.
+  useEffect(() => {
+    if (requestedFilter && requestedFilter.spaceId !== spaceId) navigation.setParams({ filter: undefined });
+  }, [navigation, requestedFilter, spaceId]);
+
+  const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod, openMonthOf } = usePeriod();
   const { transactions, viewState, latest, income, expense, currencyCode, refetch, retryLatest } = useTransactionsData({
-    range: activeRange,
+    range,
+    filter,
   });
 
   const { currentData: walletsOverview } = useGetWalletsQuery(useSpaceArg());
@@ -34,7 +52,7 @@ const TransactionsScreen = () => {
       <TransactionComposer ref={composerRef} initialWalletId={firstWalletId} />
 
       <BottomModal ref={rangePickerRef} dynamicSizing>
-        <RangePickerSheet activeRange={activeRange} onApply={setActiveRange} />
+        <RangePickerSheet period={period} onApply={applyPeriod} />
       </BottomModal>
 
       <ScreenFrame edges={['top', 'left', 'right']} blurredStatusBar>
@@ -45,15 +63,24 @@ const TransactionsScreen = () => {
             <>
               <TransactionsHeader />
 
-              <FilterBar
-                range={activeRange}
-                income={income}
-                expense={expense}
-                currencyCode={currencyCode}
-                onPresetPress={setPresetRange}
-                onOpenPicker={handleOpenPicker}
-                onReset={resetRange}
-              />
+              {filter ? (
+                <AppliedFilter
+                  filter={filter}
+                  total={filter.transactionType === TransactionType.INCOME ? income : expense}
+                  currencyCode={currencyCode}
+                  onClear={clearFilter}
+                />
+              ) : (
+                <FilterBar
+                  period={period}
+                  income={income}
+                  expense={expense}
+                  currencyCode={currencyCode}
+                  onPresetPress={selectCurrent}
+                  onOpenPicker={handleOpenPicker}
+                  onReset={resetPeriod}
+                />
+              )}
             </>
           }
           placeholder={
@@ -71,11 +98,13 @@ const TransactionsScreen = () => {
                 <TransactionsEmptyState
                   variant="filteredEmpty"
                   latest={latest}
-                  activeRange={activeRange}
-                  onResetRange={resetRange}
-                  onJumpToLatest={() => jumpToMonthOf(latest.timestamp)}
+                  activeRange={range}
+                  onResetRange={canReset ? resetPeriod : undefined}
+                  onJumpToLatest={() => openMonthOf(latest.timestamp)}
                 />
               )}
+
+              {viewState === 'noMatches' && <TransactionsEmptyState variant="noMatches" onClearFilter={clearFilter} />}
 
               {viewState === 'rangeError' && <TransactionsEmptyState variant="rangeError" onRetry={refetch} />}
 

@@ -92,6 +92,30 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.label,
     color: colors.text,
   },
+  stepper: {
+    marginTop: theme.spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: theme.spacing.sm,
+    borderRadius: 14,
+    padding: 9,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+  },
+  stepperCenter: {
+    flex: 1,
+    alignItems: 'center',
+    rowGap: 2,
+  },
+  // Plus Jakarta Sans under-measures hug-width text and clips its last glyph.
+  stepperText: {
+    paddingRight: 2,
+  },
+  stepperLink: {
+    fontFamily: theme.fonts.semiBold,
+    color: colors.accent,
+  },
   calendarRoot: {
     marginTop: theme.spacing.lg,
   },
@@ -107,6 +131,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.track,
+  },
+  navButtonDisabled: {
+    opacity: 0.35,
   },
   monthLabel: {
     fontFamily: theme.fonts.semiBold,
@@ -169,6 +196,9 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.bodySm,
     color: colors.muted,
   },
+  summaryError: {
+    color: colors.danger,
+  },
   applyButton: {
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.xl,
@@ -177,6 +207,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.accent,
+  },
+  applyButtonDisabled: {
+    opacity: 0.4,
   },
   applyButtonText: {
     fontFamily: theme.fonts.semiBold,

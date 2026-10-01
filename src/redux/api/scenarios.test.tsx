@@ -39,7 +39,8 @@ interface SpaceDb {
   categories: Category[];
   limits: LimitView[];
   wallets: WalletWithBalance[];
-  transactions: Omit<Transaction, 'wallet' | 'category'>[];
+  // Stored with their ids, like the backend's table; responses expose only the joined relations.
+  transactions: (Omit<Transaction, 'wallet' | 'category'> & { wallet_id: number; category_id: number })[];
 }
 
 const category = (id: number, name: string, limit: number | null): Category => ({
@@ -76,10 +77,13 @@ const createBackend = () => {
       transactions: [],
     });
 
-  const toRow = (spaceDb: SpaceDb, row: SpaceDb['transactions'][number]): Transaction => ({
+  const toRow = (
+    spaceDb: SpaceDb,
+    { wallet_id, category_id, ...row }: SpaceDb['transactions'][number],
+  ): Transaction => ({
     ...row,
-    wallet: spaceDb.wallets.find((wallet) => wallet.id === row.wallet_id) ?? null,
-    category: spaceDb.categories.find((item) => item.id === row.category_id)!,
+    wallet: spaceDb.wallets.find((wallet) => wallet.id === wallet_id) ?? null,
+    category: spaceDb.categories.find((item) => item.id === category_id)!,
   });
 
   const handle = ({ url, method = 'GET', data }: RequestConfig): unknown => {
@@ -151,8 +155,9 @@ const createBackend = () => {
       } as SpaceDb['transactions'][0];
 
       spaceDb.transactions.push(row);
+      const { wallet_id: _walletId, category_id: _categoryId, ...transaction } = row;
 
-      return { transaction: row, wallet: spaceDb.wallets[0], previous_balance: 0 };
+      return { transaction, wallet: spaceDb.wallets[0], previous_balance: 0 };
     }
 
     throw new Error(`Unhandled ${method} ${url}`);
@@ -190,7 +195,7 @@ const useMountedScreens = () => {
   return {
     gate: useLoadInitData({ isSignedIn }),
     home: useGetTransactionsQuery(useCurrentMonthArg()),
-    history: useTransactionsData({ range: getCurrentMonthRange() }),
+    history: useTransactionsData({ range: getCurrentMonthRange(), filter: null }),
     wallets: useGetWalletsQuery(spaceArg),
     categories: useGetCategoriesQuery(spaceArg),
     limits: useGetLimitsQuery(spaceArg),

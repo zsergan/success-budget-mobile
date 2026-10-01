@@ -20,6 +20,10 @@ export const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getM
 export const endOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
 const monthShort = (date: Date) => date.toLocaleString('en-US', { month: 'short' });
 
+// The device's local calendar day as YYYY-MM-DD, the form the statistics API takes for dates.
+export const toLocalDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
 /** Month boundaries for whatever month `reference` falls in, no preset attached. */
 export const getMonthRange = (reference: Date | string): { from: Date; to: Date } => {
   const date = new Date(reference);

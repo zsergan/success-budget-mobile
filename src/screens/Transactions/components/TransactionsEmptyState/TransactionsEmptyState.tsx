@@ -13,11 +13,15 @@ type Props =
       variant: 'filteredEmpty';
       latest: TransactionModel;
       activeRange: DateRange;
-      onResetRange: () => void;
+      // Absent while the current month is already selected: there is nothing to reset to.
+      onResetRange?: () => void;
       onJumpToLatest: () => void;
     }
+  | { variant: 'noMatches'; onClearFilter: () => void }
   | { variant: 'rangeError'; onRetry: () => void }
   | { variant: 'latestError'; onRetry: () => void };
+
+const jumpLabel = (latest: TransactionModel) => `Jump to ${formatDateDDMMYYYY(latest.timestamp)}`;
 
 const TransactionsEmptyState = (props: Props) => (
   <View style={styles.emptyContainer}>
@@ -38,11 +42,26 @@ const TransactionsEmptyState = (props: Props) => (
         icon="calendar"
         title="Nothing in this period"
         description={`No transactions between ${formatRangeLabel(props.activeRange)}. Your last one was on ${formatDateDDMMYYYY(props.latest.timestamp)}.`}
-        actionLabel="Reset to this month"
-        actionVariant="secondary"
-        onActionPress={props.onResetRange}
-        secondaryActionLabel={`Jump to ${formatDateDDMMYYYY(props.latest.timestamp)}`}
-        onSecondaryActionPress={props.onJumpToLatest}
+        {...(props.onResetRange
+          ? {
+              actionLabel: 'Reset to this month',
+              actionVariant: 'secondary' as const,
+              onActionPress: props.onResetRange,
+              secondaryActionLabel: jumpLabel(props.latest),
+              onSecondaryActionPress: props.onJumpToLatest,
+            }
+          : { actionLabel: jumpLabel(props.latest), onActionPress: props.onJumpToLatest })}
+      />
+    )}
+
+    {props.variant === 'noMatches' && (
+      <EmptyState
+        variant="solid"
+        icon="filter"
+        title="Nothing matches this filter"
+        description="These transactions may have been deleted or changed since."
+        actionLabel="Clear filter"
+        onActionPress={props.onClearFilter}
       />
     )}
 

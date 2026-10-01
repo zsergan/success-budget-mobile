@@ -2,14 +2,13 @@ import type { TransactionType } from '@shared/enums';
 import type { Category } from './categoryDto';
 import type { Wallet, WalletWithBalance } from './walletDto';
 
+// The backend excludes `wallet_id`/`category_id` from every response; read them off the joined relations.
 export interface Transaction {
   id: string;
-  wallet_id: number;
-  category_id: number;
   transaction_type: TransactionType;
   amount: string;
   timestamp: string;
-  description: string;
+  description: string | null;
   wallet: Wallet | null;
   category: Category;
 }

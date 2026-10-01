@@ -14,9 +14,10 @@ module.exports = {
   },
   // jest-expo's own transformIgnorePatterns (its allowlist of node_modules
   // packages that need Babel transforming) does not include `immer`, which
-  // @reduxjs/toolkit ships as an ESM-only build -- add it to the same list.
+  // @reduxjs/toolkit ships as an ESM-only build -- add it to the same list,
+  // along with react-native-gifted-charts' ESM-only core package.
   transformIgnorePatterns: [
-    '/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|immer))',
+    '/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|immer|gifted-charts-core))',
     '/node_modules/react-native-reanimated/plugin/',
   ],
 };

@@ -1,6 +1,6 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
-import { HomeScreen, LimitsScreen, SettingsScreen, TransactionsScreen } from '@screens';
+import { HomeScreen, LimitsScreen, SettingsScreen, StatsScreen, TransactionsScreen } from '@screens';
 import { Icon } from '@components';
 import { colors } from '@shared/theme';
 import { ScreenNames } from '@shared/enums';
@@ -16,6 +16,7 @@ interface IconProps {
 const HomeIcon = ({ color, size }: IconProps) => <Icon name="home" size={size} color={color} />;
 const LimitsIcon = ({ color, size }: IconProps) => <Icon name="limit" size={size} color={color} />;
 const TransactionsIcon = ({ color, size }: IconProps) => <Icon name="list" size={size} color={color} />;
+const StatsIcon = ({ color, size }: IconProps) => <Icon name="chart" size={size} color={color} />;
 const SettingsIcon = ({ color, size }: IconProps) => <Icon name="settings" size={size} color={color} />;
 
 const MainNavigator = () => {
@@ -38,6 +39,12 @@ const MainNavigator = () => {
         name={ScreenNames.TRANSACTIONS_TAB}
         component={TransactionsScreen}
         options={{ tabBarIcon: TransactionsIcon, tabBarLabel: 'History', headerShown: false }}
+      />
+
+      <Tab.Screen
+        name={ScreenNames.STATS_TAB}
+        component={StatsScreen}
+        options={{ tabBarIcon: StatsIcon, headerShown: false }}
       />
 
       <Tab.Screen

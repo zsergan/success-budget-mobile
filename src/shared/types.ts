@@ -1,13 +1,32 @@
 import type { BottomTabNavigationProp, BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp, CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { ScreenNames, AppColor } from '@shared/enums';
+import type { ScreenNames, AppColor, TransactionType } from '@shared/enums';
 
-type AddWalletParams = { id: 'new' } | { id: number; walletName: string; balance: string; design: AppColor };
+// Plain data, never a callback: where to go once the wallet is saved, and for which space.
+export type AddTransactionIntent = { returnTo: ScreenNames.STATS_TAB; spaceId: number };
+
+type AddWalletParams =
+  | { id: 'new'; addTransaction?: AddTransactionIntent }
+  | { id: number; walletName: string; balance: string; design: AppColor };
+
+// A one-time request to open the composer on a wallet that was just created.
+export type ComposeWithWallet = { spaceId: number; walletId: number };
+
+// A History view opened from a Stats row: the period's own instants, as the statistics API returned them.
+export type HistoryFilter = {
+  spaceId: number;
+  from: string;
+  to: string;
+  transactionType: TransactionType;
+  // The row's name, shown on the applied filter.
+  name: string;
+} & ({ categoryId: number; walletId?: never } | { walletId: number; categoryId?: never });
 
 export type MainTabParamList = {
   [ScreenNames.HOME_TAB]: undefined;
-  [ScreenNames.TRANSACTIONS_TAB]: undefined;
+  [ScreenNames.TRANSACTIONS_TAB]: { filter?: HistoryFilter } | undefined;
+  [ScreenNames.STATS_TAB]: { composeWith?: ComposeWithWallet } | undefined;
   [ScreenNames.LIMITS_TAB]: undefined;
   [ScreenNames.SETTINGS_TAB]: undefined;
 };
@@ -50,6 +69,8 @@ export type IconType =
   | 'forward'
   | 'chevron-down'
   | 'chevron-up'
+  | 'chevron-right'
+  | 'pie'
   | 'edit'
   | 'trash'
   | 'more'

@@ -11,6 +11,9 @@ import {
 
 import { AlertProvider, ErrorBoundary } from '@components';
 import store from '@redux/Store';
+import ChartsPrototypeScreen from '@screens/ChartsPrototype/ChartsPrototypeScreen';
+
+const showChartsPrototype = __DEV__ && process.env.EXPO_PUBLIC_CHARTS_PROTOTYPE === '1';
 
 const App = () => {
   useFonts({
@@ -23,9 +26,7 @@ const App = () => {
     <ErrorBoundary>
       <SafeAreaProvider>
         <Provider store={store}>
-          <AlertProvider>
-            <RootNavigator />
-          </AlertProvider>
+          <AlertProvider>{showChartsPrototype ? <ChartsPrototypeScreen /> : <RootNavigator />}</AlertProvider>
         </Provider>
       </SafeAreaProvider>
     </ErrorBoundary>

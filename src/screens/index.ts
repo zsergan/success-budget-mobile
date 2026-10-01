@@ -8,5 +8,6 @@ export { default as LimitsScreen } from './Limits/LimitsScreen';
 export { default as LoadingScreen } from './Loading/LoadingScreen';
 export { default as MembersScreen } from './Members/MembersScreen';
 export { default as SettingsScreen } from './Settings/SettingsScreen';
+export { default as StatsScreen } from './Stats/StatsScreen';
 export { default as TransactionsScreen } from './Transactions/TransactionsScreen';
 export { default as WelcomeScreen } from './Welcome/WelcomeScreen';
