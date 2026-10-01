@@ -4,10 +4,17 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useNavigation } from '@react-navigation/native';
 
 import type { TransactionComposerHandle } from '@components';
-import { BottomSheetModal as BottomModal, RangePickerSheet, ScreenFrame, TransactionComposer } from '@components';
+import {
+  BottomSheetModal as BottomModal,
+  RangePickerSheet,
+  ScreenFrame,
+  SpacesSheet,
+  TransactionComposer,
+} from '@components';
 import { usePeriod } from '@hooks';
-import { useAppSelector, useSpaceArg } from '@redux/hooks';
+import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
+import { activateSpace } from '@redux/state/space/thunks';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { ScreenNames } from '@shared/enums';
 import type { MainTabNavigationProp } from '@shared/types';
@@ -25,6 +32,7 @@ import useAddTransaction from './hooks/useAddTransaction';
 import useComposeWithNewWallet from './hooks/useComposeWithNewWallet';
 import useRefreshOnReturn from './hooks/useRefreshOnReturn';
 import useSpaceAccessRecovery from './hooks/useSpaceAccessRecovery';
+import useSpaceStatus from './hooks/useSpaceStatus';
 import useStatsData from './hooks/useStatsData';
 import useStatsSelection from './hooks/useStatsSelection';
 import type { BreakdownGroup, BreakdownMode } from './statsItems';
@@ -36,6 +44,7 @@ const StatsScreen = () => {
   const navigation = useNavigation<MainTabNavigationProp<ScreenNames.STATS_TAB>>();
   const rangePickerRef = useRef<BottomSheetModal>(null);
   const walletSheetRef = useRef<BottomSheetModal>(null);
+  const spacesSheetRef = useRef<BottomSheetModal>(null);
   const composerRef = useRef<TransactionComposerHandle>(null);
 
   const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod } = usePeriod();
@@ -48,6 +57,18 @@ const StatsScreen = () => {
   const firstWalletId = walletsOverview?.wallets[0]?.wallet.id ?? -1;
 
   const spaceId = useAppSelector(selectCurrentSpaceId);
+  const dispatch = useAppDispatch();
+  const space = useSpaceStatus();
+
+  const selectSpace = (id: number) => {
+    dispatch(activateSpace(id));
+    spacesSheetRef.current?.dismiss();
+  };
+
+  const createSpace = () => {
+    spacesSheetRef.current?.dismiss();
+    navigation.navigate(ScreenNames.CREATE_SPACE_SCREEN);
+  };
 
   const addTransaction = useAddTransaction({
     onHasWallets: () => composerRef.current?.openExpense(),
@@ -68,11 +89,19 @@ const StatsScreen = () => {
   const [mode, setMode] = useState<BreakdownMode>('category');
   const selection = useStatsSelection(JSON.stringify([spaceId, range.from, range.to]), mode);
 
-  const failure = accessDenied ? (
-    <StatsFailure variant="noAccess" error={loadError} onOpenHome={() => navigation.navigate(ScreenNames.HOME_TAB)} />
-  ) : loadFailed ? (
-    <StatsFailure variant="loadFailed" error={loadError} onRetry={retryFailed} />
-  ) : null;
+  // Without a space the stats are skipped, so they could never leave their placeholders.
+  const failure =
+    space.status === 'failed' ? (
+      <StatsFailure variant="spacesFailed" error={space.error} onAction={space.retry} />
+    ) : space.status === 'missing' && space.spaces.length === 0 ? (
+      <StatsFailure variant="noSpaces" onAction={createSpace} />
+    ) : space.status === 'missing' ? (
+      <StatsFailure variant="noSpaceSelected" onAction={() => spacesSheetRef.current?.present()} />
+    ) : accessDenied ? (
+      <StatsFailure variant="noAccess" error={loadError} onAction={() => navigation.navigate(ScreenNames.HOME_TAB)} />
+    ) : loadFailed ? (
+      <StatsFailure variant="loadFailed" error={loadError} onAction={retryFailed} />
+    ) : null;
 
   const showsUpdateFailed = updateFailed && !failure;
 
@@ -124,6 +153,10 @@ const StatsScreen = () => {
 
       <BottomModal ref={walletSheetRef} dynamicSizing>
         <CreateWalletSheet onCreateWallet={openCreateWallet} />
+      </BottomModal>
+
+      <BottomModal ref={spacesSheetRef} dynamicSizing>
+        <SpacesSheet spaces={space.spaces} currentSpaceId={spaceId} onSelect={selectSpace} onCreateNew={createSpace} />
       </BottomModal>
 
       <ScreenFrame edges={['top', 'left', 'right']}>

@@ -7,7 +7,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { createAppStore } from '@redux/Store';
 import { spaceApi } from '@redux/state/space/api';
 import { activateSpace } from '@redux/state/space/thunks';
-import { ScreenNames } from '@shared/enums';
+import type { Space } from '@api/dto';
+import { ScreenNames, SpaceType } from '@shared/enums';
 import type { MainTabParamList, MainTabScreenProps } from '@shared/types';
 import type { StatsFixture } from './fixtures/statsFixtures';
 import { STATS_FIXTURES } from './fixtures/statsFixtures';
@@ -59,6 +60,17 @@ const failure = (statusCode: number) => () =>
 
 let fixture: StatsFixture;
 let fail: Partial<Record<Block, () => Promise<never>>>;
+let respondSpaces: () => Promise<unknown>;
+
+const personal: Space = {
+  id: 1,
+  name: 'Personal',
+  type: SpaceType.PERSONAL,
+  currency: { id: 1, code: 'USD', name: 'US Dollar' },
+  role: 'owner',
+  member_count: 1,
+  created_at: '2026-01-01T00:00:00.000Z',
+};
 
 const blockOf = (url: string) => url.split('/').pop() as Block;
 const statsRequests = (block?: Block) =>
@@ -73,13 +85,13 @@ const HistoryProbe = ({ route }: MainTabScreenProps<ScreenNames.TRANSACTIONS_TAB
   <Text testID="history-filter">{JSON.stringify(route.params?.filter ?? null)}</Text>
 );
 
-const renderStats = () => {
+const renderStats = ({ spaceId = 1 }: { spaceId?: number | null } = {}) => {
   const store = createAppStore();
-  store.dispatch(activateSpace(1));
+  if (spaceId !== null) store.dispatch(activateSpace(spaceId));
   // The app keeps the spaces list subscribed from sign-in on.
   store.dispatch(spaceApi.endpoints.getSpaces.initiate());
 
-  render(
+  const view = render(
     <Provider store={store}>
       <NavigationContainer ref={navigationRef}>
         <Tab.Navigator initialRouteName={ScreenNames.STATS_TAB} screenOptions={{ headerShown: false }}>
@@ -90,6 +102,8 @@ const renderStats = () => {
       </NavigationContainer>
     </Provider>,
   );
+
+  return { store, ...view };
 };
 
 // The rows past the first screenful would wait for real layout and scroll events that a test can't produce.
@@ -108,6 +122,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   fixture = STATS_FIXTURES.month;
   fail = {};
+  respondSpaces = () => Promise.resolve({ data: [] });
   mockedRequest.mockImplementation((config: RequestConfig) => {
     if (config.url.includes('/statistics/')) {
       const block = blockOf(config.url);
@@ -115,7 +130,7 @@ beforeEach(() => {
       return fail[block]?.() ?? Promise.resolve({ data: fixture[block] });
     }
 
-    return Promise.resolve({ data: config.url === '/spaces' ? [] : null });
+    return config.url === '/spaces' ? respondSpaces() : Promise.resolve({ data: null });
   });
 });
 
@@ -240,5 +255,56 @@ describe('StatsScreen', () => {
 
     expect(screen.getByText('Gifts')).toBeTruthy();
     expect(statsRequests()).toHaveLength(0);
+  });
+
+  describe('without a space', () => {
+    it('waits on placeholders while the spaces list is on its way', async () => {
+      respondSpaces = () => new Promise(() => {});
+      renderStats({ spaceId: null });
+      await settle();
+
+      expect(screen.getAllByTestId('block-placeholder').length).toBeGreaterThan(0);
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(statsRequests()).toHaveLength(0);
+    });
+
+    it('offers to load the spaces again when the list failed, then shows the stats', async () => {
+      respondSpaces = failure(503);
+      renderStats({ spaceId: null });
+      await settle();
+
+      expect(screen.getByText('Couldn’t load your spaces')).toBeTruthy();
+      expect(screen.getByText(/^Error 503 · /)).toBeTruthy();
+      expect(screen.queryByTestId('block-placeholder')).toBeNull();
+
+      respondSpaces = () => Promise.resolve({ data: [personal] });
+      fireEvent.press(screen.getByText('Retry'));
+      await settle();
+
+      expect(screen.getByText('Housing')).toBeTruthy();
+    });
+
+    it('asks to choose a space when the list has some but none is selected', async () => {
+      respondSpaces = () => Promise.resolve({ data: [personal] });
+      const { store } = renderStats({ spaceId: null });
+      await settle();
+      act(() => {
+        store.dispatch(activateSpace(null));
+      });
+
+      expect(screen.getByText('No space selected')).toBeTruthy();
+      expect(screen.getByText('Choose a space')).toBeTruthy();
+      expect(screen.queryByTestId('block-placeholder')).toBeNull();
+    });
+
+    it('leads to creating a space when there is none', async () => {
+      renderStats({ spaceId: null });
+      await settle();
+
+      expect(screen.getByText('No space yet')).toBeTruthy();
+      expect(screen.getByText('Create a space')).toBeTruthy();
+      expect(screen.queryByTestId('block-placeholder')).toBeNull();
+      expect(statsRequests()).toHaveLength(0);
+    });
   });
 });

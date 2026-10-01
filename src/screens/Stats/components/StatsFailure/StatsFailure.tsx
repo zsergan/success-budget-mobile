@@ -8,34 +8,56 @@ import { formatErrorNote } from '@screens/Stats/format';
 
 import styles from './style';
 
-type Props =
-  | { variant: 'loadFailed'; error: ErrorResponse | undefined; onRetry: () => void }
-  | { variant: 'noAccess'; error: ErrorResponse | undefined; onOpenHome: () => void };
+type Variant = 'loadFailed' | 'noAccess' | 'spacesFailed' | 'noSpaces' | 'noSpaceSelected';
 
-const CONTENT: Record<
-  Props['variant'],
-  { icon: IconType; title: string; text: string; action: string; actionIcon: IconType }
-> = {
-  loadFailed: {
-    icon: 'alert',
-    title: 'Couldn’t load your stats',
-    text: 'The request failed on our side, so nothing is missing from your data. Try again in a moment.',
-    action: 'Retry',
-    actionIcon: 'refresh',
-  },
-  noAccess: {
-    icon: 'lock',
-    title: 'No access to this space',
-    text: 'You may have been removed from it, or it was deleted. Pick another space on Home.',
-    action: 'Go to Home',
-    actionIcon: 'home',
-  },
-};
+interface Props {
+  variant: Variant;
+  error?: ErrorResponse;
+  onAction: () => void;
+}
+
+const CONTENT: Record<Variant, { icon: IconType; title: string; text: string; action: string; actionIcon: IconType }> =
+  {
+    loadFailed: {
+      icon: 'alert',
+      title: 'Couldn’t load your stats',
+      text: 'The request failed on our side, so nothing is missing from your data. Try again in a moment.',
+      action: 'Retry',
+      actionIcon: 'refresh',
+    },
+    noAccess: {
+      icon: 'lock',
+      title: 'No access to this space',
+      text: 'You may have been removed from it, or it was deleted. Pick another space on Home.',
+      action: 'Go to Home',
+      actionIcon: 'home',
+    },
+    spacesFailed: {
+      icon: 'alert',
+      title: 'Couldn’t load your spaces',
+      text: 'Stats belong to a space, and the list of yours didn’t arrive. Try again in a moment.',
+      action: 'Retry',
+      actionIcon: 'refresh',
+    },
+    noSpaces: {
+      icon: 'users',
+      title: 'No space yet',
+      text: 'Stats belong to a space with its own wallets and currency. Create one to start.',
+      action: 'Create a space',
+      actionIcon: 'plus',
+    },
+    noSpaceSelected: {
+      icon: 'users',
+      title: 'No space selected',
+      text: 'Stats belong to a space with its own wallets and currency. Choose one to see them.',
+      action: 'Choose a space',
+      actionIcon: 'users',
+    },
+  };
 
 // Replaces the blocks when there is nothing to show; the period bar above stays usable.
-const StatsFailure = (props: Props) => {
-  const content = CONTENT[props.variant];
-  const onAction = props.variant === 'loadFailed' ? props.onRetry : props.onOpenHome;
+const StatsFailure = ({ variant, error, onAction }: Props) => {
+  const content = CONTENT[variant];
 
   return (
     <View style={styles.root} accessibilityRole="alert">
@@ -53,7 +75,7 @@ const StatsFailure = (props: Props) => {
         <Text style={styles.actionText}>{content.action}</Text>
       </TouchableOpacity>
 
-      {props.error && <Text style={styles.note}>{formatErrorNote(props.error)}</Text>}
+      {error && <Text style={styles.note}>{formatErrorNote(error)}</Text>}
     </View>
   );
 };

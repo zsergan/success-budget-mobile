@@ -10,7 +10,7 @@ interface Props {
 
 // Holds a block's place in the list until its own component replaces it.
 const BlockPlaceholder = ({ height, style }: Props) => (
-  <View style={[styles.block, height !== undefined && { height }, style]} />
+  <View testID="block-placeholder" style={[styles.block, height !== undefined && { height }, style]} />
 );
 
 export default BlockPlaceholder;
