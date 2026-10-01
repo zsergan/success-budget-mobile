@@ -59,9 +59,54 @@ describe('RangePickerSheet', () => {
     expect(screen.getByText('30 days selected')).toBeTruthy();
   });
 
-  it('turns a picked day into Custom', () => {
+  it('steps a Month back and applies it as that month, not as a custom range', () => {
     const { onApply } = renderSheet(CURRENT_MONTH);
 
+    fireEvent.press(screen.getByLabelText('Previous month'));
+
+    expect(screen.getByText('August 2026')).toBeTruthy();
+    fireEvent.press(screen.getByText('Apply period'));
+    expect(onApply).toHaveBeenCalledWith({ kind: 'past', unit: 'month', anchor: new Date(2026, 7, 1) });
+  });
+
+  it('takes the whole week around a tapped day', () => {
+    const { onApply } = renderSheet(CURRENT_MONTH);
+
+    fireEvent.press(screen.getByText('Week'));
+    fireEvent.press(screen.getByText('22'));
+
+    expect(screen.getByText('21–27 Sep 2026')).toBeTruthy();
+    fireEvent.press(screen.getByText('Apply period'));
+    expect(onApply).toHaveBeenCalledWith({ kind: 'past', unit: 'week', anchor: new Date(2026, 8, 21) });
+  });
+
+  it('steps a Year back without a calendar', () => {
+    const { onApply } = renderSheet(CURRENT_MONTH);
+
+    fireEvent.press(screen.getByText('Year'));
+    expect(screen.queryByText('22')).toBeNull();
+    fireEvent.press(screen.getByLabelText('Previous year'));
+    fireEvent.press(screen.getByText('Apply period'));
+
+    expect(onApply).toHaveBeenCalledWith({ kind: 'past', unit: 'year', anchor: new Date(2025, 0, 1) });
+  });
+
+  it('goes no further than the current period and leads back to it', () => {
+    const { onApply } = renderSheet({ kind: 'past', unit: 'month', anchor: new Date(2026, 4, 1) });
+
+    expect(screen.getByLabelText('Next month').props.accessibilityState).toMatchObject({ disabled: false });
+    fireEvent.press(screen.getByText('Back to this month'));
+
+    expect(screen.getByText('This month')).toBeTruthy();
+    expect(screen.getByLabelText('Next month').props.accessibilityState).toMatchObject({ disabled: true });
+    fireEvent.press(screen.getByText('Apply period'));
+    expect(onApply).toHaveBeenCalledWith(CURRENT_MONTH);
+  });
+
+  it('builds a range of days only in Custom', () => {
+    const { onApply } = renderSheet(CURRENT_MONTH);
+
+    fireEvent.press(screen.getByText('Custom'));
     fireEvent.press(screen.getByText('10'));
     fireEvent.press(screen.getByText('Apply period'));
 

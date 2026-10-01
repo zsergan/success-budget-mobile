@@ -3,7 +3,7 @@ import { customPeriod } from '@shared/utils';
 
 export type RangeField = 'from' | 'to';
 
-// Any picked day turns the draft into Custom; From then moves on to To, and a pick
+// A picked day sets the field being edited, From then moves on to To, and a pick
 // on the wrong side of the other end moves that end instead of inverting the range.
 export const pickDay = (
   current: { from: Date; to: Date },

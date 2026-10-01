@@ -12,12 +12,14 @@ import {
   currentPeriod,
   daysInRange,
   formatDateLong,
-  getPeriodUnit,
   isPeriodTooLong,
   MAX_CUSTOM_DAYS,
+  shiftPeriod,
   toDateRange,
+  unitPeriodOf,
 } from '@shared/utils';
 import CalendarGrid from './CalendarGrid';
+import PeriodStepper from './PeriodStepper';
 import type { RangeField } from './pickDay';
 import { pickDay } from './pickDay';
 
@@ -48,21 +50,31 @@ const RangePickerSheet = ({ period, onApply }: Props) => {
 
   const days = daysInRange(draftRange);
   const isTooLong = isPeriodTooLong(draft);
-  const activeQuick = getPeriodUnit(draft) ?? 'custom';
+  const stepUnit = draft.kind === 'custom' ? null : draft.unit;
+  const activeQuick = stepUnit ?? 'custom';
+
+  const showStandard = (next: Period) => {
+    setDraft(next);
+    setVisibleMonth(toDateRange(next).from);
+  };
 
   const handleQuickPreset = (value: PeriodUnit | 'custom') => {
     if (value === 'custom') {
       setDraft(customPeriod(draftRange.from, draftRange.to));
+      setEditingField('from');
       return;
     }
 
-    const next = currentPeriod(value);
-    setDraft(next);
-    setEditingField('from');
-    setVisibleMonth(toDateRange(next).from);
+    showStandard(currentPeriod(value));
   };
 
+  // A Week or Month takes the whole unit around the picked day; only Custom builds a range of days.
   const handleSelectDay = (date: Date) => {
+    if (draft.kind !== 'custom') {
+      setDraft(unitPeriodOf(draft.unit, date));
+      return;
+    }
+
     const { period: next, nextField } = pickDay(draftRange, editingField, date);
     setDraft(next);
     setEditingField(nextField);
@@ -102,32 +114,43 @@ const RangePickerSheet = ({ period, onApply }: Props) => {
         })}
       </View>
 
-      <View style={styles.fromToRow}>
-        <TouchableOpacity
-          style={[styles.fromToChip, editingField === 'from' && styles.fromToChipActive]}
-          onPress={() => setEditingField('from')}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.fromToLabel}>From</Text>
-          <Text style={styles.fromToValue}>{formatDateLong(draftRange.from)}</Text>
-        </TouchableOpacity>
+      {draft.kind === 'custom' ? (
+        <View style={styles.fromToRow}>
+          <TouchableOpacity
+            style={[styles.fromToChip, editingField === 'from' && styles.fromToChipActive]}
+            onPress={() => setEditingField('from')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.fromToLabel}>From</Text>
+            <Text style={styles.fromToValue}>{formatDateLong(draftRange.from)}</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.fromToChip, editingField === 'to' && styles.fromToChipActive]}
-          onPress={() => setEditingField('to')}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.fromToLabel}>To</Text>
-          <Text style={styles.fromToValue}>{formatDateLong(draftRange.to)}</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={[styles.fromToChip, editingField === 'to' && styles.fromToChipActive]}
+            onPress={() => setEditingField('to')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.fromToLabel}>To</Text>
+            <Text style={styles.fromToValue}>{formatDateLong(draftRange.to)}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <PeriodStepper
+          period={draft}
+          onStep={(delta) => showStandard(shiftPeriod(draft, delta))}
+          onSelectCurrent={() => showStandard(currentPeriod(draft.unit))}
+        />
+      )}
 
-      <CalendarGrid
-        month={visibleMonth}
-        range={draftRange}
-        onSelectDay={handleSelectDay}
-        onNavigate={(delta) => setVisibleMonth(addMonths(visibleMonth, delta))}
-      />
+      {/* A year is stepped whole, and a month by the stepper; the grid's own arrows are for Week and Custom. */}
+      {stepUnit !== 'year' && (
+        <CalendarGrid
+          month={visibleMonth}
+          range={draftRange}
+          onSelectDay={handleSelectDay}
+          onNavigate={stepUnit === 'month' ? undefined : (delta) => setVisibleMonth(addMonths(visibleMonth, delta))}
+        />
+      )}
 
       <Text style={[styles.summary, isTooLong && styles.summaryError]}>
         {isTooLong ? `${days} days selected · up to ${MAX_CUSTOM_DAYS}` : `${days} days selected`}

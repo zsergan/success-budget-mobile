@@ -12,7 +12,8 @@ interface Props {
   month: Date;
   range: { from: Date; to: Date };
   onSelectDay: (date: Date) => void;
-  onNavigate: (delta: 1 | -1) => void;
+  // Without it the grid shows no month header and stays on the month it was given.
+  onNavigate?: (delta: 1 | -1) => void;
 }
 
 const CalendarGrid = ({ month, range, onSelectDay, onNavigate }: Props) => {
@@ -21,17 +22,19 @@ const CalendarGrid = ({ month, range, onSelectDay, onNavigate }: Props) => {
 
   return (
     <View style={styles.calendarRoot}>
-      <View style={styles.navRow}>
-        <TouchableOpacity style={styles.navButton} onPress={() => onNavigate(-1)} activeOpacity={0.7}>
-          <Icon name="back" size={14} color={colors.text} strokeWidth={2} />
-        </TouchableOpacity>
+      {onNavigate && (
+        <View style={styles.navRow}>
+          <TouchableOpacity style={styles.navButton} onPress={() => onNavigate(-1)} activeOpacity={0.7}>
+            <Icon name="back" size={14} color={colors.text} strokeWidth={2} />
+          </TouchableOpacity>
 
-        <Text style={styles.monthLabel}>{formatMonthYear(month)}</Text>
+          <Text style={styles.monthLabel}>{formatMonthYear(month)}</Text>
 
-        <TouchableOpacity style={styles.navButton} onPress={() => onNavigate(1)} activeOpacity={0.7}>
-          <Icon name="forward" size={14} color={colors.text} strokeWidth={2} />
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity style={styles.navButton} onPress={() => onNavigate(1)} activeOpacity={0.7}>
+            <Icon name="forward" size={14} color={colors.text} strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.dowRow}>
         {DOW_LABELS.map((label, index) => (
