@@ -1,0 +1,154 @@
+import { useEffect } from 'react';
+import type { GestureResponderEvent } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
+import Svg, { Circle, G } from 'react-native-svg';
+
+import type { Money } from '@api/dto';
+import { colors } from '@shared/theme';
+import { getBreakdownAppearance } from '@screens/Stats/breakdownAppearance';
+import { formatMoney } from '@screens/Stats/format';
+import useChartMotion from '@screens/Stats/hooks/useChartMotion';
+import type { BreakdownGroup, BreakdownMode } from '@screens/Stats/statsItems';
+
+import {
+  CIRCUMFERENCE,
+  DONUT_SIZE,
+  RADIUS,
+  SELECTED_STROKE,
+  STROKE,
+  hitTestDonut,
+  toDonutSegments,
+} from './donutGeometry';
+import styles from './style';
+
+const DIMMED_OPACITY = 0.28;
+const CENTER = DONUT_SIZE / 2;
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+// A surface-colored ring that unwinds clockwise over the segments, drawn once per data set.
+const Reveal = ({ duration }: { duration: number }) => {
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    progress.set(withTiming(1, { duration, easing: Easing.out(Easing.cubic) }));
+  }, [progress, duration]);
+
+  const animatedProps = useAnimatedProps(() => ({ strokeDashoffset: -CIRCUMFERENCE * progress.get() }));
+
+  return (
+    <AnimatedCircle
+      cx={CENTER}
+      cy={CENTER}
+      r={RADIUS}
+      fill="none"
+      stroke={colors.surface}
+      strokeWidth={SELECTED_STROKE + 4}
+      strokeDasharray={[CIRCUMFERENCE, CIRCUMFERENCE]}
+      animatedProps={animatedProps}
+    />
+  );
+};
+
+const countLabel = (count: number, mode: BreakdownMode) =>
+  mode === 'wallet'
+    ? `${count} ${count === 1 ? 'wallet' : 'wallets'}`
+    : `${count} ${count === 1 ? 'category' : 'categories'}`;
+
+interface Props {
+  groups: BreakdownGroup[];
+  totalAmount: Money;
+  sourceCount: number;
+  currency: string;
+  mode: BreakdownMode;
+  selectedKey: string | null;
+  onSelect: (key: string | null) => void;
+  // Fires for any touch that starts on the donut, so the screen can tell it from a tap outside.
+  onTouchInside?: () => void;
+}
+
+const DonutChart = ({
+  groups,
+  totalAmount,
+  sourceCount,
+  currency,
+  mode,
+  selectedKey,
+  onSelect,
+  onTouchInside,
+}: Props) => {
+  const { isAnimated, duration } = useChartMotion();
+  const segments = toDonutSegments(groups);
+  const selected = groups.find((group) => group.key === selectedKey) ?? null;
+
+  const dataKey = `${mode}:${groups.map((group) => `${group.key}=${group.amount}`).join(',')}`;
+
+  const handlePress = (event: GestureResponderEvent) => {
+    const key = hitTestDonut(event.nativeEvent.locationX, event.nativeEvent.locationY, segments);
+    onSelect(key === null || key === selectedKey ? null : key);
+  };
+
+  const center = !selected
+    ? { label: 'Spent', amount: totalAmount, sub: countLabel(sourceCount, mode) }
+    : selected.kind === 'other'
+      ? { label: 'Other', amount: selected.amount, sub: countLabel(selected.children.length, mode) }
+      : {
+          label: getBreakdownAppearance(selected).name,
+          amount: selected.amount,
+          sub: `${selected.percent.toFixed(1)}%`,
+        };
+
+  // The selected segment is drawn last so its wider stroke sits on top of its neighbours.
+  const ordered = [...segments].sort((a, b) => Number(a.key === selectedKey) - Number(b.key === selectedKey));
+
+  return (
+    <Pressable
+      style={styles.root}
+      onPress={handlePress}
+      onTouchStart={onTouchInside}
+      accessibilityLabel={`${center.label}, ${formatMoney(center.amount, currency)}, ${center.sub}`}
+      testID="donut-chart"
+    >
+      <Svg style={styles.svg} width={DONUT_SIZE} height={DONUT_SIZE} pointerEvents="none">
+        <G rotation={-90} origin={`${CENTER}, ${CENTER}`}>
+          <Circle cx={CENTER} cy={CENTER} r={RADIUS} fill="none" stroke={colors.track} strokeWidth={STROKE} />
+
+          {ordered.map((segment) => {
+            const group = groups.find((item) => item.key === segment.key)!;
+            const isSelected = segment.key === selectedKey;
+
+            return (
+              <Circle
+                key={segment.key}
+                cx={CENTER}
+                cy={CENTER}
+                r={RADIUS}
+                fill="none"
+                stroke={getBreakdownAppearance(group).color}
+                strokeWidth={isSelected ? SELECTED_STROKE : STROKE}
+                strokeDasharray={[segment.visibleLength, CIRCUMFERENCE - segment.visibleLength]}
+                strokeDashoffset={-segment.start}
+                opacity={selected && !isSelected ? DIMMED_OPACITY : 1}
+              />
+            );
+          })}
+
+          {isAnimated && <Reveal key={dataKey} duration={duration} />}
+        </G>
+      </Svg>
+
+      <View style={styles.center} pointerEvents="none">
+        <Text style={styles.centerLabel} numberOfLines={1}>
+          {center.label}
+        </Text>
+        <Text style={styles.centerAmount} numberOfLines={1} adjustsFontSizeToFit>
+          {formatMoney(center.amount, currency)}
+        </Text>
+        <Text style={styles.centerSub}>{center.sub}</Text>
+      </View>
+    </Pressable>
+  );
+};
+
+export default DonutChart;
