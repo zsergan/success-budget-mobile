@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 import theme, { colors } from '@shared/theme';
 
 const CARD_RADIUS = 18;
+export const BREAKDOWN_PLACEHOLDER_HEIGHT = 260;
 
 // The donut and the rows are separate list items drawn as one card: the donut
 // item opens it, every row carries its side borders and the last row closes it.
@@ -38,6 +39,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomLeftRadius: CARD_RADIUS,
     borderBottomRightRadius: CARD_RADIUS,
+  },
+  breakdownError: {
+    minHeight: BREAKDOWN_PLACEHOLDER_HEIGHT,
   },
   emptyCard: {
     paddingVertical: theme.spacing.xxl,

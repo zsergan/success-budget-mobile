@@ -101,34 +101,11 @@ const styles = StyleSheet.create({
   chipTextDeficit: {
     color: colors.danger,
   },
-  errorCard: {
-    ...card,
-    paddingVertical: theme.spacing.md,
-    paddingLeft: theme.spacing.lg,
-    paddingRight: theme.spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    columnGap: theme.spacing.md,
+  sample: {
+    opacity: 0,
   },
-  errorText: {
+  fill: {
     flex: 1,
-    fontFamily: theme.fonts.semiBold,
-    fontSize: theme.fontSizes.bodySm,
-    color: colors.text,
-  },
-  retryButton: {
-    height: 36,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radius.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    columnGap: 6,
-    backgroundColor: colors.track,
-  },
-  retryText: {
-    fontFamily: theme.fonts.semiBold,
-    fontSize: theme.fontSizes.caption,
-    color: colors.text,
   },
 });
 

@@ -164,6 +164,47 @@ describe('block errors', () => {
 
     unmount();
   });
+
+  it('reports one screen-wide failure only when every block failed with nothing to show', async () => {
+    respond.trend = serverError;
+    respond.breakdown = serverError;
+
+    const { result, unmount } = renderForSpace(1);
+
+    await waitFor(() => expect(result.current.breakdown.hasError).toBe(true));
+    await waitFor(() => expect(result.current.trend.hasError).toBe(true));
+    expect(result.current.summary.data).toBeDefined();
+    expect(result.current.loadFailed).toBe(false);
+
+    unmount();
+
+    respond.summary = () =>
+      Promise.reject({ response: { data: { statusCode: 503, message: 'down', timestamp: SERVER_NOW } } });
+    const failing = renderForSpace(2);
+    await waitFor(() => expect(failing.result.current.loadFailed).toBe(true));
+    expect(failing.result.current.loadError?.statusCode).toBe(503);
+    expect(failing.result.current.accessDenied).toBe(false);
+
+    respond = { summary: ok, trend: ok, breakdown: ok };
+    act(() => failing.result.current.retryFailed());
+
+    await loaded(failing.result);
+    expect(failing.result.current.loadFailed).toBe(false);
+
+    failing.unmount();
+  });
+
+  it('tells a refused space apart from a failure to retry', async () => {
+    const forbidden: Responder = () =>
+      Promise.reject({ response: { data: { statusCode: 403, message: 'Space does not exist' } } });
+    respond = { summary: forbidden, trend: forbidden, breakdown: forbidden };
+
+    const { result, unmount } = renderForSpace(1);
+
+    await waitFor(() => expect(result.current.accessDenied).toBe(true));
+
+    unmount();
+  });
 });
 
 describe('refreshing the same period', () => {
@@ -246,6 +287,29 @@ describe('switching scope', () => {
     expect(result.current.trend.data).toBeUndefined();
     expect(result.current.breakdown.data).toBeUndefined();
     await waitFor(() => expect(requestsTo('summary').at(-1)?.url).toBe('/spaces/2/statistics/summary'));
+
+    unmount();
+  });
+  it('never shows a late answer for the previous space or period', async () => {
+    const late: ((value: unknown) => void)[] = [];
+    const deferred: Responder = (config) =>
+      config.url.startsWith('/spaces/1/') || config.params?.anchor_date === '2026-09-01'
+        ? new Promise((resolve) => late.push(() => resolve({ data: { ...body(config), label: 'late' } })))
+        : ok(config);
+    respond = { summary: deferred, trend: deferred, breakdown: deferred };
+
+    const { store, result, rerender, unmount } = renderForSpace(1);
+
+    rerender({ range: august });
+    act(() => {
+      store.dispatch(activateSpace(2));
+    });
+    await loaded(result);
+
+    await act(async () => late.forEach((resolve) => resolve(undefined)));
+
+    expect(late.length).toBeGreaterThan(0);
+    expect((result.current.summary.data as { label?: string }).label).toBe('/spaces/2/statistics/summary');
 
     unmount();
   });

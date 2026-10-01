@@ -169,3 +169,16 @@ export const formatMonthYearShort = (key: string) => {
 
   return `${monthShort(date)} ${date.getFullYear()}`;
 };
+
+const pad2 = (value: number) => String(value).padStart(2, '0');
+
+// "Error 503 · 09:41:22" in local time; a request that got no response at all has no status to show.
+export const formatErrorNote = ({ statusCode, timestamp }: { statusCode: number; timestamp: string }) => {
+  const at = new Date(timestamp);
+  const time = Number.isNaN(at.getTime())
+    ? null
+    : `${pad2(at.getHours())}:${pad2(at.getMinutes())}:${pad2(at.getSeconds())}`;
+  const reason = statusCode > 0 ? `Error ${statusCode}` : 'No connection';
+
+  return time ? `${reason} · ${time}` : reason;
+};

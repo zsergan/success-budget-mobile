@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { skipToken } from '@reduxjs/toolkit/query';
 
-import type { StatisticsQuery } from '@api/dto';
+import type { ErrorResponse, StatisticsQuery } from '@api/dto';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import type { StatisticsArg } from '@redux/state/statistics/api';
@@ -61,14 +61,20 @@ export interface StatsBlock<T> {
   hasError: boolean;
   // Showing an earlier cycle's data because this cycle's request failed.
   updateFailed: boolean;
+  // Why this cycle's request failed, while it stays failed.
+  error: ErrorResponse | undefined;
   retry: () => void;
 }
 
 interface QueryLike<T> {
   currentData?: T;
   isError: boolean;
+  error?: unknown;
   refetch: () => unknown;
 }
+
+// Not a failure to retry: the user is no longer a member of the space, or it is gone.
+export const isSpaceAccessDenied = (error: ErrorResponse | undefined) => error?.statusCode === 403;
 
 const argKey = (arg: StatisticsArg | typeof skipToken) => (arg === skipToken ? '' : JSON.stringify(arg));
 
@@ -102,6 +108,7 @@ const toBlock = <T>(
   { isSkipped, isBlocked, retry }: { isSkipped: boolean; isBlocked: boolean; retry: () => void },
 ): StatsBlock<T> => {
   const failed = current.isError || isBlocked;
+  const error = current.isError ? (current.error as ErrorResponse | undefined) : undefined;
 
   if (current.currentData !== undefined) {
     return {
@@ -110,6 +117,7 @@ const toBlock = <T>(
       isUpdating: false,
       hasError: false,
       updateFailed: false,
+      error: undefined,
       retry,
     };
   }
@@ -121,6 +129,7 @@ const toBlock = <T>(
       isUpdating: !failed,
       hasError: false,
       updateFailed: failed,
+      error,
       retry,
     };
   }
@@ -131,6 +140,7 @@ const toBlock = <T>(
     hasError: failed,
     isUpdating: false,
     updateFailed: false,
+    error,
     retry,
   };
 };
@@ -263,6 +273,8 @@ const useStatsData = (range: DateRange) => {
   });
 
   const blocks = [summaryBlock, trendBlock, breakdownBlock];
+  // A blocked block carries no error of its own; summary's is the one it waits on.
+  const errors = blocks.map((block) => block.error ?? (block.hasError ? summaryBlock.error : undefined));
   const retryFailed = () => {
     const failed = blocks.filter((block) => block.hasError || block.updateFailed);
     // Blocks waiting on summary share its retry; run it once.
@@ -275,6 +287,10 @@ const useStatsData = (range: DateRange) => {
     breakdown: breakdownBlock,
     isUpdating: blocks.some((block) => block.isUpdating),
     updateFailed: blocks.some((block) => block.updateFailed),
+    // Every block failed with nothing to show: one screen-wide failure instead of three cards.
+    loadFailed: blocks.every((block) => block.hasError),
+    loadError: errors.find((error) => error !== undefined),
+    accessDenied: errors.some(isSpaceAccessDenied),
     refresh,
     refreshIfStale,
     retryFailed,

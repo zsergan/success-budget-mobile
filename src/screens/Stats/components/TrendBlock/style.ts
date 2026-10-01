@@ -2,6 +2,8 @@ import { StyleSheet } from 'react-native';
 
 import theme, { colors } from '@shared/theme';
 
+import { CHART_HEIGHT } from '../TrendChart/style';
+
 const CARD_MIN_HEIGHT = 188;
 
 const styles = StyleSheet.create({
@@ -68,39 +70,14 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontVariant: ['tabular-nums'],
   },
-  error: {
+  sample: {
+    opacity: 0,
+  },
+  chartArea: {
+    height: CHART_HEIGHT,
+  },
+  fill: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    rowGap: 10,
-  },
-  errorIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.track,
-  },
-  errorTitle: {
-    fontFamily: theme.fonts.semiBold,
-    fontSize: theme.fontSizes.label,
-    color: colors.text,
-  },
-  retryButton: {
-    height: 36,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    columnGap: 7,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-  },
-  retryText: {
-    fontFamily: theme.fonts.semiBold,
-    fontSize: theme.fontSizes.bodySm,
-    color: colors.text,
   },
 });
 

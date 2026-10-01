@@ -2,6 +2,7 @@ import {
   formatChange,
   formatComparisonLabel,
   formatDayMonth,
+  formatErrorNote,
   formatFlow,
   formatMoney,
   formatPeriodWord,
@@ -165,5 +166,20 @@ describe('formatDayMonth', () => {
   it('adds the year only outside the current one', () => {
     expect(formatDayMonth('2026-08-29', now)).toBe('29 Aug');
     expect(formatDayMonth('2025-08-29', now)).toBe('29 Aug 2025');
+  });
+});
+
+describe('formatErrorNote', () => {
+  it('names the status and the local time of the failure', () => {
+    const at = new Date(2026, 8, 28, 9, 41, 22);
+
+    expect(formatErrorNote({ statusCode: 503, timestamp: at.toISOString() })).toBe('Error 503 · 09:41:22');
+  });
+
+  it('says there was no connection when no response came back', () => {
+    const at = new Date(2026, 8, 28, 18, 5, 9);
+
+    expect(formatErrorNote({ statusCode: 0, timestamp: at.toISOString() })).toBe('No connection · 18:05:09');
+    expect(formatErrorNote({ statusCode: 0, timestamp: '' })).toBe('No connection');
   });
 });

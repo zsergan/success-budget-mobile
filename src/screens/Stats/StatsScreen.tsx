@@ -14,13 +14,17 @@ import type { MainTabNavigationProp } from '@shared/types';
 import { formatRangeLabel, hasComparison, isCurrentMonth, monthPeriodOf } from '@shared/utils';
 import CreateWalletSheet from './components/CreateWalletSheet/CreateWalletSheet';
 import StatsEmptyState from './components/StatsEmptyState/StatsEmptyState';
+import StatsFailure from './components/StatsFailure/StatsFailure';
 import StatsHeader from './components/StatsHeader/StatsHeader';
 import StatsList from './components/StatsList/StatsList';
+import UpdateFailedToast from './components/UpdateFailedToast/UpdateFailedToast';
+import { UPDATE_TOAST_SPACE } from './components/UpdateFailedToast/style';
 import { parseDateKey } from './format';
 import { toHistoryFilter } from './historyFilter';
 import useAddTransaction from './hooks/useAddTransaction';
 import useComposeWithNewWallet from './hooks/useComposeWithNewWallet';
 import useRefreshOnReturn from './hooks/useRefreshOnReturn';
+import useSpaceAccessRecovery from './hooks/useSpaceAccessRecovery';
 import useStatsData from './hooks/useStatsData';
 import useStatsSelection from './hooks/useStatsSelection';
 import type { BreakdownGroup, BreakdownMode } from './statsItems';
@@ -35,8 +39,10 @@ const StatsScreen = () => {
   const composerRef = useRef<TransactionComposerHandle>(null);
 
   const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod } = usePeriod();
-  const { summary, trend, breakdown, refreshIfStale } = useStatsData(range);
+  const { summary, trend, breakdown, refreshIfStale, updateFailed, retryFailed, loadFailed, loadError, accessDenied } =
+    useStatsData(range);
   useRefreshOnReturn(refreshIfStale);
+  useSpaceAccessRecovery(accessDenied);
 
   const { currentData: walletsOverview } = useGetWalletsQuery(useSpaceArg());
   const firstWalletId = walletsOverview?.wallets[0]?.wallet.id ?? -1;
@@ -62,8 +68,16 @@ const StatsScreen = () => {
   const [mode, setMode] = useState<BreakdownMode>('category');
   const selection = useStatsSelection(JSON.stringify([spaceId, range.from, range.to]), mode);
 
+  const failure = accessDenied ? (
+    <StatsFailure variant="noAccess" error={loadError} onOpenHome={() => navigation.navigate(ScreenNames.HOME_TAB)} />
+  ) : loadFailed ? (
+    <StatsFailure variant="loadFailed" error={loadError} onRetry={retryFailed} />
+  ) : null;
+
+  const showsUpdateFailed = updateFailed && !failure;
+
   const viewState = getStatsViewState(summary.data);
-  const showsBlocks = viewState === 'data' || viewState === 'pending';
+  const showsBlocks = !failure && (viewState === 'data' || viewState === 'pending');
   const items = showsBlocks
     ? buildStatsItems({ breakdown: breakdown.data, mode, isOtherExpanded: selection.isOtherExpanded })
     : [];
@@ -83,21 +97,22 @@ const StatsScreen = () => {
   const monthLabel = range.from.toLocaleString('en-US', { month: 'long', year: 'numeric' });
   const lastTransactionDate = summary.data?.last_transaction_date;
 
-  const placeholder =
-    viewState === 'noHistory' ? (
-      <StatsEmptyState variant="noHistory" onAddTransaction={addTransaction} />
-    ) : viewState === 'future' ? (
-      <StatsEmptyState variant="future" rangeLabel={formatRangeLabel(range)} onReset={resetPeriod} />
-    ) : viewState === 'emptyPeriod' && lastTransactionDate ? (
-      <StatsEmptyState
-        variant="emptyPeriod"
-        rangeLabel={isCurrentMonth(period) ? monthLabel : formatRangeLabel(range)}
-        isCurrentMonth={isCurrentMonth(period)}
-        lastTransactionDate={lastTransactionDate}
-        onReset={canReset ? resetPeriod : undefined}
-        onOpenLastMonth={() => applyPeriod(monthPeriodOf(parseDateKey(lastTransactionDate)))}
-      />
-    ) : null;
+  const placeholder = failure ? (
+    failure
+  ) : viewState === 'noHistory' ? (
+    <StatsEmptyState variant="noHistory" onAddTransaction={addTransaction} />
+  ) : viewState === 'future' ? (
+    <StatsEmptyState variant="future" rangeLabel={formatRangeLabel(range)} onReset={resetPeriod} />
+  ) : viewState === 'emptyPeriod' && lastTransactionDate ? (
+    <StatsEmptyState
+      variant="emptyPeriod"
+      rangeLabel={isCurrentMonth(period) ? monthLabel : formatRangeLabel(range)}
+      isCurrentMonth={isCurrentMonth(period)}
+      lastTransactionDate={lastTransactionDate}
+      onReset={canReset ? resetPeriod : undefined}
+      onOpenLastMonth={() => applyPeriod(monthPeriodOf(parseDateKey(lastTransactionDate)))}
+    />
+  ) : null;
 
   return (
     <>
@@ -124,6 +139,7 @@ const StatsScreen = () => {
             items={items}
             summary={summary}
             trend={trend}
+            breakdown={breakdown}
             selectedTrendKey={selection.selectedTrendKey}
             onSelectTrend={selection.selectTrend}
             onTrendTouch={selection.markTrendTouch}
@@ -137,7 +153,10 @@ const StatsScreen = () => {
             onModeChange={setMode}
             onToggleOther={selection.toggleOther}
             onOpenHistory={openHistory}
+            bottomSpace={showsUpdateFailed ? UPDATE_TOAST_SPACE : undefined}
           />
+
+          {showsUpdateFailed && <UpdateFailedToast onRetry={retryFailed} />}
         </View>
       </ScreenFrame>
     </>

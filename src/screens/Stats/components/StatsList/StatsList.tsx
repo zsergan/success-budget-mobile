@@ -4,9 +4,10 @@ import { FlatList, Text, View } from 'react-native';
 
 import { Icon } from '@components';
 import { colors } from '@shared/theme';
-import type { StatisticsSummary, StatisticsTrend } from '@api/dto';
+import type { StatisticsBreakdown, StatisticsSummary, StatisticsTrend } from '@api/dto';
 import type { StatsBlock } from '@screens/Stats/hooks/useStatsData';
 import type { BreakdownGroup, BreakdownMode, StatsItem } from '@screens/Stats/statsItems';
+import BlockError from '../BlockError/BlockError';
 import BlockPlaceholder from '../BlockPlaceholder/BlockPlaceholder';
 import BreakdownHeader from '../BreakdownHeader/BreakdownHeader';
 import BreakdownRow from '../BreakdownRow/BreakdownRow';
@@ -14,12 +15,13 @@ import DonutChart from '../DonutChart/DonutChart';
 import SummaryCards from '../SummaryCards/SummaryCards';
 import TrendBlock from '../TrendBlock/TrendBlock';
 
-import styles from './style';
+import styles, { BREAKDOWN_PLACEHOLDER_HEIGHT } from './style';
 
 interface Props {
   items: StatsItem[];
   summary: StatsBlock<StatisticsSummary>;
   trend: StatsBlock<StatisticsTrend>;
+  breakdown: StatsBlock<StatisticsBreakdown>;
   selectedTrendKey: string | null;
   onSelectTrend: (key: string | null) => void;
   onTrendTouch: () => void;
@@ -34,12 +36,15 @@ interface Props {
   onModeChange: (mode: BreakdownMode) => void;
   onToggleOther: () => void;
   onOpenHistory: (group: BreakdownGroup) => void;
+  // Extra room under the last row for something floating over the list's bottom.
+  bottomSpace?: number;
 }
 
 const StatsList = ({
   items,
   summary,
   trend,
+  breakdown,
   selectedTrendKey,
   onSelectTrend,
   onTrendTouch,
@@ -53,6 +58,7 @@ const StatsList = ({
   onModeChange,
   onToggleOther,
   onOpenHistory,
+  bottomSpace,
 }: Props) => {
   const rowPress = (group: BreakdownGroup) => {
     if (group.kind === 'other') return onToggleOther;
@@ -76,7 +82,11 @@ const StatsList = ({
       case 'breakdownHeader':
         return <BreakdownHeader mode={mode} showModes={item.hasSpending} onModeChange={onModeChange} />;
       case 'breakdownStatus':
-        return <BlockPlaceholder height={260} />;
+        return breakdown.hasError ? (
+          <BlockError title="Couldn’t load the breakdown" onRetry={breakdown.retry} style={styles.breakdownError} />
+        ) : (
+          <BlockPlaceholder height={BREAKDOWN_PLACEHOLDER_HEIGHT} />
+        );
       case 'breakdownEmpty':
         return (
           <View style={styles.emptyCard}>
@@ -129,11 +139,11 @@ const StatsList = ({
   return (
     <FlatList
       style={styles.list}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, bottomSpace !== undefined && { paddingBottom: bottomSpace }]}
       data={items}
       keyExtractor={(item) => item.key}
       renderItem={renderItem}
-      extraData={[isOtherExpanded, summary, trend, selectedTrendKey, selectedSegmentKey, showComparison]}
+      extraData={[isOtherExpanded, summary, trend, breakdown, selectedTrendKey, selectedSegmentKey, showComparison]}
       ListEmptyComponent={placeholder}
       showsVerticalScrollIndicator={false}
     />

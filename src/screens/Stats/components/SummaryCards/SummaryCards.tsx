@@ -1,9 +1,9 @@
-import { Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import type { StatisticsSummary } from '@api/dto';
 import { Icon } from '@components';
 import { colors } from '@shared/theme';
-import type { ChangeTone } from '@screens/Stats/format';
+import type { ChangeTone, MoneySign } from '@screens/Stats/format';
 import {
   formatChange,
   formatComparisonLabel,
@@ -12,11 +12,10 @@ import {
   getMoneySign,
 } from '@screens/Stats/format';
 import type { StatsBlock } from '@screens/Stats/hooks/useStatsData';
+import BlockError from '../BlockError/BlockError';
 import BlockPlaceholder from '../BlockPlaceholder/BlockPlaceholder';
 
 import styles from './style';
-
-const SUMMARY_PLACEHOLDER_HEIGHT = 170;
 
 const TONE_COLOR: Record<ChangeTone, string> = {
   good: colors.ok,
@@ -30,40 +29,94 @@ const NET_STYLE = {
   [0]: { word: 'Balanced', value: undefined, chip: styles.chipBalanced, chipText: undefined },
 };
 
-interface TotalCardProps {
-  direction: 'income' | 'expense';
-  summary: StatisticsSummary;
-  showComparison: boolean;
+interface CardsContent {
+  income: { amount: string; comparison: string; tone: ChangeTone };
+  expense: { amount: string; comparison: string; tone: ChangeTone };
+  net: { label: string; amount: string; sign: MoneySign };
 }
 
-const TotalCard = ({ direction, summary, showComparison }: TotalCardProps) => {
+// Typical strings for the cards before there is data: laid out invisibly, they give the
+// placeholder and the error the cards' own height at any text size.
+const SAMPLE: CardsContent = {
+  income: { amount: '$0,000.00', comparison: '+00% vs 1–28 Aug', tone: 'neutral' },
+  expense: { amount: '$0,000.00', comparison: '+00% vs 1–28 Aug', tone: 'neutral' },
+  net: { label: 'Net · September', amount: '+$0,000.00', sign: 1 },
+};
+
+const toTotal = (summary: StatisticsSummary, direction: 'income' | 'expense', showComparison: boolean) => {
   const change = showComparison && summary.change && summary.previous ? summary.change[direction] : null;
   const comparison = change && formatChange(change, direction);
   const label =
     comparison?.hasPercent && summary.previous ? ` ${formatComparisonLabel(summary.period, summary.previous)}` : '';
 
+  return {
+    amount: formatMoney(summary[direction].amount, summary.currency),
+    comparison: comparison ? `${comparison.text}${label}` : '',
+    tone: comparison?.tone ?? 'neutral',
+  };
+};
+
+const toContent = (summary: StatisticsSummary, showComparison: boolean): CardsContent => ({
+  income: toTotal(summary, 'income', showComparison),
+  expense: toTotal(summary, 'expense', showComparison),
+  net: {
+    label: `Net · ${formatPeriodWord(summary.period)}`,
+    amount: formatMoney(summary.net, summary.currency, { signed: true }),
+    sign: getMoneySign(summary.net),
+  },
+});
+
+interface TotalCardProps {
+  direction: 'income' | 'expense';
+  total: CardsContent['income'];
+}
+
+const TotalCard = ({ direction, total }: TotalCardProps) => (
+  <View style={styles.totalCard}>
+    <View style={styles.totalLabelRow}>
+      {direction === 'income' ? (
+        <Icon name="income" size={11} color={colors.ok} strokeWidth={2.4} />
+      ) : (
+        <Icon name="expense" size={11} color={colors.danger} strokeWidth={2.4} />
+      )}
+      <Text style={styles.label}>{direction === 'income' ? 'Income' : 'Expense'}</Text>
+    </View>
+
+    <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit>
+      {total.amount}
+    </Text>
+
+    {/* Holds its two lines even when there is nothing to compare, so the cards keep their height. */}
+    <Text style={[styles.comparison, { color: TONE_COLOR[total.tone] }]} numberOfLines={2}>
+      {total.comparison}
+    </Text>
+  </View>
+);
+
+const Cards = ({ content }: { content: CardsContent }) => {
+  const net = NET_STYLE[content.net.sign];
+
   return (
-    <View style={styles.totalCard}>
-      <View style={styles.totalLabelRow}>
-        {direction === 'income' ? (
-          <Icon name="income" size={11} color={colors.ok} strokeWidth={2.4} />
-        ) : (
-          <Icon name="expense" size={11} color={colors.danger} strokeWidth={2.4} />
-        )}
-        <Text style={styles.label}>{direction === 'income' ? 'Income' : 'Expense'}</Text>
+    <View style={styles.root}>
+      <View style={styles.totalsRow}>
+        <TotalCard direction="income" total={content.income} />
+        <TotalCard direction="expense" total={content.expense} />
       </View>
 
-      <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit>
-        {formatMoney(summary[direction].amount, summary.currency)}
-      </Text>
+      <View style={styles.netCard}>
+        <View style={styles.netText}>
+          <Text style={styles.label} numberOfLines={1}>
+            {content.net.label}
+          </Text>
+          <Text style={[styles.netValue, net.value]} numberOfLines={1} adjustsFontSizeToFit>
+            {content.net.amount}
+          </Text>
+        </View>
 
-      {/* Holds its two lines even when there is nothing to compare, so the cards keep their height. */}
-      <Text
-        style={[styles.comparison, { color: comparison ? TONE_COLOR[comparison.tone] : colors.muted }]}
-        numberOfLines={2}
-      >
-        {comparison ? `${comparison.text}${label}` : ''}
-      </Text>
+        <View style={[styles.chip, net.chip]}>
+          <Text style={[styles.chipText, net.chipText]}>{net.word}</Text>
+        </View>
+      </View>
     </View>
   );
 };
@@ -76,43 +129,20 @@ interface Props {
 const SummaryCards = ({ block, showComparison }: Props) => {
   const summary = block.data;
 
-  if (!summary) {
-    return block.hasError ? (
-      <View style={styles.errorCard}>
-        <Text style={styles.errorText}>Couldn’t load the totals</Text>
-
-        <TouchableOpacity style={styles.retryButton} onPress={block.retry} activeOpacity={0.7}>
-          <Icon name="refresh" size={13} color={colors.text} strokeWidth={2.2} />
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    ) : (
-      <BlockPlaceholder height={SUMMARY_PLACEHOLDER_HEIGHT} />
-    );
-  }
-
-  const net = NET_STYLE[getMoneySign(summary.net)];
+  if (summary) return <Cards content={toContent(summary, showComparison)} />;
 
   return (
-    <View style={styles.root}>
-      <View style={styles.totalsRow}>
-        <TotalCard direction="income" summary={summary} showComparison={showComparison} />
-        <TotalCard direction="expense" summary={summary} showComparison={showComparison} />
+    <View>
+      <View style={styles.sample} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <Cards content={SAMPLE} />
       </View>
 
-      <View style={styles.netCard}>
-        <View style={styles.netText}>
-          <Text style={styles.label} numberOfLines={1}>
-            {`Net · ${formatPeriodWord(summary.period)}`}
-          </Text>
-          <Text style={[styles.netValue, net.value]} numberOfLines={1} adjustsFontSizeToFit>
-            {formatMoney(summary.net, summary.currency, { signed: true })}
-          </Text>
-        </View>
-
-        <View style={[styles.chip, net.chip]}>
-          <Text style={[styles.chipText, net.chipText]}>{net.word}</Text>
-        </View>
+      <View style={StyleSheet.absoluteFill}>
+        {block.hasError ? (
+          <BlockError title="Couldn’t load the totals" onRetry={block.retry} style={styles.fill} />
+        ) : (
+          <BlockPlaceholder style={styles.fill} />
+        )}
       </View>
     </View>
   );
