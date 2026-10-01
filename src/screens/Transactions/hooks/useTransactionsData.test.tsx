@@ -35,8 +35,6 @@ const rows = (...ids: string[]) => Promise.resolve({ data: ids.map((id) => ({ ..
 
 const dto: Transaction = {
   id: 'tx-1',
-  wallet_id: 1,
-  category_id: 1,
   transaction_type: TransactionType.EXPENSE,
   amount: '10.00',
   timestamp: '2026-01-05T00:00:00.000Z',

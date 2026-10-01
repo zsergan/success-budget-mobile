@@ -21,8 +21,6 @@ jest.useFakeTimers();
 
 const dto: Transaction = {
   id: 'tx-1',
-  wallet_id: 1,
-  category_id: 1,
   transaction_type: TransactionType.EXPENSE,
   amount: '10.00',
   timestamp: '2026-01-01T00:00:00.000Z',
@@ -59,7 +57,7 @@ describe('transactionApi', () => {
     expect(mockedRequest).toHaveBeenCalledWith(
       expect.objectContaining({ url: '/spaces/3/transactions', params: { from, to } }),
     );
-    expect(result.data?.[0]).toMatchObject({ id: 'tx-1', walletId: 1, category: { icon: 'grocery' } });
+    expect(result.data?.[0]).toMatchObject({ id: 'tx-1', wallet: { id: 1 }, category: { icon: 'grocery' } });
   });
 
   it('keeps an empty latest as null rather than an error', async () => {
