@@ -12,11 +12,14 @@ import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { ScreenNames } from '@shared/enums';
 import type { MainTabNavigationProp } from '@shared/types';
 import { formatRangeLabel, hasComparison, isCurrentMonth, monthPeriodOf } from '@shared/utils';
+import CreateWalletSheet from './components/CreateWalletSheet/CreateWalletSheet';
 import StatsEmptyState from './components/StatsEmptyState/StatsEmptyState';
 import StatsHeader from './components/StatsHeader/StatsHeader';
 import StatsList from './components/StatsList/StatsList';
 import { parseDateKey } from './format';
 import { toHistoryFilter } from './historyFilter';
+import useAddTransaction from './hooks/useAddTransaction';
+import useComposeWithNewWallet from './hooks/useComposeWithNewWallet';
 import useRefreshOnReturn from './hooks/useRefreshOnReturn';
 import useStatsData from './hooks/useStatsData';
 import useStatsSelection from './hooks/useStatsSelection';
@@ -28,6 +31,7 @@ import styles from './style';
 const StatsScreen = () => {
   const navigation = useNavigation<MainTabNavigationProp<ScreenNames.STATS_TAB>>();
   const rangePickerRef = useRef<BottomSheetModal>(null);
+  const walletSheetRef = useRef<BottomSheetModal>(null);
   const composerRef = useRef<TransactionComposerHandle>(null);
 
   const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod } = usePeriod();
@@ -38,6 +42,23 @@ const StatsScreen = () => {
   const firstWalletId = walletsOverview?.wallets[0]?.wallet.id ?? -1;
 
   const spaceId = useAppSelector(selectCurrentSpaceId);
+
+  const addTransaction = useAddTransaction({
+    onHasWallets: () => composerRef.current?.openExpense(),
+    onNoWallets: () => walletSheetRef.current?.present(),
+  });
+
+  const openCreateWallet = () => {
+    if (spaceId === null) return;
+
+    navigation.navigate(ScreenNames.ADD_WALLET_SCREEN, {
+      id: 'new',
+      addTransaction: { returnTo: ScreenNames.STATS_TAB, spaceId },
+    });
+  };
+
+  useComposeWithNewWallet((walletId) => composerRef.current?.openExpense(walletId));
+
   const [mode, setMode] = useState<BreakdownMode>('category');
   const selection = useStatsSelection(JSON.stringify([spaceId, range.from, range.to]), mode);
 
@@ -64,7 +85,7 @@ const StatsScreen = () => {
 
   const placeholder =
     viewState === 'noHistory' ? (
-      <StatsEmptyState variant="noHistory" onAddTransaction={() => composerRef.current?.openExpense()} />
+      <StatsEmptyState variant="noHistory" onAddTransaction={addTransaction} />
     ) : viewState === 'future' ? (
       <StatsEmptyState variant="future" rangeLabel={formatRangeLabel(range)} onReset={resetPeriod} />
     ) : viewState === 'emptyPeriod' && lastTransactionDate ? (
@@ -84,6 +105,10 @@ const StatsScreen = () => {
 
       <BottomModal ref={rangePickerRef} dynamicSizing>
         <RangePickerSheet period={period} onApply={applyPeriod} />
+      </BottomModal>
+
+      <BottomModal ref={walletSheetRef} dynamicSizing>
+        <CreateWalletSheet onCreateWallet={openCreateWallet} />
       </BottomModal>
 
       <ScreenFrame edges={['top', 'left', 'right']}>

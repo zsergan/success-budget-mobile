@@ -1,13 +1,13 @@
 import * as yup from 'yup';
+import type { CreateWalletResponse } from '@api/dto';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
 import { requireSpaceId } from '@redux/api/baseApi';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/state/space/selectors';
-import type { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
-import { AppColor } from '@shared/enums';
+import { AppColor, ScreenNames } from '@shared/enums';
 import { useCreateWalletMutation, useUpdateWalletMutation } from '@redux/state/wallet/api';
 import { useFormSubmitHandler } from '@hooks';
 import { amountSchema } from '@shared/utils';
@@ -48,7 +48,21 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
     },
   });
 
-  const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<CreateWalletFormData>({
+  // Kept only while this screen is open: leaving it any other way than a save drops the intent with it.
+  const addTransaction = route.params.id === 'new' ? route.params.addTransaction : undefined;
+
+  const continueToTransaction = (walletId: number) => {
+    if (!addTransaction || addTransaction.spaceId !== spaceId) return false;
+
+    navigation.popTo(ScreenNames.HOME_SCREEN, {
+      screen: addTransaction.returnTo,
+      params: { composeWith: { spaceId: addTransaction.spaceId, walletId } },
+    });
+
+    return true;
+  };
+
+  const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<CreateWalletFormData, CreateWalletResponse | void>({
     handleSubmit,
     formState: { isSubmitting, isSubmitSuccessful },
     onSubmit: async (formData) =>
@@ -66,7 +80,9 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
             walletId: route.params.id,
             data: { wallet_name: formData.walletName, design: formData.design },
           }).unwrap(),
-    onSuccess: () => navigation.goBack(),
+    onSuccess: (result) => {
+      if (!result || !continueToTransaction(result.wallet.id)) navigation.goBack();
+    },
     getInvalidMessage: (errors) =>
       [errors.walletName && 'Enter a wallet name', errors.initialBalance && 'Enter an initial balance']
         .filter(Boolean)
