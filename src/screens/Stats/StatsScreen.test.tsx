@@ -1,3 +1,4 @@
+import type { ReactNode, Ref } from 'react';
 import { FlatList, Text } from 'react-native';
 import { Provider } from 'react-redux';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
@@ -7,8 +8,9 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { createAppStore } from '@redux/Store';
 import { spaceApi } from '@redux/state/space/api';
 import { activateSpace } from '@redux/state/space/thunks';
+import { transactionApi } from '@redux/state/transaction/api';
 import type { Space } from '@api/dto';
-import { ScreenNames, SpaceType } from '@shared/enums';
+import { ScreenNames, SpaceType, TransactionType } from '@shared/enums';
 import type { MainTabParamList, MainTabScreenProps } from '@shared/types';
 import type { StatsFixture } from './fixtures/statsFixtures';
 import { STATS_FIXTURES } from './fixtures/statsFixtures';
@@ -23,16 +25,29 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 jest.mock('@gorhom/bottom-sheet', () => {
-  const { forwardRef } = jest.requireActual('react');
+  const React = jest.requireActual('react');
   const { ScrollView, TextInput, View } = jest.requireActual('react-native');
+  const SheetContext = React.createContext({ close: () => {} });
+
+  // Shows a sheet's content only between present() and close(), as the real modal does.
+  const BottomSheetModal = React.forwardRef(function BottomSheetModal(
+    { children }: { children: ReactNode },
+    ref: Ref<unknown>,
+  ) {
+    const [isOpen, setOpen] = React.useState(false);
+    const close = () => setOpen(false);
+    React.useImperativeHandle(ref, () => ({ present: () => setOpen(true), dismiss: close, close }));
+
+    return isOpen ? <SheetContext.Provider value={{ close }}>{children}</SheetContext.Provider> : null;
+  });
 
   return {
-    BottomSheetModal: forwardRef(() => null),
+    BottomSheetModal,
     BottomSheetBackdrop: () => null,
     BottomSheetView: View,
     BottomSheetScrollView: ScrollView,
     BottomSheetTextInput: TextInput,
-    useBottomSheet: () => ({ close: jest.fn() }),
+    useBottomSheet: () => React.useContext(SheetContext),
   };
 });
 
@@ -53,12 +68,16 @@ type Block = 'summary' | 'trend' | 'breakdown';
 interface RequestConfig {
   url: string;
   method?: string;
+  params?: Record<string, string | undefined>;
 }
 
 const failure = (statusCode: number) => () =>
   Promise.reject({ response: { data: { statusCode, message: 'boom', timestamp: '2026-09-28T09:41:22.000Z' } } });
 
 let fixture: StatsFixture;
+let fixtureFor: (config: RequestConfig) => StatsFixture;
+// Set to play a server whose clock is behind the device's: a later as_of is refused, and none means its own now.
+let serverNow: string | null;
 let fail: Partial<Record<Block, () => Promise<never>>>;
 let respondSpaces: () => Promise<unknown>;
 
@@ -73,10 +92,26 @@ const personal: Space = {
 };
 
 const blockOf = (url: string) => url.split('/').pop() as Block;
-const statsRequests = (block?: Block) =>
+const statsCalls = (block?: Block) =>
   mockedRequest.mock.calls
-    .map(([config]: [RequestConfig]) => config.url)
-    .filter((url) => url.includes('/statistics/') && (!block || blockOf(url) === block));
+    .map(([config]: [RequestConfig]) => config)
+    .filter(({ url }) => url.includes('/statistics/') && (!block || blockOf(url) === block));
+const statsRequests = (block?: Block) => statsCalls(block).map(({ url }) => url);
+const lastParams = (block: Block) => statsCalls(block).at(-1)?.params;
+
+const answer = (config: RequestConfig) => {
+  const data = fixtureFor(config)[blockOf(config.url)];
+  if (serverNow === null) return Promise.resolve({ data });
+
+  const asOf = config.params?.as_of;
+  if (asOf && asOf > serverNow) {
+    return Promise.reject({
+      response: { data: { statusCode: 400, message: [{ field: 'as_of', error: 'future' }], timestamp: serverNow } },
+    });
+  }
+
+  return Promise.resolve({ data: { ...data, period: { ...data.period, as_of: asOf ?? serverNow } } });
+};
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const navigationRef = createNavigationContainerRef<MainTabParamList>();
@@ -121,13 +156,15 @@ beforeAll(renderAllRows);
 beforeEach(() => {
   jest.clearAllMocks();
   fixture = STATS_FIXTURES.month;
+  fixtureFor = () => fixture;
+  serverNow = null;
   fail = {};
   respondSpaces = () => Promise.resolve({ data: [] });
   mockedRequest.mockImplementation((config: RequestConfig) => {
     if (config.url.includes('/statistics/')) {
       const block = blockOf(config.url);
 
-      return fail[block]?.() ?? Promise.resolve({ data: fixture[block] });
+      return fail[block]?.() ?? answer(config);
     }
 
     return config.url === '/spaces' ? respondSpaces() : Promise.resolve({ data: null });
@@ -277,10 +314,20 @@ describe('StatsScreen', () => {
       expect(screen.getByText(/^Error 503 · /)).toBeTruthy();
       expect(screen.queryByTestId('block-placeholder')).toBeNull();
 
+      expect(statsRequests()).toHaveLength(0);
+
       respondSpaces = () => Promise.resolve({ data: [personal] });
       fireEvent.press(screen.getByText('Retry'));
       await settle();
 
+      expect(spacesRequests()).toHaveLength(2);
+      expect(statsRequests().sort()).toEqual([
+        '/spaces/1/statistics/breakdown',
+        '/spaces/1/statistics/summary',
+        '/spaces/1/statistics/trend',
+      ]);
+      expect(screen.queryByText('Couldn’t load your spaces')).toBeNull();
+      expect(screen.queryByTestId('block-placeholder')).toBeNull();
       expect(screen.getByText('Housing')).toBeTruthy();
     });
 
@@ -305,6 +352,65 @@ describe('StatsScreen', () => {
       expect(screen.getByText('Create a space')).toBeTruthy();
       expect(screen.queryByTestId('block-placeholder')).toBeNull();
       expect(statsRequests()).toHaveLength(0);
+    });
+  });
+
+  describe('regression chains', () => {
+    it('on the server clock, a new transaction still brings new figures', async () => {
+      serverNow = '2026-09-27T00:00:00.000Z';
+      const { store } = renderStats();
+      await settle();
+
+      expect(statsCalls('summary').map(({ params }) => params?.as_of)).toEqual([expect.any(String), undefined]);
+      expect(lastParams('trend')?.as_of).toBe(serverNow);
+      expect(screen.getAllByText('$2,864.40').length).toBeGreaterThan(0);
+
+      serverNow = '2026-09-27T00:05:00.000Z';
+      fixture = STATS_FIXTURES.august;
+      await act(async () => {
+        await store.dispatch(
+          transactionApi.endpoints.createTransaction.initiate({
+            spaceId: 1,
+            data: {
+              wallet_id: 1,
+              category_id: 1,
+              transaction_type: TransactionType.EXPENSE,
+              amount: '242.35',
+              timestamp: serverNow!,
+            },
+          }),
+        );
+      });
+      await settle();
+
+      expect(statsCalls('summary')).toHaveLength(3);
+      expect(lastParams('summary')?.as_of).toBeUndefined();
+      expect(lastParams('trend')?.as_of).toBe(serverNow);
+      expect(lastParams('breakdown')?.as_of).toBe(serverNow);
+      expect(screen.getAllByText('$3,106.75').length).toBeGreaterThan(0);
+      expect(screen.queryByText('$2,864.40')).toBeNull();
+    });
+
+    it('opens a past month from the picker as a Month with its comparison', async () => {
+      fixtureFor = (config) => (config.params?.anchor_date === '2026-08-01' ? STATS_FIXTURES.august : fixture);
+      renderStats();
+      await settle();
+
+      fireEvent.press(screen.getByText('1–30 Sep 2026'));
+      fireEvent.press(screen.getByLabelText('Previous month'));
+      fireEvent.press(screen.getByText('Apply period'));
+      await settle();
+
+      const params = lastParams('summary');
+      expect(params).toMatchObject({ period: 'month', anchor_date: '2026-08-01' });
+      expect(params).not.toHaveProperty('from_date');
+      expect(lastParams('trend')).toEqual(params);
+      expect(lastParams('breakdown')).toEqual(params);
+
+      expect(screen.getByText('1–31 Aug 2026')).toBeTruthy();
+      expect(screen.queryByText('Reset')).toBeNull();
+      expect(screen.getAllByText(/vs Jul/).length).toBeGreaterThan(0);
+      expect(screen.queryByText('No comparison')).toBeNull();
     });
   });
 });
