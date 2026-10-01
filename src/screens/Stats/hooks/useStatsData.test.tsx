@@ -32,6 +32,7 @@ type Responder = (config: RequestConfig) => Promise<unknown>;
 
 const SERVER_NOW = '2026-09-28T12:00:00.000Z';
 
+let serverNow: string;
 let expense: string;
 let respond: Record<Block, Responder>;
 
@@ -45,7 +46,7 @@ const lastAsOf = (block: Block) => requestsTo(block).at(-1)?.params?.as_of;
 const period = (config: RequestConfig) => ({
   type: config.params?.period,
   time_zone: config.params?.time_zone,
-  as_of: config.params?.as_of ?? SERVER_NOW,
+  as_of: config.params?.as_of ?? serverNow,
 });
 
 const money = (amount: string) => ({ amount, count: 1 });
@@ -90,6 +91,7 @@ const expenseOf = (data: unknown) => (data as { expense: { amount: string } } | 
 
 beforeEach(() => {
   jest.clearAllMocks();
+  serverNow = SERVER_NOW;
   expense = '40.00';
   respond = { summary: ok, trend: ok, breakdown: ok };
   mockedRequest.mockImplementation((config: RequestConfig) => {
@@ -123,6 +125,7 @@ describe('a load cycle', () => {
     expect(summary.params).toMatchObject({ period: 'month', anchor_date: '2026-09-01' });
     expect(summary.params?.time_zone).toBeTruthy();
     expect(summary.params?.as_of).toMatch(/Z$/);
+    expect(summary.params).not.toHaveProperty('cycleId');
     expect(requestsTo('trend')[0].params).toEqual(summary.params);
     expect(requestsTo('breakdown')[0].params).toEqual(summary.params);
 
@@ -337,14 +340,34 @@ describe('control sums', () => {
   });
 });
 
-describe('a rejected as_of', () => {
-  it("repeats without as_of and gives the other blocks summary's echoed one", async () => {
-    const rejectAsOf: Responder = (config) =>
-      config.params?.as_of && config.params.as_of !== SERVER_NOW
-        ? Promise.reject({ response: { data: { statusCode: 400, message: [{ field: 'as_of', error: 'future' }] } } })
-        : ok(config);
-    respond = { summary: rejectAsOf, trend: rejectAsOf, breakdown: rejectAsOf };
+// The device clock runs ahead of the server's, so its as_of lies in the server's future.
+const rejectAsOf: Responder = (config) =>
+  config.params?.as_of && config.params.as_of > serverNow
+    ? Promise.reject({ response: { data: { statusCode: 400, message: [{ field: 'as_of', error: 'future' }] } } })
+    : ok(config);
 
+const createTransaction = (store: ReturnType<typeof createAppStore>) =>
+  act(async () => {
+    await store.dispatch(
+      transactionApi.endpoints.createTransaction.initiate({
+        spaceId: 1,
+        data: {
+          wallet_id: 1,
+          category_id: 1,
+          transaction_type: TransactionType.EXPENSE,
+          amount: '15.00',
+          timestamp: SERVER_NOW,
+        },
+      }),
+    );
+  });
+
+describe('a rejected as_of', () => {
+  beforeEach(() => {
+    respond = { summary: rejectAsOf, trend: rejectAsOf, breakdown: rejectAsOf };
+  });
+
+  it("repeats without as_of and gives the other blocks summary's echoed one", async () => {
     const { result, unmount } = renderForSpace(1);
 
     await loaded(result);
@@ -352,6 +375,96 @@ describe('a rejected as_of', () => {
     expect(requestsTo('summary').at(-1)?.params?.as_of).toBeUndefined();
     expect(lastAsOf('trend')).toBe(SERVER_NOW);
     expect(lastAsOf('breakdown')).toBe(SERVER_NOW);
+
+    unmount();
+  });
+
+  it("asks again on every new cycle and runs the other blocks on the new answer's as_of", async () => {
+    const { store, result, unmount } = renderForSpace(1);
+
+    await loaded(result);
+    const summaryCalls = requestsTo('summary').length;
+
+    serverNow = '2026-09-28T12:05:00.000Z';
+    expense = '55.00';
+    await createTransaction(store);
+
+    await waitFor(() => expect(expenseOf(result.current.summary.data)).toBe('55.00'));
+    await waitFor(() => expect(lastAsOf('breakdown')).toBe(serverNow));
+    expect(requestsTo('summary')).toHaveLength(summaryCalls + 1);
+    expect(requestsTo('summary').at(-1)?.params?.as_of).toBeUndefined();
+    expect(lastAsOf('trend')).toBe(serverNow);
+
+    await act(async () => {
+      jest.advanceTimersByTime(STATS_STALE_AFTER_MS);
+    });
+    serverNow = '2026-09-28T12:06:00.000Z';
+    act(() => result.current.refreshIfStale());
+
+    await waitFor(() => expect(lastAsOf('trend')).toBe(serverNow));
+    expect(requestsTo('summary')).toHaveLength(summaryCalls + 2);
+    expect(lastAsOf('breakdown')).toBe(serverNow);
+
+    unmount();
+  });
+
+  it('keeps the previous figures, marked as updating, until the new summary answers', async () => {
+    const { store, result, unmount } = renderForSpace(1);
+
+    await loaded(result);
+    respond.summary = hang;
+    await createTransaction(store);
+
+    await waitFor(() => expect(result.current.isUpdating).toBe(true));
+    expect(result.current.summary.data).toBeDefined();
+    expect(result.current.trend.isUpdating).toBe(true);
+    expect(result.current.breakdown.isUpdating).toBe(true);
+
+    unmount();
+  });
+
+  it('retries a failed block on its own, with the as_of its cycle got', async () => {
+    const { result, unmount } = renderForSpace(1);
+
+    await loaded(result);
+    const summaryCalls = requestsTo('summary').length;
+    respond.trend = serverError;
+    serverNow = '2026-09-28T12:05:00.000Z';
+    await act(async () => {
+      jest.advanceTimersByTime(STATS_STALE_AFTER_MS);
+    });
+    act(() => result.current.refresh());
+
+    await waitFor(() => expect(result.current.trend.updateFailed).toBe(true));
+    respond.trend = rejectAsOf;
+    serverNow = '2026-09-28T12:06:00.000Z';
+    act(() => {
+      result.current.trend.retry();
+    });
+
+    await waitFor(() => expect(result.current.trend.updateFailed).toBe(false));
+    expect(lastAsOf('trend')).toBe('2026-09-28T12:05:00.000Z');
+    expect(requestsTo('summary')).toHaveLength(summaryCalls + 1);
+
+    unmount();
+  });
+
+  it('reloads once when the sums disagree, still on the server clock', async () => {
+    respond.breakdown = (config) =>
+      rejectAsOf(config).then(() => ({ data: { ...body(config), total: money('999.00') } }));
+
+    const { result, unmount } = renderForSpace(1);
+
+    await loaded(result);
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    const summaries = requestsTo('summary');
+    expect(summaries).toHaveLength(3);
+    expect(summaries.slice(1).map((config) => config.params?.as_of)).toEqual([undefined, undefined]);
+    expect(requestsTo('breakdown').filter((config) => config.params?.as_of === SERVER_NOW)).toHaveLength(2);
+    await waitFor(() => expect(result.current.isUpdating).toBe(false));
 
     unmount();
   });

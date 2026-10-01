@@ -4,6 +4,8 @@ import { baseApi, spaceTags } from '@redux/api/baseApi';
 
 export interface StatisticsArg extends SpaceArg {
   query: StatisticsQuery;
+  // Keys the cache only, never sent: without as_of a new load cycle would otherwise reuse the last answer.
+  cycleId: number;
 }
 
 let revision = 0;

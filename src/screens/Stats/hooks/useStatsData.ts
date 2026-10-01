@@ -28,6 +28,7 @@ type BlockName = (typeof BLOCKS)[number];
 
 // One load cycle: all three blocks share its space, period, zone and as_of.
 interface Cycle {
+  id: number;
   scopeKey: string;
   spaceId: number;
   query: StatisticsQuery;
@@ -76,10 +77,13 @@ interface QueryLike<T> {
 // Not a failure to retry: the user is no longer a member of the space, or it is gone.
 export const isSpaceAccessDenied = (error: ErrorResponse | undefined) => error?.statusCode === 403;
 
+let lastCycleId = 0;
+
 const argKey = (arg: StatisticsArg | typeof skipToken) => (arg === skipToken ? '' : JSON.stringify(arg));
 
 const cycleArg = (cycle: Cycle, asOf: string | null): StatisticsArg => ({
   spaceId: cycle.spaceId,
+  cycleId: cycle.id,
   query: asOf === null ? cycle.query : { ...cycle.query, as_of: asOf },
 });
 
@@ -89,6 +93,7 @@ const startCycle = (
   isReconciling = false,
 ): Cycle => ({
   ...base,
+  id: ++lastCycleId,
   asOf: useServerClock ? null : new Date().toISOString(),
   startedAt: Date.now(),
   isReconciling,
