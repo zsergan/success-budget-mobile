@@ -60,6 +60,20 @@ describe('transactionApi', () => {
     expect(result.data?.[0]).toMatchObject({ id: 'tx-1', wallet: { id: 1 }, category: { icon: 'grocery' } });
   });
 
+  it('adds only the history filters it was given, under their API names', async () => {
+    const store = createAppStore();
+    const from = '2026-08-31T21:00:00.000Z';
+    const to = '2026-09-30T09:15:42.123Z';
+
+    await store.dispatch(
+      getTransactions.initiate({ spaceId: 3, from, to, transactionType: TransactionType.EXPENSE, walletId: 4 }),
+    );
+
+    expect(mockedRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ params: { from, to, transaction_type: TransactionType.EXPENSE, wallet_id: 4 } }),
+    );
+  });
+
   it('keeps an empty latest as null rather than an error', async () => {
     const store = createAppStore();
 

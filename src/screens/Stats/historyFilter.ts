@@ -8,10 +8,13 @@ import type { BreakdownGroup } from './statsItems';
 export const toHistoryFilter = (
   group: BreakdownGroup,
   period: Pick<StatisticsPeriod, 'from' | 'actual_to'>,
+  spaceId: number,
 ): HistoryFilter | null => {
   if (!group.opens_history || period.actual_to === null) return null;
 
   return {
+    spaceId,
+    name: group.name,
     from: period.from,
     to: period.actual_to,
     transactionType: TransactionType.EXPENSE,

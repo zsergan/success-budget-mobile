@@ -17,6 +17,7 @@ type Props =
       onResetRange?: () => void;
       onJumpToLatest: () => void;
     }
+  | { variant: 'noMatches'; onClearFilter: () => void }
   | { variant: 'rangeError'; onRetry: () => void }
   | { variant: 'latestError'; onRetry: () => void };
 
@@ -50,6 +51,17 @@ const TransactionsEmptyState = (props: Props) => (
               onSecondaryActionPress: props.onJumpToLatest,
             }
           : { actionLabel: jumpLabel(props.latest), onActionPress: props.onJumpToLatest })}
+      />
+    )}
+
+    {props.variant === 'noMatches' && (
+      <EmptyState
+        variant="solid"
+        icon="filter"
+        title="Nothing matches this filter"
+        description="These transactions may have been deleted or changed since."
+        actionLabel="Clear filter"
+        onActionPress={props.onClearFilter}
       />
     )}
 

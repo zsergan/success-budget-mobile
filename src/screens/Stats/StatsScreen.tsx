@@ -55,7 +55,7 @@ const StatsScreen = () => {
       : null;
 
   const openHistory = (group: BreakdownGroup) => {
-    const filter = breakdown.data && toHistoryFilter(group, breakdown.data.period);
+    const filter = breakdown.data && spaceId !== null && toHistoryFilter(group, breakdown.data.period, spaceId);
     if (filter) navigation.navigate(ScreenNames.TRANSACTIONS_TAB, { filter });
   };
 

@@ -7,6 +7,7 @@ import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { activateSpace } from '@redux/state/space/thunks';
 import { createAppStore } from '@redux/Store';
 import { AppColor, TransactionType } from '@shared/enums';
+import type { HistoryFilter } from '@shared/types';
 import type { DateRange } from '@shared/utils';
 import useTransactionsData from './useTransactionsData';
 
@@ -22,7 +23,7 @@ jest.useFakeTimers();
 
 interface RequestConfig {
   url: string;
-  params?: { from?: string };
+  params?: { from?: string; to?: string; transaction_type?: string; category_id?: number };
 }
 
 type Responder = (config: RequestConfig) => Promise<unknown>;
@@ -62,10 +63,11 @@ const renderForSpace = (spaceId: number, range = january) => {
   store.dispatch(activateSpace(spaceId));
 
   const wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
-  const rendered = renderHook((props: { range: DateRange }) => useTransactionsData(props), {
-    wrapper,
-    initialProps: { range },
-  });
+  const rendered = renderHook(
+    (props: { range: DateRange; filter?: HistoryFilter | null }) =>
+      useTransactionsData({ range: props.range, filter: props.filter ?? null }),
+    { wrapper, initialProps: { range } as { range: DateRange; filter?: HistoryFilter | null } },
+  );
 
   return { store, ...rendered };
 };
@@ -128,6 +130,51 @@ describe('useTransactionsData viewState', () => {
     const { result, unmount } = renderForSpace(1);
 
     await waitFor(() => expect(result.current.viewState).toBe('ready'));
+
+    unmount();
+  });
+});
+
+describe('a Stats filter', () => {
+  const filter: HistoryFilter = {
+    spaceId: 1,
+    name: 'Food',
+    from: '2026-08-31T21:00:00.000Z',
+    to: '2026-09-30T09:15:42.123Z',
+    transactionType: TransactionType.EXPENSE,
+    categoryId: 1,
+  };
+
+  it("asks for the filter's own bounds instead of the period and skips the latest check", async () => {
+    respondRange = () => rows('tx-1');
+
+    const { result, rerender, unmount } = renderForSpace(1);
+    await waitFor(() => expect(result.current.viewState).toBe('ready'));
+    mockedRequest.mockClear();
+
+    rerender({ range: january, filter });
+    await waitFor(() => expect(result.current.viewState).toBe('ready'));
+
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+    expect(mockedRequest.mock.calls[0][0].params).toEqual({
+      from: filter.from,
+      to: filter.to,
+      transaction_type: TransactionType.EXPENSE,
+      category_id: 1,
+    });
+
+    unmount();
+  });
+
+  it('reports no matches rather than an empty account', async () => {
+    const { result, rerender, unmount } = renderForSpace(1);
+    await waitFor(() => expect(result.current.viewState).toBe('trueEmpty'));
+    mockedRequest.mockClear();
+
+    rerender({ range: january, filter });
+
+    await waitFor(() => expect(result.current.viewState).toBe('noMatches'));
+    expect(latestCalls()).toBe(0);
 
     unmount();
   });

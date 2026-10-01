@@ -195,7 +195,7 @@ const useMountedScreens = () => {
   return {
     gate: useLoadInitData({ isSignedIn }),
     home: useGetTransactionsQuery(useCurrentMonthArg()),
-    history: useTransactionsData({ range: getCurrentMonthRange() }),
+    history: useTransactionsData({ range: getCurrentMonthRange(), filter: null }),
     wallets: useGetWalletsQuery(spaceArg),
     categories: useGetCategoriesQuery(spaceArg),
     limits: useGetLimitsQuery(spaceArg),

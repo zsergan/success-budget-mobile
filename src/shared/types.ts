@@ -7,12 +7,13 @@ type AddWalletParams = { id: 'new' } | { id: number; walletName: string; balance
 
 // A History view opened from a Stats row: the period's own instants, as the statistics API returned them.
 export type HistoryFilter = {
+  spaceId: number;
   from: string;
   to: string;
   transactionType: TransactionType;
-  categoryId?: number;
-  walletId?: number;
-};
+  // The row's name, shown on the applied filter.
+  name: string;
+} & ({ categoryId: number; walletId?: never } | { walletId: number; categoryId?: never });
 
 export type MainTabParamList = {
   [ScreenNames.HOME_TAB]: undefined;
