@@ -6,10 +6,11 @@ import { Icon } from '@components';
 import { colors } from '@shared/theme';
 import type { StatisticsSummary, StatisticsTrend } from '@api/dto';
 import type { StatsBlock } from '@screens/Stats/hooks/useStatsData';
-import type { BreakdownMode, StatsItem } from '@screens/Stats/statsItems';
+import type { BreakdownGroup, BreakdownMode, StatsItem } from '@screens/Stats/statsItems';
 import BlockPlaceholder from '../BlockPlaceholder/BlockPlaceholder';
 import BreakdownHeader from '../BreakdownHeader/BreakdownHeader';
 import BreakdownRow from '../BreakdownRow/BreakdownRow';
+import DonutChart from '../DonutChart/DonutChart';
 import SummaryCards from '../SummaryCards/SummaryCards';
 import TrendBlock from '../TrendBlock/TrendBlock';
 
@@ -25,11 +26,14 @@ interface Props {
   showComparison: boolean;
   // Shown in place of the blocks when the period has nothing to chart.
   placeholder: ReactElement | null;
-  currencyCode?: string;
   mode: BreakdownMode;
+  selectedSegmentKey: string | null;
+  onSelectSegment: (key: string | null) => void;
+  onDonutTouch: () => void;
   isOtherExpanded: boolean;
   onModeChange: (mode: BreakdownMode) => void;
   onToggleOther: () => void;
+  onOpenHistory: (group: BreakdownGroup) => void;
 }
 
 const StatsList = ({
@@ -41,12 +45,21 @@ const StatsList = ({
   onTrendTouch,
   showComparison,
   placeholder,
-  currencyCode,
   mode,
+  selectedSegmentKey,
+  onSelectSegment,
+  onDonutTouch,
   isOtherExpanded,
   onModeChange,
   onToggleOther,
+  onOpenHistory,
 }: Props) => {
+  const rowPress = (group: BreakdownGroup) => {
+    if (group.kind === 'other') return onToggleOther;
+    if (group.kind === 'deleted_wallets') return undefined;
+    return () => onOpenHistory(group);
+  };
+
   const renderItem: ListRenderItem<StatsItem> = ({ item }) => {
     switch (item.kind) {
       case 'summary':
@@ -80,22 +93,36 @@ const StatsList = ({
       case 'donut':
         return (
           <View style={styles.cardTop}>
-            <View style={styles.donut} />
+            <DonutChart
+              groups={item.groups}
+              totalAmount={item.totalAmount}
+              sourceCount={item.sourceCount}
+              currency={item.currency}
+              mode={mode}
+              selectedKey={selectedSegmentKey}
+              onSelect={onSelectSegment}
+              onTouchInside={onDonutTouch}
+            />
           </View>
         );
-      case 'row':
+      case 'row': {
+        const isSelected = !item.isChild && item.group.key === selectedSegmentKey;
+
         return (
           <View style={[styles.cardMiddle, item.isLast && styles.cardBottom]}>
             <BreakdownRow
               group={item.group}
-              currencyCode={currencyCode}
+              currency={item.currency}
               isChild={item.isChild}
               isFirst={item.isFirst}
               isOtherExpanded={isOtherExpanded}
-              onPress={item.group.kind === 'other' ? onToggleOther : undefined}
+              isSelected={isSelected}
+              isDimmed={selectedSegmentKey !== null && !isSelected}
+              onPress={rowPress(item.group)}
             />
           </View>
         );
+      }
     }
   };
 
@@ -106,7 +133,7 @@ const StatsList = ({
       data={items}
       keyExtractor={(item) => item.key}
       renderItem={renderItem}
-      extraData={[isOtherExpanded, summary, trend, selectedTrendKey, showComparison]}
+      extraData={[isOtherExpanded, summary, trend, selectedTrendKey, selectedSegmentKey, showComparison]}
       ListEmptyComponent={placeholder}
       showsVerticalScrollIndicator={false}
     />

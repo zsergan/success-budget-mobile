@@ -2,9 +2,6 @@ import { StyleSheet } from 'react-native';
 
 import theme, { colors } from '@shared/theme';
 
-export const OTHER_COLOR = '#8B95A3';
-export const DELETED_WALLETS_COLOR = '#C3C9D2';
-
 const styles = StyleSheet.create({
   row: {
     paddingTop: 9,
@@ -24,6 +21,12 @@ const styles = StyleSheet.create({
   },
   rowPressed: {
     backgroundColor: colors.track,
+  },
+  rowSelected: {
+    backgroundColor: colors.track,
+  },
+  rowDimmed: {
+    opacity: 0.45,
   },
   iconBox: {
     width: 34,

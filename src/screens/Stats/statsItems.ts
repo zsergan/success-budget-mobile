@@ -1,5 +1,6 @@
 import type {
   CategoryBreakdownItem,
+  Money,
   DeletedWalletsBreakdownItem,
   OtherBreakdownItem,
   StatisticsBreakdown,
@@ -18,6 +19,7 @@ export type BreakdownRowItem = {
   kind: 'row';
   key: string;
   group: BreakdownGroup;
+  currency: string;
   isChild: boolean;
   isFirst: boolean;
   isLast: boolean;
@@ -29,7 +31,14 @@ export type StatsItem =
   | { kind: 'breakdownHeader'; key: 'breakdownHeader'; hasSpending: boolean }
   | { kind: 'breakdownStatus'; key: 'breakdownStatus' }
   | { kind: 'breakdownEmpty'; key: 'breakdownEmpty' }
-  | { kind: 'donut'; key: 'donut' }
+  | {
+      kind: 'donut';
+      key: 'donut';
+      groups: BreakdownGroup[];
+      totalAmount: Money;
+      sourceCount: number;
+      currency: string;
+    }
   | BreakdownRowItem;
 
 const toGroups = (breakdown: StatisticsBreakdown, mode: BreakdownMode): BreakdownGroup[] => {
@@ -65,20 +74,24 @@ export const buildStatsItems = ({
   if (!breakdown) return [...items, { kind: 'breakdownStatus', key: 'breakdownStatus' }];
   if (!hasSpending) return [...items, { kind: 'breakdownEmpty', key: 'breakdownEmpty' }];
 
+  const { currency } = breakdown;
+  const groups = toGroups(breakdown, mode);
+  const { total_amount, source_count } = mode === 'category' ? breakdown.by_category : breakdown.by_wallet;
+
   const rows: Omit<BreakdownRowItem, 'isFirst' | 'isLast'>[] = [];
-  toGroups(breakdown, mode).forEach((group) => {
-    rows.push({ kind: 'row', key: `${mode}:${group.key}`, group, isChild: false });
+  groups.forEach((group) => {
+    rows.push({ kind: 'row', key: `${mode}:${group.key}`, group, currency, isChild: false });
 
     if (group.kind === 'other' && isOtherExpanded) {
       group.children.forEach((child) =>
-        rows.push({ kind: 'row', key: `${mode}:other:${child.key}`, group: child, isChild: true }),
+        rows.push({ kind: 'row', key: `${mode}:other:${child.key}`, group: child, currency, isChild: true }),
       );
     }
   });
 
   return [
     ...items,
-    { kind: 'donut', key: 'donut' },
+    { kind: 'donut', key: 'donut', groups, totalAmount: total_amount, sourceCount: source_count, currency },
     ...rows.map((row, index) => ({ ...row, isFirst: index === 0, isLast: index === rows.length - 1 })),
   ];
 };

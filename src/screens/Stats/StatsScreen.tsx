@@ -1,26 +1,32 @@
 import { useRef, useState } from 'react';
 import { View } from 'react-native';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useNavigation } from '@react-navigation/native';
 
 import type { TransactionComposerHandle } from '@components';
 import { BottomSheetModal as BottomModal, RangePickerSheet, ScreenFrame, TransactionComposer } from '@components';
 import { usePeriod } from '@hooks';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
-import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/state/space/selectors';
+import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
+import { ScreenNames } from '@shared/enums';
+import type { MainTabNavigationProp } from '@shared/types';
 import { formatRangeLabel, hasComparison, isCurrentMonth, monthPeriodOf } from '@shared/utils';
 import StatsEmptyState from './components/StatsEmptyState/StatsEmptyState';
 import StatsHeader from './components/StatsHeader/StatsHeader';
 import StatsList from './components/StatsList/StatsList';
 import { parseDateKey } from './format';
+import { toHistoryFilter } from './historyFilter';
 import useRefreshOnReturn from './hooks/useRefreshOnReturn';
 import useStatsData from './hooks/useStatsData';
-import type { BreakdownMode } from './statsItems';
+import useStatsSelection from './hooks/useStatsSelection';
+import type { BreakdownGroup, BreakdownMode } from './statsItems';
 import { buildStatsItems } from './statsItems';
 import { getStatsViewState } from './statsViewState';
 import styles from './style';
 
 const StatsScreen = () => {
+  const navigation = useNavigation<MainTabNavigationProp<ScreenNames.STATS_TAB>>();
   const rangePickerRef = useRef<BottomSheetModal>(null);
   const composerRef = useRef<TransactionComposerHandle>(null);
 
@@ -28,34 +34,30 @@ const StatsScreen = () => {
   const { summary, trend, breakdown, refreshIfStale } = useStatsData(range);
   useRefreshOnReturn(refreshIfStale);
 
-  const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
   const { currentData: walletsOverview } = useGetWalletsQuery(useSpaceArg());
   const firstWalletId = walletsOverview?.wallets[0]?.wallet.id ?? -1;
 
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const [mode, setMode] = useState<BreakdownMode>('category');
-
-  // Other stays expanded only for the breakdown it was opened in.
-  const breakdownScope = JSON.stringify([spaceId, range.from, range.to, mode]);
-  const [expandedIn, setExpandedIn] = useState<string | null>(null);
-  const isOtherExpanded = expandedIn === breakdownScope;
-
-  // A picked interval belongs to the space and period it was picked in.
-  const trendScope = JSON.stringify([spaceId, range.from, range.to]);
-  const [trendSelection, setTrendSelection] = useState<{ scope: string; key: string } | null>(null);
-  const selectedTrendKey = trendSelection?.scope === trendScope ? trendSelection.key : null;
-  const selectTrend = (key: string | null) => setTrendSelection(key === null ? null : { scope: trendScope, key });
-
-  // The chart flags its own touches first; any other touch on the screen drops the selection.
-  const touchInTrend = useRef(false);
-  const handleScreenTouch = () => {
-    if (!touchInTrend.current && selectedTrendKey !== null) selectTrend(null);
-    touchInTrend.current = false;
-  };
+  const selection = useStatsSelection(JSON.stringify([spaceId, range.from, range.to]), mode);
 
   const viewState = getStatsViewState(summary.data);
   const showsBlocks = viewState === 'data' || viewState === 'pending';
-  const items = showsBlocks ? buildStatsItems({ breakdown: breakdown.data, mode, isOtherExpanded }) : [];
+  const items = showsBlocks
+    ? buildStatsItems({ breakdown: breakdown.data, mode, isOtherExpanded: selection.isOtherExpanded })
+    : [];
+
+  // A pick that a refresh took away from the breakdown is simply not shown.
+  const donut = items.find((item) => item.kind === 'donut');
+  const selectedSegmentKey =
+    donut && donut.groups.some((group) => group.key === selection.selectedSegmentKey)
+      ? selection.selectedSegmentKey
+      : null;
+
+  const openHistory = (group: BreakdownGroup) => {
+    const filter = breakdown.data && toHistoryFilter(group, breakdown.data.period);
+    if (filter) navigation.navigate(ScreenNames.TRANSACTIONS_TAB, { filter });
+  };
 
   const monthLabel = range.from.toLocaleString('en-US', { month: 'long', year: 'numeric' });
   const lastTransactionDate = summary.data?.last_transaction_date;
@@ -85,7 +87,7 @@ const StatsScreen = () => {
       </BottomModal>
 
       <ScreenFrame edges={['top', 'left', 'right']}>
-        <View style={styles.root} onTouchStart={handleScreenTouch}>
+        <View style={styles.root} onTouchStart={selection.handleScreenTouch}>
           <StatsHeader
             period={period}
             onPresetPress={selectCurrent}
@@ -97,18 +99,19 @@ const StatsScreen = () => {
             items={items}
             summary={summary}
             trend={trend}
-            selectedTrendKey={selectedTrendKey}
-            onSelectTrend={selectTrend}
-            onTrendTouch={() => {
-              touchInTrend.current = true;
-            }}
+            selectedTrendKey={selection.selectedTrendKey}
+            onSelectTrend={selection.selectTrend}
+            onTrendTouch={selection.markTrendTouch}
             showComparison={hasComparison(period)}
             placeholder={placeholder}
-            currencyCode={currencyCode}
             mode={mode}
-            isOtherExpanded={isOtherExpanded}
+            selectedSegmentKey={selectedSegmentKey}
+            onSelectSegment={selection.selectSegment}
+            onDonutTouch={selection.markDonutTouch}
+            isOtherExpanded={selection.isOtherExpanded}
             onModeChange={setMode}
-            onToggleOther={() => setExpandedIn(isOtherExpanded ? null : breakdownScope)}
+            onToggleOther={selection.toggleOther}
+            onOpenHistory={openHistory}
           />
         </View>
       </ScreenFrame>

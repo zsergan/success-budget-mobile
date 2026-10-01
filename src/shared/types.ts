@@ -1,13 +1,22 @@
 import type { BottomTabNavigationProp, BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp, CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { ScreenNames, AppColor } from '@shared/enums';
+import type { ScreenNames, AppColor, TransactionType } from '@shared/enums';
 
 type AddWalletParams = { id: 'new' } | { id: number; walletName: string; balance: string; design: AppColor };
 
+// A History view opened from a Stats row: the period's own instants, as the statistics API returned them.
+export type HistoryFilter = {
+  from: string;
+  to: string;
+  transactionType: TransactionType;
+  categoryId?: number;
+  walletId?: number;
+};
+
 export type MainTabParamList = {
   [ScreenNames.HOME_TAB]: undefined;
-  [ScreenNames.TRANSACTIONS_TAB]: undefined;
+  [ScreenNames.TRANSACTIONS_TAB]: { filter?: HistoryFilter } | undefined;
   [ScreenNames.STATS_TAB]: undefined;
   [ScreenNames.LIMITS_TAB]: undefined;
   [ScreenNames.SETTINGS_TAB]: undefined;

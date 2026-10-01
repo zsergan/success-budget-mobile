@@ -3,7 +3,6 @@ import { StyleSheet } from 'react-native';
 import theme, { colors } from '@shared/theme';
 
 const CARD_RADIUS = 18;
-const DONUT_SIZE = 150;
 
 // The donut and the rows are separate list items drawn as one card: the donut
 // item opens it, every row carries its side borders and the last row closes it.
@@ -26,13 +25,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     borderColor: colors.hairline,
     backgroundColor: colors.surface,
-  },
-  donut: {
-    width: DONUT_SIZE,
-    height: DONUT_SIZE,
-    borderRadius: DONUT_SIZE / 2,
-    borderWidth: 20,
-    borderColor: colors.track,
   },
   cardMiddle: {
     paddingHorizontal: 6,
