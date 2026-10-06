@@ -11,6 +11,7 @@ export interface HttpRequest {
   method?: Method;
   body?: unknown;
   params?: Record<string, unknown>;
+  headers?: Record<string, string>;
 }
 
 const http = createHttpClient();
@@ -26,14 +27,14 @@ const sessionEndedError = (url: string): ErrorResponse => ({
 // A response that outlives the session it was sent in never reaches the cache
 // or an onQueryStarted side effect as a success, even if logout could not abort it.
 export const httpBaseQuery: BaseQueryFn<HttpRequest, unknown, ErrorResponse> = async (
-  { url, method = 'GET', body, params },
+  { url, method = 'GET', body, params, headers },
   { signal, getState },
 ) => {
   const sessionKey = (getState() as RootState).auth.sessionKey;
   const isSessionCurrent = () => (getState() as RootState).auth.sessionKey === sessionKey;
 
   try {
-    const response = await http.request({ url, method, data: body, params, signal });
+    const response = await http.request({ url, method, data: body, params, headers, signal });
 
     // RTK Query treats `data: undefined` as a malformed result; empty bodies (void handlers) become null.
     return isSessionCurrent() ? { data: response.data ?? null } : { error: sessionEndedError(url) };

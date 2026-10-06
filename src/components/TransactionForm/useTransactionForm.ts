@@ -1,6 +1,7 @@
 import * as yup from 'yup';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
+import { randomUUID } from 'expo-crypto';
 import { useBottomSheet } from '@gorhom/bottom-sheet';
 
 import type { CreateTransactionRequest } from '@api/dto';
@@ -73,7 +74,11 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
         description: formData.notes,
       };
 
-      return createTransaction({ spaceId: requireSpaceId(spaceId), data: payload }).unwrap();
+      return createTransaction({
+        spaceId: requireSpaceId(spaceId),
+        idempotencyKey: randomUUID(),
+        data: payload,
+      }).unwrap();
     },
     onSuccess: () => {
       close();

@@ -8,6 +8,7 @@ import { baseApi } from '@redux/api/baseApi';
 import { createAppStore } from '@redux/Store';
 import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
 import { transactionApi } from './api';
+import { createTransactionResponseDto } from './fixtures';
 
 const mockedRequest = jest.fn();
 
@@ -42,7 +43,14 @@ const dto: Transaction = {
   },
 };
 
-const { getTransactions, getLatestTransaction } = transactionApi.endpoints;
+const {
+  getTransactions,
+  getLatestTransaction,
+  getTransaction,
+  createTransaction,
+  updateTransaction,
+  deleteTransaction,
+} = transactionApi.endpoints;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -104,6 +112,69 @@ describe('transactionApi', () => {
     expect(mockedRequest).toHaveBeenCalledWith(
       expect.objectContaining({ params: { from, to, transaction_type: TransactionType.EXPENSE, wallet_id: 4 } }),
     );
+  });
+
+  it('reads one transaction by its id', async () => {
+    const store = createAppStore();
+
+    mockedRequest.mockResolvedValue({ data: dto });
+
+    const result = await store.dispatch(getTransaction.initiate({ spaceId: 3, transactionId: 'tx-1' }));
+
+    expect(mockedRequest).toHaveBeenCalledWith(expect.objectContaining({ url: '/spaces/3/transactions/tx-1' }));
+    expect(result.data).toMatchObject({ id: 'tx-1', version: 1 });
+  });
+
+  it('sends the action key with a create and maps its result', async () => {
+    const store = createAppStore();
+    const data = {
+      wallet_id: 1,
+      category_id: 1,
+      transaction_type: TransactionType.EXPENSE,
+      amount: '10',
+      timestamp: '2026-01-05T10:00:00.000Z',
+    };
+
+    mockedRequest.mockResolvedValue({ data: createTransactionResponseDto() });
+
+    const result = await store.dispatch(createTransaction.initiate({ spaceId: 3, idempotencyKey: 'key-1', data }));
+
+    expect(mockedRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ method: 'POST', data, headers: { 'Idempotency-Key': 'key-1' } }),
+    );
+    expect(result.data).toMatchObject({ transaction: { id: 'tx-1' }, wallet: { balance: 90 }, previousBalance: 100 });
+  });
+
+  it('sends the version it replaces as a quoted If-Match with an edit and a delete', async () => {
+    const store = createAppStore();
+    const arg = { spaceId: 3, transactionId: 'tx-1', version: 4, idempotencyKey: 'key-1' };
+    const headers = { 'Idempotency-Key': 'key-1', 'If-Match': '"4"' };
+
+    mockedRequest.mockResolvedValue({
+      data: { transaction: { ...dto, version: 5 }, wallets: [{ id: 1, balance: 80, is_deleted: false }] },
+    });
+    const edit = await store.dispatch(updateTransaction.initiate({ ...arg, data: { description: null } }));
+
+    mockedRequest.mockResolvedValue({ data: true });
+    await store.dispatch(deleteTransaction.initiate(arg));
+
+    expect(mockedRequest).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        url: '/spaces/3/transactions/tx-1',
+        method: 'PATCH',
+        data: { description: null },
+        headers,
+      }),
+    );
+    expect(mockedRequest).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ url: '/spaces/3/transactions/tx-1', method: 'DELETE', headers }),
+    );
+    expect(edit.data).toMatchObject({
+      transaction: { version: 5 },
+      wallets: [{ id: 1, balance: 80, isDeleted: false }],
+    });
   });
 
   it('keeps an empty latest as null rather than an error', async () => {

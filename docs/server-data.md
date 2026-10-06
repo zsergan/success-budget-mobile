@@ -14,6 +14,11 @@ counts as success), so a failed or session-stale write refreshes nothing.
 One exception: a limit create or edit rejected with
 `400 CATEGORY_ARCHIVED` refreshes Limits and Categories,
 because the error itself shows a category was archived elsewhere.
+Likewise a transaction write refused with `TRANSACTION_NOT_FOUND`,
+`TRANSACTION_VERSION_CONFLICT`, `WALLET_DELETED`, `CATEGORY_ARCHIVED`,
+`FORBIDDEN_WALLET` or `FORBIDDEN_CATEGORY` refreshes everything a
+transaction write does, since the cached record, wallet or category is
+behind the server.
 `History.Recent` is no longer a separate request: Home asks for the
 current month by the same client-local bounds as the Transactions tab's
 default period (`periodArg`), so both read one `History.Range` entry.
@@ -52,6 +57,7 @@ Space-scoped endpoints are written without their `/spaces/:id` prefix.
 | ----------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- | -------------------------------- |
 | Create transaction                  | `POST /transactions`                                                             | History; Wallets (balance, month totals, total, delta); Limits (spent, if expense in current month); Categories (`transaction_count`)                                    | `History.Recent`, Wallets, Limits, `History.Range` + `History.Latest` (via `dataRevision`)           | **Categories**                   |
 | Delete transaction                  | `DELETE /transactions/:id`                                                       | Same as create                                                                                                                                                           | — (`deleteTransaction` exists in `transaction.api.ts`, no thunk or UI)                               | Whole row once wired             |
+| Edit transaction                    | `PATCH /transactions/:id`                                                        | Same as create                                                                                                                                                           | — (new endpoint)                                                                                     | —                                |
 | Create category                     | `POST /categories`                                                               | Categories                                                                                                                                                               | Categories                                                                                           | —                                |
 | Edit category (name/icon/color)     | `PUT /categories/:id`                                                            | Categories; Limits (embedded category); History (embedded category)                                                                                                      | Categories, `History.Range`, `History.Latest`                                                        | **Limits**, **`History.Recent`** |
 | Archive category                    | `PUT /categories/:id` with `is_active: 0`                                        | Categories; Limits (category unlinked, limit deleted if it was its last category); History (embedded category)                                                           | Categories, `History.Range`, `History.Latest`                                                        | **Limits**, **`History.Recent`** |

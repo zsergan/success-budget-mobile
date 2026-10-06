@@ -291,6 +291,7 @@ describe('server data scenarios', () => {
       await store.dispatch(
         transactionApi.endpoints.createTransaction.initiate({
           spaceId: 1,
+          idempotencyKey: 'key-1',
           data: {
             wallet_id: 1,
             category_id: 5,
