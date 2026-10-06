@@ -1,4 +1,5 @@
 import type { TransactionModel } from '@api/models';
+import { isInitialBalance } from '@api/models';
 import { TransactionType } from '@shared/enums';
 import { compareDays } from './compare';
 import { formatDateDDMMYYYY } from './transform';
@@ -28,7 +29,8 @@ export const groupTransactionsByDay = (transactions: TransactionModel[], currenc
     const label = formatGroupLabel(transaction.timestamp);
     const lastGroup = groups[groups.length - 1];
     const group = lastGroup?.label === label ? lastGroup : undefined;
-    const signedAmount = transaction.transactionType === TransactionType.EXPENSE ? -1 : 1;
+    const sign = transaction.transactionType === TransactionType.EXPENSE ? -1 : 1;
+    const signedAmount = isInitialBalance(transaction) ? 0 : sign;
 
     if (group) {
       group.total = (group.total || 0) + signedAmount * Number(transaction.amount);
