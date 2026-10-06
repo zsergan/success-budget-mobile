@@ -13,6 +13,27 @@ const styles = StyleSheet.create({
   rootPressed: {
     backgroundColor: colors.track,
   },
+  rootBusy: {
+    opacity: 0.5,
+  },
+  // Covers the Delete action under it while the row is dragged.
+  swipeContent: {
+    backgroundColor: colors.bg,
+  },
+  deleteAction: {
+    width: 92,
+    marginLeft: theme.spacing.sm,
+    borderRadius: theme.radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    rowGap: 2,
+    backgroundColor: colors.danger,
+  },
+  deleteActionText: {
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.caption,
+    color: '#FFFDFA',
+  },
   categoryNameTime: {
     flex: 1,
     flexDirection: 'row',
@@ -32,6 +53,10 @@ const styles = StyleSheet.create({
   iconBoxExpense: {
     backgroundColor: colors.track,
   },
+  iconBoxSystem: {
+    borderRadius: 21,
+    backgroundColor: colors.track,
+  },
   textColumn: {
     flex: 1,
     minWidth: 0,
@@ -48,6 +73,9 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.caption,
     lineHeight: theme.lineHeights.caption,
     color: colors.muted,
+  },
+  metaFaint: {
+    opacity: 0.7,
   },
   amount: {
     fontFamily: theme.fonts.semiBold,

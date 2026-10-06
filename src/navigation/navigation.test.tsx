@@ -131,6 +131,7 @@ const HomeTab = ({ navigation }: MainTabScreenProps<ScreenNames.HOME_TAB>) => (
     isLoading={false}
     hasError={false}
     onPressTransaction={jest.fn()}
+    onDeleteTransaction={jest.fn()}
     onRetry={jest.fn()}
   />
 );

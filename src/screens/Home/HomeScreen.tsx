@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { Fab, RootLayout, SpaceSwitcher, useTransactionFlow } from '@components';
+import { Fab, RootLayout, SpaceSwitcher, useTransactionDelete, useTransactionFlow } from '@components';
 import { getLoadState } from '@redux/api/loadState';
 import { useCurrentMonthArg, useSpaceArg } from '@redux/hooks';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
@@ -23,6 +23,7 @@ interface Props extends MainTabScreenProps<ScreenNames.HOME_TAB> {}
 const HomeScreen = ({ navigation }: Props) => {
   const [focusedWalletId, setFocusedWalletId] = useState<number | undefined>(undefined);
   const { openCreate, openDetails } = useTransactionFlow();
+  const { requestDelete } = useTransactionDelete();
 
   const spaceArg = useSpaceArg();
   const { currentData: walletsOverview } = useGetWalletsQuery(spaceArg);
@@ -66,6 +67,7 @@ const HomeScreen = ({ navigation }: Props) => {
           hasError={hasTransactionsError}
           onRetry={recentQuery.refetch}
           onPressTransaction={openDetails}
+          onDeleteTransaction={requestDelete}
         />
       </RootLayout>
 

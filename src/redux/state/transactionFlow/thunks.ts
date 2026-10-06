@@ -4,9 +4,19 @@ import { spaceTags } from '@redux/api/baseApi';
 import type { AppThunk } from '@redux/Store';
 import { loseSpaceAccess } from '../space/thunks';
 import { transactionApi } from '../transaction/api';
-import { classifyTransactionError } from '../transaction/operations';
-import { selectTransactionFlow } from './selectors';
-import { checkFailed, checkStarted, detailsOpened, latestLoaded, recordChecked, recordGone } from './slice';
+import { classifyTransactionError, submitTransactionRequest } from '../transaction/operations';
+import { selectIsDeleting, selectTransactionFlow } from './selectors';
+import type { DeleteResult } from './slice';
+import {
+  checkFailed,
+  checkStarted,
+  deleteSettled,
+  deleteStarted,
+  detailsOpened,
+  latestLoaded,
+  recordChecked,
+  recordGone,
+} from './slice';
 
 // `failed`: no answer, or one that says nothing about the record; what is on screen stays.
 export type ReadOutcome = 'read' | 'gone' | 'failed' | 'stale';
@@ -74,4 +84,48 @@ export const openTransactionDetails =
     dispatch(detailsOpened(payload));
 
     if (selectTransactionFlow(getState())?.saved === payload.transaction) void dispatch(checkFlowRecord());
+  };
+
+// A deleted row leaves every cached list of its space at once; the refetch that follows recounts the totals.
+const dropFromLists =
+  (spaceId: number, transactionId: string): AppThunk =>
+  (dispatch, getState) => {
+    transactionApi.util
+      .selectCachedArgsForQuery(getState(), 'getTransactions')
+      .filter((arg) => arg.spaceId === spaceId)
+      .forEach((arg) =>
+        dispatch(
+          transactionApi.util.updateQueryData('getTransactions', arg, (rows) =>
+            rows.filter(({ id }) => id !== transactionId),
+          ),
+        ),
+      );
+  };
+
+// The one delete behind a list row and the sheet. Every attempt may use a new key: a delete that already applied
+// answers 404 on a retry, which counts as done.
+export const deleteTransaction =
+  ({ spaceId, transaction }: { spaceId: number; transaction: TransactionModel }): AppThunk<Promise<DeleteResult>> =>
+  async (dispatch, getState) => {
+    const transactionId = transaction.id;
+    if (selectIsDeleting(getState(), transactionId)) return 'stale';
+
+    dispatch(deleteStarted({ transactionId }));
+    const { outcome } = await dispatch(
+      submitTransactionRequest({ type: 'delete', spaceId, transactionId, version: transaction.version }, null),
+    );
+
+    const result: DeleteResult =
+      outcome.status === 'succeeded'
+        ? 'deleted'
+        : outcome.status === 'stale' || outcome.failure.kind === 'accessLost'
+          ? 'stale'
+          : outcome.failure.kind === 'conflict'
+            ? 'conflict'
+            : 'failed';
+
+    if (result === 'deleted') dispatch(dropFromLists(spaceId, transactionId));
+    dispatch(deleteSettled({ transactionId, result }));
+
+    return result;
   };

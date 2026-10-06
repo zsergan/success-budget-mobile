@@ -26,9 +26,17 @@ interface Props {
   // Shown in place of the groups while there are none (loading, empty or error states).
   placeholder: ReactElement;
   onPressTransaction: (transaction: TransactionModel) => void;
+  onDeleteTransaction: (transaction: TransactionModel, onSettled: () => void) => void;
 }
 
-const TransactionsList = ({ groups, currencyCode, header, placeholder, onPressTransaction }: Props) => {
+const TransactionsList = ({
+  groups,
+  currencyCode,
+  header,
+  placeholder,
+  onPressTransaction,
+  onDeleteTransaction,
+}: Props) => {
   const topInset = useScreenTopInset();
   const sections: Section[] = groups.map((group, index) => ({
     title: group.label,
@@ -61,7 +69,12 @@ const TransactionsList = ({ groups, currencyCode, header, placeholder, onPressTr
         </View>
       )}
       renderItem={({ item }) => (
-        <TransactionCard transaction={item} currencyCode={currencyCode} onPress={onPressTransaction} />
+        <TransactionCard
+          transaction={item}
+          currencyCode={currencyCode}
+          onPress={onPressTransaction}
+          onDelete={onDeleteTransaction}
+        />
       )}
     />
   );

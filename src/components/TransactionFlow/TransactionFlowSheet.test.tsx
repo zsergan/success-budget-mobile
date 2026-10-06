@@ -136,7 +136,7 @@ const respond = ({ url, method }: { url: string; method: string }) => {
   if (method === 'POST' && url.endsWith('/categories')) {
     return Promise.resolve({ data: category(30, 'Bonus', TransactionType.INCOME) });
   }
-  if (method === 'POST' || method === 'PATCH') {
+  if (method === 'POST' || method === 'PATCH' || method === 'DELETE') {
     return new Promise((resolve, reject) => {
       answerWrite = resolve;
       failWrite = reject;
@@ -468,6 +468,97 @@ describe('TransactionFlowSheet', () => {
     expect(mockAddAlert).not.toHaveBeenCalled();
   });
 
+  it('deletes the saved record, not the draft, and closes only after the server answers', async () => {
+    const { openDetails, flow } = renderFlow();
+
+    openDetails();
+    await settle();
+    fireEvent.press(screen.getByText('Edit'));
+    fireEvent.changeText(screen.getByLabelText('Amount'), '70');
+    fireEvent.press(screen.getByText('Delete transaction'));
+
+    const [title, message, buttons] = (Alert.alert as jest.Mock).mock.calls[0];
+    expect(title).toBe('Delete transaction?');
+    expect(message).toBe('-50 · Food · Cash. The wallet balance will be adjusted.');
+
+    act(() => buttons[1].onPress?.());
+    expect(flow()).toMatchObject({ view: { name: 'edit' }, draft: { amount: '70' } });
+
+    fireEvent.press(screen.getByText('Delete transaction'));
+    act(() => (Alert.alert as jest.Mock).mock.calls[1][2][0].onPress());
+
+    expect(screen.getByText('Deleting…')).toBeTruthy();
+    expect(screen.getByLabelText('Close')).toBeDisabled();
+    expect(flow()?.isSaving).toBe(true);
+
+    await act(async () => answerWrite({ data: true }));
+    await settle();
+
+    expect(mockedRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'DELETE',
+        url: '/spaces/1/transactions/tx-1',
+        headers: expect.objectContaining({ 'If-Match': '"2"' }),
+      }),
+    );
+    expect(flow()).toBeNull();
+    expect(mockAddAlert).toHaveBeenCalledWith('Transaction deleted');
+  });
+
+  it('keeps the record and offers to try again when a delete fails', async () => {
+    const { openDetails, flow } = renderFlow();
+
+    openDetails();
+    await settle();
+    fireEvent.press(screen.getByText('Delete transaction'));
+    act(() => (Alert.alert as jest.Mock).mock.calls[0][2][0].onPress());
+    await act(async () => failWrite(new Error('Network Error')));
+    await settle();
+
+    expect(flow()).toMatchObject({ view: { name: 'details' }, isSaving: false, notice: 'deleteFailed' });
+    expect(screen.getByText('Couldn’t delete. Check your connection and try again.')).toBeTruthy();
+
+    fireEvent.press(screen.getByText('Try again'));
+    await act(async () => answerWrite({ data: true }));
+    await settle();
+
+    expect(flow()).toBeNull();
+  });
+
+  it('asks to load the latest version when a delete finds the record changed', async () => {
+    const { openDetails, flow } = renderFlow();
+
+    openDetails();
+    await settle();
+    fireEvent.press(screen.getByText('Delete transaction'));
+    act(() => (Alert.alert as jest.Mock).mock.calls[0][2][0].onPress());
+    await act(async () => failWrite(refusal(409, 'TRANSACTION_VERSION_CONFLICT')));
+    await settle();
+
+    expect(screen.getByText('This transaction was changed')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeDisabled();
+
+    stored = transactionDto({ amount: '65.00', version: 3 });
+    fireEvent.press(screen.getByText('Load latest'));
+    await settle();
+
+    expect(flow()).toMatchObject({ notice: null, saved: { amount: '65.00', version: 3 } });
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeEnabled();
+  });
+
+  it('explains that deleting a record of a deleted wallet changes no balance', async () => {
+    stored = transactionDto({ amount: '2.75', wallet: null });
+    const { openDetails } = renderFlow();
+
+    openDetails();
+    await settle();
+    fireEvent.press(screen.getByText('Delete transaction'));
+
+    expect((Alert.alert as jest.Mock).mock.calls[0][1]).toBe(
+      '-2.75 · Food · Deleted wallet. It will be removed from history and period totals. No wallet balance will change.',
+    );
+  });
+
   it('keeps a deleted wallet unless another one is picked', async () => {
     stored = transactionDto({ wallet: null });
     const { openDetails } = renderFlow();
@@ -494,6 +585,7 @@ describe('TransactionFlowSheet', () => {
     expect(screen.getByText('Starting balance')).toBeTruthy();
     expect(screen.getByText('Set when the wallet was created')).toBeTruthy();
     expect(screen.queryByText('Edit')).toBeNull();
+    expect(screen.queryByText('Delete transaction')).toBeNull();
   });
 
   it('comes back from a new wallet with it picked and the rest of the draft kept', async () => {

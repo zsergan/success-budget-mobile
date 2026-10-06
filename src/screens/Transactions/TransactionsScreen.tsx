@@ -2,7 +2,14 @@ import { useEffect, useRef } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
-import { BottomSheetModal as BottomModal, Fab, RangePickerSheet, ScreenFrame, useTransactionFlow } from '@components';
+import {
+  BottomSheetModal as BottomModal,
+  Fab,
+  RangePickerSheet,
+  ScreenFrame,
+  useTransactionDelete,
+  useTransactionFlow,
+} from '@components';
 import { usePeriod } from '@hooks';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
@@ -22,6 +29,7 @@ const TransactionsScreen = () => {
   const navigation = useNavigation<MainTabNavigationProp<ScreenNames.TRANSACTIONS_TAB>>();
   const route = useRoute<MainTabScreenProps<ScreenNames.TRANSACTIONS_TAB>['route']>();
   const { openCreate, openDetails } = useTransactionFlow();
+  const { requestDelete } = useTransactionDelete();
   const rangePickerRef = useRef<BottomSheetModal>(null);
 
   const handleOpenPicker = () => rangePickerRef.current?.present();
@@ -53,6 +61,7 @@ const TransactionsScreen = () => {
           groups={viewState === 'ready' ? groupTransactionsByDay(transactions, currencyCode) : []}
           currencyCode={currencyCode}
           onPressTransaction={openDetails}
+          onDeleteTransaction={requestDelete}
           header={
             <>
               <TransactionsHeader />

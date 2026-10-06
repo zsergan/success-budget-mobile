@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -9,10 +10,11 @@ import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { editStarted } from '@redux/state/transactionFlow/slice';
-import { checkFlowRecord } from '@redux/state/transactionFlow/thunks';
+import { checkFlowRecord, loadLatestRecord } from '@redux/state/transactionFlow/thunks';
 import { TransactionType } from '@shared/enums';
 import theme, { colors } from '@shared/theme';
 import { formatAmount, hexToRgba } from '@shared/utils';
+import DeleteButton from '../DeleteButton/DeleteButton';
 import FlowBanner from '../FlowBanner/FlowBanner';
 import { formatDateTime } from '../format';
 
@@ -21,13 +23,29 @@ import styles from './style';
 interface Props {
   flow: TransactionFlow & { saved: TransactionModel };
   onClose: () => void;
+  onDelete: () => void;
+  onRetryDelete: () => void;
 }
 
-// Shows the record the list had at once; Edit waits until it is read again, so it never starts from an old version.
-const TransactionDetails = ({ flow: { saved: transaction, check }, onClose }: Props) => {
+// Shows the record the list had at once; Edit and Delete wait until it is read again, so neither acts on an old
+// version.
+const TransactionDetails = ({
+  flow: { saved: transaction, check, notice, isSaving },
+  onClose,
+  onDelete,
+  onRetryDelete,
+}: Props) => {
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
+  const [isLoadingLatest, setLoadingLatest] = useState(false);
+  const canAct = check === 'done' && notice !== 'conflict' && !isSaving;
+
+  const loadLatest = async () => {
+    setLoadingLatest(true);
+    await dispatch(loadLatestRecord());
+    setLoadingLatest(false);
+  };
 
   const isSystem = isInitialBalance(transaction);
   const isIncome = transaction.transactionType === TransactionType.INCOME;
@@ -41,6 +59,7 @@ const TransactionDetails = ({ flow: { saved: transaction, check }, onClose }: Pr
         <TouchableOpacity
           style={styles.closeButton}
           onPress={onClose}
+          disabled={isSaving}
           activeOpacity={0.6}
           hitSlop={8}
           accessibilityLabel="Close"
@@ -99,22 +118,40 @@ const TransactionDetails = ({ flow: { saved: transaction, check }, onClose }: Pr
         <Text style={styles.systemNote}>Set when the wallet was created</Text>
       ) : (
         <>
-          {check === 'failed' && (
+          {check === 'failed' ? (
             <FlowBanner
               tone="danger"
               text="Couldn’t load the latest version. Check your connection and try again."
               actionLabel="Try again"
               onAction={() => dispatch(checkFlowRecord())}
             />
+          ) : notice === 'conflict' ? (
+            <FlowBanner
+              tone="warn"
+              title="This transaction was changed"
+              text="Someone saved it after you opened it. Load the latest version before you edit or delete it."
+              actionLabel="Load latest"
+              isBusy={isLoadingLatest}
+              onAction={loadLatest}
+            />
+          ) : (
+            notice === 'deleteFailed' && (
+              <FlowBanner
+                tone="danger"
+                text="Couldn’t delete. Check your connection and try again."
+                actionLabel="Try again"
+                onAction={onRetryDelete}
+              />
+            )
           )}
 
           <TouchableOpacity
-            style={[styles.editButton, check !== 'done' && styles.buttonLocked]}
+            style={[styles.editButton, !canAct && styles.buttonLocked]}
             onPress={() => dispatch(editStarted())}
-            disabled={check !== 'done'}
+            disabled={!canAct}
             activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityState={{ disabled: check !== 'done', busy: check === 'pending' }}
+            accessibilityState={{ disabled: !canAct, busy: check === 'pending' }}
           >
             {check === 'pending' ? (
               <ActivityIndicator size="small" color={colors.text} />
@@ -123,6 +160,8 @@ const TransactionDetails = ({ flow: { saved: transaction, check }, onClose }: Pr
             )}
             <Text style={styles.editButtonText}>Edit</Text>
           </TouchableOpacity>
+
+          <DeleteButton isDeleting={isSaving} disabled={!canAct} onPress={onDelete} />
         </>
       )}
     </View>

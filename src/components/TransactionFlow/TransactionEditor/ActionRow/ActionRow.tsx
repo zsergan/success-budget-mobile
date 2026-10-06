@@ -19,6 +19,8 @@ interface Props {
   typeColor: string;
   // Shown over Save in place of the helper text.
   banner?: ReactNode;
+  // Under Save, e.g. Delete in an edit.
+  footer?: ReactNode;
   onPress: () => void;
 }
 
@@ -30,6 +32,7 @@ const ActionRow = ({
   isAboveKeyboard = false,
   typeColor,
   banner,
+  footer,
   onPress,
 }: Props) => {
   const insets = useSafeAreaInsets();
@@ -70,6 +73,8 @@ const ActionRow = ({
           {isSaving ? 'Saving…' : label}
         </Text>
       </TouchableOpacity>
+
+      {footer}
     </View>
   );
 };

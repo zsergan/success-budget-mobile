@@ -18,13 +18,14 @@ import {
   getDraftErrors,
   hasDraftErrors,
 } from '@redux/state/transactionFlow/draft';
-import { hasUnsavedChanges } from '@redux/state/transactionFlow/selectors';
+import { hasUnsavedChanges, selectIsDeleting } from '@redux/state/transactionFlow/selectors';
 import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { categoriesOpened, dateTimeOpened, draftChanged } from '@redux/state/transactionFlow/slice';
 import { loadLatestRecord } from '@redux/state/transactionFlow/thunks';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { TransactionType } from '@shared/enums';
 import theme, { colors } from '@shared/theme';
+import DeleteButton from '../DeleteButton/DeleteButton';
 import FlowBanner from '../FlowBanner/FlowBanner';
 import ActionRow from './ActionRow/ActionRow';
 import AmountField from './AmountField/AmountField';
@@ -49,9 +50,20 @@ interface Props {
   onClose: () => void;
   onCreateWallet: () => void;
   onCreateCategory: () => void;
+  onDelete: () => void;
+  onRetryDelete: () => void;
 }
 
-const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCreateCategory }: Props) => {
+const TransactionEditor = ({
+  flow,
+  onSave,
+  onBack,
+  onClose,
+  onCreateWallet,
+  onCreateCategory,
+  onDelete,
+  onRetryDelete,
+}: Props) => {
   const dispatch = useAppDispatch();
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -68,6 +80,7 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
 
   const { draft, saved, isSaving } = flow;
   const isEdit = saved !== null;
+  const isDeleting = useAppSelector((state) => !!saved && selectIsDeleting(state, saved.id));
   const isIncome = draft.transactionType === TransactionType.INCOME;
   const typeColor = isIncome ? colors.ok : colors.danger;
   const now = new Date();
@@ -275,11 +288,11 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
         label={saveLabel}
         helperText={helperText}
         ready={ready}
-        isSaving={isSaving}
+        isSaving={isSaving && !isDeleting}
         isAboveKeyboard={keyboardHeight > 0}
         typeColor={typeColor}
         banner={
-          hasConflict && (
+          hasConflict ? (
             <FlowBanner
               tone="warn"
               title="This transaction was changed"
@@ -288,6 +301,21 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
               isBusy={isLoadingLatest}
               onAction={loadLatest}
             />
+          ) : (
+            flow.notice === 'deleteFailed' && (
+              <FlowBanner
+                tone="danger"
+                text="Couldn’t delete. Check your connection and try again."
+                actionLabel="Try again"
+                onAction={onRetryDelete}
+              />
+            )
+          )
+        }
+        footer={
+          isEdit &&
+          keyboardHeight === 0 && (
+            <DeleteButton isDeleting={isDeleting} disabled={isSaving || hasConflict} onPress={onDelete} />
           )
         }
         onPress={onSave}

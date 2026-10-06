@@ -10,3 +10,6 @@ export const hasUnsavedChanges = (flow: TransactionFlow | null) =>
 
 export const selectLastWalletId = (state: RootState, spaceId: number) =>
   state.transactionFlow.lastWalletIds[spaceId] ?? null;
+
+export const selectIsDeleting = (state: RootState, transactionId: string) =>
+  state.transactionFlow.deletingIds.includes(transactionId);

@@ -20,6 +20,7 @@ interface Props {
   hasError: boolean;
   onRetry: () => void;
   onPressTransaction: (transaction: TransactionModel) => void;
+  onDeleteTransaction: (transaction: TransactionModel, onSettled: () => void) => void;
 }
 
 const RecentActivity = ({
@@ -31,6 +32,7 @@ const RecentActivity = ({
   hasError,
   onRetry,
   onPressTransaction,
+  onDeleteTransaction,
 }: Props) => {
   const groups = groupTransactionsByDay(transactions.slice(0, RECENT_TRANSACTIONS_LIMIT), currencyCode);
 
@@ -90,6 +92,7 @@ const RecentActivity = ({
                       transaction={transaction}
                       currencyCode={currencyCode}
                       onPress={onPressTransaction}
+                      onDelete={onDeleteTransaction}
                     />
                   ))}
                 </View>

@@ -29,7 +29,9 @@ export type FlowAway = 'wallet' | 'category';
 export type FlowCheck = 'pending' | 'done' | 'failed';
 
 // `conflict`: the record changed after it was read, so a write at its version was refused.
-export type FlowNotice = 'conflict';
+export type FlowNotice = 'conflict' | 'deleteFailed';
+
+export type DeleteResult = 'deleted' | 'conflict' | 'failed' | 'stale';
 
 export interface TransactionFlow {
   // New for every draft, so a write's key or a late answer never carries over to the next one.
@@ -57,9 +59,11 @@ interface TransactionFlowState {
   lastDraftId: number;
   // The wallet of the last saved transaction, per space, so a new one starts there.
   lastWalletIds: Record<number, number>;
+  // Deletes waiting for the server, from the sheet or a list row; a row leaves the list only once its delete is done.
+  deletingIds: string[];
 }
 
-const initialState: TransactionFlowState = { flow: null, lastDraftId: 0, lastWalletIds: {} };
+const initialState: TransactionFlowState = { flow: null, lastDraftId: 0, lastWalletIds: {}, deletingIds: [] };
 
 type DraftScoped<T = object> = PayloadAction<T & { draftId: number }>;
 
@@ -342,6 +346,32 @@ const transactionFlowSlice = createSlice({
       const flow = flowOf(state, payload.draftId);
       if (flow) flow.away = null;
     },
+    // The open record locks its sheet like a save does; the confirmation already showed what is deleted.
+    deleteStarted: (state, { payload }: PayloadAction<{ transactionId: string }>) => {
+      if (state.deletingIds.includes(payload.transactionId)) return;
+
+      state.deletingIds.push(payload.transactionId);
+      const flow = idleFlow(state);
+      if (flow?.saved?.id !== payload.transactionId || (flow.view.name !== 'details' && flow.view.name !== 'edit')) {
+        return;
+      }
+
+      flow.isSaving = true;
+      flow.notice = null;
+    },
+    deleteSettled: (state, { payload }: PayloadAction<{ transactionId: string; result: DeleteResult }>) => {
+      state.deletingIds = state.deletingIds.filter((id) => id !== payload.transactionId);
+      const flow = state.flow;
+      if (flow?.saved?.id !== payload.transactionId || !flow.isSaving) return;
+
+      if (payload.result === 'deleted') {
+        state.flow = null;
+        return;
+      }
+
+      flow.isSaving = false;
+      if (payload.result !== 'stale') flow.notice = payload.result === 'conflict' ? 'conflict' : 'deleteFailed';
+    },
     closed: (state) => {
       if (idleFlow(state)) state.flow = null;
     },
@@ -350,13 +380,16 @@ const transactionFlowSlice = createSlice({
     // Ending the session or leaving the space ends the flow, even mid-write.
     builder.addCase(spaceSelected, (state) => {
       state.flow = null;
+      state.deletingIds = [];
     });
     builder.addCase(spaceAccessLost, (state, { payload }) => {
       if (state.flow?.spaceId === payload.spaceId) state.flow = null;
+      state.deletingIds = [];
     });
     builder.addCase(logoutMe.fulfilled, (state) => {
       state.flow = null;
       state.lastWalletIds = {};
+      state.deletingIds = [];
     });
   },
 });
@@ -389,6 +422,8 @@ export const {
   walletCreated,
   categoryCreated,
   awayEnded,
+  deleteStarted,
+  deleteSettled,
   closed,
 } = transactionFlowSlice.actions;
 

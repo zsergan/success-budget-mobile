@@ -18,6 +18,7 @@ import CreatedConfirmation from './CreatedConfirmation/CreatedConfirmation';
 import DateTimePanel from './DateTimePanel/DateTimePanel';
 import useFlowClose from './hooks/useFlowClose';
 import useFlowSave from './hooks/useFlowSave';
+import useTransactionDelete from './useTransactionDelete';
 import RecordGone from './RecordGone/RecordGone';
 import TransactionDetails from './TransactionDetails/TransactionDetails';
 import TransactionEditor from './TransactionEditor/TransactionEditor';
@@ -33,6 +34,7 @@ const TransactionFlowSheet = () => {
   const flow = useAppSelector(selectTransactionFlow);
   const save = useFlowSave();
   const { requestClose, back } = useFlowClose();
+  const { requestDelete, retryDelete } = useTransactionDelete();
 
   // The content stays on screen while the sheet animates away after the flow ended.
   const [lastFlow, setLastFlow] = useState<TransactionFlow | null>(flow);
@@ -120,11 +122,18 @@ const TransactionFlowSheet = () => {
             onClose={requestClose}
             onCreateWallet={() => leaveFor('wallet')}
             onCreateCategory={() => leaveFor('category')}
+            onDelete={() => shown.saved && requestDelete(shown.saved)}
+            onRetryDelete={() => shown.saved && retryDelete(shown.saved)}
           />
         ) : null;
       case 'details':
         return shown.saved ? (
-          <TransactionDetails flow={{ ...shown, saved: shown.saved }} onClose={requestClose} />
+          <TransactionDetails
+            flow={{ ...shown, saved: shown.saved }}
+            onClose={requestClose}
+            onDelete={() => shown.saved && requestDelete(shown.saved)}
+            onRetryDelete={() => shown.saved && retryDelete(shown.saved)}
+          />
         ) : null;
       case 'gone':
         return <RecordGone onClose={requestClose} />;
