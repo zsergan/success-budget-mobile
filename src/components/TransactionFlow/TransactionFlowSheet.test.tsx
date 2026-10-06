@@ -4,7 +4,7 @@ import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
-import type { Category, GetCategoriesResponse, WalletsOverviewResponse } from '@api/dto';
+import type { Category, GetCategoriesResponse, GetLimitsResponse, WalletsOverviewResponse } from '@api/dto';
 import { createAppStore } from '@redux/Store';
 import { activateSpace } from '@redux/state/space/thunks';
 import { createTransactionResponseDto, transactionDto } from '@redux/state/transaction/fixtures';
@@ -117,8 +117,11 @@ const wallets: WalletsOverviewResponse = {
   ],
 };
 
+const noLimits: GetLimitsResponse = { total: null, categories: [], over_allocation: null };
+
 let walletsResponse = wallets;
 let categoriesResponse = categories;
+let limitsResponse = noLimits;
 
 let answerWrite: (value: unknown) => void = () => {};
 
@@ -132,7 +135,7 @@ const respond = ({ url, method }: { url: string; method: string }) => {
   if (url.endsWith('/transactions/tx-1')) return Promise.resolve({ data: stored });
   if (url.endsWith('/wallets')) return Promise.resolve({ data: walletsResponse });
   if (url.endsWith('/categories')) return Promise.resolve({ data: categoriesResponse });
-  if (url.endsWith('/limits')) return Promise.resolve({ data: { total: null, categories: [], over_allocation: null } });
+  if (url.endsWith('/limits')) return Promise.resolve({ data: limitsResponse });
 
   return Promise.resolve({ data: [] });
 };
@@ -184,6 +187,7 @@ beforeEach(() => {
   stored = transactionDto({ amount: '50.00', version: 2 });
   walletsResponse = wallets;
   categoriesResponse = categories;
+  limitsResponse = noLimits;
   mockSheet.presents = 0;
   mockedRequest.mockImplementation(respond);
   jest.spyOn(Alert, 'alert');
@@ -548,5 +552,47 @@ describe('TransactionFlowSheet', () => {
     fireEvent.press(screen.getByText('Expense'));
     expect(flow()?.draft?.categoryId).toBeNull();
     expect(screen.getByText('Old gym')).toBeTruthy();
+  });
+
+  it("forecasts an edit of a deleted wallet's expense by replacing its share, without blocking Save", async () => {
+    const day = 86_400_000;
+    stored = transactionDto({ wallet: null, amount: '50.00', timestamp: new Date(Date.now() - day).toISOString() });
+    limitsResponse = {
+      period: {
+        time_zone: 'UTC',
+        start_date: '',
+        end_date: '',
+        from: new Date(Date.now() - 10 * day).toISOString(),
+        to: new Date(Date.now() + 10 * day).toISOString(),
+      },
+      total: null,
+      categories: [
+        {
+          id: 1,
+          name: null,
+          amount: '200.00',
+          spent: 150,
+          in_percent: 75,
+          categories: [{ id: 1, name: 'Food', icon: 'Grocery', color: AppColor.SLATE }],
+        },
+      ],
+      over_allocation: null,
+    };
+    const { openDetails } = renderFlow();
+
+    openDetails();
+    await settle();
+    fireEvent.press(screen.getByText('Edit'));
+    await settle();
+
+    expect(mockedRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ url: '/spaces/1/limits', params: { time_zone: expect.any(String) } }),
+    );
+    expect(screen.queryByText(/^Food:/)).toBeNull();
+
+    fireEvent.changeText(screen.getByLabelText('Amount'), '70');
+
+    expect(screen.getByText(/^Food: 150.* → 170.* of 200/)).toBeTruthy();
+    expect(screen.getByText('Save changes')).toBeEnabled();
   });
 });

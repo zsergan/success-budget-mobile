@@ -4,40 +4,24 @@ import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    minHeight: 28,
+    borderRadius: 9,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     flexDirection: 'row',
-    columnGap: theme.spacing.sm + 1,
-    borderWidth: 1,
+    alignItems: 'center',
+    columnGap: 6,
   },
-  content: {
-    flex: 1,
-    rowGap: theme.spacing.sm - 1,
-  },
+  // SemiBold under-measures its width in a content-sized text (see cde3346).
   text: {
+    flexShrink: 1,
+    paddingRight: 2,
     fontFamily: theme.fonts.semiBold,
-    fontSize: theme.fontSizes.bodySm,
-    lineHeight: theme.lineHeights.bodySm,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
     color: colors.text,
-  },
-  bar: {
-    height: 7,
-    borderRadius: 5,
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: colors.track,
-  },
-  barFill: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    borderRadius: 5,
-  },
-  footer: {
-    fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.micro,
-    color: colors.muted,
   },
 });
 

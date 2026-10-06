@@ -4,13 +4,11 @@ import type { BottomSheetScrollViewMethods } from '@gorhom/bottom-sheet';
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import type { TransactionModel } from '@api/models';
 import Icon from '@components/Icon/Icon';
 import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
 import { getActiveCategories } from '@redux/state/category/selectors';
 import { useGetLimitsQuery } from '@redux/state/limit/api';
-import { EMPTY_LIMITS, findLimitForCategory } from '@redux/state/limit/selectors';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import type { TransactionDraft } from '@redux/state/transactionFlow/draft';
 import {
@@ -30,6 +28,7 @@ import AmountField from './AmountField/AmountField';
 import CategoryGrid from './CategoryGrid/CategoryGrid';
 import { buildCategoryGrid } from './CategoryGrid/categoryLayout';
 import DateChip from './DateChip/DateChip';
+import { forecastLimit } from './LimitHint/limitForecast';
 import LimitHint from './LimitHint/LimitHint';
 import TypeToggle from './TypeToggle/TypeToggle';
 import useDefaultWallet from './useDefaultWallet';
@@ -39,20 +38,6 @@ import WalletPicker from './WalletPicker/WalletPicker';
 import styles from './style';
 
 export const EDITOR_HEIGHT_FRACTION = 0.86;
-
-const isThisMonth = (timestamp: string, now: Date) => {
-  const date = new Date(timestamp);
-
-  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
-};
-
-// What an expense already adds to its limit's `spent` this month, so an edit replaces it instead of counting it twice.
-const countedInLimit = (saved: TransactionModel | null, categoryId: number | null, now: Date) =>
-  saved?.transactionType === TransactionType.EXPENSE &&
-  saved.category.id === categoryId &&
-  isThisMonth(saved.timestamp, now)
-    ? Number(saved.amount)
-    : 0;
 
 interface Props {
   flow: TransactionFlow & { draft: TransactionDraft };
@@ -73,7 +58,7 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
   const spaceArg = useSpaceArg();
   const { currentData: walletsOverview } = useGetWalletsQuery(spaceArg);
   const { currentData: allCategories } = useGetCategoriesQuery(spaceArg);
-  const { categoryLimits } = useGetLimitsQuery(spaceArg).currentData ?? EMPTY_LIMITS;
+  const { currentData: limits } = useGetLimitsQuery(spaceArg);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
   const { draft, saved, isSaving } = flow;
@@ -131,10 +116,12 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
   const missing = [amountError ? undefined : errors.amount, errors.category, errors.wallet, errors.description];
   const helperText = isEdit && !isChanged ? undefined : missing.find(Boolean);
 
-  const matchedLimit =
-    !isIncome && draft.categoryId !== null && isThisMonth(draft.timestamp, now)
-      ? findLimitForCategory(categoryLimits, draft.categoryId)
-      : undefined;
+  const limitForecast = forecastLimit({
+    limits,
+    original: saved && { ...saved, categoryId: saved.category.id },
+    draft,
+    now: now.getTime(),
+  });
 
   const hasDeletedWallet = isEdit && saved.wallet === null;
   const hasNoWallets = activeWalletIds?.length === 0;
@@ -206,14 +193,9 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
             error={amountError}
           />
 
-          {matchedLimit && (
+          {limitForecast && (
             <View style={styles.limitHint}>
-              <LimitHint
-                limit={matchedLimit}
-                amount={draft.amount}
-                counted={countedInLimit(saved, draft.categoryId, now)}
-                currencyCode={currencyCode}
-              />
+              <LimitHint forecast={limitForecast} currencyCode={currencyCode} />
             </View>
           )}
         </View>
