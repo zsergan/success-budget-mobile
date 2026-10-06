@@ -19,6 +19,10 @@ import {
   detailsOpened,
   draftChanged,
   editLeft,
+  latestLoaded,
+  recordChecked,
+  recordGone,
+  writeConflicted,
   editStarted,
   editSucceeded,
   panelClosed,
@@ -64,6 +68,11 @@ const setUp = () => {
   return { store, flow: () => selectTransactionFlow(store.getState()) };
 };
 
+const openChecked = (store: ReturnType<typeof setUp>['store'], transaction = saved) => {
+  store.dispatch(detailsOpened({ spaceId: 1, transaction }));
+  store.dispatch(recordChecked({ draftId: selectTransactionFlow(store.getState())!.draftId, transaction }));
+};
+
 const openCreate = (store: ReturnType<typeof setUp>['store']) =>
   store.dispatch(createOpened({ spaceId: 1, transactionType: TransactionType.EXPENSE, walletId: 3, now: NOW }));
 
@@ -102,12 +111,28 @@ describe('transaction flow', () => {
     expect(flow()).toMatchObject({ view: { name: 'create' }, draft: { timestamp: '2026-10-01T08:00:00.000Z' } });
   });
 
-  it('edits from the details, has changes only while a value differs, and goes back to the details', () => {
+  it('offers Edit only once the record was read again, and keeps the newest version it read', () => {
     const { store, flow } = setUp();
 
     store.dispatch(detailsOpened({ spaceId: 1, transaction: saved }));
-    store.dispatch(editStarted({ transaction: { ...saved, version: 3 } }));
-    expect(flow()).toMatchObject({ view: { name: 'edit' }, saved: { version: 3 }, draft: { walletId: null } });
+    store.dispatch(editStarted());
+    expect(flow()).toMatchObject({ view: { name: 'details' }, check: 'pending' });
+
+    const { draftId } = flow()!;
+    store.dispatch(recordChecked({ draftId, transaction: { ...saved, amount: '60.00', version: 3 } }));
+    store.dispatch(recordChecked({ draftId, transaction: saved }));
+    expect(flow()).toMatchObject({ check: 'done', saved: { amount: '60.00', version: 3 } });
+
+    store.dispatch(editStarted());
+    expect(flow()).toMatchObject({ view: { name: 'edit' }, draft: { amount: '60.00' } });
+  });
+
+  it('edits from the details, has changes only while a value differs, and goes back to the details', () => {
+    const { store, flow } = setUp();
+
+    openChecked(store);
+    store.dispatch(editStarted());
+    expect(flow()).toMatchObject({ view: { name: 'edit' }, saved: { version: 2 }, draft: { walletId: null } });
 
     store.dispatch(draftChanged({ amount: '70' }));
     expect(hasUnsavedChanges(flow())).toBe(true);
@@ -123,8 +148,8 @@ describe('transaction flow', () => {
     const { store, flow } = setUp();
     const initialBalance = { ...saved, kind: TransactionKind.INITIAL_BALANCE };
 
-    store.dispatch(detailsOpened({ spaceId: 1, transaction: initialBalance }));
-    store.dispatch(editStarted({ transaction: initialBalance }));
+    openChecked(store, initialBalance);
+    store.dispatch(editStarted());
 
     expect(flow()?.view).toEqual({ name: 'details' });
   });
@@ -147,11 +172,47 @@ describe('transaction flow', () => {
     expect(flow()).toBeNull();
   });
 
+  it('keeps the draft after a conflict until the latest version is loaded on request', () => {
+    const { store, flow } = setUp();
+
+    openChecked(store);
+    store.dispatch(editStarted());
+    store.dispatch(draftChanged({ amount: '70' }));
+    const { draftId } = flow()!;
+
+    store.dispatch(saveStarted({ draftId }));
+    store.dispatch(writeConflicted({ draftId }));
+    expect(flow()).toMatchObject({ isSaving: false, notice: 'conflict', draft: { amount: '70' } });
+
+    store.dispatch(latestLoaded({ draftId, transaction: { ...saved, amount: '55.00', version: 4 } }));
+    expect(flow()).toMatchObject({
+      draftId: draftId + 1,
+      view: { name: 'edit' },
+      notice: null,
+      saved: { version: 4 },
+      draft: { amount: '55.00' },
+    });
+    expect(hasUnsavedChanges(flow())).toBe(false);
+  });
+
+  it('ends on its own view when the record was deleted elsewhere', () => {
+    const { store, flow } = setUp();
+
+    openChecked(store);
+    store.dispatch(editStarted());
+    store.dispatch(draftChanged({ amount: '70' }));
+    store.dispatch(recordGone({ draftId: flow()!.draftId }));
+
+    expect(flow()).toMatchObject({ view: { name: 'gone' }, draft: null });
+    store.dispatch(closed());
+    expect(flow()).toBeNull();
+  });
+
   it('returns from a saved edit to the details with the new record', () => {
     const { store, flow } = setUp();
 
-    store.dispatch(detailsOpened({ spaceId: 1, transaction: saved }));
-    store.dispatch(editStarted({ transaction: saved }));
+    openChecked(store);
+    store.dispatch(editStarted());
     const { draftId } = flow()!;
 
     store.dispatch(saveStarted({ draftId }));
@@ -245,8 +306,8 @@ describe('transaction flow', () => {
   it('keeps the category of an edited record in the grid', () => {
     const { store, flow } = setUp();
 
-    store.dispatch(detailsOpened({ spaceId: 1, transaction: saved }));
-    store.dispatch(editStarted({ transaction: saved }));
+    openChecked(store);
+    store.dispatch(editStarted());
 
     expect(flow()?.promotedCategoryId).toBe(4);
   });

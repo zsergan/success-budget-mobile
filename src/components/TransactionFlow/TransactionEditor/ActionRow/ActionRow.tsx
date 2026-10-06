@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,10 +17,21 @@ interface Props {
   // The home indicator is under the keyboard then, so its inset is not kept.
   isAboveKeyboard?: boolean;
   typeColor: string;
+  // Shown over Save in place of the helper text.
+  banner?: ReactNode;
   onPress: () => void;
 }
 
-const ActionRow = ({ label, helperText, ready, isSaving, isAboveKeyboard = false, typeColor, onPress }: Props) => {
+const ActionRow = ({
+  label,
+  helperText,
+  ready,
+  isSaving,
+  isAboveKeyboard = false,
+  typeColor,
+  banner,
+  onPress,
+}: Props) => {
   const insets = useSafeAreaInsets();
   const isActive = ready || isSaving;
 
@@ -27,7 +39,9 @@ const ActionRow = ({ label, helperText, ready, isSaving, isAboveKeyboard = false
     <View
       style={[styles.footer, { marginBottom: isAboveKeyboard ? theme.spacing.md : theme.spacing.xl + insets.bottom }]}
     >
-      {helperText && !isSaving && (
+      {banner}
+
+      {!banner && helperText && !isSaving && (
         <View style={styles.helperRow}>
           <Icon name="info" size={13} color={colors.muted} strokeWidth={1.8} />
           <Text style={styles.helperText}>{helperText}</Text>

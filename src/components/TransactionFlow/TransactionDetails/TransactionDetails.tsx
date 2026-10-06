@@ -1,4 +1,4 @@
-import { Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
@@ -7,28 +7,27 @@ import { isInitialBalance } from '@api/models';
 import Icon from '@components/Icon/Icon';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
-import { useGetTransactionQuery } from '@redux/state/transaction/api';
+import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { editStarted } from '@redux/state/transactionFlow/slice';
+import { checkFlowRecord } from '@redux/state/transactionFlow/thunks';
 import { TransactionType } from '@shared/enums';
 import theme, { colors } from '@shared/theme';
 import { formatAmount, hexToRgba } from '@shared/utils';
+import FlowBanner from '../FlowBanner/FlowBanner';
 import { formatDateTime } from '../format';
 
 import styles from './style';
 
 interface Props {
-  spaceId: number;
-  saved: TransactionModel;
+  flow: TransactionFlow & { saved: TransactionModel };
   onClose: () => void;
 }
 
-// Reads the record again, so Edit starts from the version on the server rather than the one the list had.
-const TransactionDetails = ({ spaceId, saved, onClose }: Props) => {
+// Shows the record the list had at once; Edit waits until it is read again, so it never starts from an old version.
+const TransactionDetails = ({ flow: { saved: transaction, check }, onClose }: Props) => {
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
-  const { currentData } = useGetTransactionQuery({ spaceId, transactionId: saved.id });
-  const transaction = currentData && currentData.version >= saved.version ? currentData : saved;
 
   const isSystem = isInitialBalance(transaction);
   const isIncome = transaction.transactionType === TransactionType.INCOME;
@@ -99,14 +98,32 @@ const TransactionDetails = ({ spaceId, saved, onClose }: Props) => {
       {isSystem ? (
         <Text style={styles.systemNote}>Set when the wallet was created</Text>
       ) : (
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={() => dispatch(editStarted({ transaction }))}
-          activeOpacity={0.8}
-        >
-          <Icon name="edit" size={16} color={colors.text} strokeWidth={1.9} />
-          <Text style={styles.editButtonText}>Edit</Text>
-        </TouchableOpacity>
+        <>
+          {check === 'failed' && (
+            <FlowBanner
+              tone="danger"
+              text="Couldn’t load the latest version. Check your connection and try again."
+              actionLabel="Try again"
+              onAction={() => dispatch(checkFlowRecord())}
+            />
+          )}
+
+          <TouchableOpacity
+            style={[styles.editButton, check !== 'done' && styles.buttonLocked]}
+            onPress={() => dispatch(editStarted())}
+            disabled={check !== 'done'}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: check !== 'done', busy: check === 'pending' }}
+          >
+            {check === 'pending' ? (
+              <ActivityIndicator size="small" color={colors.text} />
+            ) : (
+              <Icon name="edit" size={16} color={colors.text} strokeWidth={1.9} />
+            )}
+            <Text style={styles.editButtonText}>Edit</Text>
+          </TouchableOpacity>
+        </>
       )}
     </View>
   );

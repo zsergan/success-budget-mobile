@@ -18,6 +18,7 @@ import CreatedConfirmation from './CreatedConfirmation/CreatedConfirmation';
 import DateTimePanel from './DateTimePanel/DateTimePanel';
 import useFlowClose from './hooks/useFlowClose';
 import useFlowSave from './hooks/useFlowSave';
+import RecordGone from './RecordGone/RecordGone';
 import TransactionDetails from './TransactionDetails/TransactionDetails';
 import TransactionEditor from './TransactionEditor/TransactionEditor';
 
@@ -123,8 +124,10 @@ const TransactionFlowSheet = () => {
         ) : null;
       case 'details':
         return shown.saved ? (
-          <TransactionDetails spaceId={shown.spaceId} saved={shown.saved} onClose={requestClose} />
+          <TransactionDetails flow={{ ...shown, saved: shown.saved }} onClose={requestClose} />
         ) : null;
+      case 'gone':
+        return <RecordGone onClose={requestClose} />;
       case 'categories':
         return shown.draft ? (
           <CategoriesPanel

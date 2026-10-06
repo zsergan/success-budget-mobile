@@ -5,6 +5,7 @@ import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-shee
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Icon from '@components/Icon/Icon';
+import { useAlert } from '@hooks';
 import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
 import { getActiveCategories } from '@redux/state/category/selectors';
@@ -20,9 +21,11 @@ import {
 import { hasUnsavedChanges } from '@redux/state/transactionFlow/selectors';
 import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { categoriesOpened, dateTimeOpened, draftChanged } from '@redux/state/transactionFlow/slice';
+import { loadLatestRecord } from '@redux/state/transactionFlow/thunks';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { TransactionType } from '@shared/enums';
 import theme, { colors } from '@shared/theme';
+import FlowBanner from '../FlowBanner/FlowBanner';
 import ActionRow from './ActionRow/ActionRow';
 import AmountField from './AmountField/AmountField';
 import CategoryGrid from './CategoryGrid/CategoryGrid';
@@ -55,6 +58,8 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
   const keyboardHeight = useKeyboardHeight();
   const scrollRef = useRef<BottomSheetScrollViewMethods>(null);
   const [isNoteFocused, setNoteFocused] = useState(false);
+  const [isLoadingLatest, setLoadingLatest] = useState(false);
+  const { addAlert } = useAlert();
   const spaceArg = useSpaceArg();
   const { currentData: walletsOverview } = useGetWalletsQuery(spaceArg);
   const { currentData: allCategories } = useGetCategoriesQuery(spaceArg);
@@ -109,7 +114,8 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
     },
   });
   const isChanged = hasUnsavedChanges(flow);
-  const ready = !hasDraftErrors(errors) && (!isEdit || isChanged);
+  const hasConflict = flow.notice === 'conflict';
+  const ready = !hasDraftErrors(errors) && (!isEdit || isChanged) && !hasConflict;
   // A typed value that is not an amount, and a date out of range, are explained at their fields; the footer names
   // what is still missing.
   const amountError = draft.amount.trim() ? errors.amount : undefined;
@@ -142,6 +148,14 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
   useEffect(() => {
     if (isNoteFocused && keyboardHeight > 0) scrollRef.current?.scrollToEnd({ animated: true });
   }, [isNoteFocused, keyboardHeight]);
+
+  const loadLatest = async () => {
+    setLoadingLatest(true);
+    const outcome = await dispatch(loadLatestRecord());
+    setLoadingLatest(false);
+
+    if (outcome === 'failed') addAlert('Couldn’t load the latest version. Check your connection and try again.');
+  };
 
   const saveLabel = isEdit ? 'Save changes' : isIncome ? 'Save income' : 'Save expense';
 
@@ -264,6 +278,18 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
         isSaving={isSaving}
         isAboveKeyboard={keyboardHeight > 0}
         typeColor={typeColor}
+        banner={
+          hasConflict && (
+            <FlowBanner
+              tone="warn"
+              title="This transaction was changed"
+              text="Someone saved it after you opened it. Your edits are still here; loading the latest version replaces them."
+              actionLabel="Load latest"
+              isBusy={isLoadingLatest}
+              onAction={loadLatest}
+            />
+          )
+        }
         onPress={onSave}
       />
     </View>

@@ -10,7 +10,8 @@ import { activateSpace } from '@redux/state/space/thunks';
 import { createTransactionResponseDto, transactionDto } from '@redux/state/transaction/fixtures';
 import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import { mapTransaction } from '@api/models';
-import { awayEnded, createOpened, detailsOpened, walletCreated } from '@redux/state/transactionFlow/slice';
+import { awayEnded, createOpened, walletCreated } from '@redux/state/transactionFlow/slice';
+import { openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
 import TransactionFlowSheet from './TransactionFlowSheet';
 
@@ -124,6 +125,10 @@ let categoriesResponse = categories;
 let limitsResponse = noLimits;
 
 let answerWrite: (value: unknown) => void = () => {};
+let failWrite: (reason: unknown) => void = () => {};
+let answerRead: (() => Promise<unknown>) | null = null;
+
+const refusal = (statusCode: number, code: string) => ({ response: { data: { statusCode, code, message: code } } });
 
 let stored = transactionDto({ amount: '50.00', version: 2 });
 
@@ -131,8 +136,13 @@ const respond = ({ url, method }: { url: string; method: string }) => {
   if (method === 'POST' && url.endsWith('/categories')) {
     return Promise.resolve({ data: category(30, 'Bonus', TransactionType.INCOME) });
   }
-  if (method === 'POST' || method === 'PATCH') return new Promise((resolve) => (answerWrite = resolve));
-  if (url.endsWith('/transactions/tx-1')) return Promise.resolve({ data: stored });
+  if (method === 'POST' || method === 'PATCH') {
+    return new Promise((resolve, reject) => {
+      answerWrite = resolve;
+      failWrite = reject;
+    });
+  }
+  if (url.endsWith('/transactions/tx-1')) return answerRead ? answerRead() : Promise.resolve({ data: stored });
   if (url.endsWith('/wallets')) return Promise.resolve({ data: walletsResponse });
   if (url.endsWith('/categories')) return Promise.resolve({ data: categoriesResponse });
   if (url.endsWith('/limits')) return Promise.resolve({ data: limitsResponse });
@@ -165,7 +175,7 @@ const renderFlow = () => {
 
   const openDetails = () =>
     act(() => {
-      store.dispatch(detailsOpened({ spaceId: 1, transaction: mapTransaction(stored) }));
+      store.dispatch(openTransactionDetails({ spaceId: 1, transaction: mapTransaction(stored) }));
     });
 
   return { store, open, openDetails, flow: () => selectTransactionFlow(store.getState()) };
@@ -185,6 +195,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockSheet.props = undefined;
   stored = transactionDto({ amount: '50.00', version: 2 });
+  answerRead = null;
   walletsResponse = wallets;
   categoriesResponse = categories;
   limitsResponse = noLimits;
@@ -368,6 +379,93 @@ describe('TransactionFlowSheet', () => {
       }),
     );
     expect(flow()).toMatchObject({ view: { name: 'details' }, saved: { amount: '70.00', version: 3 } });
+    expect(mockAddAlert).toHaveBeenCalledWith('Changes saved');
+  });
+
+  it('shows the record the list had, and offers Edit only once it is read again', async () => {
+    let finishRead: (value: unknown) => void = () => {};
+    answerRead = () => new Promise((resolve) => (finishRead = resolve));
+    const { openDetails, flow } = renderFlow();
+
+    openDetails();
+    await settle();
+    expect(flow()).toMatchObject({ check: 'pending', saved: { amount: '50.00' } });
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeDisabled();
+
+    await act(async () => finishRead({ data: transactionDto({ amount: '65.00', version: 3 }) }));
+    await settle();
+
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeEnabled();
+    expect(flow()).toMatchObject({ check: 'done', saved: { amount: '65.00', version: 3 } });
+  });
+
+  it('lets the details be read again when the first read fails', async () => {
+    answerRead = () => Promise.reject(new Error('Network Error'));
+    const { openDetails } = renderFlow();
+
+    openDetails();
+    await settle();
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeDisabled();
+
+    answerRead = null;
+    fireEvent.press(screen.getByText('Try again'));
+    await settle();
+
+    expect(screen.queryByText('Try again')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeEnabled();
+  });
+
+  it('keeps the edits after a conflict and replaces them only when the latest version is loaded', async () => {
+    const { openDetails, flow } = renderFlow();
+
+    openDetails();
+    await settle();
+    fireEvent.press(screen.getByText('Edit'));
+    fireEvent.changeText(screen.getByLabelText('Amount'), '70');
+    fireEvent.press(screen.getByText('Save changes'));
+
+    await act(async () => failWrite(refusal(409, 'TRANSACTION_VERSION_CONFLICT')));
+    await settle();
+
+    expect(screen.getByText('This transaction was changed')).toBeTruthy();
+    expect(screen.getByLabelText('Amount').props.value).toBe('70');
+    expect(screen.getByText('Save changes')).toBeDisabled();
+    expect(mockedRequest.mock.calls.filter(([config]) => config.method === 'PATCH')).toHaveLength(1);
+
+    stored = transactionDto({ amount: '80.00', version: 3 });
+    fireEvent.press(screen.getByText('Load latest'));
+    await settle();
+
+    expect(screen.queryByText('This transaction was changed')).toBeNull();
+    expect(screen.getByLabelText('Amount').props.value).toBe('80.00');
+    expect(flow()).toMatchObject({ view: { name: 'edit' }, saved: { version: 3 } });
+  });
+
+  it('says the record no longer exists when the details find it deleted elsewhere', async () => {
+    answerRead = () => Promise.reject(refusal(404, 'TRANSACTION_NOT_FOUND'));
+    const { openDetails } = renderFlow();
+
+    openDetails();
+    await settle();
+
+    expect(screen.getByText('This transaction no longer exists')).toBeTruthy();
+    fireEvent.press(screen.getByText('Close'));
+    expect(screen.queryByText('This transaction no longer exists')).toBeNull();
+  });
+
+  it('says the record no longer exists when an edit finds it deleted', async () => {
+    const { openDetails } = renderFlow();
+
+    openDetails();
+    await settle();
+    fireEvent.press(screen.getByText('Edit'));
+    fireEvent.changeText(screen.getByLabelText('Amount'), '70');
+    fireEvent.press(screen.getByText('Save changes'));
+    await act(async () => failWrite(refusal(404, 'TRANSACTION_NOT_FOUND')));
+    await settle();
+
+    expect(screen.getByText('This transaction no longer exists')).toBeTruthy();
+    expect(mockAddAlert).not.toHaveBeenCalled();
   });
 
   it('keeps a deleted wallet unless another one is picked', async () => {

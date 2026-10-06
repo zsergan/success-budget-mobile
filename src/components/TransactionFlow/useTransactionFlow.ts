@@ -3,7 +3,8 @@ import { useCallback } from 'react';
 import type { TransactionModel } from '@api/models';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
-import { createOpened, detailsOpened } from '@redux/state/transactionFlow/slice';
+import { createOpened } from '@redux/state/transactionFlow/slice';
+import { openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { TransactionType } from '@shared/enums';
 
 // Opens the one transaction sheet for the active space; a flow that is already open stays as it is.
@@ -22,7 +23,7 @@ const useTransactionFlow = () => {
 
   const openDetails = useCallback(
     (transaction: TransactionModel) => {
-      if (spaceId !== null) dispatch(detailsOpened({ spaceId, transaction }));
+      if (spaceId !== null) dispatch(openTransactionDetails({ spaceId, transaction }));
     },
     [dispatch, spaceId],
   );

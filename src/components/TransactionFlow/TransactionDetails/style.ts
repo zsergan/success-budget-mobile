@@ -117,6 +117,9 @@ const styles = StyleSheet.create({
     columnGap: theme.spacing.sm,
     backgroundColor: colors.track,
   },
+  buttonLocked: {
+    opacity: 0.5,
+  },
   editButtonText: {
     fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.bodyLg,

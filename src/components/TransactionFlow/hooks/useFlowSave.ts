@@ -4,7 +4,14 @@ import { useAlert, useTransactionOperation } from '@hooks';
 import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
 import { getDraftErrors, hasDraftErrors, toCreateRequest, toUpdateRequest } from '@redux/state/transactionFlow/draft';
 import { hasUnsavedChanges, selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
-import { createSucceeded, editSucceeded, saveFailed, saveStarted } from '@redux/state/transactionFlow/slice';
+import {
+  createSucceeded,
+  editSucceeded,
+  recordGone,
+  saveFailed,
+  saveStarted,
+  writeConflicted,
+} from '@redux/state/transactionFlow/slice';
 import { getErrorMessage } from '@shared/utils';
 
 // Saves the open draft once the API confirms it; a second tap, or an answer for another draft, space or session, does nothing.
@@ -20,7 +27,8 @@ const useFlowSave = () => {
 
   return useCallback(async () => {
     const flow = selectTransactionFlow(store.getState());
-    if (!flow?.draft || flow.isSaving) return;
+    // After a conflict the same version would be refused again; the user loads the latest one first.
+    if (!flow?.draft || flow.isSaving || flow.notice === 'conflict') return;
 
     const { saved, draft, spaceId } = flow;
     const errors = getDraftErrors(draft, {
@@ -45,6 +53,13 @@ const useFlowSave = () => {
 
     if (outcome.status === 'ignored') return;
 
+    if (outcome.status === 'failed' && saved) {
+      const { kind } = outcome.failure;
+
+      if (kind === 'conflict') return void dispatch(writeConflicted(scope));
+      if (kind === 'notFound') return void dispatch(recordGone(scope));
+    }
+
     if (outcome.status !== 'succeeded') {
       dispatch(saveFailed(scope));
       if (outcome.status === 'failed') addAlert(getErrorMessage(outcome.failure.error));
@@ -55,6 +70,7 @@ const useFlowSave = () => {
       dispatch(createSucceeded({ ...scope, result: outcome.result }));
     } else {
       dispatch(editSucceeded({ ...scope, transaction: outcome.result.transaction }));
+      addAlert('Changes saved');
     }
   }, [dispatch, store, submit, addAlert]);
 };

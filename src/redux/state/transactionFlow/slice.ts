@@ -18,10 +18,18 @@ export type FlowView =
   | { name: 'categories'; form: FlowForm }
   // `pending` is the date and time picked but not applied yet.
   | { name: 'dateTime'; form: FlowForm; pending: string }
-  | { name: 'created' };
+  | { name: 'created' }
+  // The record was deleted elsewhere.
+  | { name: 'gone' };
 
 // Creating a wallet or a category from the form hides the sheet; the draft waits here.
 export type FlowAway = 'wallet' | 'category';
+
+// Whether the record has been read again since the details opened from a list that may be behind the server.
+export type FlowCheck = 'pending' | 'done' | 'failed';
+
+// `conflict`: the record changed after it was read, so a write at its version was refused.
+export type FlowNotice = 'conflict';
 
 export interface TransactionFlow {
   // New for every draft, so a write's key or a late answer never carries over to the next one.
@@ -29,6 +37,8 @@ export interface TransactionFlow {
   spaceId: number;
   view: FlowView;
   saved: TransactionModel | null;
+  check: FlowCheck;
+  notice: FlowNotice | null;
   draft: TransactionDraft | null;
   // What the draft started from; it has changes only while it differs from this.
   baseline: TransactionDraft | null;
@@ -82,6 +92,8 @@ const startCreate = (
     spaceId: flow.spaceId,
     view: { name: 'create', focusAmount: true },
     saved: null,
+    check: 'done',
+    notice: null,
     draft: fresh,
     baseline: fresh,
     followsNow: true,
@@ -115,6 +127,8 @@ const transactionFlowSlice = createSlice({
         spaceId: payload.spaceId,
         view: { name: 'details' },
         saved: payload.transaction,
+        check: 'pending',
+        notice: null,
         draft: null,
         baseline: null,
         followsNow: false,
@@ -124,17 +138,69 @@ const transactionFlowSlice = createSlice({
         away: null,
       };
     },
-    // Takes the record as the details show it now, which may be newer than when they opened.
-    editStarted: (state, { payload }: PayloadAction<{ transaction: TransactionModel }>) => {
-      const flow = idleFlow(state);
-      if (flow?.view.name !== 'details' || isInitialBalance(payload.transaction)) return;
+    checkStarted: (state, { payload }: DraftScoped) => {
+      const flow = flowOf(state, payload.draftId);
+      if (flow?.view.name === 'details') flow.check = 'pending';
+    },
+    // The details follow the server; an older answer than what they show changes nothing.
+    recordChecked: (state, { payload }: DraftScoped<{ transaction: TransactionModel }>) => {
+      const flow = flowOf(state, payload.draftId);
+      if (flow?.view.name !== 'details' || flow.isSaving || flow.saved?.id !== payload.transaction.id) return;
+
+      if (payload.transaction.version >= flow.saved.version) flow.saved = payload.transaction;
+      flow.check = 'done';
+    },
+    checkFailed: (state, { payload }: DraftScoped) => {
+      const flow = flowOf(state, payload.draftId);
+      if (flow?.view.name === 'details' && flow.check === 'pending') flow.check = 'failed';
+    },
+    recordGone: (state, { payload }: DraftScoped) => {
+      const flow = flowOf(state, payload.draftId);
+      if (!flow?.saved) return;
+
+      flow.view = { name: 'gone' };
+      flow.isSaving = false;
+      flow.notice = null;
+      flow.draft = null;
+      flow.baseline = null;
+    },
+    // A conflict keeps the draft as typed; only the user replaces it, by loading the latest version.
+    writeConflicted: (state, { payload }: DraftScoped) => {
+      const flow = flowOf(state, payload.draftId);
+      if (!flow?.saved) return;
+
+      flow.isSaving = false;
+      flow.notice = 'conflict';
+    },
+    latestLoaded: (state, { payload }: DraftScoped<{ transaction: TransactionModel }>) => {
+      const flow = flowOf(state, payload.draftId);
+      if (!flow || flow.isSaving || flow.saved?.id !== payload.transaction.id) return;
+
+      flow.saved = payload.transaction;
+      flow.check = 'done';
+      flow.notice = null;
+      if (!flow.draft) return;
 
       state.lastDraftId += 1;
       flow.draftId = state.lastDraftId;
-      flow.saved = payload.transaction;
       flow.draft = draftFromTransaction(payload.transaction);
       flow.baseline = flow.draft;
       flow.promotedCategoryId = payload.transaction.category.id;
+      flow.view = { name: 'edit' };
+    },
+    // Only a record read again since the details opened can be edited.
+    editStarted: (state) => {
+      const flow = idleFlow(state);
+      if (flow?.view.name !== 'details' || flow.check !== 'done' || !flow.saved || isInitialBalance(flow.saved)) {
+        return;
+      }
+
+      state.lastDraftId += 1;
+      flow.draftId = state.lastDraftId;
+      flow.draft = draftFromTransaction(flow.saved);
+      flow.baseline = flow.draft;
+      flow.promotedCategoryId = flow.saved.category.id;
+      flow.notice = null;
       flow.view = { name: 'edit' };
     },
     editLeft: (state) => {
@@ -142,6 +208,7 @@ const transactionFlowSlice = createSlice({
       if (flow?.view.name !== 'edit') return;
 
       flow.view = { name: 'details' };
+      flow.notice = null;
       flow.draft = null;
       flow.baseline = null;
     },
@@ -218,6 +285,7 @@ const transactionFlowSlice = createSlice({
       flow.isSaving = false;
       if (payload.transaction.wallet) state.lastWalletIds[flow.spaceId] = payload.transaction.wallet.id;
       flow.saved = payload.transaction;
+      flow.check = 'done';
       flow.draft = null;
       flow.baseline = null;
       flow.view = { name: 'details' };
@@ -296,6 +364,12 @@ const transactionFlowSlice = createSlice({
 export const {
   createOpened,
   detailsOpened,
+  checkStarted,
+  recordChecked,
+  checkFailed,
+  recordGone,
+  writeConflicted,
+  latestLoaded,
   editStarted,
   editLeft,
   draftChanged,
