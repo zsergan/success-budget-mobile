@@ -5,3 +5,4 @@ export * from './limitStatus';
 export * from './transform';
 export * from './validation';
 export * from './period';
+export * from './money';
