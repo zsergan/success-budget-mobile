@@ -9,11 +9,13 @@ import { logoutMe } from './state/auth/thunks';
 import { startSpaceSelectionListener } from './state/space/listeners';
 import memberReducer from './state/member/slice';
 import spaceReducer from './state/space/slice';
+import transactionFlowReducer from './state/transactionFlow/slice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
   member: memberReducer,
   space: spaceReducer,
+  transactionFlow: transactionFlowReducer,
   [baseApi.reducerPath]: baseApi.reducer,
 });
 
