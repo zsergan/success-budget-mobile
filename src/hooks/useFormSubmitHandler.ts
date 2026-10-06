@@ -4,6 +4,9 @@ import { useSessionGuard } from '@redux/hooks';
 import { getErrorMessage } from '@shared/utils';
 import useAlert from './useAlert';
 
+// Thrown by an onSubmit whose outcome must not surface (a repeated tap, another space): no alert, no success.
+export class SubmitSkipped extends Error {}
+
 interface UseFormSubmitHandlerOptions<TFormData extends FieldValues, TResult> {
   handleSubmit: UseFormHandleSubmit<TFormData>;
   formState: { isSubmitting: boolean; isSubmitSuccessful: boolean };
@@ -38,7 +41,7 @@ const useFormSubmitHandler = <TFormData extends FieldValues, TResult = unknown>(
       onSuccess(result);
     } catch (error) {
       // Includes the abort logout causes, which is not an isStale response.
-      if (isSessionCurrent()) addAlert(getErrorMessage(error));
+      if (isSessionCurrent() && !(error instanceof SubmitSkipped)) addAlert(getErrorMessage(error));
 
       throw error;
     }

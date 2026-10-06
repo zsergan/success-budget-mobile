@@ -1,7 +1,7 @@
 import * as yup from 'yup';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { randomUUID } from 'expo-crypto';
 import { useBottomSheet } from '@gorhom/bottom-sheet';
 
 import type { CreateTransactionRequest } from '@api/dto';
@@ -9,9 +9,8 @@ import { TransactionType } from '@shared/enums';
 import { requireSpaceId } from '@redux/api/baseApi';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
-import { useCreateTransactionMutation } from '@redux/state/transaction/api';
 import { positiveAmountSchema } from '@shared/utils';
-import { useFormSubmitHandler } from '@hooks';
+import { SubmitSkipped, useFormSubmitHandler, useTransactionOperation } from '@hooks';
 
 export interface TransactionFormData {
   amount: string;
@@ -37,8 +36,10 @@ interface UseTransactionFormProps {
 }
 
 const useTransactionForm = ({ transactionType, initialWalletId }: UseTransactionFormProps) => {
+  // The draft belongs to the space it was started in; a save after a switch is never sent.
   const spaceId = useAppSelector(selectCurrentSpaceId);
-  const [createTransaction] = useCreateTransactionMutation();
+  const [draftSpaceId] = useState(spaceId);
+  const { submit } = useTransactionOperation();
   const { close } = useBottomSheet();
 
   const {
@@ -74,11 +75,12 @@ const useTransactionForm = ({ transactionType, initialWalletId }: UseTransaction
         description: formData.notes,
       };
 
-      return createTransaction({
-        spaceId: requireSpaceId(spaceId),
-        idempotencyKey: randomUUID(),
-        data: payload,
-      }).unwrap();
+      const outcome = await submit({ type: 'create', spaceId: requireSpaceId(draftSpaceId), data: payload });
+
+      if (outcome.status === 'succeeded') return outcome.result;
+      if (outcome.status === 'failed') throw outcome.failure.error;
+
+      throw new SubmitSkipped();
     },
     onSuccess: () => {
       close();
