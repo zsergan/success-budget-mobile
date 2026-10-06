@@ -5,6 +5,7 @@ import { mapLimitsResponse } from '@api/models';
 import type { SpaceArg } from '@redux/api/baseApi';
 import { baseApi, invalidatesOnSuccess, spaceTags } from '@redux/api/baseApi';
 import { isApiError } from '@shared/utils/error';
+import { getDeviceTimeZone } from '../statistics/selectors';
 
 interface LimitArg extends SpaceArg {
   limitId: number;
@@ -20,7 +21,8 @@ const invalidatesCategoryWrite = (_result: unknown, error: unknown, { spaceId }:
 export const limitApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getLimits: build.query<LimitsModel, SpaceArg>({
-      query: ({ spaceId }) => ({ url: `/spaces/${spaceId}/limits` }),
+      // `spent` covers the device's current month, which the response returns as `period`.
+      query: ({ spaceId }) => ({ url: `/spaces/${spaceId}/limits`, params: { time_zone: getDeviceTimeZone() } }),
       transformResponse: (response: GetLimitsResponse) => mapLimitsResponse(response),
       providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Limits'),
     }),

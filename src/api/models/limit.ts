@@ -1,6 +1,6 @@
 import type { AppColor } from '@shared/enums';
 import type { IconType } from '@shared/types';
-import type { GetLimitsResponse, LimitView, OverAllocation } from '@api/dto';
+import type { GetLimitsResponse, LimitsPeriod, LimitView, OverAllocation } from '@api/dto';
 import { toMobileIcon } from './category';
 
 export interface LimitCategoryModel {
@@ -24,7 +24,16 @@ export interface OverAllocationModel {
   difference: number;
 }
 
+export interface LimitsPeriodModel {
+  timeZone: string;
+  startDate: string;
+  endDate: string;
+  from: string;
+  to: string;
+}
+
 export interface LimitsModel {
+  period: LimitsPeriodModel | null;
   total: LimitModel | null;
   categoryLimits: LimitModel[];
   overAllocation: OverAllocationModel | null;
@@ -49,7 +58,16 @@ const mapOverAllocation = (dto: OverAllocation): OverAllocationModel => ({
   difference: dto.difference,
 });
 
+const mapPeriod = (dto: LimitsPeriod): LimitsPeriodModel => ({
+  timeZone: dto.time_zone,
+  startDate: dto.start_date,
+  endDate: dto.end_date,
+  from: dto.from,
+  to: dto.to,
+});
+
 export const mapLimitsResponse = (dto: GetLimitsResponse): LimitsModel => ({
+  period: dto.period ? mapPeriod(dto.period) : null,
   total: dto.total ? mapLimitView(dto.total) : null,
   categoryLimits: dto.categories.map(mapLimitView),
   overAllocation: dto.over_allocation ? mapOverAllocation(dto.over_allocation) : null,
