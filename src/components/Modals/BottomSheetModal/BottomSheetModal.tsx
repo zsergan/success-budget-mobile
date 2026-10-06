@@ -14,17 +14,26 @@ interface Props {
   dynamicSizing?: boolean;
   /** Fixed snap point when `dynamicSizing` is false. Defaults to '85%'. */
   snapPoint?: string;
+  enablePanDownToClose?: boolean;
+  /** Replaces the backdrop's own close, for a sheet that decides itself whether it may close. */
+  onBackdropPress?: () => void;
 }
 
 const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheetModal(
-  { children, onDismiss, dynamicSizing = false, snapPoint = '85%' },
+  { children, onDismiss, dynamicSizing = false, snapPoint = '85%', enablePanDownToClose = true, onBackdropPress },
   ref,
 ) {
   const renderBackdrop = useCallback(
     (backdropProps: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop {...backdropProps} appearsOnIndex={0} disappearsOnIndex={-1} />
+      <BottomSheetBackdrop
+        {...backdropProps}
+        appearsOnIndex={0}
+        disappearsOnIndex={-1}
+        pressBehavior={onBackdropPress ? 'none' : 'close'}
+        onPress={onBackdropPress}
+      />
     ),
-    [],
+    [onBackdropPress],
   );
 
   return (
@@ -37,6 +46,7 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
       backgroundStyle={styles.background}
       handleComponent={null}
       onDismiss={onDismiss}
+      enablePanDownToClose={enablePanDownToClose}
       keyboardBehavior="interactive"
       android_keyboardInputMode="adjustResize"
     >

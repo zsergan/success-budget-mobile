@@ -1,7 +1,6 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
-import type { TransactionComposerHandle } from '@components';
-import { Fab, RootLayout, SpaceSwitcher, TransactionComposer } from '@components';
+import { Fab, RootLayout, SpaceSwitcher, useTransactionFlow } from '@components';
 import { getLoadState } from '@redux/api/loadState';
 import { useCurrentMonthArg, useSpaceArg } from '@redux/hooks';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
@@ -10,6 +9,7 @@ import { useGetTransactionsQuery } from '@redux/state/transaction/api';
 import { EMPTY_TRANSACTIONS } from '@redux/state/transaction/selectors';
 import { useBalanceVisibility } from '@hooks';
 import type { ScreenNames } from '@shared/enums';
+import { TransactionType } from '@shared/enums';
 import type { MainTabScreenProps } from '@shared/types';
 import { FAB_SCROLL_CLEARANCE } from '@shared/constants';
 import BalanceOverview from './components/BalanceOverview/BalanceOverview';
@@ -22,7 +22,7 @@ interface Props extends MainTabScreenProps<ScreenNames.HOME_TAB> {}
 
 const HomeScreen = ({ navigation }: Props) => {
   const [focusedWalletId, setFocusedWalletId] = useState<number | undefined>(undefined);
-  const composerRef = useRef<TransactionComposerHandle>(null);
+  const { openCreate } = useTransactionFlow();
 
   const spaceArg = useSpaceArg();
   const { currentData: walletsOverview } = useGetWalletsQuery(spaceArg);
@@ -36,12 +36,10 @@ const HomeScreen = ({ navigation }: Props) => {
   const composerWalletId =
     focusedWalletId !== undefined && wallets.some(({ wallet }) => wallet.id === focusedWalletId)
       ? focusedWalletId
-      : (wallets[0]?.wallet.id ?? -1);
+      : wallets[0]?.wallet.id;
 
   return (
     <>
-      <TransactionComposer ref={composerRef} initialWalletId={composerWalletId} />
-
       <RootLayout
         style={styles.container}
         contentContainerStyle={{ paddingBottom: FAB_SCROLL_CLEARANCE }}
@@ -73,7 +71,10 @@ const HomeScreen = ({ navigation }: Props) => {
         />
       </RootLayout>
 
-      <Fab onExpense={() => composerRef.current?.openExpense()} onIncome={() => composerRef.current?.openIncome()} />
+      <Fab
+        onExpense={() => openCreate(TransactionType.EXPENSE, composerWalletId)}
+        onIncome={() => openCreate(TransactionType.INCOME, composerWalletId)}
+      />
     </>
   );
 };

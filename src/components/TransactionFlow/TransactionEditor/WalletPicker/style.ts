@@ -18,10 +18,10 @@ const styles = StyleSheet.create({
     columnGap: theme.spacing.sm,
   },
   walletChip: {
-    flex: 1,
+    maxWidth: 140,
     height: 44,
     borderRadius: theme.radius.md,
-    paddingHorizontal: theme.spacing.md - 2,
+    paddingHorizontal: theme.spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -30,16 +30,32 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.hairline,
   },
+  deletedChip: {
+    borderStyle: 'dashed',
+  },
+  newChipProminent: {
+    borderColor: colors.text,
+  },
   walletDot: {
     width: 12,
     height: 12,
     borderRadius: 4,
   },
+  deletedDot: {
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.muted,
+  },
+  // SemiBold under-measures its width in a content-sized chip (see cde3346).
   walletChipText: {
+    paddingRight: 2,
     flexShrink: 1,
     fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.bodySm,
     color: colors.text,
+  },
+  deletedText: {
+    color: colors.muted,
   },
 });
 

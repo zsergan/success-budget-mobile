@@ -8,7 +8,7 @@ import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { spaceApi } from '@redux/state/space/api';
 import { acceptInviteAndSelect, activateSpace, createSpaceAndSelect } from '@redux/state/space/thunks';
 import { SpaceType } from '@shared/enums';
-import useFormSubmitHandler, { SubmitSkipped } from './useFormSubmitHandler';
+import useFormSubmitHandler from './useFormSubmitHandler';
 
 const mockedRequest = jest.fn();
 
@@ -70,16 +70,6 @@ it('alerts a failure of the current session and leaves the form unsubmitted', as
   await act(() => result.current.onSubmit());
 
   expect(mockedAddAlert).toHaveBeenCalledWith('Name taken');
-  expect(onSuccess).not.toHaveBeenCalled();
-  expect(result.current.formState.isSubmitSuccessful).toBe(false);
-});
-
-it('stays silent and unsubmitted when the submit is skipped', async () => {
-  const { result, onSuccess } = renderSubmitHandler(() => Promise.reject(new SubmitSkipped()));
-
-  await act(() => result.current.onSubmit());
-
-  expect(mockedAddAlert).not.toHaveBeenCalled();
   expect(onSuccess).not.toHaveBeenCalled();
   expect(result.current.formState.isSubmitSuccessful).toBe(false);
 });

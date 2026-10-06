@@ -35,6 +35,8 @@ export interface TransactionFlow {
   // A new transaction's date stays "now" until one is picked, so Add another takes the new now.
   followsNow: boolean;
   isSaving: boolean;
+  // A category picked from the full list keeps its tile in the grid until the form closes.
+  promotedCategoryId: number | null;
   // The last create's result, for its confirmation and Undo.
   created: CreateTransactionResult | null;
   away: FlowAway | null;
@@ -82,6 +84,7 @@ const startCreate = (
     baseline: fresh,
     followsNow: true,
     isSaving: false,
+    promotedCategoryId: null,
     created: null,
     away: null,
   };
@@ -114,6 +117,7 @@ const transactionFlowSlice = createSlice({
         baseline: null,
         followsNow: false,
         isSaving: false,
+        promotedCategoryId: null,
         created: null,
         away: null,
       };
@@ -128,6 +132,7 @@ const transactionFlowSlice = createSlice({
       flow.saved = payload.transaction;
       flow.draft = draftFromTransaction(payload.transaction);
       flow.baseline = flow.draft;
+      flow.promotedCategoryId = null;
       flow.view = { name: 'edit' };
     },
     editLeft: (state) => {
@@ -155,6 +160,7 @@ const transactionFlowSlice = createSlice({
       if (flow?.view.name !== 'categories' || !flow.draft) return;
 
       flow.draft.categoryId = payload.categoryId;
+      flow.promotedCategoryId = payload.categoryId;
       flow.view = formView(flow.view.form);
     },
     dateTimeOpened: (state) => {
@@ -244,7 +250,11 @@ const transactionFlowSlice = createSlice({
       const flow = flowOf(state, payload.draftId);
       if (flow?.away !== 'category' || !flow.draft) return;
 
-      if (payload.transactionType === flow.draft.transactionType) flow.draft.categoryId = payload.categoryId;
+      if (payload.transactionType === flow.draft.transactionType) {
+        flow.draft.categoryId = payload.categoryId;
+        flow.promotedCategoryId = payload.categoryId;
+      }
+
       if (flow.view.name === 'categories') flow.view = formView(flow.view.form);
       flow.away = null;
     },

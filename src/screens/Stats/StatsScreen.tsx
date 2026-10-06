@@ -1,22 +1,21 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { View } from 'react-native';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useNavigation } from '@react-navigation/native';
 
-import type { TransactionComposerHandle } from '@components';
 import {
   BottomSheetModal as BottomModal,
   RangePickerSheet,
   ScreenFrame,
   SpacesSheet,
-  TransactionComposer,
+  useTransactionFlow,
 } from '@components';
 import { usePeriod } from '@hooks';
 import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { activateSpace } from '@redux/state/space/thunks';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
-import { ScreenNames } from '@shared/enums';
+import { ScreenNames, TransactionType } from '@shared/enums';
 import type { MainTabNavigationProp } from '@shared/types';
 import { formatRangeLabel, hasComparison, isCurrentMonth, monthPeriodOf } from '@shared/utils';
 import CreateWalletSheet from './components/CreateWalletSheet/CreateWalletSheet';
@@ -45,7 +44,7 @@ const StatsScreen = () => {
   const rangePickerRef = useRef<BottomSheetModal>(null);
   const walletSheetRef = useRef<BottomSheetModal>(null);
   const spacesSheetRef = useRef<BottomSheetModal>(null);
-  const composerRef = useRef<TransactionComposerHandle>(null);
+  const { openCreate } = useTransactionFlow();
 
   const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod } = usePeriod();
   const { summary, trend, breakdown, refreshIfStale, updateFailed, retryFailed, loadFailed, loadError, accessDenied } =
@@ -54,7 +53,7 @@ const StatsScreen = () => {
   useSpaceAccessRecovery(accessDenied);
 
   const { currentData: walletsOverview } = useGetWalletsQuery(useSpaceArg());
-  const firstWalletId = walletsOverview?.wallets[0]?.wallet.id ?? -1;
+  const firstWalletId = walletsOverview?.wallets[0]?.wallet.id;
 
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const dispatch = useAppDispatch();
@@ -71,7 +70,7 @@ const StatsScreen = () => {
   };
 
   const addTransaction = useAddTransaction({
-    onHasWallets: () => composerRef.current?.openExpense(),
+    onHasWallets: () => openCreate(TransactionType.EXPENSE, firstWalletId),
     onNoWallets: () => walletSheetRef.current?.present(),
   });
 
@@ -84,7 +83,7 @@ const StatsScreen = () => {
     });
   };
 
-  useComposeWithNewWallet((walletId) => composerRef.current?.openExpense(walletId));
+  useComposeWithNewWallet(useCallback((walletId) => openCreate(TransactionType.EXPENSE, walletId), [openCreate]));
 
   const [mode, setMode] = useState<BreakdownMode>('category');
   const selection = useStatsSelection(JSON.stringify([spaceId, range.from, range.to]), mode);
@@ -145,8 +144,6 @@ const StatsScreen = () => {
 
   return (
     <>
-      <TransactionComposer ref={composerRef} initialWalletId={firstWalletId} />
-
       <BottomModal ref={rangePickerRef} dynamicSizing>
         <RangePickerSheet period={period} onApply={applyPeriod} />
       </BottomModal>

@@ -12,6 +12,16 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.lg,
     rowGap: theme.spacing.md + 2,
   },
+  topFields: {
+    marginTop: theme.spacing.md + 2,
+    rowGap: theme.spacing.md + 2,
+  },
+  fields: {
+    flex: 1,
+  },
+  fieldsLocked: {
+    opacity: 0.55,
+  },
   limitHint: {
     marginHorizontal: theme.spacing.xl,
   },
@@ -22,27 +32,21 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     backgroundColor: colors.track,
   },
-  emptyText: {
-    marginTop: theme.spacing.xl,
-    marginHorizontal: theme.spacing.xl,
-    fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.bodyLg,
-    color: colors.text,
-  },
   header: {
     paddingHorizontal: theme.spacing.xl,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    columnGap: theme.spacing.md,
   },
   headerTitle: {
+    flex: 1,
     fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.titleSm,
     lineHeight: theme.lineHeights.titleSm,
     letterSpacing: theme.letterSpacing.titleSm,
     color: colors.text,
   },
-  closeButton: {
+  headerButton: {
     width: 32,
     height: 32,
     borderRadius: 11,
@@ -79,6 +83,9 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.caption,
     lineHeight: theme.lineHeights.caption,
     color: colors.muted,
+  },
+  sectionHintError: {
+    color: colors.danger,
   },
   note: {
     minHeight: 64,

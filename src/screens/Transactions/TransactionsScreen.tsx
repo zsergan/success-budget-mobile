@@ -2,8 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
-import type { TransactionComposerHandle } from '@components';
-import { BottomSheetModal as BottomModal, Fab, RangePickerSheet, ScreenFrame, TransactionComposer } from '@components';
+import { BottomSheetModal as BottomModal, Fab, RangePickerSheet, ScreenFrame, useTransactionFlow } from '@components';
 import { usePeriod } from '@hooks';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
@@ -23,7 +22,7 @@ import useTransactionsData from './hooks/useTransactionsData';
 const TransactionsScreen = () => {
   const navigation = useNavigation<MainTabNavigationProp<ScreenNames.TRANSACTIONS_TAB>>();
   const route = useRoute<MainTabScreenProps<ScreenNames.TRANSACTIONS_TAB>['route']>();
-  const composerRef = useRef<TransactionComposerHandle>(null);
+  const { openCreate } = useTransactionFlow();
   const rangePickerRef = useRef<BottomSheetModal>(null);
 
   const handleOpenPicker = () => rangePickerRef.current?.present();
@@ -45,12 +44,10 @@ const TransactionsScreen = () => {
   });
 
   const { currentData: walletsOverview } = useGetWalletsQuery(useSpaceArg());
-  const firstWalletId = walletsOverview?.wallets[0]?.wallet.id ?? -1;
+  const firstWalletId = walletsOverview?.wallets[0]?.wallet.id;
 
   return (
     <>
-      <TransactionComposer ref={composerRef} initialWalletId={firstWalletId} />
-
       <BottomModal ref={rangePickerRef} dynamicSizing>
         <RangePickerSheet period={period} onApply={applyPeriod} />
       </BottomModal>
@@ -90,7 +87,7 @@ const TransactionsScreen = () => {
               {viewState === 'trueEmpty' && (
                 <TransactionsEmptyState
                   variant="trueEmpty"
-                  onAddTransaction={() => composerRef.current?.openExpense()}
+                  onAddTransaction={() => openCreate(TransactionType.EXPENSE, firstWalletId)}
                 />
               )}
 
@@ -115,7 +112,10 @@ const TransactionsScreen = () => {
       </ScreenFrame>
 
       {viewState !== 'loading' && (
-        <Fab onExpense={() => composerRef.current?.openExpense()} onIncome={() => composerRef.current?.openIncome()} />
+        <Fab
+          onExpense={() => openCreate(TransactionType.EXPENSE, firstWalletId)}
+          onIncome={() => openCreate(TransactionType.INCOME, firstWalletId)}
+        />
       )}
     </>
   );

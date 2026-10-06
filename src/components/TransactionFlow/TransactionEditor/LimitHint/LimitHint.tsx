@@ -10,14 +10,17 @@ import styles from './style';
 interface Props {
   limit: LimitModel;
   amount: string;
+  // What this record already adds to `spent`: an edit replaces it rather than adding to it.
+  counted?: number;
   currencyCode?: string;
 }
 
-const LimitHint = ({ limit, amount, currencyCode }: Props) => {
+const LimitHint = ({ limit, amount, counted = 0, currencyCode }: Props) => {
   const cap = Number(limit.amount);
   const typed = Number(amount.replace(',', '.')) || 0;
-  const before = getLimitStatus(limit.spent, cap);
-  const after = getLimitStatus(limit.spent + typed, cap);
+  const spent = limit.spent - counted;
+  const before = getLimitStatus(spent, cap);
+  const after = getLimitStatus(spent + typed, cap);
 
   if (after.level === 'ok') {
     return null;
@@ -26,7 +29,7 @@ const LimitHint = ({ limit, amount, currencyCode }: Props) => {
   const isOver = after.level === 'over';
   const color = isOver ? colors.danger : colors.warn;
   const limitName = limit.name ?? limit.categories[0]?.name ?? 'limit';
-  const spentAfter = limit.spent + typed;
+  const spentAfter = spent + typed;
   const daysLeft = getDaysLeftInMonth();
 
   const text = isOver
@@ -46,7 +49,7 @@ const LimitHint = ({ limit, amount, currencyCode }: Props) => {
         </View>
 
         <Text style={styles.footer}>
-          {`${formatCurrencyAmount(limit.spent, currencyCode)} spent → ${formatCurrencyAmount(spentAfter, currencyCode)} · ${daysLeft} days left`}
+          {`${formatCurrencyAmount(spent, currencyCode)} spent → ${formatCurrencyAmount(spentAfter, currencyCode)} · ${daysLeft} days left`}
         </Text>
       </View>
     </View>

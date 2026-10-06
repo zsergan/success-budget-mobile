@@ -53,6 +53,45 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: colors.muted,
   },
+  archivedBadge: {
+    fontFamily: theme.fonts.semiBold,
+    fontSize: 9,
+    lineHeight: 12,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+    color: colors.muted,
+  },
+  empty: {
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.lg,
+    alignItems: 'center',
+    rowGap: theme.spacing.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.hairline,
+  },
+  emptyText: {
+    fontFamily: theme.fonts.medium,
+    fontSize: theme.fontSizes.bodySm,
+    lineHeight: theme.lineHeights.bodySm,
+    color: colors.muted,
+  },
+  createButton: {
+    height: 36,
+    borderRadius: 11,
+    paddingHorizontal: theme.spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: 6,
+    backgroundColor: colors.track,
+  },
+  // SemiBold under-measures its width in a content-sized chip (see cde3346).
+  createButtonText: {
+    paddingRight: 2,
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.bodySm,
+    color: colors.text,
+  },
 });
 
 export default styles;

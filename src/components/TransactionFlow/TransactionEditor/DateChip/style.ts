@@ -3,10 +3,6 @@ import { StyleSheet } from 'react-native';
 import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
-  dateTimeRow: {
-    flexDirection: 'row',
-    columnGap: theme.spacing.sm,
-  },
   section: {
     rowGap: theme.spacing.md - 2,
   },
@@ -17,14 +13,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     color: colors.muted,
   },
-  dateBox: {
-    flex: 1,
-  },
-  timeBox: {
-    width: 118,
-  },
-  pickerBox: {
-    height: 50,
+  chip: {
+    alignSelf: 'flex-start',
+    height: 44,
     borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing.md + 1,
     flexDirection: 'row',
@@ -34,10 +25,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.hairline,
   },
-  pickerText: {
+  chipError: {
+    borderColor: colors.danger,
+  },
+  // SemiBold under-measures its width in a content-sized chip (see cde3346).
+  chipText: {
+    paddingRight: 2,
     fontFamily: theme.fonts.semiBold,
-    fontSize: theme.fontSizes.bodyLg,
+    fontSize: theme.fontSizes.bodySm,
     color: colors.text,
+  },
+  error: {
+    fontFamily: theme.fonts.medium,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    color: colors.danger,
   },
 });
 
