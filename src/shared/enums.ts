@@ -3,6 +3,12 @@ export enum TransactionType {
   EXPENSE = 'expense',
 }
 
+// Only the server marks a wallet's starting balance; the category name is display text.
+export enum TransactionKind {
+  REGULAR = 'regular',
+  INITIAL_BALANCE = 'initial_balance',
+}
+
 export enum AppColor {
   SLATE = 'slate',
   AMBER = 'amber',

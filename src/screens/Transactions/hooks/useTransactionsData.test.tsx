@@ -6,7 +6,7 @@ import type { Transaction } from '@api/dto';
 import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { activateSpace } from '@redux/state/space/thunks';
 import { createAppStore } from '@redux/Store';
-import { AppColor, TransactionType } from '@shared/enums';
+import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
 import type { HistoryFilter } from '@shared/types';
 import type { DateRange } from '@shared/utils';
 import useTransactionsData from './useTransactionsData';
@@ -34,13 +34,17 @@ let respondLatest: Responder;
 const serverError = () => Promise.reject({ response: { data: { statusCode: 500, message: 'boom' } } });
 const rows = (...ids: string[]) => Promise.resolve({ data: ids.map((id) => ({ ...dto, id })) });
 
+const STAMPS = { created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-01T00:00:00.000Z' };
+
 const dto: Transaction = {
   id: 'tx-1',
+  kind: TransactionKind.REGULAR,
   transaction_type: TransactionType.EXPENSE,
   amount: '10.00',
   timestamp: '2026-01-05T00:00:00.000Z',
-  description: '',
-  wallet: { id: 1, wallet_name: 'Cash', design: AppColor.SLATE },
+  description: null,
+  version: 1,
+  wallet: { id: 1, wallet_name: 'Cash', design: AppColor.SLATE, ...STAMPS },
   category: {
     id: 1,
     name: 'Food',
@@ -48,9 +52,8 @@ const dto: Transaction = {
     icon: 'Grocery',
     color: AppColor.SLATE,
     is_active: 1,
-    transaction_count: 0,
-    limit: null,
-    archived_at: null,
+    is_archived: false,
+    ...STAMPS,
   },
 };
 

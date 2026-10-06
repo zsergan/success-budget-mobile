@@ -6,7 +6,7 @@ import { renderHook } from '@testing-library/react-native';
 import type { Transaction } from '@api/dto';
 import { baseApi } from '@redux/api/baseApi';
 import { createAppStore } from '@redux/Store';
-import { AppColor, TransactionType } from '@shared/enums';
+import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
 import { transactionApi } from './api';
 
 const mockedRequest = jest.fn();
@@ -19,13 +19,17 @@ jest.mock('@api/instance', () => ({
 // RTK Query batches store notifications on an animation frame, which would otherwise fire after teardown.
 jest.useFakeTimers();
 
+const STAMPS = { created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-01T00:00:00.000Z' };
+
 const dto: Transaction = {
   id: 'tx-1',
+  kind: TransactionKind.REGULAR,
   transaction_type: TransactionType.EXPENSE,
   amount: '10.00',
   timestamp: '2026-01-01T00:00:00.000Z',
-  description: '',
-  wallet: { id: 1, wallet_name: 'Cash', design: AppColor.SLATE },
+  description: null,
+  version: 1,
+  wallet: { id: 1, wallet_name: 'Cash', design: AppColor.SLATE, ...STAMPS },
   category: {
     id: 1,
     name: 'Food',
@@ -33,9 +37,8 @@ const dto: Transaction = {
     icon: 'Grocery',
     color: AppColor.SLATE,
     is_active: 1,
-    transaction_count: 0,
-    limit: null,
-    archived_at: null,
+    is_archived: false,
+    ...STAMPS,
   },
 };
 
@@ -58,6 +61,35 @@ describe('transactionApi', () => {
       expect.objectContaining({ url: '/spaces/3/transactions', params: { from, to } }),
     );
     expect(result.data?.[0]).toMatchObject({ id: 'tx-1', wallet: { id: 1 }, category: { icon: 'grocery' } });
+  });
+
+  it('maps the kind, the version and the compact category, and keeps a deleted wallet as null', async () => {
+    const store = createAppStore();
+
+    mockedRequest.mockResolvedValue({
+      data: [{ ...dto, kind: TransactionKind.INITIAL_BALANCE, version: 3, wallet: null }],
+    });
+
+    const result = await store.dispatch(getTransactions.initiate({ spaceId: 3, from: 'a', to: 'b' }));
+
+    expect(result.data?.[0]).toEqual({
+      id: 'tx-1',
+      kind: TransactionKind.INITIAL_BALANCE,
+      transactionType: TransactionType.EXPENSE,
+      amount: '10.00',
+      timestamp: '2026-01-01T00:00:00.000Z',
+      description: null,
+      version: 3,
+      wallet: null,
+      category: {
+        id: 1,
+        name: 'Food',
+        transactionType: TransactionType.EXPENSE,
+        icon: 'grocery',
+        color: AppColor.SLATE,
+        isArchived: false,
+      },
+    });
   });
 
   it('adds only the history filters it was given, under their API names', async () => {

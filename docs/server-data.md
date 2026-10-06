@@ -88,20 +88,17 @@ described in the lifecycle section.
 
 ## Notes for the RTK Query design
 
-- `POST /transactions` returns the bare transaction with no `wallet` or
-  `category` relation, so it can't be inserted into a cached history list
-  as-is; invalidating is the straightforward option.
+- Every transaction read and write result is the backend's transaction
+  view (`docs/transactions-contract.md`): `kind`, `version`, a nullable
+  `wallet` and a compact `category` without `transaction_count`, `limit`
+  or `sort`, mapped to `TransactionCategoryModel` rather than the
+  Categories API's `CategoryModel`. `wallet_id` and `category_id` are not
+  in it.
 - A transaction created outside the currently cached period does not
   change `History.Recent`/`History.Range` rows, but invalidating them
   anyway is correct and cheap; no need to match on timestamps.
 - An income transaction does not change Limits; a per-type rule is
   possible but not required.
-- History rows still differ from the client `Transaction` DTO: the
-  backend excludes `wallet_id` and `category_id` (so `walletId` and
-  `categoryId` on `TransactionModel` are always `undefined`), and the
-  embedded `category` is the bare entity without `transaction_count`,
-  `limit` or `archived_at`, although it is mapped as a full
-  `CategoryModel`. Nothing reads those fields from history today.
 
 ## Statistics
 

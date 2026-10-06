@@ -14,7 +14,7 @@ import { transactionApi, useGetTransactionsQuery } from '@redux/state/transactio
 import { useGetWalletsQuery, walletApi } from '@redux/state/wallet/api';
 import { createAppStore } from '@redux/Store';
 import useTransactionsData from '@screens/Transactions/hooks/useTransactionsData';
-import { AppColor, SpaceType, TransactionType } from '@shared/enums';
+import { AppColor, SpaceType, TransactionKind, TransactionType } from '@shared/enums';
 import { getCurrentMonthRange } from '@shared/utils';
 
 const mockedRequest = jest.fn();
@@ -55,6 +55,8 @@ const category = (id: number, name: string, limit: number | null): Category => (
   archived_at: null,
 });
 
+const STAMPS = { created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-01T00:00:00.000Z' };
+
 const space = (id: number): Space => ({
   id,
   name: `Space ${id}`,
@@ -80,11 +82,18 @@ const createBackend = () => {
   const toRow = (
     spaceDb: SpaceDb,
     { wallet_id, category_id, ...row }: SpaceDb['transactions'][number],
-  ): Transaction => ({
-    ...row,
-    wallet: spaceDb.wallets.find((wallet) => wallet.id === wallet_id) ?? null,
-    category: spaceDb.categories.find((item) => item.id === category_id)!,
-  });
+  ): Transaction => {
+    const wallet = spaceDb.wallets.find((item) => item.id === wallet_id);
+    const { id, name, transaction_type, icon, color, is_active } = spaceDb.categories.find(
+      (item) => item.id === category_id,
+    )!;
+
+    return {
+      ...row,
+      wallet: wallet ? { id: wallet.id, wallet_name: wallet.wallet_name, design: wallet.design, ...STAMPS } : null,
+      category: { id, name, transaction_type, icon, color, is_active, is_archived: is_active === 0, ...STAMPS },
+    };
+  };
 
   const handle = ({ url, method = 'GET', data }: RequestConfig): unknown => {
     if (url === '/spaces') return [space(1), space(2)];
@@ -150,14 +159,15 @@ const createBackend = () => {
     if (resource === 'transactions' && method === 'POST') {
       const row = {
         id: `tx-${spaceDb.transactions.length + 1}`,
-        description: '',
+        kind: TransactionKind.REGULAR,
+        version: 1,
+        description: null,
         ...data,
       } as SpaceDb['transactions'][0];
 
       spaceDb.transactions.push(row);
-      const { wallet_id: _walletId, category_id: _categoryId, ...transaction } = row;
 
-      return { transaction, wallet: spaceDb.wallets[0], previous_balance: 0 };
+      return { transaction: toRow(spaceDb, row), wallet: { ...spaceDb.wallets[0], ...STAMPS }, previous_balance: 0 };
     }
 
     throw new Error(`Unhandled ${method} ${url}`);
@@ -305,12 +315,14 @@ describe('server data scenarios', () => {
   it('renames a category and a wallet inside the history already on screen', async () => {
     backend.db(1).transactions.push({
       id: 'tx-1',
+      kind: TransactionKind.REGULAR,
+      version: 1,
       wallet_id: 1,
       category_id: 5,
       transaction_type: TransactionType.EXPENSE,
-      amount: '12',
+      amount: '12.00',
       timestamp: '2026-01-10T10:00:00.000Z',
-      description: '',
+      description: null,
     });
 
     const { store, result, unmount } = await renderApp();
