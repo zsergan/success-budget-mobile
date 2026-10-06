@@ -215,6 +215,16 @@ describe('transaction flow', () => {
     expect(flow()).toMatchObject({ away: null, draft: { categoryId: 11, walletId: 9 } });
   });
 
+  it('keeps a date that follows now when Apply changes nothing', () => {
+    const { store, flow } = setUp();
+
+    openCreate(store);
+    store.dispatch(dateTimeOpened());
+    store.dispatch(dateTimeApplied());
+
+    expect(flow()?.followsNow).toBe(true);
+  });
+
   it('ends on a space switch or a logout, even mid-write', async () => {
     const { store, flow } = setUp();
 

@@ -179,8 +179,8 @@ const transactionFlowSlice = createSlice({
       const flow = idleFlow(state);
       if (flow?.view.name !== 'dateTime' || !flow.draft) return;
 
+      if (Date.parse(flow.view.pending) !== Date.parse(flow.draft.timestamp)) flow.followsNow = false;
       flow.draft.timestamp = flow.view.pending;
-      flow.followsNow = false;
       flow.view = formView(flow.view.form);
     },
     // Back or Cancel from a panel: the form as it was, an unapplied date dropped.

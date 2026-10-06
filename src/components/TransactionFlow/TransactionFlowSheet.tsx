@@ -135,7 +135,14 @@ const TransactionFlowSheet = () => {
           />
         ) : null;
       case 'dateTime':
-        return <DateTimePanel pending={shown.view.pending} onBack={back} onClose={requestClose} />;
+        return (
+          <DateTimePanel
+            pending={shown.view.pending}
+            original={shown.baseline?.timestamp ?? shown.view.pending}
+            onBack={back}
+            onClose={requestClose}
+          />
+        );
       case 'created':
         return shown.created ? (
           <CreatedConfirmation
