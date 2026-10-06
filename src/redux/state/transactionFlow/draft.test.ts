@@ -3,6 +3,7 @@ import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
 import type { TransactionDraft } from './draft';
 import {
   createDraft,
+  defaultWalletId,
   draftFromTransaction,
   getDraftErrors,
   isDraftChanged,
@@ -41,12 +42,34 @@ describe('normalizeAmount', () => {
     ['50.0', '50.00'],
     ['050,5', '50.50'],
     [' 0.01 ', '0.01'],
+    ['.5', '0.50'],
+    ['1 234,50', '1234.50'],
+    ['1,234.50', '1234.50'],
+    ['1.234.567', '1234567.00'],
   ])('reads %j as %s', (input, expected) => {
     expect(normalizeAmount(input)).toBe(expected);
   });
 
-  it.each(['', '-1', '1.234', '.5', '1e3', '12a'])('rejects %j', (input) => {
+  it.each(['', '-1', '1.234', '1,234,5', '1.2.3', '1e3', '12a', '.'])('rejects %j', (input) => {
     expect(normalizeAmount(input)).toBeNull();
+  });
+});
+
+describe('amount errors', () => {
+  const draft = {
+    ...createDraft({ transactionType: TransactionType.EXPENSE, walletId: 1, timestamp: '' }),
+    categoryId: 4,
+  };
+  const amountError = (amount: string) => getDraftErrors({ ...draft, amount }, { now: NOW }).amount;
+
+  it('explains why a typed or pasted value is no amount, and never cuts or rounds it', () => {
+    expect(amountError('')).toBe('Enter an amount');
+    expect(amountError('-12')).toBe('Enter the amount without a sign: the type sets it');
+    expect(amountError('12.345')).toBe('Use at most two decimal places');
+    expect(amountError('12,5,0')).toBe('Use digits and one decimal separator');
+    expect(amountError('0,00')).toBe('Enter an amount greater than zero');
+    expect(amountError('100000000')).toBe('The maximum amount is 99,999,999.99');
+    expect(amountError('99,999,999.99')).toBeUndefined();
   });
 });
 
@@ -86,12 +109,40 @@ describe('getDraftErrors', () => {
     ).toEqual({});
   });
 
+  it('refuses a date before the first one the server stores', () => {
+    const draft = { ...fresh, amount: '5', categoryId: 4, timestamp: '1970-01-01T00:00:00.000Z' };
+
+    expect(getDraftErrors(draft, { now: NOW })).toEqual({ timestamp: 'Pick a date after 1 January 1970' });
+  });
+
+  it("takes only a wallet and a category still on offer, but keeps an edit's own", () => {
+    const available = { walletIds: [2], categoryIds: [5] };
+    const draft = { ...fresh, amount: '5', categoryId: 4 };
+
+    expect(getDraftErrors(draft, { now: NOW, available })).toEqual({
+      wallet: 'Choose a wallet',
+      category: 'Choose a category',
+    });
+    expect(getDraftErrors(edit({ amount: '70' }), { baseline, now: NOW, available })).toEqual({});
+    expect(getDraftErrors(edit({ walletId: 3 }), { baseline, now: NOW, available })).toEqual({
+      wallet: 'Choose a wallet',
+    });
+  });
+
   it('leaves values an edit does not change alone', () => {
     const legacy = { ...baseline, amount: '0.00', timestamp: new Date(NOW + 3_600_000).toISOString() };
 
     expect(getDraftErrors({ ...legacy, description: 'Dinner' }, { baseline: legacy, now: NOW })).toEqual({});
     expect(getDraftErrors({ ...legacy, amount: '0' }, { baseline: legacy, now: NOW })).toEqual({});
     expect(getDraftErrors({ ...legacy, walletId: null }, { baseline: legacy, now: NOW })).toEqual({});
+  });
+});
+
+describe('defaultWalletId', () => {
+  it('takes the first preferred wallet still active, else the first active one', () => {
+    expect(defaultWalletId([1, 2, 3], [9, 2])).toBe(2);
+    expect(defaultWalletId([1, 2, 3], [null])).toBe(1);
+    expect(defaultWalletId([], [2])).toBeNull();
   });
 });
 

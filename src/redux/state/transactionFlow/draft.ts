@@ -25,26 +25,78 @@ export const MAX_AMOUNT = '99999999.99';
 export const DESCRIPTION_MAX_LENGTH = 140;
 // The server refuses a timestamp more than a minute ahead of its clock.
 const FUTURE_MARGIN_MS = 60_000;
+// The first instant the server stores (MySQL TIMESTAMP).
+export const MIN_TIMESTAMP = '1970-01-01T00:00:01.000Z';
 
-// "50", "50.0" and "050,00" are the same amount: "50.00". Anything else is not an amount.
-export const normalizeAmount = (value: string): string | null => {
-  const match = value
-    .trim()
-    .replace(',', '.')
-    .match(/^(\d+)(?:\.(\d{0,2}))?$/);
+export type AmountProblem = 'empty' | 'sign' | 'format' | 'scale' | 'zero' | 'range';
 
-  if (!match) return null;
-
-  const whole = match[1].replace(/^0+(?=\d)/, '');
-
-  return `${whole}.${(match[2] ?? '').padEnd(2, '0')}`;
+const AMOUNT_MESSAGES: Record<AmountProblem, string> = {
+  empty: 'Enter an amount',
+  sign: 'Enter the amount without a sign: the type sets it',
+  format: 'Use digits and one decimal separator',
+  scale: 'Use at most two decimal places',
+  zero: 'Enter an amount greater than zero',
+  range: 'The maximum amount is 99,999,999.99',
 };
 
-const isWithinRange = (amount: string) => {
-  const [whole] = amount.split('.');
-  const [maxWhole] = MAX_AMOUNT.split('.');
+// Thousands groups of a pasted amount: "1 234,50", "1,234.50" or "1.234.567".
+const GROUPED = /^\d{1,3}(?:([.,])\d{3})(?:\1\d{3})*$/;
 
-  return amount !== '0.00' && whole.length <= maxWhole.length;
+const splitAmount = (text: string): { whole: string; fraction: string } | null => {
+  const compact = text.replace(/(\d)[\s\u00A0\u202F']+(?=\d)/g, '$1');
+  const lastSeparator = Math.max(compact.lastIndexOf('.'), compact.lastIndexOf(','));
+  const separators = compact.match(/[.,]/g) ?? [];
+
+  if (separators.length > 1) {
+    const isGroupedWhole = separators.slice(0, -1).every((mark) => mark === separators[0]);
+    const decimalMark = separators[separators.length - 1];
+
+    if (decimalMark !== separators[0] && isGroupedWhole && GROUPED.test(compact.slice(0, lastSeparator))) {
+      return {
+        whole: compact.slice(0, lastSeparator).replace(/[.,]/g, ''),
+        fraction: compact.slice(lastSeparator + 1),
+      };
+    }
+
+    return GROUPED.test(compact) ? { whole: compact.replace(/[.,]/g, ''), fraction: '' } : null;
+  }
+
+  const [whole, fraction = ''] = compact.split(/[.,]/);
+
+  return /^\d*$/.test(whole) && /^\d*$/.test(fraction) && (whole + fraction).length > 0 ? { whole, fraction } : null;
+};
+
+// Reads an amount as typed or pasted, with either decimal separator; never cuts or rounds it.
+const readAmount = (text: string): { amount: string } | { problem: AmountProblem } => {
+  const trimmed = text.trim();
+
+  if (trimmed === '') return { problem: 'empty' };
+  if (/^[-+\u2212]/.test(trimmed)) return { problem: 'sign' };
+
+  const parts = splitAmount(trimmed);
+
+  if (!parts) return { problem: 'format' };
+  if (parts.fraction.length > 2) return { problem: 'scale' };
+
+  const whole = parts.whole.replace(/^0+(?=\d)/, '') || '0';
+
+  return { amount: `${whole}.${parts.fraction.padEnd(2, '0')}` };
+};
+
+// "50", "50.0", "050,00" and "50." are the same amount: "50.00". Anything else is not an amount.
+export const normalizeAmount = (value: string): string | null => {
+  const read = readAmount(value);
+
+  return 'amount' in read ? read.amount : null;
+};
+
+export const getAmountProblem = (value: string): AmountProblem | null => {
+  const read = readAmount(value);
+
+  if ('problem' in read) return read.problem;
+  if (read.amount === '0.00') return 'zero';
+
+  return read.amount.split('.')[0].length > MAX_AMOUNT.split('.')[0].length ? 'range' : null;
 };
 
 export const normalizeDescription = (value: string): string | null => value.trim() || null;
@@ -94,23 +146,40 @@ export const isDraftChanged = (draft: TransactionDraft, baseline: TransactionDra
   changedFields(draft, baseline).length > 0;
 
 // An edit leaves values it does not change alone, as the server does: a legacy zero amount survives a new note.
+// `available` holds what may be picked now, once loaded; an edit's own archived category counts while its type matches.
 export const getDraftErrors = (
   draft: TransactionDraft,
-  { baseline, now }: { baseline?: TransactionDraft; now: number },
+  {
+    baseline,
+    now,
+    available,
+  }: { baseline?: TransactionDraft; now: number; available?: { walletIds?: number[]; categoryIds?: number[] } },
 ): DraftErrors => {
   const changed = new Set(baseline ? changedFields(draft, baseline) : Object.keys(isSameField));
   const errors: DraftErrors = {};
-  const amount = normalizeAmount(draft.amount);
+  const amountProblem = getAmountProblem(draft.amount);
 
-  if (changed.has('amount') && (amount === null || !isWithinRange(amount))) {
-    errors.amount = draft.amount.trim() === '' ? 'Enter an amount' : 'Enter an amount from 0.01 to 99,999,999.99';
+  if (changed.has('amount') && amountProblem) errors.amount = AMOUNT_MESSAGES[amountProblem];
+
+  // A changed pick must still be on offer; an unchanged one is the record's own and stays.
+  const isGone = (id: number | null, ids: number[] | undefined, isChanged: boolean) =>
+    id !== null && !!ids && isChanged && !ids.includes(id);
+
+  if (
+    draft.categoryId === null ||
+    isGone(draft.categoryId, available?.categoryIds, changed.has('categoryId') || changed.has('transactionType'))
+  ) {
+    errors.category = 'Choose a category';
   }
 
-  if (draft.categoryId === null) errors.category = 'Choose a category';
-  if (!baseline && draft.walletId === null) errors.wallet = 'Choose a wallet';
+  if ((!baseline && draft.walletId === null) || isGone(draft.walletId, available?.walletIds, changed.has('walletId'))) {
+    errors.wallet = 'Choose a wallet';
+  }
 
   if (changed.has('timestamp') && Date.parse(draft.timestamp) > now + FUTURE_MARGIN_MS) {
     errors.timestamp = 'A transaction cannot be in the future';
+  } else if (changed.has('timestamp') && Date.parse(draft.timestamp) < Date.parse(MIN_TIMESTAMP)) {
+    errors.timestamp = 'Pick a date after 1 January 1970';
   }
 
   if (descriptionLength(draft.description) > DESCRIPTION_MAX_LENGTH) {
@@ -119,6 +188,10 @@ export const getDraftErrors = (
 
   return errors;
 };
+
+// A wallet the new draft was opened from, else the last one used in this space, else the first active one.
+export const defaultWalletId = (activeIds: number[], preferred: (number | null)[]) =>
+  preferred.find((id) => id !== null && activeIds.includes(id)) ?? activeIds[0] ?? null;
 
 export const hasDraftErrors = (errors: DraftErrors) => Object.keys(errors).length > 0;
 
