@@ -6,7 +6,14 @@ import { baseApi } from '@redux/api/baseApi';
 import { memberApi } from '../member/api';
 import { profileApi } from '../profile/api';
 import { spaceApi } from './api';
-import { acceptInviteAndSelect, activateSpace, createSpaceAndSelect, leaveCurrentSpace } from './thunks';
+import { walletApi } from '../wallet/api';
+import {
+  acceptInviteAndSelect,
+  activateSpace,
+  createSpaceAndSelect,
+  leaveCurrentSpace,
+  loseSpaceAccess,
+} from './thunks';
 
 const mockedRequest = jest.fn();
 
@@ -284,4 +291,33 @@ describe('a request from before a logout and a new login', () => {
       expect(store.getState().space.currentSpaceId).toBe(99);
     },
   );
+});
+
+describe('loseSpaceAccess', () => {
+  it("drops the lost space's cached data and moves to a space the refreshed list still has", async () => {
+    const store = signedInStore();
+    const overview = { total_balance: 0, total_balance_currency: 'USD', delta_percent: 0, wallets: [] };
+
+    mockedRequest.mockResolvedValue({ data: [space({ id: 10, type: SpaceType.GROUP }), space({ id: 20 })] });
+    store.dispatch(spaceApi.endpoints.getSpaces.initiate());
+    await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
+    store.dispatch(activateSpace(10));
+    store.dispatch(
+      walletApi.util.upsertQueryEntries([
+        { endpointName: 'getWallets', arg: { spaceId: 10 }, value: overview },
+        { endpointName: 'getWallets', arg: { spaceId: 20 }, value: overview },
+      ]),
+    );
+
+    mockedRequest.mockResolvedValue({ data: [space({ id: 20 })] });
+    jest.advanceTimersByTime(1);
+    store.dispatch(loseSpaceAccess(10));
+
+    expect(walletApi.endpoints.getWallets.select({ spaceId: 10 })(store.getState()).data).toBeUndefined();
+    expect(walletApi.endpoints.getWallets.select({ spaceId: 20 })(store.getState()).data).toBe(overview);
+
+    await jest.runOnlyPendingTimersAsync();
+    await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
+    expect(store.getState().space.currentSpaceId).toBe(20);
+  });
 });

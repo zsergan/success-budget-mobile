@@ -1,6 +1,9 @@
 import { createAction } from '@reduxjs/toolkit';
+import type { QueryCacheKey } from '@reduxjs/toolkit/query';
 
 import type { CreateSpaceRequest, SpaceSummary } from '@api/dto';
+import type { SpaceArg } from '@redux/api/baseApi';
+import { baseApi } from '@redux/api/baseApi';
 import type { AppThunk } from '@redux/Store';
 import { memberApi } from '../member/api';
 import { selectProfileId } from '../profile/selectors';
@@ -19,6 +22,24 @@ export const activateSpace =
     if (spaceId === getState().space.currentSpaceId) return;
 
     dispatch(spaceSelected(spaceId));
+  };
+
+export const spaceAccessLost = createAction<{ spaceId: number }>('space/accessLost');
+
+// The server refused the space itself (the user was removed, or it was deleted): nothing cached for it stays, and
+// the refreshed spaces list moves the selection to one the user still has.
+export const loseSpaceAccess =
+  (spaceId: number): AppThunk =>
+  (dispatch, getState) => {
+    dispatch(spaceAccessLost({ spaceId }));
+
+    Object.entries(getState()[baseApi.reducerPath].queries).forEach(([queryCacheKey, entry]) => {
+      if ((entry?.originalArgs as Partial<SpaceArg> | undefined)?.spaceId === spaceId) {
+        dispatch(baseApi.internalActions.removeQueryResult({ queryCacheKey: queryCacheKey as QueryCacheKey }));
+      }
+    });
+
+    dispatch(spaceApi.util.invalidateTags(['Spaces']));
   };
 
 // A request that outlived a logout must not select a space for the next session.

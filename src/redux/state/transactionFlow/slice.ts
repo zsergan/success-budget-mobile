@@ -5,7 +5,7 @@ import type { CreateTransactionResult, TransactionModel } from '@api/models';
 import { isInitialBalance } from '@api/models';
 import type { TransactionType } from '@shared/enums';
 import { logoutMe } from '../auth/thunks';
-import { spaceSelected } from '../space/thunks';
+import { spaceAccessLost, spaceSelected } from '../space/thunks';
 import type { TransactionDraft } from './draft';
 import { createDraft, draftFromTransaction } from './draft';
 
@@ -282,6 +282,9 @@ const transactionFlowSlice = createSlice({
     // Ending the session or leaving the space ends the flow, even mid-write.
     builder.addCase(spaceSelected, (state) => {
       state.flow = null;
+    });
+    builder.addCase(spaceAccessLost, (state, { payload }) => {
+      if (state.flow?.spaceId === payload.spaceId) state.flow = null;
     });
     builder.addCase(logoutMe.fulfilled, (state) => {
       state.flow = null;

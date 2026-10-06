@@ -5,6 +5,7 @@ import { ApiErrorCode } from '@api/dto';
 import type { CreateTransactionResult, UpdateTransactionResult } from '@api/models';
 import type { AppThunk, RootState } from '@redux/Store';
 import { TransactionType } from '@shared/enums';
+import { loseSpaceAccess } from '../space/thunks';
 import { transactionApi } from './api';
 
 // What the user asked for, tied to the space the draft belongs to.
@@ -111,6 +112,7 @@ export const runTransactionOperation =
 
       // Gone already, by an earlier attempt or another member: what the delete asked for is true.
       if (operation.type === 'delete' && failure.kind === 'notFound') return { status: 'succeeded', result: null };
+      if (failure.kind === 'accessLost') dispatch(loseSpaceAccess(operation.spaceId));
 
       return { status: 'failed', failure, operation };
     }

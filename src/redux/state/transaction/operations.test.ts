@@ -1,7 +1,10 @@
 import type { CreateTransactionRequest } from '@api/dto';
 import { createAppStore } from '@redux/Store';
 import { logoutMe } from '@redux/state/auth/thunks';
+import { spaceApi } from '@redux/state/space/api';
 import { activateSpace } from '@redux/state/space/thunks';
+import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
+import { createOpened } from '@redux/state/transactionFlow/slice';
 import { TransactionType } from '@shared/enums';
 import { createTransactionResponseDto, transactionDto } from './fixtures';
 import type { OperationMemory, TransactionRequest } from './operations';
@@ -206,6 +209,22 @@ describe('submitTransactionRequest', () => {
       status: 'succeeded',
       result: null,
     });
+  });
+
+  it('drops the space and its draft once the server says the user has no access to it', async () => {
+    const { store, submit } = setUp();
+
+    store.dispatch(spaceApi.endpoints.getSpaces.initiate());
+    store.dispatch(
+      createOpened({ spaceId: 1, transactionType: TransactionType.EXPENSE, walletId: 1, now: lunch.timestamp }),
+    );
+    mockedRequest.mockImplementation(fails(403, 'FORBIDDEN_SPACE'));
+
+    expect(await submit(create())).toMatchObject({ status: 'failed', failure: { kind: 'accessLost' } });
+    await jest.runOnlyPendingTimersAsync();
+
+    expect(selectTransactionFlow(store.getState())).toBeNull();
+    expect(sent().filter(({ url }) => url === '/spaces')).toHaveLength(2);
   });
 
   it('keeps a result that arrives in another space or session from surfacing', async () => {

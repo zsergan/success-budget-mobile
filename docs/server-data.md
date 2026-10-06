@@ -19,6 +19,9 @@ Likewise a transaction write refused with `TRANSACTION_NOT_FOUND`,
 `FORBIDDEN_WALLET` or `FORBIDDEN_CATEGORY` refreshes everything a
 transaction write does, since the cached record, wallet or category is
 behind the server.
+A transaction request refused with `403 FORBIDDEN_SPACE` removes every
+cached entry of that space and refreshes Spaces, whose fallback moves the
+selection to a space the user still belongs to.
 `History.Recent` is no longer a separate request: Home asks for the
 current month by the same client-local bounds as the Transactions tab's
 default period (`periodArg`), so both read one `History.Range` entry.
