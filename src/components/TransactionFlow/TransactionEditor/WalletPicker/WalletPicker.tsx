@@ -13,12 +13,14 @@ interface Props {
   // The record's own deleted wallet: kept until another one is picked and saved.
   hasDeletedWallet: boolean;
   selectedId: number | null;
+  // Why the row looks as it does: a deleted wallet kept, or no wallet to save to.
+  hint?: string;
   typeColor: string;
   onSelect: (walletId: number | null) => void;
   onCreate: () => void;
 }
 
-const WalletPicker = ({ wallets, hasDeletedWallet, selectedId, typeColor, onSelect, onCreate }: Props) => {
+const WalletPicker = ({ wallets, hasDeletedWallet, selectedId, hint, typeColor, onSelect, onCreate }: Props) => {
   const selectedStyle = { backgroundColor: hexToRgba(typeColor, 0.09), borderColor: typeColor };
 
   return (
@@ -72,6 +74,8 @@ const WalletPicker = ({ wallets, hasDeletedWallet, selectedId, typeColor, onSele
           <Text style={styles.walletChipText}>New wallet</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {hint && <Text style={styles.hint}>{hint}</Text>}
     </View>
   );
 };

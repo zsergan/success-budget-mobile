@@ -32,11 +32,8 @@ const HomeScreen = ({ navigation }: Props) => {
   const { isLoading: isLoadingTransactions, hasError: hasTransactionsError } = getLoadState(recentQuery);
   const { isHidden, toggle } = useBalanceVisibility();
 
-  // The focused wallet can disappear (deleted, or a space switch replaced the list), so fall back to the first one.
-  const composerWalletId =
-    focusedWalletId !== undefined && wallets.some(({ wallet }) => wallet.id === focusedWalletId)
-      ? focusedWalletId
-      : wallets[0]?.wallet.id;
+  // A wallet the user swiped to opens the form on it; otherwise the form picks the last used one.
+  const composerWalletId = wallets.some(({ wallet }) => wallet.id === focusedWalletId) ? focusedWalletId : undefined;
 
   return (
     <>

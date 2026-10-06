@@ -30,6 +30,7 @@ import { buildCategoryGrid } from './CategoryGrid/categoryLayout';
 import DateChip from './DateChip/DateChip';
 import LimitHint from './LimitHint/LimitHint';
 import TypeToggle from './TypeToggle/TypeToggle';
+import useDefaultWallet from './useDefaultWallet';
 import WalletPicker from './WalletPicker/WalletPicker';
 
 import styles from './style';
@@ -75,9 +76,12 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
   const now = new Date();
 
   const wallets = useMemo(() => walletsOverview?.wallets.map(({ wallet }) => wallet) ?? [], [walletsOverview]);
+  const activeWalletIds = useMemo(() => walletsOverview?.wallets.map(({ wallet }) => wallet.id), [walletsOverview]);
   const { incomes, expenses } = useMemo(() => getActiveCategories(allCategories), [allCategories]);
   const activeOf = (type: TransactionType) => (type === TransactionType.INCOME ? incomes : expenses);
   const archived = saved?.category.isArchived ? saved.category : null;
+
+  useDefaultWallet(flow, activeWalletIds);
 
   const fitsType = (categoryId: number | null, type: TransactionType) =>
     categoryId !== null &&
@@ -102,6 +106,7 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
   const errors = getDraftErrors(draft, {
     baseline: isEdit ? (flow.baseline ?? undefined) : undefined,
     now: now.getTime(),
+    available: { walletIds: activeWalletIds },
   });
   const isChanged = hasUnsavedChanges(flow);
   const ready = !hasDraftErrors(errors) && (!isEdit || isChanged);
@@ -113,6 +118,16 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
       : undefined;
 
   const walletName = wallets.find(({ id }) => id === draft.walletId)?.wallet_name;
+  const hasDeletedWallet = isEdit && saved.wallet === null;
+  const hasNoWallets = activeWalletIds?.length === 0;
+  const walletHint = hasDeletedWallet
+    ? hasNoWallets
+      ? 'This wallet was deleted and you have no other wallets. Keep it, or create a new one to move the transaction.'
+      : 'This wallet was deleted. You can keep it or move the transaction to another wallet.'
+    : !isEdit && hasNoWallets
+      ? 'Create a wallet to save this transaction.'
+      : undefined;
+
   const saveLabel = isEdit ? 'Save changes' : isIncome ? 'Save income' : 'Save expense';
 
   return (
@@ -195,8 +210,9 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
 
             <WalletPicker
               wallets={wallets}
-              hasDeletedWallet={isEdit && saved.wallet === null}
+              hasDeletedWallet={hasDeletedWallet}
               selectedId={draft.walletId}
+              hint={walletHint}
               typeColor={typeColor}
               onSelect={(walletId) => change({ walletId })}
               onCreate={onCreateWallet}

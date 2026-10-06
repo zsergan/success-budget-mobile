@@ -57,6 +57,12 @@ const styles = StyleSheet.create({
   deletedText: {
     color: colors.muted,
   },
+  hint: {
+    fontFamily: theme.fonts.medium,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    color: colors.muted,
+  },
 });
 
 export default styles;

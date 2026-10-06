@@ -4,9 +4,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 
 import { BottomSheetModal as BottomModal, Fab, RangePickerSheet, ScreenFrame, useTransactionFlow } from '@components';
 import { usePeriod } from '@hooks';
-import { useAppSelector, useSpaceArg } from '@redux/hooks';
+import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
-import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { TransactionType } from '@shared/enums';
 import type { ScreenNames } from '@shared/enums';
 import type { MainTabNavigationProp, MainTabScreenProps } from '@shared/types';
@@ -42,9 +41,6 @@ const TransactionsScreen = () => {
     range,
     filter,
   });
-
-  const { currentData: walletsOverview } = useGetWalletsQuery(useSpaceArg());
-  const firstWalletId = walletsOverview?.wallets[0]?.wallet.id;
 
   return (
     <>
@@ -88,7 +84,7 @@ const TransactionsScreen = () => {
               {viewState === 'trueEmpty' && (
                 <TransactionsEmptyState
                   variant="trueEmpty"
-                  onAddTransaction={() => openCreate(TransactionType.EXPENSE, firstWalletId)}
+                  onAddTransaction={() => openCreate(TransactionType.EXPENSE)}
                 />
               )}
 
@@ -114,8 +110,8 @@ const TransactionsScreen = () => {
 
       {viewState !== 'loading' && (
         <Fab
-          onExpense={() => openCreate(TransactionType.EXPENSE, firstWalletId)}
-          onIncome={() => openCreate(TransactionType.INCOME, firstWalletId)}
+          onExpense={() => openCreate(TransactionType.EXPENSE)}
+          onIncome={() => openCreate(TransactionType.INCOME)}
         />
       )}
     </>

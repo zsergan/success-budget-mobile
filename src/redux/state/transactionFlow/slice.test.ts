@@ -3,7 +3,7 @@ import { createAppStore } from '@redux/Store';
 import { logoutMe } from '@redux/state/auth/thunks';
 import { activateSpace } from '@redux/state/space/thunks';
 import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
-import { hasUnsavedChanges, selectTransactionFlow } from './selectors';
+import { hasUnsavedChanges, selectLastWalletId, selectTransactionFlow } from './selectors';
 import {
   anotherStarted,
   awayEnded,
@@ -26,6 +26,7 @@ import {
   saveFailed,
   saveStarted,
   walletCreated,
+  walletDefaulted,
 } from './slice';
 
 jest.mock('@api/instance', () => ({
@@ -213,6 +214,32 @@ describe('transaction flow', () => {
     store.dispatch(awayStarted({ draftId, target: 'wallet' }));
     store.dispatch(awayEnded({ draftId }));
     expect(flow()).toMatchObject({ away: null, draft: { categoryId: 11, walletId: 9 } });
+  });
+
+  it('starts on a default wallet without counting it as a change', () => {
+    const { store, flow } = setUp();
+
+    store.dispatch(createOpened({ spaceId: 1, transactionType: TransactionType.EXPENSE, walletId: null, now: NOW }));
+    store.dispatch(walletDefaulted({ draftId: flow()!.draftId, walletId: 5 }));
+
+    expect(flow()?.draft?.walletId).toBe(5);
+    expect(hasUnsavedChanges(flow())).toBe(false);
+  });
+
+  it('remembers the wallet of a saved transaction per space until a logout', async () => {
+    const { store, flow } = setUp();
+    const result = { transaction: { ...saved, wallet: { id: 7, wallet_name: 'Card', design: AppColor.SLATE } } };
+
+    openCreate(store);
+    const { draftId } = flow()!;
+    store.dispatch(saveStarted({ draftId }));
+    store.dispatch(createSucceeded({ draftId, result: result as CreateTransactionResult }));
+
+    expect(selectLastWalletId(store.getState(), 1)).toBe(7);
+    expect(selectLastWalletId(store.getState(), 2)).toBeNull();
+
+    await store.dispatch(logoutMe());
+    expect(selectLastWalletId(store.getState(), 1)).toBeNull();
   });
 
   it('keeps a date that follows now when Apply changes nothing', () => {

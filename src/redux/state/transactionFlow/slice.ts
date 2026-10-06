@@ -45,9 +45,11 @@ export interface TransactionFlow {
 interface TransactionFlowState {
   flow: TransactionFlow | null;
   lastDraftId: number;
+  // The wallet of the last saved transaction, per space, so a new one starts there.
+  lastWalletIds: Record<number, number>;
 }
 
-const initialState: TransactionFlowState = { flow: null, lastDraftId: 0 };
+const initialState: TransactionFlowState = { flow: null, lastDraftId: 0, lastWalletIds: {} };
 
 type DraftScoped<T = object> = PayloadAction<T & { draftId: number }>;
 
@@ -206,6 +208,7 @@ const transactionFlowSlice = createSlice({
 
       flow.isSaving = false;
       flow.created = payload.result;
+      if (payload.result.transaction.wallet) state.lastWalletIds[flow.spaceId] = payload.result.transaction.wallet.id;
       flow.view = { name: 'created' };
     },
     editSucceeded: (state, { payload }: DraftScoped<{ transaction: TransactionModel }>) => {
@@ -213,6 +216,7 @@ const transactionFlowSlice = createSlice({
       if (!flow) return;
 
       flow.isSaving = false;
+      if (payload.transaction.wallet) state.lastWalletIds[flow.spaceId] = payload.transaction.wallet.id;
       flow.saved = payload.transaction;
       flow.draft = null;
       flow.baseline = null;
@@ -231,6 +235,14 @@ const transactionFlowSlice = createSlice({
       });
 
       state.flow = { ...next, followsNow: flow.followsNow };
+    },
+    // A new draft's wallet, once the space's wallets are known; it is where the form starts, not a change.
+    walletDefaulted: (state, { payload }: DraftScoped<{ walletId: number | null }>) => {
+      const flow = flowOf(state, payload.draftId);
+      if (!flow?.draft || !flow.baseline || flow.saved || flow.isSaving) return;
+
+      flow.draft.walletId = payload.walletId;
+      flow.baseline.walletId = payload.walletId;
     },
     awayStarted: (state, { payload }: DraftScoped<{ target: FlowAway }>) => {
       const flow = flowOf(state, payload.draftId);
@@ -273,6 +285,7 @@ const transactionFlowSlice = createSlice({
     });
     builder.addCase(logoutMe.fulfilled, (state) => {
       state.flow = null;
+      state.lastWalletIds = {};
     });
   },
 });
@@ -294,6 +307,7 @@ export const {
   createSucceeded,
   editSucceeded,
   anotherStarted,
+  walletDefaulted,
   awayStarted,
   walletCreated,
   categoryCreated,

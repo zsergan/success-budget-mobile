@@ -117,6 +117,9 @@ const wallets: WalletsOverviewResponse = {
   ],
 };
 
+let walletsResponse = wallets;
+let categoriesResponse = categories;
+
 let answerWrite: (value: unknown) => void = () => {};
 
 let stored = transactionDto({ amount: '50.00', version: 2 });
@@ -127,8 +130,8 @@ const respond = ({ url, method }: { url: string; method: string }) => {
   }
   if (method === 'POST' || method === 'PATCH') return new Promise((resolve) => (answerWrite = resolve));
   if (url.endsWith('/transactions/tx-1')) return Promise.resolve({ data: stored });
-  if (url.endsWith('/wallets')) return Promise.resolve({ data: wallets });
-  if (url.endsWith('/categories')) return Promise.resolve({ data: categories });
+  if (url.endsWith('/wallets')) return Promise.resolve({ data: walletsResponse });
+  if (url.endsWith('/categories')) return Promise.resolve({ data: categoriesResponse });
   if (url.endsWith('/limits')) return Promise.resolve({ data: { total: null, categories: [], over_allocation: null } });
 
   return Promise.resolve({ data: [] });
@@ -152,9 +155,9 @@ const renderFlow = () => {
     </Provider>,
   );
 
-  const open = (transactionType = TransactionType.EXPENSE) =>
+  const open = (transactionType = TransactionType.EXPENSE, walletId: number | null = 7) =>
     act(() => {
-      store.dispatch(createOpened({ spaceId: 1, transactionType, walletId: 7, now: new Date().toISOString() }));
+      store.dispatch(createOpened({ spaceId: 1, transactionType, walletId, now: new Date().toISOString() }));
     });
 
   const openDetails = () =>
@@ -179,6 +182,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockSheet.props = undefined;
   stored = transactionDto({ amount: '50.00', version: 2 });
+  walletsResponse = wallets;
+  categoriesResponse = categories;
   mockSheet.presents = 0;
   mockedRequest.mockImplementation(respond);
   jest.spyOn(Alert, 'alert');
@@ -444,5 +449,30 @@ describe('TransactionFlowSheet', () => {
 
     expect(flow()).toMatchObject({ away: null, draft: { categoryId: null } });
     expect(screen.getByText('New transaction')).toBeTruthy();
+  });
+
+  it('starts on an active wallet when none or a gone one was asked for, with nothing to discard', async () => {
+    const { open, flow } = renderFlow();
+
+    open(TransactionType.EXPENSE, 99);
+    await settle();
+
+    expect(flow()?.draft?.walletId).toBe(7);
+    fireEvent.press(screen.getByLabelText('Close'));
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(flow()).toBeNull();
+  });
+
+  it('offers a wallet first when the space has none, and saves nothing until there is one', async () => {
+    walletsResponse = { ...wallets, wallets: [] };
+    const { open, flow } = renderFlow();
+
+    open(TransactionType.EXPENSE, null);
+    await settle();
+    fillExpense();
+
+    expect(flow()?.draft?.walletId).toBeNull();
+    expect(screen.getByText('Create a wallet to save this transaction.')).toBeTruthy();
+    expect(screen.getByText('Save expense')).toBeDisabled();
   });
 });

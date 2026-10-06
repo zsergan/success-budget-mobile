@@ -7,3 +7,6 @@ export const selectTransactionFlow = (state: RootState) => state.transactionFlow
 // A picked but unapplied date is not a change yet.
 export const hasUnsavedChanges = (flow: TransactionFlow | null) =>
   !!flow?.draft && !!flow.baseline && isDraftChanged(flow.draft, flow.baseline);
+
+export const selectLastWalletId = (state: RootState, spaceId: number) =>
+  state.transactionFlow.lastWalletIds[spaceId] ?? null;

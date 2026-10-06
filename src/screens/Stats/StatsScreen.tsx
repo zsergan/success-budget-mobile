@@ -11,10 +11,9 @@ import {
   useTransactionFlow,
 } from '@components';
 import { usePeriod } from '@hooks';
-import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
+import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { activateSpace } from '@redux/state/space/thunks';
-import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { ScreenNames, TransactionType } from '@shared/enums';
 import type { MainTabNavigationProp } from '@shared/types';
 import { formatRangeLabel, hasComparison, isCurrentMonth, monthPeriodOf } from '@shared/utils';
@@ -52,9 +51,6 @@ const StatsScreen = () => {
   useRefreshOnReturn(refreshIfStale);
   useSpaceAccessRecovery(accessDenied);
 
-  const { currentData: walletsOverview } = useGetWalletsQuery(useSpaceArg());
-  const firstWalletId = walletsOverview?.wallets[0]?.wallet.id;
-
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const dispatch = useAppDispatch();
   const space = useSpaceStatus();
@@ -70,7 +66,7 @@ const StatsScreen = () => {
   };
 
   const addTransaction = useAddTransaction({
-    onHasWallets: () => openCreate(TransactionType.EXPENSE, firstWalletId),
+    onHasWallets: () => openCreate(TransactionType.EXPENSE),
     onNoWallets: () => walletSheetRef.current?.present(),
   });
 
