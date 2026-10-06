@@ -10,7 +10,7 @@ import { activateSpace } from '@redux/state/space/thunks';
 import { createTransactionResponseDto, transactionDto } from '@redux/state/transaction/fixtures';
 import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import { mapTransaction } from '@api/models';
-import { createOpened, detailsOpened } from '@redux/state/transactionFlow/slice';
+import { awayEnded, createOpened, detailsOpened, walletCreated } from '@redux/state/transactionFlow/slice';
 import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
 import TransactionFlowSheet from './TransactionFlowSheet';
 
@@ -26,24 +26,30 @@ const mockSheet: { props?: SheetProps; presents: number } = { presents: 0 };
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = jest.requireActual('react');
   const { ScrollView, TextInput, View } = jest.requireActual('react-native');
+  const SheetContext = React.createContext({ close: () => {} });
 
-  // Shows its content only between present() and dismiss(), as the real modal does.
+  // Shows its content only between present() and dismiss(), as the real modal does. The first sheet is the flow's.
   const BottomSheetModal = React.forwardRef(function BottomSheetModal(props: SheetProps, ref: Ref<unknown>) {
     const [isOpen, setOpen] = React.useState(false);
-    mockSheet.props = props;
+    const isFlowSheet = React.useRef(mockSheet.props === undefined || mockSheet.props === props).current;
+    if (isFlowSheet) mockSheet.props = props;
+
+    const dismiss = () => {
+      setOpen((wasOpen: boolean) => {
+        if (wasOpen) props.onDismiss?.();
+        return false;
+      });
+    };
 
     React.useImperativeHandle(ref, () => ({
       present: () => {
-        mockSheet.presents += 1;
+        if (isFlowSheet) mockSheet.presents += 1;
         setOpen(true);
       },
-      dismiss: () => {
-        setOpen(false);
-        props.onDismiss?.();
-      },
+      dismiss,
     }));
 
-    return isOpen ? props.children : null;
+    return isOpen ? <SheetContext.Provider value={{ close: dismiss }}>{props.children}</SheetContext.Provider> : null;
   });
 
   return {
@@ -52,8 +58,15 @@ jest.mock('@gorhom/bottom-sheet', () => {
     BottomSheetView: View,
     BottomSheetScrollView: ScrollView,
     BottomSheetTextInput: TextInput,
+    useBottomSheet: () => React.useContext(SheetContext),
   };
 });
+
+const mockNavigate = jest.fn();
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  useNavigation: () => ({ navigate: mockNavigate }),
+}));
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
@@ -91,7 +104,7 @@ const categories: GetCategoriesResponse = {
     category(2, 'Taxi'),
     ...Array.from({ length: 8 }, (_, index) => category(index + 3, `Spend ${index + 3}`)),
   ],
-  incomes: [category(20, 'Salary', TransactionType.INCOME)],
+  incomes: [],
   archived: [],
 };
 
@@ -109,6 +122,9 @@ let answerWrite: (value: unknown) => void = () => {};
 let stored = transactionDto({ amount: '50.00', version: 2 });
 
 const respond = ({ url, method }: { url: string; method: string }) => {
+  if (method === 'POST' && url.endsWith('/categories')) {
+    return Promise.resolve({ data: category(30, 'Bonus', TransactionType.INCOME) });
+  }
   if (method === 'POST' || method === 'PATCH') return new Promise((resolve) => (answerWrite = resolve));
   if (url.endsWith('/transactions/tx-1')) return Promise.resolve({ data: stored });
   if (url.endsWith('/wallets')) return Promise.resolve({ data: wallets });
@@ -161,6 +177,7 @@ const pressBackdrop = () =>
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockSheet.props = undefined;
   stored = transactionDto({ amount: '50.00', version: 2 });
   mockSheet.presents = 0;
   mockedRequest.mockImplementation(respond);
@@ -370,5 +387,62 @@ describe('TransactionFlowSheet', () => {
     expect(screen.getByText('Starting balance')).toBeTruthy();
     expect(screen.getByText('Set when the wallet was created')).toBeTruthy();
     expect(screen.queryByText('Edit')).toBeNull();
+  });
+
+  it('comes back from a new wallet with it picked and the rest of the draft kept', async () => {
+    const { store, open, flow } = renderFlow();
+
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('New wallet'));
+
+    const { draftId } = flow()!;
+    expect(flow()?.away).toBe('wallet');
+    expect(screen.queryByText('New transaction')).toBeNull();
+    expect(mockNavigate).toHaveBeenCalledWith('AddWalletScreen', { id: 'new', forDraft: draftId });
+
+    act(() => {
+      store.dispatch(walletCreated({ draftId, walletId: 8 }));
+      store.dispatch(awayEnded({ draftId }));
+    });
+
+    expect(screen.getByText('New transaction')).toBeTruthy();
+    expect(mockSheet.presents).toBe(2);
+    expect(flow()?.draft).toMatchObject({ amount: '12', categoryId: 1, walletId: 8 });
+  });
+
+  it('creates a category from an empty grid and comes back with it picked, or unchanged on cancel', async () => {
+    const { open, flow } = renderFlow();
+
+    open(TransactionType.INCOME);
+    await settle();
+    fireEvent.changeText(screen.getByLabelText('Amount'), '500');
+    fireEvent.press(screen.getByText('Create category'));
+
+    expect(flow()?.away).toBe('category');
+    expect(screen.getByPlaceholderText('My category')).toBeTruthy();
+
+    fireEvent.changeText(screen.getByPlaceholderText('My category'), 'Bonus');
+    fireEvent.press(screen.getByText('Create category'));
+    await settle();
+
+    expect(flow()).toMatchObject({ away: null, draft: { amount: '500', categoryId: 30 } });
+    expect(screen.queryByPlaceholderText('My category')).toBeNull();
+    expect(screen.getByText('Save income')).toBeTruthy();
+  });
+
+  it('returns to the form unchanged when the new category is not saved', async () => {
+    const { store, open, flow } = renderFlow();
+
+    open(TransactionType.INCOME);
+    await settle();
+    fireEvent.press(screen.getByText('Create category'));
+    act(() => {
+      store.dispatch(awayEnded({ draftId: flow()!.draftId }));
+    });
+
+    expect(flow()).toMatchObject({ away: null, draft: { categoryId: null } });
+    expect(screen.getByText('New transaction')).toBeTruthy();
   });
 });

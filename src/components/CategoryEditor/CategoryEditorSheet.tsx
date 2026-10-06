@@ -26,13 +26,15 @@ interface Props {
   category?: CategoryModel;
   defaultTransactionType?: TransactionType;
   onRequestDelete?: (category: CategoryModel) => void;
+  onSaved?: (category: CategoryModel) => void;
 }
 
-const CategoryEditorSheet = ({ category, defaultTransactionType, onRequestDelete }: Props) => {
+const CategoryEditorSheet = ({ category, defaultTransactionType, onRequestDelete, onSaved }: Props) => {
   const { height: windowHeight } = useWindowDimensions();
   const { isNewCategory, control, watch, onSubmit, isSubmitDisabled } = useCategoryEditorForm({
     category,
     defaultTransactionType,
+    onSaved,
   });
 
   const name = watch('name');

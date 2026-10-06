@@ -239,12 +239,12 @@ const transactionFlowSlice = createSlice({
       flow.away = payload.target;
     },
     // The new wallet or category is saved on its own; discarding the draft later does not remove it.
+    // The form comes back with awayEnded, once the wallet screen has gone.
     walletCreated: (state, { payload }: DraftScoped<{ walletId: number }>) => {
       const flow = flowOf(state, payload.draftId);
       if (flow?.away !== 'wallet' || !flow.draft) return;
 
       flow.draft.walletId = payload.walletId;
-      flow.away = null;
     },
     categoryCreated: (state, { payload }: DraftScoped<{ categoryId: number; transactionType: TransactionType }>) => {
       const flow = flowOf(state, payload.draftId);

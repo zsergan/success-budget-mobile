@@ -34,9 +34,10 @@ const schema = yup.object().shape({
 interface UseCategoryEditorFormProps {
   category?: CategoryModel;
   defaultTransactionType?: TransactionType;
+  onSaved?: (category: CategoryModel) => void;
 }
 
-const useCategoryEditorForm = ({ category, defaultTransactionType }: UseCategoryEditorFormProps) => {
+const useCategoryEditorForm = ({ category, defaultTransactionType, onSaved }: UseCategoryEditorFormProps) => {
   const isNewCategory = !category;
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const [createCategory] = useCreateCategoryMutation();
@@ -59,7 +60,7 @@ const useCategoryEditorForm = ({ category, defaultTransactionType }: UseCategory
     },
   });
 
-  const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<CategoryEditorFormData>({
+  const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<CategoryEditorFormData, CategoryModel>({
     handleSubmit,
     formState: { isSubmitting, isSubmitSuccessful },
     onSubmit: async (formData) => {
@@ -82,7 +83,10 @@ const useCategoryEditorForm = ({ category, defaultTransactionType }: UseCategory
 
       return updateCategory({ spaceId: requireSpaceId(spaceId), categoryId: category.id, data: payload }).unwrap();
     },
-    onSuccess: () => close(),
+    onSuccess: (saved) => {
+      onSaved?.(saved);
+      close();
+    },
     getInvalidMessage: (errors) => [errors.name && 'Enter a category name'].filter(Boolean).join('\n'),
     reset,
   });

@@ -199,7 +199,9 @@ describe('transaction flow', () => {
 
     store.dispatch(awayStarted({ draftId, target: 'wallet' }));
     store.dispatch(walletCreated({ draftId, walletId: 9 }));
-    expect(flow()).toMatchObject({ away: null, draft: { walletId: 9 } });
+    expect(flow()).toMatchObject({ away: 'wallet', draft: { walletId: 9 } });
+    store.dispatch(awayEnded({ draftId }));
+    expect(flow()?.away).toBeNull();
 
     store.dispatch(categoriesOpened());
     store.dispatch(awayStarted({ draftId, target: 'category' }));

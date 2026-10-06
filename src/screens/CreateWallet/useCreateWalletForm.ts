@@ -1,13 +1,15 @@
 import * as yup from 'yup';
+import { useEffect } from 'react';
 import type { CreateWalletResponse } from '@api/dto';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
 import { requireSpaceId } from '@redux/api/baseApi';
-import { useAppSelector } from '@redux/hooks';
+import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/state/space/selectors';
 import type { RootStackScreenProps } from '@shared/types';
 import { AppColor, ScreenNames } from '@shared/enums';
+import { awayEnded, walletCreated } from '@redux/state/transactionFlow/slice';
 import { useCreateWalletMutation, useUpdateWalletMutation } from '@redux/state/wallet/api';
 import { useFormSubmitHandler } from '@hooks';
 import { amountSchema } from '@shared/utils';
@@ -28,6 +30,8 @@ interface UseCreateWalletFormProps extends RootStackScreenProps<ScreenNames.ADD_
 
 const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) => {
   const isNewWallet = route.params.id === 'new';
+  const forDraft = route.params.id === 'new' ? route.params.forDraft : undefined;
+  const dispatch = useAppDispatch();
 
   const spaceCurrencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
   const spaceId = useAppSelector(selectCurrentSpaceId);
@@ -47,6 +51,13 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
       design: isNewWallet ? AppColor.SLATE : route.params.design,
     },
   });
+
+  useEffect(
+    () => () => {
+      if (forDraft !== undefined) dispatch(awayEnded({ draftId: forDraft }));
+    },
+    [dispatch, forDraft],
+  );
 
   // Kept only while this screen is open: leaving it any other way than a save drops the intent with it.
   const addTransaction = route.params.id === 'new' ? route.params.addTransaction : undefined;
@@ -81,6 +92,7 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
             data: { wallet_name: formData.walletName, design: formData.design },
           }).unwrap(),
     onSuccess: (result) => {
+      if (result && forDraft !== undefined) dispatch(walletCreated({ draftId: forDraft, walletId: result.wallet.id }));
       if (!result || !continueToTransaction(result.wallet.id)) navigation.goBack();
     },
     getInvalidMessage: (errors) =>

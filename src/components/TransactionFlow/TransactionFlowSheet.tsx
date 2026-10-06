@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BackHandler } from 'react-native';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import type { CategoryModel } from '@api/models';
+import CategoryEditorSheet, { CATEGORY_EDITOR_SNAP_POINT } from '@components/CategoryEditor/CategoryEditorSheet';
 import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
 import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
 import { hasUnsavedChanges, selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
-import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
-import { anotherStarted, closed } from '@redux/state/transactionFlow/slice';
+import type { FlowAway, TransactionFlow } from '@redux/state/transactionFlow/slice';
+import { anotherStarted, awayEnded, awayStarted, categoryCreated, closed } from '@redux/state/transactionFlow/slice';
+import { ScreenNames } from '@shared/enums';
+import type { RootStackParamList } from '@shared/types';
 import CategoriesPanel from './CategoriesPanel/CategoriesPanel';
 import CreatedConfirmation from './CreatedConfirmation/CreatedConfirmation';
 import DateTimePanel from './DateTimePanel/DateTimePanel';
@@ -20,7 +26,9 @@ import TransactionEditor from './TransactionEditor/TransactionEditor';
 const TransactionFlowSheet = () => {
   const dispatch = useAppDispatch();
   const store = useAppStore();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const sheetRef = useRef<BottomSheetModal>(null);
+  const categorySheetRef = useRef<BottomSheetModal>(null);
   const flow = useAppSelector(selectTransactionFlow);
   const save = useFlowSave();
   const { requestClose, back } = useFlowClose();
@@ -31,6 +39,7 @@ const TransactionFlowSheet = () => {
   const shown = flow ?? lastFlow;
 
   const isVisible = !!flow && !flow.away;
+  const isCreatingCategory = flow?.away === 'category';
   const isDismissingRef = useRef(false);
 
   useEffect(() => {
@@ -42,6 +51,11 @@ const TransactionFlowSheet = () => {
       sheetRef.current?.dismiss();
     }
   }, [isVisible]);
+
+  useEffect(() => {
+    if (isCreatingCategory) categorySheetRef.current?.present();
+    else categorySheetRef.current?.dismiss();
+  }, [isCreatingCategory]);
 
   useEffect(() => {
     if (!isVisible) return;
@@ -67,6 +81,30 @@ const TransactionFlowSheet = () => {
 
   const isGuarded = !!flow && (flow.isSaving || hasUnsavedChanges(flow));
 
+  // Creating a wallet or a category hides the sheet; the draft waits in the flow and comes back with the new pick.
+  const leaveFor = (target: FlowAway) => {
+    const current = selectTransactionFlow(store.getState());
+    if (!current || current.isSaving) return;
+
+    dispatch(awayStarted({ draftId: current.draftId, target }));
+    if (target === 'wallet')
+      navigation.navigate(ScreenNames.ADD_WALLET_SCREEN, { id: 'new', forDraft: current.draftId });
+  };
+
+  const handleCategorySaved = (category: CategoryModel) => {
+    if (!flow) return;
+
+    dispatch(
+      categoryCreated({ draftId: flow.draftId, categoryId: category.id, transactionType: category.transactionType }),
+    );
+  };
+
+  // Closing the category sheet without saving returns to the form as it was.
+  const handleCategoryDismiss = () => {
+    const current = selectTransactionFlow(store.getState());
+    if (current?.away === 'category') dispatch(awayEnded({ draftId: current.draftId }));
+  };
+
   const renderView = () => {
     if (!shown) return null;
 
@@ -79,8 +117,8 @@ const TransactionFlowSheet = () => {
             onSave={save}
             onBack={back}
             onClose={requestClose}
-            onCreateWallet={() => undefined}
-            onCreateCategory={() => undefined}
+            onCreateWallet={() => leaveFor('wallet')}
+            onCreateCategory={() => leaveFor('category')}
           />
         ) : null;
       case 'details':
@@ -112,15 +150,23 @@ const TransactionFlowSheet = () => {
   };
 
   return (
-    <BottomModal
-      ref={sheetRef}
-      dynamicSizing
-      enablePanDownToClose={!isGuarded}
-      onBackdropPress={requestClose}
-      onDismiss={handleDismiss}
-    >
-      {renderView()}
-    </BottomModal>
+    <>
+      <BottomModal
+        ref={sheetRef}
+        dynamicSizing
+        enablePanDownToClose={!isGuarded}
+        onBackdropPress={requestClose}
+        onDismiss={handleDismiss}
+      >
+        {renderView()}
+      </BottomModal>
+
+      <BottomModal ref={categorySheetRef} snapPoint={CATEGORY_EDITOR_SNAP_POINT} onDismiss={handleCategoryDismiss}>
+        {shown?.draft && (
+          <CategoryEditorSheet defaultTransactionType={shown.draft.transactionType} onSaved={handleCategorySaved} />
+        )}
+      </BottomModal>
+    </>
   );
 };
 

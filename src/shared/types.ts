@@ -7,7 +7,8 @@ import type { ScreenNames, AppColor, TransactionType } from '@shared/enums';
 export type AddTransactionIntent = { returnTo: ScreenNames.STATS_TAB; spaceId: number };
 
 type AddWalletParams =
-  | { id: 'new'; addTransaction?: AddTransactionIntent }
+  // `forDraft`: the transaction draft waiting for this wallet; it gets it on save, and its form back on leaving.
+  | { id: 'new'; addTransaction?: AddTransactionIntent; forDraft?: number }
   | { id: number; walletName: string; balance: string; design: AppColor };
 
 // A one-time request to open the composer on a wallet that was just created.
