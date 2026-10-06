@@ -7,7 +7,9 @@ import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
 import { hasUnsavedChanges, selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { anotherStarted, closed } from '@redux/state/transactionFlow/slice';
+import CategoriesPanel from './CategoriesPanel/CategoriesPanel';
 import CreatedConfirmation from './CreatedConfirmation/CreatedConfirmation';
+import DateTimePanel from './DateTimePanel/DateTimePanel';
 import useFlowClose from './hooks/useFlowClose';
 import useFlowSave from './hooks/useFlowSave';
 import TransactionEditor from './TransactionEditor/TransactionEditor';
@@ -80,6 +82,17 @@ const TransactionFlowSheet = () => {
             onCreateCategory={() => undefined}
           />
         ) : null;
+      case 'categories':
+        return shown.draft ? (
+          <CategoriesPanel
+            transactionType={shown.draft.transactionType}
+            selectedId={shown.draft.categoryId}
+            onBack={back}
+            onClose={requestClose}
+          />
+        ) : null;
+      case 'dateTime':
+        return <DateTimePanel pending={shown.view.pending} onBack={back} onClose={requestClose} />;
       case 'created':
         return shown.created ? (
           <CreatedConfirmation

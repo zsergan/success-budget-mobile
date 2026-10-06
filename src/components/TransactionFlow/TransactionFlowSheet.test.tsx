@@ -58,6 +58,8 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
+jest.mock('@react-native-community/datetimepicker', () => () => null);
+
 const mockAddAlert = jest.fn();
 jest.mock('@hooks/useAlert', () => () => ({ addAlert: mockAddAlert }));
 jest.mock('expo-crypto', () => ({ randomUUID: () => 'key-1' }));
@@ -83,8 +85,12 @@ const category = (id: number, name: string, transactionType = TransactionType.EX
 });
 
 const categories: GetCategoriesResponse = {
-  expenses: [category(1, 'Food'), category(2, 'Taxi')],
-  incomes: [category(3, 'Salary', TransactionType.INCOME)],
+  expenses: [
+    category(1, 'Food'),
+    category(2, 'Taxi'),
+    ...Array.from({ length: 8 }, (_, index) => category(index + 3, `Spend ${index + 3}`)),
+  ],
+  incomes: [category(20, 'Salary', TransactionType.INCOME)],
   archived: [],
 };
 
@@ -245,5 +251,36 @@ describe('TransactionFlowSheet', () => {
       draft: { transactionType: TransactionType.EXPENSE, walletId: 7, amount: '', categoryId: null },
     });
     expect(screen.getByText('New transaction')).toBeTruthy();
+  });
+
+  it('keeps the draft through More and the date panel, and takes a date only on Apply', async () => {
+    const { open, flow } = renderFlow();
+
+    open();
+    await settle();
+    fireEvent.changeText(screen.getByLabelText('Amount'), '12');
+    const { timestamp } = flow()!.draft!;
+
+    fireEvent.press(screen.getByText('More'));
+    expect(screen.getByText('Categories')).toBeTruthy();
+    fireEvent.press(screen.getByText('Spend 10'));
+
+    expect(screen.getByText('New transaction')).toBeTruthy();
+    // The seventh tile and the section's hint.
+    expect(screen.getAllByText('Spend 10')).toHaveLength(2);
+    expect(flow()?.draft).toMatchObject({ amount: '12', categoryId: 10 });
+
+    fireEvent.press(screen.getByText(/^Today, /));
+    fireEvent.press(screen.getByText('Yesterday'));
+    fireEvent.press(screen.getByLabelText('Back to the form'));
+    expect(flow()?.draft?.timestamp).toBe(timestamp);
+
+    fireEvent.press(screen.getByText(/^Today, /));
+    fireEvent.press(screen.getByText('Yesterday'));
+    fireEvent.press(screen.getByText('Apply'));
+
+    expect(screen.getByText(/^Yesterday, /)).toBeTruthy();
+    expect(flow()?.draft).toMatchObject({ amount: '12', categoryId: 10 });
+    expect(flow()?.draft?.timestamp).not.toBe(timestamp);
   });
 });
