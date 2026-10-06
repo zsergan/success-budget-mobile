@@ -2,14 +2,14 @@ import type { MutableRefObject, ReactNode } from 'react';
 import { useCallback, useEffect, useState, createContext, useRef } from 'react';
 import { Animated, Dimensions, Easing } from 'react-native';
 
-import type { AlertItem } from '../Alert/Alert';
+import type { AlertAction, AlertItem } from '../Alert/Alert';
 import Alert from '../Alert/Alert';
 import { registerGlobalAlertHandler } from './globalAlert';
 
 import styles from './style';
 
 interface AlertContextData {
-  addAlert(message: string): void;
+  addAlert(message: string, action?: AlertAction): void;
   dismissAlert(id: number): void;
 }
 
@@ -49,14 +49,14 @@ const AlertProvider = ({ children }: AlertProviderProps) => {
   );
 
   const addAlert = useCallback(
-    (message: string) => {
+    (message: string, action?: AlertAction) => {
       if (timeout.current) {
         clearTimeout(timeout.current);
       }
 
       const id = Math.floor(Math.random() * 9000000) + 1000000;
 
-      setAlert({ id, message });
+      setAlert({ id, message, action });
 
       showAlert();
 
