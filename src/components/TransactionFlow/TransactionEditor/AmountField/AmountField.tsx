@@ -1,9 +1,15 @@
-import { useEffect, useRef } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import type { ComponentRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Text, View } from 'react-native';
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 
-import { hexToRgba } from '@shared/utils';
+import { colors } from '@shared/theme';
 
-import styles from './style';
+import styles, { AMOUNT_FONT } from './style';
+
+// The digits shrink from 40 to 28 pt as they grow, so the largest amount still fits on one line.
+const fontSizeFor = (value: string) =>
+  Math.max(AMOUNT_FONT.min, Math.min(AMOUNT_FONT.max, AMOUNT_FONT.max - (value.length - 8) * 2));
 
 interface Props {
   value: string;
@@ -12,40 +18,52 @@ interface Props {
   typeColor: string;
   isIncome: boolean;
   currencyCode?: string;
-  walletName?: string;
+  // Why a typed or pasted value is not an amount; empty input is not an error here.
+  error?: string;
 }
 
-const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currencyCode, walletName }: Props) => {
-  const inputRef = useRef<TextInput>(null);
+// The typed text stays exactly as entered, so the caret never jumps and nothing is cut; the sign comes from the type.
+const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currencyCode, error }: Props) => {
+  const inputRef = useRef<ComponentRef<typeof BottomSheetTextInput>>(null);
+  const [isFocused, setFocused] = useState(false);
 
   // Focused once, on the open of a new transaction; never on Edit or on the way back from a panel.
   useEffect(() => {
     if (autoFocus) inputRef.current?.focus();
   }, [autoFocus]);
 
-  return (
-    <View style={[styles.hero, { backgroundColor: hexToRgba(typeColor, 0.07) }]}>
-      <Text style={[styles.heroLabel, { color: typeColor }]}>{isIncome ? 'Income amount' : 'Expense amount'}</Text>
+  const hasValue = value.trim() !== '';
+  const fontSize = fontSizeFor(value);
+  const lineColor = error ? colors.danger : isFocused ? typeColor : colors.hairline;
 
-      <View style={styles.heroRow}>
-        <TextInput
+  return (
+    <View style={styles.root}>
+      <View style={[styles.row, { borderBottomColor: lineColor }, (isFocused || !!error) && styles.rowActive]}>
+        {hasValue && (
+          <Text style={[styles.sign, { color: typeColor, fontSize }]} accessibilityElementsHidden>
+            {isIncome ? '+' : '−'}
+          </Text>
+        )}
+
+        <BottomSheetTextInput
           ref={inputRef}
           value={value}
           onChangeText={onChange}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           placeholder="0"
-          placeholderTextColor={hexToRgba(typeColor, 0.4)}
+          placeholderTextColor={colors.muted}
           inputMode="decimal"
-          style={[styles.heroAmount, { color: typeColor }]}
+          style={[styles.input, { color: typeColor, fontSize }]}
+          selectionColor={typeColor}
           returnKeyType="done"
           accessibilityLabel="Amount"
         />
 
-        <Text style={[styles.heroCurrency, { color: typeColor }]}>{currencyCode}</Text>
+        <Text style={styles.currency}>{currencyCode}</Text>
       </View>
 
-      <Text style={styles.heroSub}>
-        {walletName ? `${currencyCode} · ${isIncome ? 'added to' : 'taken from'} ${walletName}` : currencyCode}
-      </Text>
+      {error && <Text style={styles.error}>{error}</Text>}
     </View>
   );
 };

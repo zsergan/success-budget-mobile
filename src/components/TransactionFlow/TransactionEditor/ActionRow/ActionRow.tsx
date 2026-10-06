@@ -13,16 +13,20 @@ interface Props {
   helperText?: string;
   ready: boolean;
   isSaving: boolean;
+  // The home indicator is under the keyboard then, so its inset is not kept.
+  isAboveKeyboard?: boolean;
   typeColor: string;
   onPress: () => void;
 }
 
-const ActionRow = ({ label, helperText, ready, isSaving, typeColor, onPress }: Props) => {
+const ActionRow = ({ label, helperText, ready, isSaving, isAboveKeyboard = false, typeColor, onPress }: Props) => {
   const insets = useSafeAreaInsets();
   const isActive = ready || isSaving;
 
   return (
-    <View style={[styles.footer, { marginBottom: theme.spacing.xl + insets.bottom }]}>
+    <View
+      style={[styles.footer, { marginBottom: isAboveKeyboard ? theme.spacing.md : theme.spacing.xl + insets.bottom }]}
+    >
       {helperText && !isSaving && (
         <View style={styles.helperRow}>
           <Icon name="info" size={13} color={colors.muted} strokeWidth={1.8} />

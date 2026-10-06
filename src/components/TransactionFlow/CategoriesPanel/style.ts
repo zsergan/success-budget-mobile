@@ -49,6 +49,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: colors.muted,
   },
+  noMatches: {
+    paddingVertical: theme.spacing.xl,
+    textAlign: 'center',
+    fontFamily: theme.fonts.medium,
+    fontSize: theme.fontSizes.bodySm,
+    lineHeight: theme.lineHeights.bodySm,
+    color: colors.muted,
+  },
 });
 
 export default styles;

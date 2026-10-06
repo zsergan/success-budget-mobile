@@ -56,6 +56,12 @@ const CategoriesPanel = ({ transactionType, selectedId, onBack, onClose }: Props
           />
         )}
 
+        {shown.length === 0 && needle !== '' && (
+          <Text style={styles.noMatches}>
+            No {isIncome ? 'income' : 'expense'} categories match “{query.trim()}”
+          </Text>
+        )}
+
         <View style={styles.grid}>
           {shown.map((category) => {
             const isSelected = category.id === selectedId;

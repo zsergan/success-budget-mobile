@@ -242,6 +242,15 @@ describe('transaction flow', () => {
     expect(selectLastWalletId(store.getState(), 1)).toBeNull();
   });
 
+  it('keeps the category of an edited record in the grid', () => {
+    const { store, flow } = setUp();
+
+    store.dispatch(detailsOpened({ spaceId: 1, transaction: saved }));
+    store.dispatch(editStarted({ transaction: saved }));
+
+    expect(flow()?.promotedCategoryId).toBe(4);
+  });
+
   it('keeps a date that follows now when Apply changes nothing', () => {
     const { store, flow } = setUp();
 

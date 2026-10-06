@@ -1,6 +1,8 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import type { BottomSheetScrollViewMethods } from '@gorhom/bottom-sheet';
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { TransactionModel } from '@api/models';
 import Icon from '@components/Icon/Icon';
@@ -22,7 +24,7 @@ import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { categoriesOpened, dateTimeOpened, draftChanged } from '@redux/state/transactionFlow/slice';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { TransactionType } from '@shared/enums';
-import { colors } from '@shared/theme';
+import theme, { colors } from '@shared/theme';
 import ActionRow from './ActionRow/ActionRow';
 import AmountField from './AmountField/AmountField';
 import CategoryGrid from './CategoryGrid/CategoryGrid';
@@ -31,6 +33,7 @@ import DateChip from './DateChip/DateChip';
 import LimitHint from './LimitHint/LimitHint';
 import TypeToggle from './TypeToggle/TypeToggle';
 import useDefaultWallet from './useDefaultWallet';
+import useKeyboardHeight from './useKeyboardHeight';
 import WalletPicker from './WalletPicker/WalletPicker';
 
 import styles from './style';
@@ -63,6 +66,10 @@ interface Props {
 const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCreateCategory }: Props) => {
   const dispatch = useAppDispatch();
   const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
+  const scrollRef = useRef<BottomSheetScrollViewMethods>(null);
+  const [isNoteFocused, setNoteFocused] = useState(false);
   const spaceArg = useSpaceArg();
   const { currentData: walletsOverview } = useGetWalletsQuery(spaceArg);
   const { currentData: allCategories } = useGetCategoriesQuery(spaceArg);
@@ -79,7 +86,9 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
   const activeWalletIds = useMemo(() => walletsOverview?.wallets.map(({ wallet }) => wallet.id), [walletsOverview]);
   const { incomes, expenses } = useMemo(() => getActiveCategories(allCategories), [allCategories]);
   const activeOf = (type: TransactionType) => (type === TransactionType.INCOME ? incomes : expenses);
+  // Only the record's own archived category is offered, and only for its type.
   const archived = saved?.category.isArchived ? saved.category : null;
+  const ownArchived = archived?.transactionType === draft.transactionType ? archived : null;
 
   useDefaultWallet(flow, activeWalletIds);
 
@@ -90,7 +99,7 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
 
   const grid = buildCategoryGrid({
     active: activeOf(draft.transactionType),
-    archived: archived?.transactionType === draft.transactionType ? archived : null,
+    archived: ownArchived,
     promotedId: flow.promotedCategoryId,
   });
 
@@ -106,18 +115,27 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
   const errors = getDraftErrors(draft, {
     baseline: isEdit ? (flow.baseline ?? undefined) : undefined,
     now: now.getTime(),
-    available: { walletIds: activeWalletIds },
+    available: {
+      walletIds: activeWalletIds,
+      categoryIds: allCategories && [
+        ...activeOf(draft.transactionType).map(({ id }) => id),
+        ...(ownArchived ? [ownArchived.id] : []),
+      ],
+    },
   });
   const isChanged = hasUnsavedChanges(flow);
   const ready = !hasDraftErrors(errors) && (!isEdit || isChanged);
-  const helperText = isEdit && !isChanged ? undefined : Object.values(errors)[0];
+  // A typed value that is not an amount, and a date out of range, are explained at their fields; the footer names
+  // what is still missing.
+  const amountError = draft.amount.trim() ? errors.amount : undefined;
+  const missing = [amountError ? undefined : errors.amount, errors.category, errors.wallet, errors.description];
+  const helperText = isEdit && !isChanged ? undefined : missing.find(Boolean);
 
   const matchedLimit =
     !isIncome && draft.categoryId !== null && isThisMonth(draft.timestamp, now)
       ? findLimitForCategory(categoryLimits, draft.categoryId)
       : undefined;
 
-  const walletName = wallets.find(({ id }) => id === draft.walletId)?.wallet_name;
   const hasDeletedWallet = isEdit && saved.wallet === null;
   const hasNoWallets = activeWalletIds?.length === 0;
   const walletHint = hasDeletedWallet
@@ -128,10 +146,20 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
       ? 'Create a wallet to save this transaction.'
       : undefined;
 
+  // Above the keyboard the form shrinks to what is left, so Save stays in view and the fields scroll under it.
+  const height = Math.min(
+    windowHeight * EDITOR_HEIGHT_FRACTION,
+    keyboardHeight > 0 ? windowHeight - keyboardHeight - insets.top - theme.spacing.sm : Infinity,
+  );
+
+  useEffect(() => {
+    if (isNoteFocused && keyboardHeight > 0) scrollRef.current?.scrollToEnd({ animated: true });
+  }, [isNoteFocused, keyboardHeight]);
+
   const saveLabel = isEdit ? 'Save changes' : isIncome ? 'Save income' : 'Save expense';
 
   return (
-    <View style={[styles.root, { height: windowHeight * EDITOR_HEIGHT_FRACTION }]}>
+    <View style={[styles.root, { height }]}>
       <View style={styles.topBlock}>
         <View style={styles.handle} />
 
@@ -175,7 +203,7 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
             typeColor={typeColor}
             isIncome={isIncome}
             currencyCode={currencyCode}
-            walletName={walletName}
+            error={amountError}
           />
 
           {matchedLimit && (
@@ -191,6 +219,7 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
         </View>
 
         <BottomSheetScrollView
+          ref={scrollRef}
           style={styles.body}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -232,6 +261,8 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
                 style={styles.note}
                 value={draft.description}
                 onChangeText={(description) => change({ description })}
+                onFocus={() => setNoteFocused(true)}
+                onBlur={() => setNoteFocused(false)}
                 placeholder="Add a note…"
                 placeholderTextColor={colors.muted}
                 multiline
@@ -249,6 +280,7 @@ const TransactionEditor = ({ flow, onSave, onBack, onClose, onCreateWallet, onCr
         helperText={helperText}
         ready={ready}
         isSaving={isSaving}
+        isAboveKeyboard={keyboardHeight > 0}
         typeColor={typeColor}
         onPress={onSave}
       />

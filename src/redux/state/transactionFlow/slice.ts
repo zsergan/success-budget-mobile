@@ -134,7 +134,7 @@ const transactionFlowSlice = createSlice({
       flow.saved = payload.transaction;
       flow.draft = draftFromTransaction(payload.transaction);
       flow.baseline = flow.draft;
-      flow.promotedCategoryId = null;
+      flow.promotedCategoryId = payload.transaction.category.id;
       flow.view = { name: 'edit' };
     },
     editLeft: (state) => {

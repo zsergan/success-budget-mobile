@@ -475,4 +475,78 @@ describe('TransactionFlowSheet', () => {
     expect(screen.getByText('Create a wallet to save this transaction.')).toBeTruthy();
     expect(screen.getByText('Save expense')).toBeDisabled();
   });
+
+  it('explains a typed or pasted amount that is not one and keeps it as entered', async () => {
+    const { open, flow } = renderFlow();
+
+    open();
+    await settle();
+    fireEvent.press(screen.getByText('Food'));
+    fireEvent.changeText(screen.getByLabelText('Amount'), '12.345');
+
+    expect(screen.getByText('Use at most two decimal places')).toBeTruthy();
+    expect(screen.getByText('Save expense')).toBeDisabled();
+    expect(flow()?.draft?.amount).toBe('12.345');
+
+    fireEvent.changeText(screen.getByLabelText('Amount'), '1 234,50');
+
+    expect(screen.queryByText('Use at most two decimal places')).toBeNull();
+    expect(screen.getByText('Save expense')).toBeEnabled();
+    expect(screen.getByText('−', { includeHiddenElements: true })).toBeTruthy();
+  });
+
+  it('searches a long list of categories and says when nothing matches', async () => {
+    categoriesResponse = {
+      ...categories,
+      expenses: Array.from({ length: 20 }, (_, index) => category(index + 1, `Spend ${index + 1}`)),
+    };
+    const { open } = renderFlow();
+
+    open();
+    await settle();
+    fireEvent.press(screen.getByText('More'));
+    fireEvent.changeText(screen.getByLabelText('Search categories'), 'gym');
+
+    expect(screen.getByText('No expense categories match “gym”')).toBeTruthy();
+
+    fireEvent.changeText(screen.getByLabelText('Search categories'), 'spend 20');
+    fireEvent.press(screen.getByText('Spend 20'));
+
+    expect(screen.getByText('New transaction')).toBeTruthy();
+    expect(screen.getAllByText('Spend 20').length).toBeGreaterThan(0);
+  });
+
+  it('keeps the archived category and deleted wallet of an edit as options of that record only', async () => {
+    stored = transactionDto({
+      wallet: null,
+      category: { ...transactionDto().category, id: 40, name: 'Old gym', is_active: 0, is_archived: true },
+    });
+    const { openDetails, flow } = renderFlow();
+
+    openDetails();
+    await settle();
+    fireEvent.press(screen.getByText('Edit'));
+    await settle();
+
+    expect(screen.getByText('Archived — you can keep it')).toBeTruthy();
+    expect(
+      screen.getByText('This wallet was deleted. You can keep it or move the transaction to another wallet.'),
+    ).toBeTruthy();
+
+    fireEvent.press(screen.getByText('Food'));
+    fireEvent.press(screen.getByText('Cash'));
+    expect(screen.getByText('Save changes')).toBeEnabled();
+
+    fireEvent.press(screen.getAllByText('Old gym')[0]);
+    fireEvent.press(screen.getByText('Deleted wallet'));
+    expect(screen.getByText('Save changes')).toBeDisabled();
+
+    fireEvent.press(screen.getByText('Income'));
+    expect(flow()?.draft?.categoryId).toBeNull();
+    expect(screen.queryByText('Old gym')).toBeNull();
+
+    fireEvent.press(screen.getByText('Expense'));
+    expect(flow()?.draft?.categoryId).toBeNull();
+    expect(screen.getByText('Old gym')).toBeTruthy();
+  });
 });
