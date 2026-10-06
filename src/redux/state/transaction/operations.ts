@@ -208,7 +208,7 @@ export interface Submission<T extends RequestType> {
 // settles that attempt with its own key, then sends the change against whatever it turned out to do.
 export const submitTransactionRequest =
   <T extends RequestType>(
-    request: TransactionRequest & { type: T },
+    request: Extract<TransactionRequest, { type: T }>,
     previous: OperationMemory | null,
   ): AppThunk<Promise<Submission<T>>> =>
   async (dispatch, getState) => {

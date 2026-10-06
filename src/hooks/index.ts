@@ -8,4 +8,6 @@ export { default as useLoadInitData } from './useLoadInitData';
 export { default as usePeriod } from './usePeriod';
 export { default as useSwipe } from './useSwipe';
 export { default as useThemePreference } from './useThemePreference';
+export { default as useTransactionOperation } from './useTransactionOperation';
+export type { TransactionSubmitOutcome } from './useTransactionOperation';
 export type { ThemePreference } from './useThemePreference';
