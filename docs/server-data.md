@@ -11,8 +11,8 @@ now follows the "Stale" column through RTK Query tags (`src/redux/state/<domain>
 columns and the lifecycle section record the thunk-era behavior.
 Invalidation happens only after a successful mutation (an empty body
 counts as success), so a failed or session-stale write refreshes nothing.
-One exception: a limit create or edit rejected with `400 An archived
-category cannot be added to a limit` refreshes Limits and Categories,
+One exception: a limit create or edit rejected with
+`400 CATEGORY_ARCHIVED` refreshes Limits and Categories,
 because the error itself shows a category was archived elsewhere.
 `History.Recent` is no longer a separate request: Home asks for the
 current month by the same client-local bounds as the Transactions tab's

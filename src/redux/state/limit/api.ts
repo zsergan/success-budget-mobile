@@ -1,5 +1,5 @@
 import type { CreateLimitRequest, GetLimitsResponse, LimitEntity, UpdateLimitRequest } from '@api/dto';
-import { ApiErrorMessage } from '@api/dto';
+import { ApiErrorCode } from '@api/dto';
 import type { LimitsModel } from '@api/models';
 import { mapLimitsResponse } from '@api/models';
 import type { SpaceArg } from '@redux/api/baseApi';
@@ -15,7 +15,7 @@ const limitWriteTags = (spaceId: number) => spaceTags(spaceId, 'Limits', 'Catego
 
 // A category archived elsewhere rejects the write and proves both lists stale, so they refresh for the next pick.
 const invalidatesCategoryWrite = (_result: unknown, error: unknown, { spaceId }: SpaceArg) =>
-  !error || isApiError(error, 400, ApiErrorMessage.CATEGORY_ARCHIVED) ? limitWriteTags(spaceId) : [];
+  !error || isApiError(error, 400, ApiErrorCode.CATEGORY_ARCHIVED) ? limitWriteTags(spaceId) : [];
 
 export const limitApi = baseApi.injectEndpoints({
   endpoints: (build) => ({

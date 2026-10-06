@@ -249,7 +249,7 @@ describe('invalidation rules (docs/server-data.md)', () => {
     ],
   ])('a limit %s rejected for an archived category refreshes categories and limits', async (_write, mutate) => {
     mutationFails = true;
-    mutationError = { statusCode: 400, message: 'An archived category cannot be added to a limit' };
+    mutationError = { statusCode: 400, code: 'CATEGORY_ARCHIVED', message: 'The category is archived' };
 
     expect(await refetchedAfter(mutate)).toEqual(['1:categories', '1:limits']);
   });
