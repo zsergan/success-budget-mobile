@@ -2,14 +2,19 @@ import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DraggableFlatList from 'react-native-draggable-flatlist';
 
-import { BottomSheetModal as BottomModal, EmptyState, Icon } from '@components';
+import {
+  BottomSheetModal as BottomModal,
+  CATEGORY_EDITOR_SNAP_POINT,
+  CategoryEditorSheet,
+  EmptyState,
+  Icon,
+} from '@components';
 import { useConfirmAction } from '@hooks';
 import type { CategoryModel } from '@api/models';
 import type { RootStackScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
 import { colors } from '@shared/theme';
 import CategoriesEmptyState from './components/CategoriesEmptyState/CategoriesEmptyState';
-import CategoryEditorSheet, { CATEGORY_EDITOR_SNAP_POINT } from './components/CategoryEditor/CategoryEditorSheet';
 import DeleteCategoryDialog from './components/DeleteCategoryDialog/DeleteCategoryDialog';
 import CategoryRow from './components/CategoryRow/CategoryRow';
 import SegmentedControl from './components/SegmentedControl/SegmentedControl';

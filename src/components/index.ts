@@ -1,6 +1,8 @@
 export * from './Alert';
 export * from './Buttons';
 export { default as Carousel } from './Carousel/Carousel';
+export { default as CategoryEditorSheet, CATEGORY_EDITOR_SNAP_POINT } from './CategoryEditor/CategoryEditorSheet';
+export { default as CategoryIconBox } from './CategoryIconBox/CategoryIconBox';
 export { default as CircleIcon } from './CircleIcon/CircleIcon';
 export { default as Divider } from './Divider/Divider';
 export { default as EmptyState } from './EmptyState/EmptyState';

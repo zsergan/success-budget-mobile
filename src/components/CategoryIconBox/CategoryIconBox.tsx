@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 
-import { Icon } from '@components';
+import Icon from '@components/Icon/Icon';
 import { getCategoryStroke, getCategoryTint } from '@shared/categoryColors';
 import type { AppColor } from '@shared/enums';
 import type { IconType } from '@shared/types';

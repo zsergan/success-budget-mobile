@@ -2,7 +2,7 @@ import { Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 're
 import { Controller } from 'react-hook-form';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
-import { Icon } from '@components';
+import Icon from '@components/Icon/Icon';
 import type { CategoryModel } from '@api/models';
 import { toBackendIcon } from '@api/models';
 import { TransactionType } from '@shared/enums';

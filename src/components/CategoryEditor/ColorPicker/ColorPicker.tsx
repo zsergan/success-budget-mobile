@@ -1,6 +1,6 @@
 import { TouchableOpacity, View } from 'react-native';
 
-import { Icon } from '@components';
+import Icon from '@components/Icon/Icon';
 import { getCategoryStroke, CATEGORY_COLOR_ORDER } from '@shared/categoryColors';
 import type { AppColor } from '@shared/enums';
 import { colors, colorScheme } from '@shared/theme';
