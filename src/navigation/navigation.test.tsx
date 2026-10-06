@@ -130,6 +130,7 @@ const HomeTab = ({ navigation }: MainTabScreenProps<ScreenNames.HOME_TAB>) => (
     hasWallets
     isLoading={false}
     hasError={false}
+    onPressTransaction={jest.fn()}
     onRetry={jest.fn()}
   />
 );

@@ -19,6 +19,7 @@ interface Props {
   isLoading: boolean;
   hasError: boolean;
   onRetry: () => void;
+  onPressTransaction: (transaction: TransactionModel) => void;
 }
 
 const RecentActivity = ({
@@ -29,6 +30,7 @@ const RecentActivity = ({
   isLoading,
   hasError,
   onRetry,
+  onPressTransaction,
 }: Props) => {
   const groups = groupTransactionsByDay(transactions.slice(0, RECENT_TRANSACTIONS_LIMIT), currencyCode);
 
@@ -83,7 +85,12 @@ const RecentActivity = ({
 
                 <View style={styles.groupItems}>
                   {group.items.map((transaction) => (
-                    <TransactionCard key={transaction.id} transaction={transaction} currencyCode={currencyCode} />
+                    <TransactionCard
+                      key={transaction.id}
+                      transaction={transaction}
+                      currencyCode={currencyCode}
+                      onPress={onPressTransaction}
+                    />
                   ))}
                 </View>
               </View>

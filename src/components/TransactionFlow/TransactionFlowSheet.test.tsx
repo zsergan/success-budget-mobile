@@ -7,10 +7,11 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { Category, GetCategoriesResponse, WalletsOverviewResponse } from '@api/dto';
 import { createAppStore } from '@redux/Store';
 import { activateSpace } from '@redux/state/space/thunks';
-import { createTransactionResponseDto } from '@redux/state/transaction/fixtures';
+import { createTransactionResponseDto, transactionDto } from '@redux/state/transaction/fixtures';
 import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
-import { createOpened } from '@redux/state/transactionFlow/slice';
-import { AppColor, TransactionType } from '@shared/enums';
+import { mapTransaction } from '@api/models';
+import { createOpened, detailsOpened } from '@redux/state/transactionFlow/slice';
+import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
 import TransactionFlowSheet from './TransactionFlowSheet';
 
 interface SheetProps {
@@ -105,8 +106,11 @@ const wallets: WalletsOverviewResponse = {
 
 let answerWrite: (value: unknown) => void = () => {};
 
+let stored = transactionDto({ amount: '50.00', version: 2 });
+
 const respond = ({ url, method }: { url: string; method: string }) => {
-  if (method === 'POST') return new Promise((resolve) => (answerWrite = resolve));
+  if (method === 'POST' || method === 'PATCH') return new Promise((resolve) => (answerWrite = resolve));
+  if (url.endsWith('/transactions/tx-1')) return Promise.resolve({ data: stored });
   if (url.endsWith('/wallets')) return Promise.resolve({ data: wallets });
   if (url.endsWith('/categories')) return Promise.resolve({ data: categories });
   if (url.endsWith('/limits')) return Promise.resolve({ data: { total: null, categories: [], over_allocation: null } });
@@ -137,7 +141,12 @@ const renderFlow = () => {
       store.dispatch(createOpened({ spaceId: 1, transactionType, walletId: 7, now: new Date().toISOString() }));
     });
 
-  return { store, open, flow: () => selectTransactionFlow(store.getState()) };
+  const openDetails = () =>
+    act(() => {
+      store.dispatch(detailsOpened({ spaceId: 1, transaction: mapTransaction(stored) }));
+    });
+
+  return { store, open, openDetails, flow: () => selectTransactionFlow(store.getState()) };
 };
 
 const settle = () => act(async () => jest.runOnlyPendingTimersAsync());
@@ -152,6 +161,7 @@ const pressBackdrop = () =>
 
 beforeEach(() => {
   jest.clearAllMocks();
+  stored = transactionDto({ amount: '50.00', version: 2 });
   mockSheet.presents = 0;
   mockedRequest.mockImplementation(respond);
   jest.spyOn(Alert, 'alert');
@@ -282,5 +292,83 @@ describe('TransactionFlowSheet', () => {
     expect(screen.getByText(/^Yesterday, /)).toBeTruthy();
     expect(flow()?.draft).toMatchObject({ amount: '12', categoryId: 10 });
     expect(flow()?.draft?.timestamp).not.toBe(timestamp);
+  });
+
+  it('edits from the details: Save changes only for a real change, Back asks before dropping it', async () => {
+    const { openDetails, flow } = renderFlow();
+
+    openDetails();
+    await settle();
+    fireEvent.press(screen.getByText('Edit'));
+
+    expect(screen.getByText('Edit transaction')).toBeTruthy();
+    expect(screen.getByText('Save changes')).toBeDisabled();
+
+    fireEvent.changeText(screen.getByLabelText('Amount'), '70');
+    expect(screen.getByText('Save changes')).toBeEnabled();
+    fireEvent.changeText(screen.getByLabelText('Amount'), '50');
+    expect(screen.getByText('Save changes')).toBeDisabled();
+
+    fireEvent.changeText(screen.getByLabelText('Amount'), '70');
+    fireEvent.press(screen.getByLabelText('Back to details'));
+    expect(Alert.alert).toHaveBeenCalledWith('Discard changes?', expect.any(String), expect.any(Array));
+
+    const [discard] = (Alert.alert as jest.Mock).mock.calls[0][2];
+    act(() => discard.onPress());
+    expect(flow()).toMatchObject({ view: { name: 'details' }, draft: null });
+  });
+
+  it('saves an edit at the version it read and returns to the details', async () => {
+    const { openDetails, flow } = renderFlow();
+
+    openDetails();
+    await settle();
+    fireEvent.press(screen.getByText('Edit'));
+    fireEvent.changeText(screen.getByLabelText('Amount'), '70');
+    fireEvent.press(screen.getByText('Save changes'));
+
+    stored = transactionDto({ amount: '70.00', version: 3 });
+    await act(async () =>
+      answerWrite({ data: { transaction: stored, wallets: [{ id: 1, balance: 30, is_deleted: false }] } }),
+    );
+    await settle();
+
+    expect(mockedRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'PATCH',
+        url: '/spaces/1/transactions/tx-1',
+        data: expect.objectContaining({ amount: '70.00' }),
+        headers: expect.objectContaining({ 'If-Match': '"2"' }),
+      }),
+    );
+    expect(flow()).toMatchObject({ view: { name: 'details' }, saved: { amount: '70.00', version: 3 } });
+  });
+
+  it('keeps a deleted wallet unless another one is picked', async () => {
+    stored = transactionDto({ wallet: null });
+    const { openDetails } = renderFlow();
+
+    openDetails();
+    await settle();
+    expect(screen.getByText('Deleted wallet')).toBeTruthy();
+
+    fireEvent.press(screen.getByText('Edit'));
+    fireEvent.changeText(screen.getByLabelText('Note'), 'Lunch');
+    fireEvent.press(screen.getByText('Save changes'));
+
+    const [[patch]] = mockedRequest.mock.calls.filter(([config]) => config.method === 'PATCH');
+    expect(patch.data).not.toHaveProperty('wallet_id');
+  });
+
+  it('offers no edit for an initial balance', async () => {
+    stored = transactionDto({ kind: TransactionKind.INITIAL_BALANCE, transaction_type: TransactionType.INCOME });
+    const { openDetails } = renderFlow();
+
+    openDetails();
+    await settle();
+
+    expect(screen.getByText('Starting balance')).toBeTruthy();
+    expect(screen.getByText('Set when the wallet was created')).toBeTruthy();
+    expect(screen.queryByText('Edit')).toBeNull();
   });
 });

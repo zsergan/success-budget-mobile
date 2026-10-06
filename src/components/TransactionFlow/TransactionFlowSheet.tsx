@@ -12,6 +12,7 @@ import CreatedConfirmation from './CreatedConfirmation/CreatedConfirmation';
 import DateTimePanel from './DateTimePanel/DateTimePanel';
 import useFlowClose from './hooks/useFlowClose';
 import useFlowSave from './hooks/useFlowSave';
+import TransactionDetails from './TransactionDetails/TransactionDetails';
 import TransactionEditor from './TransactionEditor/TransactionEditor';
 
 // The one sheet for creating, viewing and editing a transaction. Its content follows the flow's view, so moving
@@ -81,6 +82,10 @@ const TransactionFlowSheet = () => {
             onCreateWallet={() => undefined}
             onCreateCategory={() => undefined}
           />
+        ) : null;
+      case 'details':
+        return shown.saved ? (
+          <TransactionDetails spaceId={shown.spaceId} saved={shown.saved} onClose={requestClose} />
         ) : null;
       case 'categories':
         return shown.draft ? (

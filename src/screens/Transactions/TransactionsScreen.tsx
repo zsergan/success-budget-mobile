@@ -22,7 +22,7 @@ import useTransactionsData from './hooks/useTransactionsData';
 const TransactionsScreen = () => {
   const navigation = useNavigation<MainTabNavigationProp<ScreenNames.TRANSACTIONS_TAB>>();
   const route = useRoute<MainTabScreenProps<ScreenNames.TRANSACTIONS_TAB>['route']>();
-  const { openCreate } = useTransactionFlow();
+  const { openCreate, openDetails } = useTransactionFlow();
   const rangePickerRef = useRef<BottomSheetModal>(null);
 
   const handleOpenPicker = () => rangePickerRef.current?.present();
@@ -56,6 +56,7 @@ const TransactionsScreen = () => {
         <TransactionsList
           groups={viewState === 'ready' ? groupTransactionsByDay(transactions, currencyCode) : []}
           currencyCode={currencyCode}
+          onPressTransaction={openDetails}
           header={
             <>
               <TransactionsHeader />

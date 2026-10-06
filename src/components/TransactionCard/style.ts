@@ -8,6 +8,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     columnGap: theme.spacing.sm,
+    borderRadius: theme.radius.sm,
+  },
+  rootPressed: {
+    backgroundColor: colors.track,
   },
   categoryNameTime: {
     flex: 1,

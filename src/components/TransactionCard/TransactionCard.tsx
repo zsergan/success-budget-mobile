@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import type { TransactionModel } from '@api/models';
 import Icon from '../Icon/Icon';
@@ -11,9 +11,10 @@ import styles from './style';
 interface Props {
   transaction: TransactionModel;
   currencyCode?: string;
+  onPress?: (transaction: TransactionModel) => void;
 }
 
-const TransactionCard = ({ transaction, currencyCode }: Props) => {
+const TransactionCard = ({ transaction, currencyCode, onPress }: Props) => {
   const isIncome = transaction.transactionType === TransactionType.INCOME;
   const walletName = transaction.wallet ? transaction.wallet.wallet_name : 'Deleted wallet';
   const time = formatDateHHMM(transaction.timestamp);
@@ -22,7 +23,12 @@ const TransactionCard = ({ transaction, currencyCode }: Props) => {
     : `${walletName} · ${time}`;
 
   return (
-    <View style={styles.root}>
+    <Pressable
+      style={({ pressed }) => [styles.root, pressed && styles.rootPressed]}
+      onPress={onPress && (() => onPress(transaction))}
+      disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+    >
       <View style={styles.categoryNameTime}>
         <View style={[styles.iconBox, isIncome ? styles.iconBoxIncome : styles.iconBoxExpense]}>
           <Icon name={transaction.category.icon} size={20} color={isIncome ? colors.ok : colors.text} />
@@ -42,7 +48,7 @@ const TransactionCard = ({ transaction, currencyCode }: Props) => {
       <Text style={[styles.amount, isIncome && styles.income]}>
         {formatAmount(transaction.amount, transaction.transactionType, currencyCode)}
       </Text>
-    </View>
+    </Pressable>
   );
 };
 

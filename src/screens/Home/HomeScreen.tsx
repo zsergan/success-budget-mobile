@@ -22,7 +22,7 @@ interface Props extends MainTabScreenProps<ScreenNames.HOME_TAB> {}
 
 const HomeScreen = ({ navigation }: Props) => {
   const [focusedWalletId, setFocusedWalletId] = useState<number | undefined>(undefined);
-  const { openCreate } = useTransactionFlow();
+  const { openCreate, openDetails } = useTransactionFlow();
 
   const spaceArg = useSpaceArg();
   const { currentData: walletsOverview } = useGetWalletsQuery(spaceArg);
@@ -68,6 +68,7 @@ const HomeScreen = ({ navigation }: Props) => {
           isLoading={isLoadingTransactions}
           hasError={hasTransactionsError}
           onRetry={recentQuery.refetch}
+          onPressTransaction={openDetails}
         />
       </RootLayout>
 
