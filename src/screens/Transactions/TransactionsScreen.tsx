@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { View } from 'react-native';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
 import {
+  Banner,
   BottomSheetModal as BottomModal,
   Fab,
   RangePickerSheet,
@@ -26,6 +28,8 @@ import TransactionsEmptyState from './components/TransactionsEmptyState/Transact
 import TransactionsHeader from './components/TransactionsHeader/TransactionsHeader';
 import TransactionsList from './components/TransactionsList/TransactionsList';
 import useTransactionsData from './hooks/useTransactionsData';
+
+import styles from './style';
 
 const HIGHLIGHT_MS = 2500;
 
@@ -82,7 +86,18 @@ const TransactionsScreen = () => {
         }
       : rangeSelection(range),
   );
-  const { transactions, viewState, latest, income, expense, currencyCode, refetch, retryLatest } = useTransactionsData({
+  const {
+    transactions,
+    viewState,
+    latest,
+    income,
+    expense,
+    currencyCode,
+    refreshFailed,
+    retryRefresh,
+    refetch,
+    retryLatest,
+  } = useTransactionsData({
     range,
     filter,
   });
@@ -134,6 +149,17 @@ const TransactionsScreen = () => {
                   onOpenPicker={handleOpenPicker}
                   onReset={resetPeriod}
                 />
+              )}
+
+              {refreshFailed && (
+                <View style={styles.banner}>
+                  <Banner
+                    tone="danger"
+                    text="Couldn’t update the list. It shows what was loaded before."
+                    actionLabel="Retry"
+                    onAction={retryRefresh}
+                  />
+                </View>
               )}
             </>
           }

@@ -46,7 +46,7 @@ const useTransactionsData = ({ range, filter }: UseTransactionsDataProps) => {
   const latest = latestQuery.currentData;
   const { income, expense } = useMemo(() => getPeriodTotals(transactions), [transactions]);
 
-  const { isLoading: isLoadingRange, hasError: rangeError } = getLoadState(rangeQuery);
+  const { isLoading: isLoadingRange, hasError: rangeError, hasRefreshError } = getLoadState(rangeQuery);
 
   let viewState: TransactionsViewState;
 
@@ -70,6 +70,12 @@ const useTransactionsData = ({ range, filter }: UseTransactionsDataProps) => {
     income,
     expense,
     currencyCode,
+    // What is listed stays, but a refresh, e.g. after a saved change, could not bring it up to date.
+    refreshFailed: hasRefreshError,
+    retryRefresh: () => {
+      rangeQuery.refetch();
+      if (!filter) latestQuery.refetch();
+    },
     refetch: rangeQuery.refetch,
     retryLatest: latestQuery.refetch,
   };

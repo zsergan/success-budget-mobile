@@ -27,7 +27,7 @@ import { TransactionType } from '@shared/enums';
 import theme, { colors } from '@shared/theme';
 import DeleteButton from '../DeleteButton/DeleteButton';
 import { deleteFailureText } from '../deleteMessage';
-import FlowBanner from '../FlowBanner/FlowBanner';
+import Banner from '@components/Banner/Banner';
 import ActionRow from './ActionRow/ActionRow';
 import AmountField from './AmountField/AmountField';
 import CategoryGrid from './CategoryGrid/CategoryGrid';
@@ -294,7 +294,7 @@ const TransactionEditor = ({
         typeColor={typeColor}
         banner={
           hasConflict ? (
-            <FlowBanner
+            <Banner
               tone="warn"
               title="This transaction was changed"
               text="Someone saved it after you opened it. Your edits are still here; loading the latest version replaces them."
@@ -304,7 +304,7 @@ const TransactionEditor = ({
             />
           ) : (
             (flow.notice === 'deleteFailed' || flow.notice === 'deleteUncertain') && (
-              <FlowBanner
+              <Banner
                 tone="danger"
                 text={deleteFailureText(flow.notice, 'delete')}
                 actionLabel="Try again"

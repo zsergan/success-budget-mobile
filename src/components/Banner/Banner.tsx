@@ -15,8 +15,8 @@ interface Props {
   onAction: () => void;
 }
 
-// An inline message over the sheet's actions, with the one step that resolves it.
-const FlowBanner = ({ tone, title, text, actionLabel, isBusy = false, onAction }: Props) => {
+// An inline message with the one step that resolves it.
+const Banner = ({ tone, title, text, actionLabel, isBusy = false, onAction }: Props) => {
   const color = tone === 'warn' ? colors.warn : colors.danger;
 
   return (
@@ -47,4 +47,4 @@ const FlowBanner = ({ tone, title, text, actionLabel, isBusy = false, onAction }
   );
 };
 
-export default FlowBanner;
+export default Banner;

@@ -431,7 +431,7 @@ describe('server data scenarios', () => {
 
     expect(result.current.wallets.isError).toBe(true);
     expect(result.current.wallets.currentData?.wallets).toHaveLength(1);
-    expect(getLoadState(result.current.wallets)).toEqual({ isLoading: false, hasError: false });
+    expect(getLoadState(result.current.wallets)).toEqual({ isLoading: false, hasError: false, hasRefreshError: true });
     expect(result.current.history.viewState).toBe('trueEmpty');
     expect(gateLog.slice(openedAt)).not.toContain(true);
 

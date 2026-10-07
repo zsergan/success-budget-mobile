@@ -16,7 +16,7 @@ import theme, { colors } from '@shared/theme';
 import { formatAmount, formatMoneyAmount, hexToRgba } from '@shared/utils';
 import DeleteButton from '../DeleteButton/DeleteButton';
 import { deleteFailureText } from '../deleteMessage';
-import FlowBanner from '../FlowBanner/FlowBanner';
+import Banner from '@components/Banner/Banner';
 import { formatDateTime } from '../format';
 
 import styles from './style';
@@ -120,14 +120,14 @@ const TransactionDetails = ({
       ) : (
         <>
           {check === 'failed' ? (
-            <FlowBanner
+            <Banner
               tone="danger"
               text="Couldn’t load the latest version. Check your connection and try again."
               actionLabel="Try again"
               onAction={() => dispatch(checkFlowRecord())}
             />
           ) : notice === 'conflict' ? (
-            <FlowBanner
+            <Banner
               tone="warn"
               title="This transaction was changed"
               text="Someone saved it after you opened it. Load the latest version before you edit or delete it."
@@ -137,7 +137,7 @@ const TransactionDetails = ({
             />
           ) : (
             (notice === 'deleteFailed' || notice === 'deleteUncertain') && (
-              <FlowBanner
+              <Banner
                 tone="danger"
                 text={deleteFailureText(notice, 'delete')}
                 actionLabel="Try again"

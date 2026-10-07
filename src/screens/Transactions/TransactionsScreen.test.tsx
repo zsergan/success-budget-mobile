@@ -2,8 +2,9 @@ import type { ReactNode, Ref } from 'react';
 import { Provider } from 'react-redux';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { act, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
+import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { createAppStore } from '@redux/Store';
 import { activateSpace } from '@redux/state/space/thunks';
 import { transactionDto } from '@redux/state/transaction/fixtures';
@@ -160,5 +161,32 @@ describe('TransactionsScreen', () => {
     await settle();
     expect(screen.queryByText('Today')).toBeNull();
     expect(screen.getByText('No transactions yet')).toBeTruthy();
+  });
+
+  it('says a refresh failed while it keeps the rows it had, and retries it', async () => {
+    let failList = false;
+    mockedRequest.mockImplementation(({ url }: RequestConfig) => {
+      if (url !== '/spaces/1/transactions') return Promise.resolve({ data: null });
+      return failList
+        ? Promise.reject({ response: { data: { statusCode: 500, message: 'boom' } } })
+        : Promise.resolve({ data: [taxi] });
+    });
+
+    const store = renderTransactions(undefined);
+    await settle();
+    expect(screen.getByText('Taxi')).toBeTruthy();
+
+    failList = true;
+    act(() => {
+      store.dispatch(baseApi.util.invalidateTags(spaceTags(1, 'Transactions')));
+    });
+    await settle();
+    expect(screen.getByText('Taxi')).toBeTruthy();
+    expect(screen.getByText('Couldn’t update the list. It shows what was loaded before.')).toBeTruthy();
+
+    failList = false;
+    fireEvent.press(screen.getByText('Retry'));
+    await settle();
+    expect(screen.queryByText('Couldn’t update the list. It shows what was loaded before.')).toBeNull();
   });
 });

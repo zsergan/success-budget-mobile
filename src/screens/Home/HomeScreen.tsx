@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { View } from 'react-native';
 import { skipToken } from '@reduxjs/toolkit/query';
 
-import { Fab, RootLayout, SpaceSwitcher, useTransactionDelete, useTransactionFlow } from '@components';
+import { Banner, Fab, RootLayout, SpaceSwitcher, useTransactionDelete, useTransactionFlow } from '@components';
 import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useCurrentMonthArg, useSpaceArg } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
@@ -27,7 +28,8 @@ const HomeScreen = ({ navigation }: Props) => {
   const { requestDelete } = useTransactionDelete();
 
   const spaceArg = useSpaceArg();
-  const { currentData: walletsOverview } = useGetWalletsQuery(spaceArg);
+  const walletsQuery = useGetWalletsQuery(spaceArg);
+  const walletsOverview = walletsQuery.currentData;
   const { total, currencyCode, walletsCount, deltaPercent } = getTotalBalance(walletsOverview);
   const wallets = walletsOverview?.wallets ?? EMPTY_WALLETS;
   const recentArg = useCurrentMonthArg();
@@ -35,7 +37,13 @@ const HomeScreen = ({ navigation }: Props) => {
   const { openCreate, openDetails } = useTransactionFlow(
     recentArg === skipToken ? null : { from: recentArg.from, to: recentArg.to },
   );
-  const { isLoading: isLoadingTransactions, hasError: hasTransactionsError } = getLoadState(recentQuery);
+  const {
+    isLoading: isLoadingTransactions,
+    hasError: hasTransactionsError,
+    hasRefreshError: hasRecentRefreshError,
+  } = getLoadState(recentQuery);
+  // Balances and activity stay, but a refresh, e.g. after a saved change, could not bring them up to date.
+  const refreshFailed = hasRecentRefreshError || getLoadState(walletsQuery).hasRefreshError;
   // An empty month tells a first run from a quiet month only by the latest record of the whole history.
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const latestQuery = useGetLatestTransactionQuery(recentQuery.currentData?.length === 0 ? spaceArg : skipToken);
@@ -59,6 +67,20 @@ const HomeScreen = ({ navigation }: Props) => {
         blurredStatusBar
       >
         <SpaceSwitcher navigation={navigation} />
+
+        {refreshFailed && (
+          <View style={styles.banner}>
+            <Banner
+              tone="danger"
+              text="Couldn’t update. Balances and activity show what was loaded before."
+              actionLabel="Retry"
+              onAction={() => {
+                walletsQuery.refetch();
+                recentQuery.refetch();
+              }}
+            />
+          </View>
+        )}
 
         <BalanceOverview
           total={total}

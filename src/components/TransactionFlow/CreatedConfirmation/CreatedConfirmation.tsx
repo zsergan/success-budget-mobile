@@ -22,7 +22,7 @@ import { TransactionType } from '@shared/enums';
 import theme, { colors } from '@shared/theme';
 import { formatAmount, formatCurrencyAmount, formatDateLong, formatDayMonth, hexToRgba } from '@shared/utils';
 import { deleteFailureText } from '../deleteMessage';
-import FlowBanner from '../FlowBanner/FlowBanner';
+import Banner from '@components/Banner/Banner';
 import { formatDateTime } from '../format';
 
 import styles from './style';
@@ -138,7 +138,7 @@ const CreatedConfirmation = ({ flow, onUndo, onShow, onOpenRecord, onAddAnother,
 
       {notice === 'conflict' ? (
         <View style={styles.banner}>
-          <FlowBanner
+          <Banner
             tone="warn"
             title="This transaction was changed"
             text="Someone saved it after it was created, so it wasn’t undone. Open it to see the latest version."
@@ -149,12 +149,7 @@ const CreatedConfirmation = ({ flow, onUndo, onShow, onOpenRecord, onAddAnother,
       ) : (
         (notice === 'deleteFailed' || notice === 'deleteUncertain') && (
           <View style={styles.banner}>
-            <FlowBanner
-              tone="danger"
-              text={deleteFailureText(notice, 'undo')}
-              actionLabel="Try again"
-              onAction={onUndo}
-            />
+            <Banner tone="danger" text={deleteFailureText(notice, 'undo')} actionLabel="Try again" onAction={onUndo} />
           </View>
         )
       )}

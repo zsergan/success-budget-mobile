@@ -5,6 +5,7 @@ export { default as CategoryEditorSheet, CATEGORY_EDITOR_SNAP_POINT } from './Ca
 export { default as CategoryIconBox } from './CategoryIconBox/CategoryIconBox';
 export { default as CircleIcon } from './CircleIcon/CircleIcon';
 export { default as Divider } from './Divider/Divider';
+export { default as Banner } from './Banner/Banner';
 export { default as EmptyState } from './EmptyState/EmptyState';
 export { default as ErrorBoundary } from './ErrorBoundary/ErrorBoundary';
 export { default as Fab } from './Fab/Fab';

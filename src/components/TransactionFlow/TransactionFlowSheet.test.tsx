@@ -250,6 +250,25 @@ describe('TransactionFlowSheet', () => {
     );
   });
 
+  it('keeps a confirmed create confirmed when the refresh after it fails', async () => {
+    const { open, flow } = renderFlow();
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('Save expense'));
+
+    mockedRequest.mockImplementation((config: { url: string; method: string }) =>
+      config.method === 'GET' ? Promise.reject(refusal(500, 'INTERNAL_SERVER_ERROR')) : respond(config),
+    );
+    await act(async () => answerWrite({ data: createTransactionResponseDto() }));
+    await act(async () => jest.advanceTimersByTimeAsync(100));
+
+    expect(mockedRequest).toHaveBeenCalledWith(expect.objectContaining({ method: 'GET', url: '/spaces/1/wallets' }));
+    expect(screen.getByText('Transaction saved')).toBeTruthy();
+    expect(flow()?.view.name).toBe('created');
+    expect(mockAddAlert).not.toHaveBeenCalled();
+  });
+
   it('shows what was saved and closes by itself, unless touched', async () => {
     const { store, open, flow } = renderFlow();
 
