@@ -3,7 +3,7 @@ import type { QueryCacheKey } from '@reduxjs/toolkit/query';
 
 import type { CreateSpaceRequest, SpaceSummary } from '@api/dto';
 import type { SpaceArg } from '@redux/api/baseApi';
-import { baseApi } from '@redux/api/baseApi';
+import { baseApi, spaceTags } from '@redux/api/baseApi';
 import type { AppThunk } from '@redux/Store';
 import { memberApi } from '../member/api';
 import { selectProfileId } from '../profile/selectors';
@@ -22,6 +22,24 @@ export const activateSpace =
     if (spaceId === getState().space.currentSpaceId) return;
 
     dispatch(spaceSelected(spaceId));
+  };
+
+// A return to a screen or the app asks again for the space's data at most this often.
+export const SPACE_REFRESH_AFTER_MS = 30_000;
+
+export const spaceDataRefreshed = createAction<number>('space/dataRefreshed');
+
+// Other members' changes reach this device only through new requests. Every resource a transaction touches is
+// asked for again through its tags; Stats starts a new cycle with a new as_of from the same tags.
+export const refreshSpaceData =
+  ({ force = false }: { force?: boolean } = {}): AppThunk =>
+  (dispatch, getState) => {
+    const { currentSpaceId, refreshedAt } = getState().space;
+    const now = Date.now();
+    if (currentSpaceId === null || (!force && now - refreshedAt < SPACE_REFRESH_AFTER_MS)) return;
+
+    dispatch(spaceDataRefreshed(now));
+    dispatch(baseApi.util.invalidateTags(spaceTags(currentSpaceId, 'Transactions', 'Wallets', 'Limits', 'Categories')));
   };
 
 export const spaceAccessLost = createAction<{ spaceId: number }>('space/accessLost');

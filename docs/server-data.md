@@ -91,13 +91,16 @@ described in the lifecycle section.
 
 ### Staleness with no local mutation
 
-- **Other members of a shared space.** Nothing is re-fetched on screen
-  focus, app foreground, pull-to-refresh or a timer, so their changes only
-  appear after the next local mutation that happens to refresh the same
-  resource, or a space switch / re-login.
-- **Month rollover.** Wallets month totals, Limits and `History.Recent`
-  are computed by the server for the month containing "now". If the app
-  stays open across the boundary they keep showing the previous month.
+- **Other members of a shared space.** Home, Transactions, Limits and
+  Categories call `useSpaceRefresh`: a return to the screen, or to the app
+  while it shows one of them, invalidates the space's `Transactions`,
+  `Wallets`, `Limits` and `Categories` (`refreshSpaceData`), at most once
+  every 30 s per space. Stats follows through its revision and also
+  restarts its own cycle when it is older than 30 s. Open details are read
+  again on a return to the app; a form being edited keeps its draft.
+- **Month rollover.** `useSpaceRefresh` also wakes when a new month begins:
+  it renders the screen again, so a current period moves onto the new
+  month, and refreshes the space's data regardless of the 30 s limit.
 
 ## Notes for the RTK Query design
 
@@ -157,9 +160,8 @@ something to drop on purpose.
   `transactionsInvalidated` after mutations that affect history. The
   Members screen fetches `Members` on mount and on space change. Sign-up
   and Create Space fetch `Currencies` on mount.
-- **No other triggers.** No refetch on screen focus, app foreground,
-  reconnect, pull-to-refresh or interval (see "Staleness with no local
-  mutation" above).
+- **Returns and a new month.** See "Staleness with no local mutation"
+  above; there is no refetch on reconnect, pull-to-refresh or interval.
 - **Stale responses.** Each list fetch stores its `requestId` on pending
   and ignores a fulfilled/rejected action with a different id, so an older
   request cannot overwrite a newer one. `fetchSpaces` additionally only

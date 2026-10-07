@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BackHandler } from 'react-native';
+import { AppState, BackHandler } from 'react-native';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,7 +12,7 @@ import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
 import { hasUnsavedChanges, selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import type { FlowAway, TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { anotherStarted, awayEnded, awayStarted, categoryCreated, closed } from '@redux/state/transactionFlow/slice';
-import { deleteTransaction, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
+import { checkFlowRecord, deleteTransaction, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackParamList } from '@shared/types';
 import CategoriesPanel from './CategoriesPanel/CategoriesPanel';
@@ -73,6 +73,24 @@ const TransactionFlowSheet = () => {
 
     return () => subscription.remove();
   }, [isVisible, back]);
+
+  // Open details may have changed elsewhere while the app was away; a form keeps its draft and meets a conflict on save.
+  useEffect(() => {
+    let wasInBackground = false;
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'background') {
+        wasInBackground = true;
+      } else if (state === 'active' && wasInBackground) {
+        wasInBackground = false;
+        const current = selectTransactionFlow(store.getState());
+        if (current?.view.name === 'details' && !current.isSaving && current.check !== 'pending') {
+          void dispatch(checkFlowRecord());
+        }
+      }
+    });
+
+    return () => subscription.remove();
+  }, [dispatch, store]);
 
   // Only a swipe closes the sheet on its own; one we dismissed ourselves is not a close request.
   const handleDismiss = useCallback(() => {

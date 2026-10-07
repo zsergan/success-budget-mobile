@@ -9,7 +9,7 @@ import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { EMPTY_WALLETS, getTotalBalance } from '@redux/state/wallet/selectors';
 import { useGetLatestTransactionQuery, useGetTransactionsQuery } from '@redux/state/transaction/api';
 import { EMPTY_TRANSACTIONS, getEmptyPeriodState } from '@redux/state/transaction/selectors';
-import { useBalanceVisibility } from '@hooks';
+import { useBalanceVisibility, useSpaceRefresh } from '@hooks';
 import { ScreenNames, TransactionType } from '@shared/enums';
 import type { MainTabScreenProps } from '@shared/types';
 import { FAB_SCROLL_CLEARANCE } from '@shared/constants';
@@ -22,6 +22,7 @@ import styles from './style';
 interface Props extends MainTabScreenProps<ScreenNames.HOME_TAB> {}
 
 const HomeScreen = ({ navigation }: Props) => {
+  useSpaceRefresh();
   const [focusedWalletId, setFocusedWalletId] = useState<number | undefined>(undefined);
   const { requestDelete } = useTransactionDelete();
 

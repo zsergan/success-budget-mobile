@@ -9,7 +9,7 @@ import {
   EmptyState,
   Icon,
 } from '@components';
-import { useConfirmAction } from '@hooks';
+import { useConfirmAction, useSpaceRefresh } from '@hooks';
 import type { CategoryModel } from '@api/models';
 import type { RootStackScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
@@ -30,6 +30,7 @@ const ARCHIVE_FOOTNOTE =
   'Restoring puts a category back into the picker. It does not re-join limits automatically — add it to a limit again if you want it counted.';
 
 const CategoriesScreen = ({ navigation }: Props) => {
+  useSpaceRefresh();
   const categoryDeletion = useConfirmAction<CategoryModel>();
 
   const {

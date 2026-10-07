@@ -10,7 +10,7 @@ import {
   useTransactionDelete,
   useTransactionFlow,
 } from '@components';
-import { usePeriod } from '@hooks';
+import { usePeriod, useSpaceRefresh } from '@hooks';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { rangeSelection } from '@redux/state/transactionFlow/selection';
@@ -30,6 +30,7 @@ import useTransactionsData from './hooks/useTransactionsData';
 const HIGHLIGHT_MS = 2500;
 
 const TransactionsScreen = () => {
+  useSpaceRefresh();
   const navigation = useNavigation<MainTabNavigationProp<ScreenNames.TRANSACTIONS_TAB>>();
   const route = useRoute<MainTabScreenProps<ScreenNames.TRANSACTIONS_TAB>['route']>();
   const { requestDelete } = useTransactionDelete();

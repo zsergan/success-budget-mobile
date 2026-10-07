@@ -10,7 +10,7 @@ import {
   SpacesSheet,
   useTransactionFlow,
 } from '@components';
-import { usePeriod } from '@hooks';
+import { usePeriod, useRefreshOnReturn } from '@hooks';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { activateSpace } from '@redux/state/space/thunks';
@@ -29,7 +29,6 @@ import { parseDateKey } from './format';
 import { toHistoryFilter } from './historyFilter';
 import useAddTransaction from './hooks/useAddTransaction';
 import useComposeWithNewWallet from './hooks/useComposeWithNewWallet';
-import useRefreshOnReturn from './hooks/useRefreshOnReturn';
 import useSpaceStatus from './hooks/useSpaceStatus';
 import useStatsData from './hooks/useStatsData';
 import useStatsSelection from './hooks/useStatsSelection';

@@ -1,5 +1,6 @@
 import type { ReactNode, Ref } from 'react';
-import { Alert, PixelRatio } from 'react-native';
+import type { AppStateStatus } from 'react-native';
+import { Alert, AppState, PixelRatio } from 'react-native';
 import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
@@ -560,6 +561,39 @@ describe('TransactionFlowSheet', () => {
 
     expect(screen.getByRole('button', { name: 'Edit' })).toBeEnabled();
     expect(flow()).toMatchObject({ check: 'done', saved: { amount: '65.00', version: 3 } });
+  });
+
+  it('reads open details again on a return to the app, but never touches a draft being edited', async () => {
+    const listeners: ((state: AppStateStatus) => void)[] = [];
+    jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, listener) => {
+      listeners.push(listener as (state: AppStateStatus) => void);
+      return { remove: () => {} } as ReturnType<typeof AppState.addEventListener>;
+    });
+    const returnToApp = () =>
+      act(() => {
+        listeners.forEach((listener) => {
+          listener('background');
+          listener('active');
+        });
+      });
+    const { openDetails, flow } = renderFlow();
+    openDetails();
+    await settle();
+
+    stored = transactionDto({ amount: '70.00', version: 3 });
+    returnToApp();
+    await settle();
+    expect(flow()).toMatchObject({ check: 'done', saved: { amount: '70.00', version: 3 } });
+
+    fireEvent.press(screen.getByRole('button', { name: 'Edit' }));
+    const draft = flow()?.draft;
+    stored = transactionDto({ amount: '80.00', version: 4 });
+    returnToApp();
+    await settle();
+
+    expect(flow()).toMatchObject({ view: { name: 'edit' }, saved: { version: 3 } });
+    expect(flow()?.draft).toBe(draft);
+    jest.restoreAllMocks();
   });
 
   it('lets the details be read again when the first read fails', async () => {
