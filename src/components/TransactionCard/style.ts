@@ -7,7 +7,6 @@ const styles = StyleSheet.create({
   root: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     columnGap: theme.spacing.sm,
     borderRadius: theme.radius.sm,
   },
@@ -38,12 +37,6 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.caption,
     color: '#FFFDFA',
   },
-  categoryNameTime: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    columnGap: theme.spacing.sm,
-  },
   iconBox: {
     width: 42,
     height: 42,
@@ -66,7 +59,24 @@ const styles = StyleSheet.create({
     minWidth: 0,
     rowGap: 3,
   },
+  topLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: theme.spacing.sm,
+  },
+  lineStacked: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  metaLine: {
+    flexDirection: 'row',
+  },
+  metaLineWrapped: {
+    flexWrap: 'wrap',
+  },
   category: {
+    flexGrow: 1,
+    flexShrink: 1,
     fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.bodyLg,
     lineHeight: theme.lineHeights.bodyLg,
@@ -80,6 +90,22 @@ const styles = StyleSheet.create({
   },
   metaFaint: {
     opacity: 0.7,
+  },
+  description: {
+    flexShrink: 1,
+  },
+  // Hugging Plus Jakarta Sans boxes under-measure by a pixel or two (see cde3346); without the buffer "Cash" ellipsizes.
+  walletBeside: {
+    flexShrink: 0,
+    maxWidth: '30%',
+    paddingRight: 2,
+  },
+  walletAlone: {
+    flexShrink: 1,
+  },
+  fixed: {
+    flexShrink: 0,
+    paddingRight: 2,
   },
   amount: {
     fontFamily: theme.fonts.semiBold,

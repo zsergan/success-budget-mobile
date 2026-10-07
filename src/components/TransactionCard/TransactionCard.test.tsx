@@ -58,4 +58,26 @@ describe('TransactionCard', () => {
     expect(screen.getByText('12.00 USD')).toBeTruthy();
     expect(screen.queryByLabelText('Delete')).toBeNull();
   });
+
+  it('shows the description, wallet and time as separate parts', () => {
+    renderCard({ description: 'Dinner with Anna', timestamp: new Date(2026, 0, 5, 9, 10).toISOString() });
+
+    expect(screen.getByText('Dinner with Anna')).toBeTruthy();
+    expect(screen.getByText('Cash')).toBeTruthy();
+    expect(screen.getByText(' · 09:10')).toBeTruthy();
+  });
+
+  it('starts the second line with the wallet when there is no description', () => {
+    renderCard({ description: null });
+
+    expect(screen.getAllByText('Food')).toHaveLength(1);
+    expect(screen.queryByText(' · ')).toBeNull();
+    expect(screen.getByText('Cash')).toBeTruthy();
+  });
+
+  it('names a deleted wallet', () => {
+    renderCard({ wallet: null });
+
+    expect(screen.getByText('Deleted wallet')).toBeTruthy();
+  });
 });

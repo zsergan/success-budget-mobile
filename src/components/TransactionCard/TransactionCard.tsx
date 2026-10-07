@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { ActivityIndicator, Pressable, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 
@@ -15,6 +15,7 @@ import { colors } from '@shared/theme';
 import styles from './style';
 
 const DELETE_ACTION_TEXT_COLOR = '#FFFDFA';
+const LARGE_FONT_SCALE = 1.3;
 
 // One swiped row at a time across every list: opening another closes it.
 let openRow: SwipeableMethods | null = null;
@@ -31,13 +32,10 @@ interface Props {
 const TransactionCard = ({ transaction, currencyCode, isHighlighted = false, onPress, onDelete }: Props) => {
   const swipeRef = useRef<SwipeableMethods>(null);
   const isDeleting = useAppSelector((state) => selectIsDeleting(state, transaction.id));
+  const isLargeText = useWindowDimensions().fontScale >= LARGE_FONT_SCALE;
   const isSystem = isInitialBalance(transaction);
   const isIncome = transaction.transactionType === TransactionType.INCOME && !isSystem;
-  const walletName = transaction.wallet ? transaction.wallet.wallet_name : 'Deleted wallet';
-  const time = formatDateHHMM(transaction.timestamp);
-  const meta = transaction.description
-    ? `${transaction.description} · ${walletName} · ${time}`
-    : `${walletName} · ${time}`;
+  const { description, wallet } = transaction;
 
   // A row being deleted stays put, dimmed, until the server answers.
   const card = (
@@ -53,40 +51,57 @@ const TransactionCard = ({ transaction, currencyCode, isHighlighted = false, onP
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityState={{ busy: isDeleting }}
     >
-      <View style={styles.categoryNameTime}>
-        <View
-          style={[
-            styles.iconBox,
-            isSystem ? styles.iconBoxSystem : isIncome ? styles.iconBoxIncome : styles.iconBoxExpense,
-          ]}
-        >
-          <Icon
-            name={isSystem ? 'wallet' : transaction.category.icon}
-            size={20}
-            color={isIncome ? colors.ok : colors.text}
-          />
-        </View>
+      <View
+        style={[
+          styles.iconBox,
+          isSystem ? styles.iconBoxSystem : isIncome ? styles.iconBoxIncome : styles.iconBoxExpense,
+        ]}
+      >
+        <Icon
+          name={isSystem ? 'wallet' : transaction.category.icon}
+          size={20}
+          color={isIncome ? colors.ok : colors.text}
+        />
+      </View>
 
-        <View style={styles.textColumn}>
-          <Text style={styles.category} numberOfLines={1}>
+      <View style={styles.textColumn}>
+        <View style={[styles.topLine, isLargeText && styles.lineStacked]}>
+          <Text style={styles.category} numberOfLines={isLargeText ? 2 : 1}>
             {transaction.category.name}
           </Text>
 
-          <Text style={[styles.meta, !transaction.wallet && styles.metaFaint]} numberOfLines={1}>
-            {meta}
+          {isDeleting ? (
+            <ActivityIndicator size="small" color={colors.muted} />
+          ) : (
+            <Text style={[styles.amount, isIncome && styles.income]}>
+              {isSystem
+                ? formatMoneyAmount(transaction.amount, currencyCode)
+                : formatAmount(transaction.amount, transaction.transactionType, currencyCode)}
+            </Text>
+          )}
+        </View>
+
+        {/* The time never shrinks; the description gives way first, then only a wallet name past its share. */}
+        <View style={[styles.metaLine, isLargeText && styles.metaLineWrapped]}>
+          {description && (
+            <>
+              <Text style={[styles.meta, styles.description]} numberOfLines={1}>
+                {description}
+              </Text>
+              <Text style={[styles.meta, styles.fixed]}>{' · '}</Text>
+            </>
+          )}
+
+          <Text
+            style={[styles.meta, description ? styles.walletBeside : styles.walletAlone, !wallet && styles.metaFaint]}
+            numberOfLines={1}
+          >
+            {wallet ? wallet.wallet_name : 'Deleted wallet'}
           </Text>
+
+          <Text style={[styles.meta, styles.fixed]}>{` · ${formatDateHHMM(transaction.timestamp)}`}</Text>
         </View>
       </View>
-
-      {isDeleting ? (
-        <ActivityIndicator size="small" color={colors.muted} />
-      ) : (
-        <Text style={[styles.amount, isIncome && styles.income]}>
-          {isSystem
-            ? formatMoneyAmount(transaction.amount, currencyCode)
-            : formatAmount(transaction.amount, transaction.transactionType, currencyCode)}
-        </Text>
-      )}
     </Pressable>
   );
 
