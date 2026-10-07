@@ -4,7 +4,8 @@ import * as SecureStore from 'expo-secure-store';
 import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
 import { createAppStore } from '@redux/Store';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
-import { createHttpClient } from './instance';
+import { getRejectValue } from '@redux/createAppAsyncThunk';
+import { createHttpClient, REQUEST_TIMEOUT_MS } from './instance';
 import { bindHttpSession } from './session';
 
 jest.mock('expo-secure-store');
@@ -142,4 +143,11 @@ describe('a late response after a logout and a new login', () => {
     expect(mockedShowGlobalAlert).not.toHaveBeenCalled();
     expect(store.getState().auth.isSignedIn).toBe(true);
   });
+});
+
+it('gives up on a request after the timeout, as on a lost connection', () => {
+  const timedOut = { code: 'ECONNABORTED', message: 'timeout of 20000ms exceeded', config: {} };
+
+  expect(createHttpClient().defaults.timeout).toBe(REQUEST_TIMEOUT_MS);
+  expect(getRejectValue(timedOut)).toMatchObject({ statusCode: 0 });
 });

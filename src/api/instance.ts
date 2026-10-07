@@ -18,9 +18,12 @@ declare module 'axios' {
   }
 }
 
+// A request with no answer by then fails like a lost connection; a write it carried may still have applied.
+export const REQUEST_TIMEOUT_MS = 20_000;
+
 // Sign-in/up (auth.api.ts) and the RTK Query base query share this auth, 401 and 429 handling.
 export const createHttpClient = () => {
-  const api = axios.create({ baseURL: BASE_API_URL });
+  const api = axios.create({ baseURL: BASE_API_URL, timeout: REQUEST_TIMEOUT_MS });
 
   api.interceptors.request.use(
     async (config) => {
