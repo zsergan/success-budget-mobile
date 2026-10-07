@@ -8,6 +8,10 @@ export const selectTransactionFlow = (state: RootState) => state.transactionFlow
 export const hasUnsavedChanges = (flow: TransactionFlow | null) =>
   !!flow?.draft && !!flow.baseline && flow.view.name !== 'created' && isDraftChanged(flow.draft, flow.baseline);
 
+// A save that may have applied, or a create that waits for the user to send it, is explained before the form closes.
+export const hasOpenSave = (flow: TransactionFlow | null) =>
+  flow?.notice === 'saveUnknown' || flow?.notice === 'saveExpired';
+
 export const selectLastWalletId = (state: RootState, spaceId: number) =>
   state.transactionFlow.lastWalletIds[spaceId] ?? null;
 

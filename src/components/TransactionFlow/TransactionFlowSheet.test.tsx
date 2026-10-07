@@ -177,6 +177,19 @@ const refusal = (statusCode: number, code: string) => ({ response: { data: { sta
 
 let stored = transactionDto({ amount: '50.00', version: 2 });
 
+let answerOperation = () =>
+  Promise.resolve({
+    data: {
+      operation_id: 'key-1',
+      status: 'applied',
+      transaction_id: 'tx-1',
+      created_at: stored.timestamp,
+      deleted_at: null,
+      transaction: stored,
+    },
+  });
+const defaultAnswerOperation = answerOperation;
+
 const respond = ({ url, method }: { url: string; method: string }) => {
   if (method === 'POST' && url.endsWith('/categories')) {
     return Promise.resolve({ data: category(30, 'Bonus', TransactionType.INCOME) });
@@ -184,6 +197,7 @@ const respond = ({ url, method }: { url: string; method: string }) => {
   if (method === 'POST' || method === 'PATCH' || method === 'DELETE') {
     return writeAnswer(sentWrites++).promise;
   }
+  if (url.includes('/transactions/operations/')) return answerOperation();
   if (url.endsWith('/transactions/tx-1')) return answerRead ? answerRead() : Promise.resolve({ data: stored });
   if (url.endsWith('/wallets')) return Promise.resolve({ data: walletsResponse });
   if (url.endsWith('/categories')) return Promise.resolve({ data: categoriesResponse });
@@ -250,6 +264,7 @@ beforeEach(() => {
   mockSheet.props = undefined;
   stored = transactionDto({ amount: '50.00', version: 2 });
   answerRead = null;
+  answerOperation = defaultAnswerOperation;
   walletsResponse = wallets;
   categoriesResponse = categories;
   limitsResponse = noLimits;
@@ -329,6 +344,86 @@ describe('TransactionFlowSheet', () => {
     expect(mockedRequest).toHaveBeenCalledWith(
       expect.objectContaining({ method: 'POST', data: expect.objectContaining({ amount: '12.00', category_id: 1 }) }),
     );
+  });
+
+  it('keeps saying a save is not confirmed, and tries it again with the same key', async () => {
+    const { open, flow } = renderFlow();
+    open();
+    await settle();
+    fillExpense();
+
+    fireEvent.press(screen.getByText('Save expense'));
+    await act(async () => failWrite(new Error('timeout of 20000ms exceeded')));
+    await settle();
+
+    expect(screen.getByText('Not confirmed yet')).toBeTruthy();
+    expect(mockAddAlert).not.toHaveBeenCalled();
+    expect(flow()).toMatchObject({ view: { name: 'create' }, notice: 'saveUnknown' });
+
+    fireEvent.press(screen.getByText('Try again'));
+    await act(async () => answerWrite({ data: createTransactionResponseDto() }));
+
+    const posts = mockedRequest.mock.calls.filter(([config]) => config.method === 'POST');
+    expect(posts).toHaveLength(2);
+    expect(posts[1][0]).toEqual(posts[0][0]);
+    expect(posts[0][0].data.client_operation_id).toBe(posts[0][0].headers['Idempotency-Key']);
+    expect(screen.getByText('Transaction saved')).toBeTruthy();
+  });
+
+  it('closes on request with a save not confirmed, and keeps that save to settle later', async () => {
+    const { store, open, flow } = renderFlow();
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('Save expense'));
+    await act(async () => failWrite(new Error('Network Error')));
+    await settle();
+
+    expect(startSwipeClose()).toBe(true);
+    const [title, , buttons] = (Alert.alert as jest.Mock).mock.calls[0];
+    expect(title).toBe('Close without confirmation?');
+
+    act(() => buttons[0].onPress());
+
+    expect(flow()).toBeNull();
+    expect(store.getState().pendingWrite.writes).toMatchObject([
+      { status: 'unknown', operation: { type: 'create', data: { amount: '12.00', category_id: 1 } } },
+    ]);
+  });
+
+  it('says why the server refused a save until the form changes', async () => {
+    const { open } = renderFlow();
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('Save expense'));
+    await act(async () =>
+      failWrite({
+        response: { data: { statusCode: 400, code: 'CATEGORY_ARCHIVED', message: 'This category is archived' } },
+      }),
+    );
+    await settle();
+
+    expect(screen.getByText('The server refused this save')).toBeTruthy();
+    expect(screen.getByText('This category is archived')).toBeTruthy();
+
+    fireEvent.press(screen.getByText('Taxi'));
+
+    expect(screen.queryByText('The server refused this save')).toBeNull();
+  });
+
+  it('shows the record when an earlier attempt of the create had saved it', async () => {
+    const { open, flow } = renderFlow();
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('Save expense'));
+    await act(async () => failWrite(refusal(409, 'TRANSACTION_OPERATION_EXISTS')));
+    await settle();
+
+    expect(flow()).toMatchObject({ view: { name: 'details' }, saved: { id: 'tx-1' }, draft: null });
+    expect(mockAddAlert).toHaveBeenCalledWith('This transaction was already saved');
+    expect(mockedRequest.mock.calls.filter(([config]) => config.method === 'POST')).toHaveLength(1);
   });
 
   it('sends one create for a double tap on Save', async () => {

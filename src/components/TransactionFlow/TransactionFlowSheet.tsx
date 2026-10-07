@@ -8,7 +8,7 @@ import CategoryEditorSheet, { CATEGORY_EDITOR_SNAP_POINT } from '@components/Cat
 import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
 import { useAlert } from '@hooks';
 import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
-import { hasUnsavedChanges, selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
+import { hasOpenSave, hasUnsavedChanges, selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import type { FlowAway, TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { anotherStarted, awayEnded, awayStarted, categoryCreated, closed } from '@redux/state/transactionFlow/slice';
 import { checkFlowRecord, deleteTransaction, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
@@ -89,7 +89,7 @@ const TransactionFlowSheet = () => {
     const current = selectTransactionFlow(store.getState());
     if (isDismissing() || !current || current.away) return false;
     if (current.isSaving) return true;
-    if (!hasUnsavedChanges(current)) return false;
+    if (!hasUnsavedChanges(current) && !hasOpenSave(current)) return false;
 
     requestClose();
     return true;

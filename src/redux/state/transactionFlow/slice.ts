@@ -31,7 +31,13 @@ export type FlowCheck = 'pending' | 'done' | 'failed';
 
 // `conflict`: the record changed after it was read, so a write at its version was refused.
 // `deleteUncertain`: no answer, so the delete may have applied; repeating it is safe.
-export type FlowNotice = 'conflict' | 'deleteFailed' | 'deleteUncertain';
+// `saveUnknown`: no answer, so the save may have applied; repeating it never applies it twice.
+// `saveRefused`: the server refused it, as `refusal` says. `saveNotSent`: it could not be stored, so it never went out.
+// `saveExpired`: a create the server never got before its key ran out; only the user sends it again.
+export type FlowNotice =
+  'conflict' | 'deleteFailed' | 'deleteUncertain' | 'saveUnknown' | 'saveRefused' | 'saveNotSent' | 'saveExpired';
+
+export type SaveNotice = Extract<FlowNotice, `save${string}`>;
 
 export type DeleteResult = 'deleted' | 'conflict' | 'failed' | 'uncertain' | 'stale';
 
@@ -45,6 +51,8 @@ export interface TransactionFlow {
   saved: TransactionModel | null;
   check: FlowCheck;
   notice: FlowNotice | null;
+  // The server's reason with a `saveRefused` notice.
+  refusal: string | null;
   draft: TransactionDraft | null;
   // What the draft started from; it has changes only while it differs from this.
   baseline: TransactionDraft | null;
@@ -106,6 +114,7 @@ const startCreate = (
     saved: null,
     check: 'done',
     notice: null,
+    refusal: null,
     draft: fresh,
     baseline: fresh,
     followsNow: true,
@@ -167,6 +176,7 @@ const transactionFlowSlice = createSlice({
         saved: payload.transaction,
         check: 'pending',
         notice: null,
+        refusal: null,
         draft: null,
         baseline: null,
         followsNow: false,
@@ -257,6 +267,11 @@ const transactionFlowSlice = createSlice({
       if (!flow?.draft || !activeForm(flow)) return;
 
       Object.assign(flow.draft, payload);
+      // A refusal or a save that never went out says nothing about the changed draft; an unknown save still might.
+      if (flow.notice === 'saveRefused' || flow.notice === 'saveNotSent') {
+        flow.notice = null;
+        flow.refusal = null;
+      }
     },
     categoriesOpened: (state) => {
       const flow = idleFlow(state);
@@ -304,10 +319,37 @@ const transactionFlowSlice = createSlice({
       if (!flow?.draft || !activeForm(flow)) return;
 
       flow.isSaving = true;
+      flow.notice = null;
+      flow.refusal = null;
     },
-    saveFailed: (state, { payload }: DraftScoped) => {
+    saveFailed: (state, { payload }: DraftScoped<{ notice?: SaveNotice; refusal?: string }>) => {
       const flow = flowOf(state, payload.draftId);
-      if (flow) flow.isSaving = false;
+      if (!flow) return;
+
+      flow.isSaving = false;
+      flow.notice = payload.notice ?? null;
+      flow.refusal = payload.refusal ?? null;
+    },
+    // An earlier attempt of this create had applied: the form gives way to the record, or ends when it is deleted.
+    createFound: (state, { payload }: DraftScoped<{ transaction: TransactionModel | null }>) => {
+      const flow = flowOf(state, payload.draftId);
+      if (!flow) return;
+
+      if (!payload.transaction) {
+        state.flow = null;
+        return;
+      }
+
+      Object.assign(flow, {
+        view: { name: 'details' },
+        saved: payload.transaction,
+        check: 'done',
+        notice: null,
+        refusal: null,
+        draft: null,
+        baseline: null,
+        isSaving: false,
+      });
     },
     createSucceeded: (state, { payload }: DraftScoped<{ result: CreateTransactionResult; now: number }>) => {
       const flow = flowOf(state, payload.draftId);
@@ -460,6 +502,7 @@ export const {
   panelClosed,
   saveStarted,
   saveFailed,
+  createFound,
   createSucceeded,
   editSucceeded,
   anotherStarted,

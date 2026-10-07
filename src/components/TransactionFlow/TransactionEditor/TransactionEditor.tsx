@@ -316,6 +316,32 @@ const TransactionEditor = ({
               isBusy={isLoadingLatest}
               onAction={loadLatest}
             />
+          ) : flow.notice === 'saveUnknown' ? (
+            <Banner
+              tone="warn"
+              title="Not confirmed yet"
+              text="The server didn’t answer, so it may already be saved. Trying again never saves it twice."
+              actionLabel="Try again"
+              onAction={onSave}
+            />
+          ) : flow.notice === 'saveRefused' ? (
+            <Banner tone="danger" title="The server refused this save" text={flow.refusal ?? ''} />
+          ) : flow.notice === 'saveNotSent' ? (
+            <Banner
+              tone="danger"
+              title="Not saved"
+              text="It couldn’t be stored on this device first, so nothing was sent."
+              actionLabel="Try again"
+              onAction={onSave}
+            />
+          ) : flow.notice === 'saveExpired' ? (
+            <Banner
+              tone="danger"
+              title="Not saved"
+              text="The server never got it, and a day has passed. Send it now to add it as new."
+              actionLabel="Send now"
+              onAction={onSave}
+            />
           ) : (
             (flow.notice === 'deleteFailed' || flow.notice === 'deleteUncertain') && (
               <Banner

@@ -206,6 +206,27 @@ describe('pending writes', () => {
     });
   });
 
+  it('sends a create that ran out while its form stayed open only when saved again', async () => {
+    const store = signIn();
+    mockedRequest.mockImplementationOnce(noAnswer);
+    const first = await submit(store);
+    jest.setSystemTime(Date.now() + KEY_LIFETIME_MS);
+    mockedRequest.mockImplementationOnce(refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND'));
+
+    const second = await submit(store, create, first.memory);
+
+    expect(second.outcome).toMatchObject({ status: 'failed', failure: { kind: 'expired' } });
+    expect(posts()).toHaveLength(1);
+
+    mockedRequest.mockImplementationOnce(answers(createTransactionResponseDto()));
+    const third = await submit(store, create, second.memory);
+
+    expect(third.outcome).toMatchObject({ status: 'succeeded' });
+    expect(posts()).toHaveLength(2);
+    expect(posts()[1]).toEqual(posts()[0]);
+    expect(await stored()).toEqual([]);
+  });
+
   it('looks a create up when its operation id is already taken', async () => {
     const store = signIn();
     mockedRequest

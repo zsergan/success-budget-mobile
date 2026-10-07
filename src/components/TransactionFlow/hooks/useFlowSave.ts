@@ -4,7 +4,9 @@ import { useAlert, useTransactionOperation } from '@hooks';
 import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
 import { getDraftErrors, hasDraftErrors, toCreateRequest, toUpdateRequest } from '@redux/state/transactionFlow/draft';
 import { hasUnsavedChanges, selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
+import type { SaveNotice } from '@redux/state/transactionFlow/slice';
 import {
+  createFound,
   createSucceeded,
   editSucceeded,
   recordGone,
@@ -12,7 +14,14 @@ import {
   saveStarted,
   writeConflicted,
 } from '@redux/state/transactionFlow/slice';
+import type { TransactionFailureKind } from '@redux/state/transaction/operations';
 import { getErrorMessage } from '@shared/utils';
+
+const SAVE_NOTICES: Partial<Record<TransactionFailureKind, SaveNotice>> = {
+  uncertain: 'saveUnknown',
+  expired: 'saveExpired',
+  notSent: 'saveNotSent',
+};
 
 // Saves the open draft once the API confirms it; a second tap, or an answer for another draft, space or session, does nothing.
 const useFlowSave = () => {
@@ -53,6 +62,16 @@ const useFlowSave = () => {
 
     if (outcome.status === 'ignored') return;
 
+    if (outcome.status === 'found') {
+      dispatch(createFound({ ...scope, transaction: outcome.transaction }));
+      addAlert(
+        outcome.transaction
+          ? 'This transaction was already saved'
+          : 'This transaction was saved earlier and has since been deleted',
+      );
+      return;
+    }
+
     if (outcome.status === 'failed' && saved) {
       const { kind } = outcome.failure;
 
@@ -60,10 +79,18 @@ const useFlowSave = () => {
       if (kind === 'notFound') return void dispatch(recordGone(scope));
     }
 
-    if (outcome.status !== 'succeeded') {
-      dispatch(saveFailed(scope));
-      if (outcome.status === 'failed') addAlert(getErrorMessage(outcome.failure.error));
-      return;
+    if (outcome.status === 'stale') return void dispatch(saveFailed(scope));
+
+    // The form keeps saying what happened and what to do next until the next save.
+    if (outcome.status === 'failed') {
+      const { kind, error } = outcome.failure;
+      const notice = SAVE_NOTICES[kind];
+
+      return void dispatch(
+        saveFailed(
+          notice ? { ...scope, notice } : { ...scope, notice: 'saveRefused', refusal: getErrorMessage(error) },
+        ),
+      );
     }
 
     if ('previousBalance' in outcome.result) {

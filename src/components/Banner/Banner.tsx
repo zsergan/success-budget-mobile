@@ -10,12 +10,13 @@ interface Props {
   tone: 'warn' | 'danger';
   title?: string;
   text: string;
-  actionLabel: string;
+  // Left out when the next step is in the form itself.
+  actionLabel?: string;
   isBusy?: boolean;
-  onAction: () => void;
+  onAction?: () => void;
 }
 
-// An inline message with the one step that resolves it.
+// An inline message with the one step that resolves it, when there is one.
 const Banner = ({ tone, title, text, actionLabel, isBusy = false, onAction }: Props) => {
   const color = tone === 'warn' ? colors.warn : colors.danger;
 
@@ -28,21 +29,23 @@ const Banner = ({ tone, title, text, actionLabel, isBusy = false, onAction }: Pr
         <Text style={styles.text}>{text}</Text>
       </View>
 
-      <TouchableOpacity
-        style={styles.action}
-        onPress={onAction}
-        disabled={isBusy}
-        activeOpacity={0.7}
-        hitSlop={8}
-        accessibilityRole="button"
-        accessibilityState={{ busy: isBusy }}
-      >
-        {isBusy ? (
-          <ActivityIndicator size="small" color={colors.text} />
-        ) : (
-          <Text style={styles.actionText}>{actionLabel}</Text>
-        )}
-      </TouchableOpacity>
+      {actionLabel && onAction && (
+        <TouchableOpacity
+          style={styles.action}
+          onPress={onAction}
+          disabled={isBusy}
+          activeOpacity={0.7}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityState={{ busy: isBusy }}
+        >
+          {isBusy ? (
+            <ActivityIndicator size="small" color={colors.text} />
+          ) : (
+            <Text style={styles.actionText}>{actionLabel}</Text>
+          )}
+        </TouchableOpacity>
+      )}
     </View>
   );
 };

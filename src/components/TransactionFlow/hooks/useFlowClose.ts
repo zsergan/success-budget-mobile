@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { Alert } from 'react-native';
 
 import { useAppDispatch, useAppStore } from '@redux/hooks';
-import { hasUnsavedChanges, selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
+import { hasOpenSave, hasUnsavedChanges, selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import { closed, editLeft, panelClosed } from '@redux/state/transactionFlow/slice';
 
 const confirmDiscard = (isEdit: boolean, onDiscard: () => void) =>
@@ -12,6 +12,20 @@ const confirmDiscard = (isEdit: boolean, onDiscard: () => void) =>
     [
       { text: 'Discard', style: 'destructive', onPress: onDiscard },
       { text: 'Keep editing', style: 'cancel', isPreferred: true },
+    ],
+  );
+
+// Closing drops the draft, never a write already sent: an unconfirmed one is settled in the background, and one that
+// ran out stays on Home until the user sends or discards it.
+const confirmLeavingSave = (notice: 'saveUnknown' | 'saveExpired', onClose: () => void) =>
+  Alert.alert(
+    notice === 'saveUnknown' ? 'Close without confirmation?' : 'Close without sending?',
+    notice === 'saveUnknown'
+      ? 'It may already be saved. The app keeps checking and never saves it twice; edits made since are lost.'
+      : 'It stays on Home, where you can send it later or discard it; edits made since are lost.',
+    [
+      { text: 'Close', style: 'destructive', onPress: onClose },
+      { text: 'Keep open', style: 'cancel', isPreferred: true },
     ],
   );
 
@@ -33,7 +47,8 @@ const useFlowClose = () => {
 
     const close = () => dispatch(closed());
 
-    if (hasUnsavedChanges(flow)) confirmDiscard(flow.saved !== null, close);
+    if (hasOpenSave(flow)) confirmLeavingSave(flow.notice as 'saveUnknown' | 'saveExpired', close);
+    else if (hasUnsavedChanges(flow)) confirmDiscard(flow.saved !== null, close);
     else close();
   }, [dispatch, getFlow]);
 
@@ -46,7 +61,8 @@ const useFlowClose = () => {
     } else if (flow.view.name === 'edit') {
       const leave = () => dispatch(editLeft());
 
-      if (hasUnsavedChanges(flow)) confirmDiscard(true, leave);
+      if (flow.notice === 'saveUnknown') confirmLeavingSave(flow.notice, leave);
+      else if (hasUnsavedChanges(flow)) confirmDiscard(true, leave);
       else leave();
     } else {
       requestClose();
