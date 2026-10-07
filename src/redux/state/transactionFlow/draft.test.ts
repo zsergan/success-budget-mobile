@@ -68,6 +68,7 @@ describe('amount errors', () => {
     expect(amountError('12.345')).toBe('Use at most two decimal places');
     expect(amountError('12,5,0')).toBe('Use digits and one decimal separator');
     expect(amountError('0,00')).toBe('Enter an amount greater than zero');
+    expect(amountError('0.01')).toBeUndefined();
     expect(amountError('100000000')).toBe('The maximum amount is 99,999,999.99');
     expect(amountError('99,999,999.99')).toBeUndefined();
   });

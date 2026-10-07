@@ -250,6 +250,21 @@ describe('TransactionFlowSheet', () => {
     );
   });
 
+  it('sends one create for a double tap on Save', async () => {
+    const { open } = renderFlow();
+    open();
+    await settle();
+    fillExpense();
+
+    fireEvent.press(screen.getByText('Save expense'));
+    fireEvent.press(screen.getByText('Saving…'));
+    await act(async () => answerWrite({ data: createTransactionResponseDto() }));
+
+    const posts = mockedRequest.mock.calls.filter(([config]) => config.method === 'POST');
+    expect(posts).toHaveLength(1);
+    expect(screen.getByText('Transaction saved')).toBeTruthy();
+  });
+
   it('keeps a confirmed create confirmed when the refresh after it fails', async () => {
     const { open, flow } = renderFlow();
     open();
