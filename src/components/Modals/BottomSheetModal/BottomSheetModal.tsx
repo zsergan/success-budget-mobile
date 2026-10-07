@@ -15,17 +15,30 @@ export type Ref = BottomSheetModal;
 interface Props {
   children: ReactNode;
   onDismiss?: () => void;
-  /** Size the sheet to its whole content, up to the screen, instead of a fixed snap point. */
+  /** Size the sheet to a content whose root is one BottomSheetView or BottomSheetScrollView holding all of it. */
   dynamicSizing?: boolean;
-  /** Fixed snap point when `dynamicSizing` is false. Defaults to '85%'. */
+  /**
+   * Size the sheet to its whole content, measured here, up to the screen: for content with a header and actions
+   * around an inner scroll view, which the library's dynamic sizing would size to that scroll view alone.
+   */
+  fitContent?: boolean;
+  /** Fixed snap point when neither sizing is set. Defaults to '85%'. */
   snapPoint?: string;
-  enablePanDownToClose?: boolean;
   /** Replaces the backdrop's own close, for a sheet that decides itself whether it may close. */
   onBackdropPress?: () => void;
+  enablePanDownToClose?: boolean;
 }
 
 const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheetModal(
-  { children, onDismiss, dynamicSizing = false, snapPoint = '85%', enablePanDownToClose = true, onBackdropPress },
+  {
+    children,
+    onDismiss,
+    dynamicSizing = false,
+    fitContent = false,
+    snapPoint = '85%',
+    onBackdropPress,
+    enablePanDownToClose = true,
+  },
   ref,
 ) {
   const { height: windowHeight } = useWindowDimensions();
@@ -56,8 +69,8 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
     <BottomSheetModal
       ref={ref}
       index={0}
-      snapPoints={[dynamicSizing ? Math.min(contentHeight, maxHeight) : snapPoint]}
-      enableDynamicSizing={false}
+      snapPoints={dynamicSizing ? undefined : [fitContent ? Math.min(contentHeight, maxHeight) : snapPoint]}
+      enableDynamicSizing={dynamicSizing}
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.background}
       handleComponent={null}
@@ -67,8 +80,9 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
       android_keyboardInputMode="adjustResize"
     >
       {dynamicSizing ? (
-        // The library's dynamic sizing takes an inner scroll view's height and drops what is around it; this measures
-        // the whole content. A scrolling view bounds its own height or shrinks under maxHeight.
+        // Dynamic sizing needs the content itself as the measured root; an extra BottomSheetView here would compete with it.
+        children
+      ) : fitContent ? (
         <View style={{ maxHeight }} onLayout={handleContentLayout}>
           {children}
         </View>

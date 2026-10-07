@@ -208,7 +208,7 @@ const TransactionFlowSheet = () => {
     <>
       <BottomModal
         ref={sheetRef}
-        dynamicSizing
+        fitContent
         enablePanDownToClose={!isGuarded}
         onBackdropPress={requestClose}
         onDismiss={handleDismiss}

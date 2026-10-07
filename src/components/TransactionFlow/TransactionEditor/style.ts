@@ -3,8 +3,8 @@ import { StyleSheet } from 'react-native';
 import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
+  // The height is set by the editor; a flex here would let the measured sheet collapse it.
   root: {
-    flex: 1,
     width: '100%',
   },
   // Shared top inset + gap for the handle, header, type switch and hero, instead of each carrying its own margin.

@@ -33,7 +33,7 @@ const renderSheet = (content: string) =>
         insets: { top: TOP_INSET, right: 0, bottom: 0, left: 0 },
       }}
     >
-      <BottomModal dynamicSizing>
+      <BottomModal fitContent>
         <Text>{content}</Text>
       </BottomModal>
     </SafeAreaProvider>,
@@ -44,7 +44,7 @@ const layOut = (height: number) =>
     nativeEvent: { layout: { x: 0, y: 0, width: 400, height } },
   });
 
-describe('BottomModal with dynamic sizing', () => {
+describe('BottomModal fitted to its content', () => {
   it('snaps to the height of the whole content, measured outside the library', () => {
     renderSheet('content');
     expect(mockSheet.enableDynamicSizing).toBe(false);
