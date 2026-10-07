@@ -22,6 +22,9 @@ behind the server.
 A transaction request refused with `403 FORBIDDEN_SPACE` removes every
 cached entry of that space and refreshes Spaces, whose fallback moves the
 selection to a space the user still belongs to.
+Any read refused with `403` for the current space refreshes Spaces too;
+once the list no longer has the space, the selection moves off it and its
+cached entries are removed.
 `History.Recent` is no longer a separate request: Home asks for the
 current month by the same client-local bounds as the Transactions tab's
 default period (`periodArg`), so both read one `History.Range` entry.

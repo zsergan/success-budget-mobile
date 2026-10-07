@@ -26,9 +26,8 @@ export const activateSpace =
 
 export const spaceAccessLost = createAction<{ spaceId: number }>('space/accessLost');
 
-// The server refused the space itself (the user was removed, or it was deleted): nothing cached for it stays, and
-// the refreshed spaces list moves the selection to one the user still has.
-export const loseSpaceAccess =
+// Nothing cached for a space the user no longer belongs to stays, and its open transaction ends.
+export const dropSpaceData =
   (spaceId: number): AppThunk =>
   (dispatch, getState) => {
     dispatch(spaceAccessLost({ spaceId }));
@@ -38,7 +37,14 @@ export const loseSpaceAccess =
         dispatch(baseApi.internalActions.removeQueryResult({ queryCacheKey: queryCacheKey as QueryCacheKey }));
       }
     });
+  };
 
+// The server refused the space itself (the user was removed, or it was deleted): its data goes at once, and the
+// refreshed spaces list moves the selection to one the user still has.
+export const loseSpaceAccess =
+  (spaceId: number): AppThunk =>
+  (dispatch) => {
+    dispatch(dropSpaceData(spaceId));
     dispatch(spaceApi.util.invalidateTags(['Spaces']));
   };
 

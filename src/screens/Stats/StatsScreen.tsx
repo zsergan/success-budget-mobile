@@ -30,7 +30,6 @@ import { toHistoryFilter } from './historyFilter';
 import useAddTransaction from './hooks/useAddTransaction';
 import useComposeWithNewWallet from './hooks/useComposeWithNewWallet';
 import useRefreshOnReturn from './hooks/useRefreshOnReturn';
-import useSpaceAccessRecovery from './hooks/useSpaceAccessRecovery';
 import useSpaceStatus from './hooks/useSpaceStatus';
 import useStatsData from './hooks/useStatsData';
 import useStatsSelection from './hooks/useStatsSelection';
@@ -49,7 +48,6 @@ const StatsScreen = () => {
   const { summary, trend, breakdown, refreshIfStale, updateFailed, retryFailed, loadFailed, loadError, accessDenied } =
     useStatsData(range);
   useRefreshOnReturn(refreshIfStale);
-  useSpaceAccessRecovery(accessDenied);
 
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const dispatch = useAppDispatch();
