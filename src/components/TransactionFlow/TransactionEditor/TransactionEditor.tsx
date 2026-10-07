@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import type { BottomSheetScrollViewMethods } from '@gorhom/bottom-sheet';
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Icon from '@components/Icon/Icon';
 import { useAlert } from '@hooks';
@@ -24,7 +23,7 @@ import { categoriesOpened, dateTimeOpened, draftChanged } from '@redux/state/tra
 import { loadLatestRecord } from '@redux/state/transactionFlow/thunks';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { TransactionType } from '@shared/enums';
-import theme, { colors } from '@shared/theme';
+import { colors } from '@shared/theme';
 import DeleteButton from '../DeleteButton/DeleteButton';
 import { deleteFailureText } from '../deleteMessage';
 import Banner from '@components/Banner/Banner';
@@ -37,12 +36,10 @@ import { forecastLimit } from './LimitHint/limitForecast';
 import LimitHint from './LimitHint/LimitHint';
 import TypeToggle from './TypeToggle/TypeToggle';
 import useDefaultWallet from './useDefaultWallet';
-import useKeyboardHeight from './useKeyboardHeight';
+import useBoundedHeight from '../hooks/useBoundedHeight';
 import WalletPicker from './WalletPicker/WalletPicker';
 
 import styles from './style';
-
-export const EDITOR_HEIGHT_FRACTION = 0.86;
 
 interface Props {
   flow: TransactionFlow & { draft: TransactionDraft };
@@ -66,9 +63,7 @@ const TransactionEditor = ({
   onRetryDelete,
 }: Props) => {
   const dispatch = useAppDispatch();
-  const { height: windowHeight } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-  const keyboardHeight = useKeyboardHeight();
+  const { height, keyboardHeight } = useBoundedHeight();
   const scrollRef = useRef<BottomSheetScrollViewMethods>(null);
   const [isNoteFocused, setNoteFocused] = useState(false);
   const [isLoadingLatest, setLoadingLatest] = useState(false);
@@ -152,12 +147,6 @@ const TransactionEditor = ({
     : !isEdit && hasNoWallets
       ? 'Create a wallet to save this transaction.'
       : undefined;
-
-  // Above the keyboard the form shrinks to what is left, so Save stays in view and the fields scroll under it.
-  const height = Math.min(
-    windowHeight * EDITOR_HEIGHT_FRACTION,
-    keyboardHeight > 0 ? windowHeight - keyboardHeight - insets.top - theme.spacing.sm : Infinity,
-  );
 
   useEffect(() => {
     if (isNoteFocused && keyboardHeight > 0) scrollRef.current?.scrollToEnd({ animated: true });

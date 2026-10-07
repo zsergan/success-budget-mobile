@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
@@ -12,7 +12,7 @@ import { compareDays } from '@shared/utils/compare';
 import { MIN_TIMESTAMP } from '@redux/state/transactionFlow/draft';
 import { formatDateTime } from '../format';
 import PanelHeader from '../PanelHeader/PanelHeader';
-import { EDITOR_HEIGHT_FRACTION } from '../TransactionEditor/TransactionEditor';
+import useBoundedHeight from '../hooks/useBoundedHeight';
 import type { PickBounds } from './pickDateTime';
 import { pickDay, pickTime } from './pickDateTime';
 import TimeField from './TimeField';
@@ -34,7 +34,7 @@ interface Props {
 const DateTimePanel = ({ pending, original, onBack, onClose }: Props) => {
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
+  const { height } = useBoundedHeight();
   const now = useNow();
   const picked = new Date(pending);
   const [month, setMonth] = useState(() => new Date(picked.getFullYear(), picked.getMonth(), 1));
@@ -58,7 +58,7 @@ const DateTimePanel = ({ pending, original, onBack, onClose }: Props) => {
   ];
 
   return (
-    <View style={{ height: windowHeight * EDITOR_HEIGHT_FRACTION }}>
+    <View style={{ height }}>
       <PanelHeader title="Date & time" onBack={onBack} onClose={onClose} />
 
       <BottomSheetScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>

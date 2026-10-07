@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
-  // The height is set by the editor; a flex here would let the measured sheet collapse it.
+  // The height comes from useBoundedHeight; a flex here would let the measured sheet collapse it.
   root: {
     width: '100%',
   },

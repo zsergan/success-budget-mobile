@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Keyboard, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Keyboard, Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 
 import Icon from '@components/Icon/Icon';
@@ -11,7 +11,7 @@ import { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
 import { hexToRgba } from '@shared/utils';
 import PanelHeader from '../PanelHeader/PanelHeader';
-import { EDITOR_HEIGHT_FRACTION } from '../TransactionEditor/TransactionEditor';
+import useBoundedHeight from '../hooks/useBoundedHeight';
 
 import styles from './style';
 
@@ -27,7 +27,7 @@ interface Props {
 // Every active category of the draft's type; a tap picks it and goes back to the form, which kept the rest.
 const CategoriesPanel = ({ transactionType, selectedId, onBack, onClose }: Props) => {
   const dispatch = useAppDispatch();
-  const { height: windowHeight } = useWindowDimensions();
+  const { height } = useBoundedHeight();
   const { currentData } = useGetCategoriesQuery(useSpaceArg());
   const { incomes, expenses } = useMemo(() => getActiveCategories(currentData), [currentData]);
   const [query, setQuery] = useState('');
@@ -41,7 +41,7 @@ const CategoriesPanel = ({ transactionType, selectedId, onBack, onClose }: Props
   const shown = needle ? categories.filter(({ name }) => name.toLowerCase().includes(needle)) : categories;
 
   return (
-    <View style={{ height: windowHeight * EDITOR_HEIGHT_FRACTION }}>
+    <View style={{ height }}>
       <PanelHeader title="Categories" subtitle="Your transaction is kept" onBack={onBack} onClose={onClose} />
 
       <BottomSheetScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
