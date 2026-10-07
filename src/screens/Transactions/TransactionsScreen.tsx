@@ -5,6 +5,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 
 import {
   Banner,
+  PendingWritesBanner,
   BottomSheetModal as BottomModal,
   Fab,
   RangePickerSheet,
@@ -150,6 +151,8 @@ const TransactionsScreen = () => {
                   onReset={resetPeriod}
                 />
               )}
+
+              <PendingWritesBanner style={styles.banner} />
 
               {refreshFailed && (
                 <View style={styles.banner}>

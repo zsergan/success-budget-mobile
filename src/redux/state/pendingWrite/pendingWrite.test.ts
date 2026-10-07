@@ -72,6 +72,9 @@ const signIn = (userId = 1) => {
 const submit = (store: ReturnType<typeof signIn>, request = create, memory: OperationMemory | null = null) =>
   store.dispatch(submitTransactionRequest(request, memory));
 
+const results = async (store: ReturnType<typeof signIn>) =>
+  (await store.dispatch(resumePendingWrites())).map(({ result }) => result);
+
 // The app starts again: a new store, signed in as the same user, reads what was left.
 const restart = async (userId = 1) => {
   mockedRequest.mockClear();
@@ -169,7 +172,7 @@ describe('pending writes', () => {
       const store = await leaveUnanswered();
       mockedRequest.mockImplementationOnce(operation('applied'));
 
-      expect(await store.dispatch(resumePendingWrites())).toEqual([
+      expect(await results(store)).toEqual([
         { kind: 'applied', transaction: expect.objectContaining({ id: 'tx-1', version: 2 }) },
       ]);
       expect(sent()).toEqual([
@@ -182,7 +185,7 @@ describe('pending writes', () => {
       const store = await leaveUnanswered();
       mockedRequest.mockImplementationOnce(operation('deleted'));
 
-      expect(await store.dispatch(resumePendingWrites())).toEqual([{ kind: 'deleted' }]);
+      expect(await results(store)).toEqual([{ kind: 'deleted' }]);
       expect(posts()).toEqual([]);
       expect(await stored()).toEqual([]);
     });
@@ -191,8 +194,8 @@ describe('pending writes', () => {
       const store = await leaveUnanswered();
       mockedRequest.mockImplementationOnce(refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND'));
 
-      expect(await store.dispatch(resumePendingWrites())).toEqual([{ kind: 'expired' }]);
-      expect(await store.dispatch(resumePendingWrites())).toEqual([]);
+      expect(await results(store)).toEqual([{ kind: 'expired' }]);
+      expect(await results(store)).toEqual([]);
       expect(posts()).toEqual([]);
       expect(await stored()).toMatchObject([{ status: 'expired' }]);
 
@@ -223,7 +226,7 @@ describe('pending writes', () => {
       .mockImplementationOnce(refusal(400, 'CATEGORY_ARCHIVED'))
       .mockImplementationOnce(refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND'));
 
-    expect(await store.dispatch(resumePendingWrites())).toEqual([
+    expect(await results(store)).toEqual([
       { kind: 'refused', error: expect.objectContaining({ code: 'CATEGORY_ARCHIVED' }) },
     ]);
     expect(await stored()).toEqual([]);

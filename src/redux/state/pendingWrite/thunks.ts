@@ -18,13 +18,23 @@ export const restorePendingWrites =
     if (selectProfileId(getState()) === userId) dispatch(writesRestored({ userId, writes }));
   };
 
+export interface ResumedWrite {
+  operation: StoredOperation;
+  result: WriteResult;
+}
+
 // Sends every unsettled write again with its own key, or looks up a create whose key ran out. An expired create
 // waits for the user.
-export const resumePendingWrites = (): AppThunk<Promise<WriteResult[]>> => (dispatch, getState) => {
+export const resumePendingWrites = (): AppThunk<Promise<ResumedWrite[]>> => (dispatch, getState) => {
   const { sessionKey } = getState().auth;
   const waiting = getState().pendingWrite.writes.filter(({ status }) => status !== 'expired');
 
-  return Promise.all(waiting.map(({ operation }) => dispatch(settleWrite(inSession(operation, sessionKey)))));
+  return Promise.all(
+    waiting.map(async ({ operation }) => ({
+      operation,
+      result: await dispatch(settleWrite(inSession(operation, sessionKey))),
+    })),
+  );
 };
 
 // The user's call for a create the server has no trace of after its key ran out: the same operation id again.

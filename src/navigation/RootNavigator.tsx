@@ -16,7 +16,7 @@ import {
   WelcomeScreen,
 } from '@screens';
 import type { RootStackParamList } from '@shared/types';
-import { useAuth, useLoadInitData } from '@hooks';
+import { useAuth, useLoadInitData, usePendingWritesSync } from '@hooks';
 import { ScreenNames } from '@shared/enums';
 import MainNavigator from './MainNavigator';
 
@@ -25,6 +25,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const RootNavigator = () => {
   const { isSignedIn, isLoading } = useAuth();
   const { isLoading: isDataLoading } = useLoadInitData({ isSignedIn });
+  usePendingWritesSync();
 
   const isAppLoading = isLoading || isDataLoading;
 

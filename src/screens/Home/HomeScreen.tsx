@@ -2,7 +2,15 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { skipToken } from '@reduxjs/toolkit/query';
 
-import { Banner, Fab, RootLayout, SpaceSwitcher, useTransactionDelete, useTransactionFlow } from '@components';
+import {
+  Banner,
+  Fab,
+  PendingWritesBanner,
+  RootLayout,
+  SpaceSwitcher,
+  useTransactionDelete,
+  useTransactionFlow,
+} from '@components';
 import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useCurrentMonthArg, useSpaceArg } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
@@ -82,6 +90,8 @@ const HomeScreen = ({ navigation }: Props) => {
             />
           </View>
         )}
+
+        <PendingWritesBanner style={styles.banner} />
 
         <BalanceOverview
           total={total}
