@@ -43,11 +43,12 @@ Every resource except Profile and Currencies is scoped to the active space.
 | `History.Recent` | `GET /spaces/:id/transactions` (no params → current month) | `transaction.transactions`      | Rows with embedded `wallet` (null once deleted) and `category`; Home shows the first `RECENT_TRANSACTIONS_LIMIT`                                                            |
 | `History.Range`  | `GET /spaces/:id/transactions?from&to`                     | `transaction.rangeTransactions` | Same row shape, for the period picked on the Transactions tab; period totals are derived from it client-side                                                                |
 | `History.Latest` | `GET /spaces/:id/transactions/latest`                      | `transaction.latest`            | Single most recent row (or `null`); tells "no transactions at all" apart from "none in this period"                                                                         |
+| `History.Count`  | `GET /spaces/:id/transactions/count?from&to`               | — (RTK Query only)              | Number of rows `History.Range` would return, initial balances included; the period picker's counter                                                                         |
 | `Members`        | `GET /spaces/:id/members`                                  | `member.members`                | Member rows and pending invite rows                                                                                                                                         |
 | `Statistics`     | `GET /spaces/:id/statistics/{summary,trend,breakdown}`     | — (RTK Query only)              | Every transaction sum and count; category and wallet names, colors, archived and deleted state                                                                              |
 
-"History" below means all three of `History.Recent`, `History.Range` and
-`History.Latest`.
+"History" below means all of `History.Recent`, `History.Range`,
+`History.Latest` and `History.Count`.
 
 ## Invalidation rules
 

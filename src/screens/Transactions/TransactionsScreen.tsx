@@ -20,6 +20,7 @@ import type { MainTabNavigationProp, MainTabScreenProps, RevealTransaction } fro
 import { groupTransactionsByDay } from '@shared/utils';
 import AppliedFilter from './components/AppliedFilter/AppliedFilter';
 import FilterBar from './components/FilterBar/FilterBar';
+import RangeCount from './components/RangeCount/RangeCount';
 import TransactionsSkeleton from './components/Skeleton/TransactionsSkeleton';
 import TransactionsEmptyState from './components/TransactionsEmptyState/TransactionsEmptyState';
 import TransactionsHeader from './components/TransactionsHeader/TransactionsHeader';
@@ -97,7 +98,11 @@ const TransactionsScreen = () => {
   return (
     <>
       <BottomModal ref={rangePickerRef} dynamicSizing>
-        <RangePickerSheet period={period} onApply={applyPeriod} />
+        <RangePickerSheet
+          period={period}
+          onApply={applyPeriod}
+          renderRangeNote={(draft) => <RangeCount range={draft} />}
+        />
       </BottomModal>
 
       <ScreenFrame edges={['top', 'left', 'right']} blurredStatusBar>

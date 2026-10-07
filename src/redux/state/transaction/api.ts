@@ -3,6 +3,7 @@ import type {
   CreateTransactionResponse,
   ErrorResponse,
   Transaction,
+  TransactionsCountResponse,
   UpdateTransactionRequest,
   UpdateTransactionResponse,
 } from '@api/dto';
@@ -46,6 +47,14 @@ export const periodArg = (spaceId: number, { from, to }: { from: Date; to: Date 
   to: to.toISOString(),
 });
 
+const listParams = ({ from, to, transactionType, categoryId, walletId }: TransactionsArg) => ({
+  from,
+  to,
+  ...(transactionType && { transaction_type: transactionType }),
+  ...(categoryId !== undefined && { category_id: categoryId }),
+  ...(walletId !== undefined && { wallet_id: walletId }),
+});
+
 const writeHeaders = ({ idempotencyKey, version }: IdempotentArg & { version?: number }) => ({
   'Idempotency-Key': idempotencyKey,
   ...(version !== undefined && { 'If-Match': `"${version}"` }),
@@ -73,17 +82,13 @@ const invalidatesTransactionWrite = (_result: unknown, error: unknown, { spaceId
 export const transactionApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getTransactions: build.query<TransactionModel[], TransactionsArg>({
-      query: ({ spaceId, from, to, transactionType, categoryId, walletId }) => ({
-        url: `/spaces/${spaceId}/transactions`,
-        params: {
-          from,
-          to,
-          ...(transactionType && { transaction_type: transactionType }),
-          ...(categoryId !== undefined && { category_id: categoryId }),
-          ...(walletId !== undefined && { wallet_id: walletId }),
-        },
-      }),
+      query: (arg) => ({ url: `/spaces/${arg.spaceId}/transactions`, params: listParams(arg) }),
       transformResponse: (response: Transaction[]) => response.map(mapTransaction),
+      providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions'),
+    }),
+    getTransactionsCount: build.query<number, TransactionsArg>({
+      query: (arg) => ({ url: `/spaces/${arg.spaceId}/transactions/count`, params: listParams(arg) }),
+      transformResponse: (response: TransactionsCountResponse) => response.count,
       providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions'),
     }),
     getLatestTransaction: build.query<TransactionModel | null, SpaceArg>({
@@ -129,6 +134,7 @@ export const transactionApi = baseApi.injectEndpoints({
 
 export const {
   useGetTransactionsQuery,
+  useGetTransactionsCountQuery,
   useGetLatestTransactionQuery,
   useGetTransactionQuery,
   useCreateTransactionMutation,

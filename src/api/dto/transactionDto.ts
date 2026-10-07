@@ -33,6 +33,11 @@ export interface Transaction {
   category: TransactionCategory;
 }
 
+// The number of rows the list returns for the same query, initial balances included.
+export interface TransactionsCountResponse {
+  count: number;
+}
+
 export interface CreateTransactionRequest {
   wallet_id: number;
   category_id: number;

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -5,7 +6,7 @@ import { BottomSheetScrollView, useBottomSheet } from '@gorhom/bottom-sheet';
 
 import Icon from '@components/Icon/Icon';
 import theme, { colors } from '@shared/theme';
-import type { Period, PeriodUnit } from '@shared/utils';
+import type { DateRange, Period, PeriodUnit } from '@shared/utils';
 import {
   addMonths,
   customPeriod,
@@ -35,11 +36,13 @@ const QUICK_PRESETS: { value: PeriodUnit | 'custom'; label: string }[] = [
 interface Props {
   period: Period;
   onApply: (period: Period) => void;
+  // A note on the drafted range, e.g. how many records it holds; Apply never waits for it.
+  renderRangeNote?: (range: DateRange) => ReactNode;
 }
 
 // The modal unmounts this on close, so every opening drafts from the applied period
 // and closing without Apply leaves it untouched.
-const RangePickerSheet = ({ period, onApply }: Props) => {
+const RangePickerSheet = ({ period, onApply, renderRangeNote }: Props) => {
   const { close } = useBottomSheet();
   const insets = useSafeAreaInsets();
 
@@ -155,6 +158,8 @@ const RangePickerSheet = ({ period, onApply }: Props) => {
       <Text style={[styles.summary, isTooLong && styles.summaryError]}>
         {isTooLong ? `${days} days selected · up to ${MAX_CUSTOM_DAYS}` : `${days} days selected`}
       </Text>
+
+      {!isTooLong && renderRangeNote?.(draftRange)}
 
       <TouchableOpacity
         style={[

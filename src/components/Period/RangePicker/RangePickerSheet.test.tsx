@@ -1,7 +1,10 @@
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import type { Period } from '@shared/utils';
+import type { ReactNode } from 'react';
+import { Text } from 'react-native';
+
+import type { DateRange, Period } from '@shared/utils';
 import { CURRENT_MONTH, customPeriod } from '@shared/utils';
 import RangePickerSheet from './RangePickerSheet';
 
@@ -26,11 +29,11 @@ const metrics = {
   insets: { top: 62, right: 0, bottom: 34, left: 0 },
 };
 
-const renderSheet = (period: Period) => {
+const renderSheet = (period: Period, renderRangeNote?: (range: DateRange) => ReactNode) => {
   const onApply = jest.fn();
   const view = render(
     <SafeAreaProvider initialMetrics={metrics}>
-      <RangePickerSheet period={period} onApply={onApply} />
+      <RangePickerSheet period={period} onApply={onApply} renderRangeNote={renderRangeNote} />
     </SafeAreaProvider>,
   );
 
@@ -121,5 +124,15 @@ describe('RangePickerSheet', () => {
     expect(screen.getByText('367 days selected · up to 366')).toBeTruthy();
     fireEvent.press(screen.getByText('Apply period'));
     expect(onApply).not.toHaveBeenCalled();
+  });
+
+  it('notes the drafted range, only while it can be applied', () => {
+    const note = ({ from }: DateRange) => <Text>{`Note from ${from.getDate()}`}</Text>;
+    renderSheet(customPeriod(new Date(2025, 8, 3), new Date(2026, 8, 2)), note);
+    expect(screen.getByText('Note from 3')).toBeTruthy();
+
+    fireEvent.press(screen.getByText('1'));
+
+    expect(screen.queryByText(/^Note from/)).toBeNull();
   });
 });
