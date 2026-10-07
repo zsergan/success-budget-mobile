@@ -7,6 +7,8 @@ import { act, render, screen } from '@testing-library/react-native';
 import { createAppStore } from '@redux/Store';
 import { activateSpace } from '@redux/state/space/thunks';
 import { transactionDto } from '@redux/state/transaction/fixtures';
+import { deleteTransaction } from '@redux/state/transactionFlow/thunks';
+import { mapTransaction } from '@api/models';
 import { ScreenNames, TransactionType } from '@shared/enums';
 import type { MainTabParamList } from '@shared/types';
 import TransactionsScreen from './TransactionsScreen';
@@ -79,6 +81,8 @@ const renderTransactions = (params: MainTabParamList[ScreenNames.TRANSACTIONS_TA
       </NavigationContainer>
     </Provider>,
   );
+
+  return store;
 };
 
 const listRequests = () =>
@@ -125,5 +129,36 @@ describe('TransactionsScreen', () => {
     await settle();
 
     expect(listRequests().every(({ params }) => params?.from === new Date(2026, 8, 1).toISOString())).toBe(true);
+  });
+
+  it('drops a day once its last row is deleted, then picks the empty state for the whole history', async () => {
+    const today = transactionDto({ id: 'tx-today', timestamp: new Date(2026, 8, 28, 9).toISOString() });
+    const earlier = transactionDto({ id: 'tx-earlier', timestamp: new Date(2026, 8, 20, 9).toISOString() });
+    let rows = [today, earlier];
+    mockedRequest.mockImplementation(({ url }: RequestConfig & { method?: string }) => {
+      if (url === '/spaces/1/transactions') return Promise.resolve({ data: rows });
+      if (url === '/spaces/1/transactions/latest') return Promise.resolve({ data: rows[0] ?? null });
+      return Promise.resolve({ data: true });
+    });
+
+    const store = renderTransactions(undefined);
+    await settle();
+    expect(screen.getByText('Sun, Sep 20')).toBeTruthy();
+
+    rows = [today];
+    await act(async () => {
+      await store.dispatch(deleteTransaction({ spaceId: 1, transaction: mapTransaction(earlier) }));
+    });
+    await settle();
+    expect(screen.queryByText('Sun, Sep 20')).toBeNull();
+    expect(screen.getByText('Today')).toBeTruthy();
+
+    rows = [];
+    await act(async () => {
+      await store.dispatch(deleteTransaction({ spaceId: 1, transaction: mapTransaction(today) }));
+    });
+    await settle();
+    expect(screen.queryByText('Today')).toBeNull();
+    expect(screen.getByText('No transactions yet')).toBeTruthy();
   });
 });

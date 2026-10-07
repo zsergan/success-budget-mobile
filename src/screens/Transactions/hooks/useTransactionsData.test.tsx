@@ -236,3 +236,31 @@ describe('invalidation', () => {
     unmount();
   });
 });
+
+describe('deleting the last record of a period', () => {
+  it('waits for the next latest record instead of pointing to the deleted one', async () => {
+    let resolveLatest: (value: unknown) => void = () => {};
+    respondRange = () => rows('tx-1');
+    respondLatest = () => Promise.resolve({ data: dto });
+
+    const { store, result, unmount } = renderForSpace(1);
+    await waitFor(() => expect(result.current.viewState).toBe('ready'));
+
+    respondRange = () => rows();
+    respondLatest = () =>
+      new Promise((resolve) => {
+        resolveLatest = resolve;
+      });
+    act(() => {
+      store.dispatch(baseApi.util.invalidateTags(spaceTags(1, 'Transactions')));
+    });
+
+    await waitFor(() => expect(result.current.transactions).toEqual([]));
+    expect(result.current.viewState).toBe('loading');
+
+    await act(async () => resolveLatest({ data: null }));
+    await waitFor(() => expect(result.current.viewState).toBe('trueEmpty'));
+
+    unmount();
+  });
+});

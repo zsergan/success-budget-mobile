@@ -5,7 +5,7 @@ import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { periodArg, useGetLatestTransactionQuery, useGetTransactionsQuery } from '@redux/state/transaction/api';
-import { EMPTY_TRANSACTIONS, getPeriodTotals } from '@redux/state/transaction/selectors';
+import { EMPTY_TRANSACTIONS, getEmptyPeriodState, getPeriodTotals } from '@redux/state/transaction/selectors';
 import type { TransactionsArg } from '@redux/state/transaction/api';
 import type { HistoryFilter } from '@shared/types';
 import type { DateRange } from '@shared/utils';
@@ -47,7 +47,6 @@ const useTransactionsData = ({ range, filter }: UseTransactionsDataProps) => {
   const { income, expense } = useMemo(() => getPeriodTotals(transactions), [transactions]);
 
   const { isLoading: isLoadingRange, hasError: rangeError } = getLoadState(rangeQuery);
-  const { isLoading: isLoadingLatest, hasError: latestError } = getLoadState(latestQuery);
 
   let viewState: TransactionsViewState;
 
@@ -60,14 +59,8 @@ const useTransactionsData = ({ range, filter }: UseTransactionsDataProps) => {
     viewState = 'ready';
   } else if (filter) {
     viewState = 'noMatches';
-  } else if (isLoadingLatest) {
-    viewState = 'loading';
-  } else if (latestError) {
-    viewState = 'latestError';
-  } else if (latest === null) {
-    viewState = 'trueEmpty';
   } else {
-    viewState = 'filteredEmpty';
+    viewState = getEmptyPeriodState(latestQuery, range);
   }
 
   return {

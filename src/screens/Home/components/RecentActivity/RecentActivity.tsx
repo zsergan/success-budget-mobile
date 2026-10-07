@@ -2,10 +2,11 @@ import { ActivityIndicator, Text, View } from 'react-native';
 
 import { EmptyState, SectionTitle, TinyButton, TransactionCard } from '@components';
 import type { TransactionModel } from '@api/models';
+import type { EmptyPeriodState } from '@redux/state/transaction/selectors';
 import type { MainTabNavigationProp } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { colors } from '@shared/theme';
-import { formatSignedAmount, groupTransactionsByDay, limitGroupRows } from '@shared/utils';
+import { formatDateDDMMYYYY, formatSignedAmount, groupTransactionsByDay, limitGroupRows } from '@shared/utils';
 
 import styles from './style';
 
@@ -19,6 +20,11 @@ interface Props {
   isLoading: boolean;
   hasError: boolean;
   onRetry: () => void;
+  // What an empty month means for the whole history.
+  emptyState: EmptyPeriodState;
+  latest: TransactionModel | null;
+  onRetryLatest: () => void;
+  onJumpToLatest: (transaction: TransactionModel) => void;
   onPressTransaction: (transaction: TransactionModel) => void;
   onDeleteTransaction: (transaction: TransactionModel, onSettled: () => void) => void;
 }
@@ -31,6 +37,10 @@ const RecentActivity = ({
   isLoading,
   hasError,
   onRetry,
+  emptyState,
+  latest,
+  onRetryLatest,
+  onJumpToLatest,
   onPressTransaction,
   onDeleteTransaction,
 }: Props) => {
@@ -52,7 +62,7 @@ const RecentActivity = ({
       />
 
       <View style={styles.section}>
-        {isLoading && transactions.length === 0 ? (
+        {(isLoading || emptyState === 'loading') && transactions.length === 0 ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator color={colors.accent} />
           </View>
@@ -63,6 +73,23 @@ const RecentActivity = ({
             description="Check your connection and try again."
             actionLabel="Retry"
             onActionPress={onRetry}
+          />
+        ) : transactions.length === 0 && emptyState === 'latestError' ? (
+          <EmptyState
+            icon="list"
+            title="Couldn't confirm this is empty"
+            description="This month has no transactions, but we couldn't check the rest of your history. Try again."
+            actionLabel="Retry"
+            onActionPress={onRetryLatest}
+          />
+        ) : transactions.length === 0 && emptyState === 'filteredEmpty' && latest ? (
+          <EmptyState
+            variant="solid"
+            icon="calendar"
+            title="Nothing this month"
+            description={`Your last transaction was on ${formatDateDDMMYYYY(latest.timestamp)}.`}
+            actionLabel={`Jump to ${formatDateDDMMYYYY(latest.timestamp)}`}
+            onActionPress={() => onJumpToLatest(latest)}
           />
         ) : transactions.length === 0 ? (
           <EmptyState
