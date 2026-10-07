@@ -14,6 +14,7 @@ import { usePeriod } from '@hooks';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { activateSpace } from '@redux/state/space/thunks';
+import { rangeSelection } from '@redux/state/transactionFlow/selection';
 import { ScreenNames, TransactionType } from '@shared/enums';
 import type { MainTabNavigationProp } from '@shared/types';
 import { formatRangeLabel, hasComparison, isCurrentMonth, monthPeriodOf } from '@shared/utils';
@@ -43,9 +44,8 @@ const StatsScreen = () => {
   const rangePickerRef = useRef<BottomSheetModal>(null);
   const walletSheetRef = useRef<BottomSheetModal>(null);
   const spacesSheetRef = useRef<BottomSheetModal>(null);
-  const { openCreate } = useTransactionFlow();
-
   const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod } = usePeriod();
+  const { openCreate } = useTransactionFlow(rangeSelection(range));
   const { summary, trend, breakdown, refreshIfStale, updateFailed, retryFailed, loadFailed, loadError, accessDenied } =
     useStatsData(range);
   useRefreshOnReturn(refreshIfStale);

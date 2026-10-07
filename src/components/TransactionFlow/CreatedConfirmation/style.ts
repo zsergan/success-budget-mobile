@@ -16,6 +16,18 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
     backgroundColor: colors.track,
   },
+  timerTrack: {
+    alignSelf: 'stretch',
+    height: 3,
+    borderRadius: 2,
+    overflow: 'hidden',
+    backgroundColor: colors.track,
+  },
+  timerBar: {
+    height: 3,
+    // Shrinks toward the left edge; scaleX alone would shrink toward the middle.
+    transformOrigin: 'left',
+  },
   check: {
     width: 64,
     height: 64,
@@ -48,6 +60,52 @@ const styles = StyleSheet.create({
     lineHeight: theme.lineHeights.caption,
     color: colors.muted,
     textAlign: 'center',
+  },
+  hiddenRow: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+    borderRadius: theme.radius.md,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    backgroundColor: colors.track,
+  },
+  hiddenText: {
+    flex: 1,
+    fontFamily: theme.fonts.medium,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    color: colors.text,
+  },
+  // SemiBold under-measures its width in a content-sized label (see cde3346).
+  showText: {
+    paddingRight: 2,
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.bodySm,
+    color: colors.text,
+    textDecorationLine: 'underline',
+  },
+  banner: {
+    alignSelf: 'stretch',
+    marginTop: theme.spacing.sm,
+  },
+  undoButton: {
+    height: 40,
+    marginTop: theme.spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: theme.spacing.xs,
+  },
+  undoText: {
+    paddingRight: 2,
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.bodySm,
+    color: colors.text,
+  },
+  actionsLocked: {
+    opacity: 0.4,
   },
   actions: {
     alignSelf: 'stretch',

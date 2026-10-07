@@ -35,8 +35,11 @@ const useTransactionDelete = () => {
           label: 'Open',
           onPress: () => dispatch(openTransactionDetails({ spaceId, transaction })),
         });
-      } else if (!isInSheet && result === 'failed') {
-        addAlert('Couldn’t delete transaction', { label: 'Retry', onPress: () => void runRef.current(transaction) });
+      } else if (!isInSheet && (result === 'failed' || result === 'uncertain')) {
+        addAlert(result === 'uncertain' ? 'Couldn’t confirm the delete' : 'Couldn’t delete transaction', {
+          label: 'Retry',
+          onPress: () => void runRef.current(transaction),
+        });
       }
     },
     [dispatch, store, addAlert, spaceId],

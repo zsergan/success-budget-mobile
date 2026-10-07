@@ -15,6 +15,7 @@ import { TransactionType } from '@shared/enums';
 import theme, { colors } from '@shared/theme';
 import { formatAmount, hexToRgba } from '@shared/utils';
 import DeleteButton from '../DeleteButton/DeleteButton';
+import { deleteFailureText } from '../deleteMessage';
 import FlowBanner from '../FlowBanner/FlowBanner';
 import { formatDateTime } from '../format';
 
@@ -135,10 +136,10 @@ const TransactionDetails = ({
               onAction={loadLatest}
             />
           ) : (
-            notice === 'deleteFailed' && (
+            (notice === 'deleteFailed' || notice === 'deleteUncertain') && (
               <FlowBanner
                 tone="danger"
-                text="Couldn’t delete. Check your connection and try again."
+                text={deleteFailureText(notice, 'delete')}
                 actionLabel="Try again"
                 onAction={onRetryDelete}
               />

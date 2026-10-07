@@ -13,6 +13,7 @@ import {
 import { usePeriod } from '@hooks';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
+import { rangeSelection } from '@redux/state/transactionFlow/selection';
 import { TransactionType } from '@shared/enums';
 import type { ScreenNames } from '@shared/enums';
 import type { MainTabNavigationProp, MainTabScreenProps, RevealTransaction } from '@shared/types';
@@ -30,7 +31,6 @@ const HIGHLIGHT_MS = 2500;
 const TransactionsScreen = () => {
   const navigation = useNavigation<MainTabNavigationProp<ScreenNames.TRANSACTIONS_TAB>>();
   const route = useRoute<MainTabScreenProps<ScreenNames.TRANSACTIONS_TAB>['route']>();
-  const { openCreate, openDetails } = useTransactionFlow();
   const { requestDelete } = useTransactionDelete();
   const rangePickerRef = useRef<BottomSheetModal>(null);
 
@@ -66,6 +66,20 @@ const TransactionsScreen = () => {
     if (reveal) navigation.setParams({ reveal: undefined, filter: undefined });
   }, [navigation, reveal]);
 
+  const { openCreate, openDetails } = useTransactionFlow(
+    filter
+      ? {
+          from: filter.from,
+          to: filter.to,
+          filter: {
+            name: filter.name,
+            transactionType: filter.transactionType,
+            categoryId: filter.categoryId,
+            walletId: filter.walletId,
+          },
+        }
+      : rangeSelection(range),
+  );
   const { transactions, viewState, latest, income, expense, currencyCode, refetch, retryLatest } = useTransactionsData({
     range,
     filter,

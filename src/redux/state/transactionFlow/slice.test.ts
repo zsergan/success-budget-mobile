@@ -235,7 +235,7 @@ describe('transaction flow', () => {
     const { draftId } = flow()!;
 
     store.dispatch(saveStarted({ draftId }));
-    store.dispatch(createSucceeded({ draftId, result }));
+    store.dispatch(createSucceeded({ draftId, result, now: 0 }));
     expect(flow()).toMatchObject({ view: { name: 'created' }, created: result });
 
     store.dispatch(anotherStarted({ now: '2026-10-06T12:05:00.000Z' }));
@@ -250,6 +250,32 @@ describe('transaction flow', () => {
         categoryId: null,
         timestamp: '2026-10-06T12:05:00.000Z',
       },
+    });
+  });
+
+  it('keeps a picked date for Add another, and the selection the form opened with', () => {
+    const { store, flow } = setUp();
+    const selection = { from: '2026-10-01T00:00:00.000Z', to: '2026-10-31T23:59:59.999Z' };
+
+    store.dispatch(
+      createOpened({ spaceId: 1, transactionType: TransactionType.EXPENSE, walletId: 3, now: NOW, selection }),
+    );
+    store.dispatch(dateTimeOpened());
+    store.dispatch(pendingDateChanged({ timestamp: '2026-10-01T08:00:00.000Z' }));
+    store.dispatch(dateTimeApplied());
+    store.dispatch(draftChanged({ amount: '5', categoryId: 4, description: 'Lunch' }));
+    const { draftId } = flow()!;
+
+    store.dispatch(saveStarted({ draftId }));
+    store.dispatch(createSucceeded({ draftId, result: { transaction: saved } as CreateTransactionResult, now: 0 }));
+    expect(flow()).toMatchObject({ autoCloseAt: 5000 });
+
+    store.dispatch(anotherStarted({ now: '2026-10-06T12:05:00.000Z' }));
+    expect(flow()).toMatchObject({
+      draftId: draftId + 1,
+      selection,
+      autoCloseAt: null,
+      draft: { timestamp: '2026-10-01T08:00:00.000Z', amount: '', categoryId: null, description: '' },
     });
   });
 
@@ -294,7 +320,7 @@ describe('transaction flow', () => {
     openCreate(store);
     const { draftId } = flow()!;
     store.dispatch(saveStarted({ draftId }));
-    store.dispatch(createSucceeded({ draftId, result: result as CreateTransactionResult }));
+    store.dispatch(createSucceeded({ draftId, result: result as CreateTransactionResult, now: 0 }));
 
     expect(selectLastWalletId(store.getState(), 1)).toBe(7);
     expect(selectLastWalletId(store.getState(), 2)).toBeNull();

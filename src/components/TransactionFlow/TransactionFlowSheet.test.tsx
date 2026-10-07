@@ -1,5 +1,5 @@
 import type { ReactNode, Ref } from 'react';
-import { Alert } from 'react-native';
+import { Alert, PixelRatio } from 'react-native';
 import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
@@ -11,8 +11,10 @@ import { createTransactionResponseDto, transactionDto } from '@redux/state/trans
 import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import { mapTransaction } from '@api/models';
 import { awayEnded, createOpened, walletCreated } from '@redux/state/transactionFlow/slice';
+import type { ViewSelection } from '@redux/state/transactionFlow/selection';
 import { openTransactionDetails } from '@redux/state/transactionFlow/thunks';
-import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
+import { baseApi, spaceTags } from '@redux/api/baseApi';
+import { ScreenNames, AppColor, TransactionKind, TransactionType } from '@shared/enums';
 import TransactionFlowSheet from './TransactionFlowSheet';
 
 interface SheetProps {
@@ -168,9 +170,13 @@ const renderFlow = () => {
     </Provider>,
   );
 
-  const open = (transactionType = TransactionType.EXPENSE, walletId: number | null = 7) =>
+  const open = (
+    transactionType = TransactionType.EXPENSE,
+    walletId: number | null = 7,
+    selection: ViewSelection | null = null,
+  ) =>
     act(() => {
-      store.dispatch(createOpened({ spaceId: 1, transactionType, walletId, now: new Date().toISOString() }));
+      store.dispatch(createOpened({ spaceId: 1, transactionType, walletId, now: new Date().toISOString(), selection }));
     });
 
   const openDetails = () =>
@@ -202,6 +208,7 @@ beforeEach(() => {
   mockSheet.presents = 0;
   mockedRequest.mockImplementation(respond);
   jest.spyOn(Alert, 'alert');
+  jest.spyOn(PixelRatio, 'getFontScale').mockReturnValue(1);
 });
 
 describe('TransactionFlowSheet', () => {
@@ -240,6 +247,162 @@ describe('TransactionFlowSheet', () => {
     expect(mockedRequest).toHaveBeenCalledWith(
       expect.objectContaining({ method: 'POST', data: expect.objectContaining({ amount: '12.00', category_id: 1 }) }),
     );
+  });
+
+  it('shows what was saved and closes by itself, unless touched', async () => {
+    const { store, open, flow } = renderFlow();
+
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('Save expense'));
+    await act(async () => answerWrite({ data: createTransactionResponseDto() }));
+
+    expect(screen.getByText(/^Food · Cash · Jan 5, \d\d:00$/)).toBeTruthy();
+    expect(screen.getByText('Cash balance 90 · was 100')).toBeTruthy();
+
+    await act(async () => jest.advanceTimersByTime(3000));
+    act(() => {
+      store.dispatch(baseApi.util.invalidateTags(spaceTags(1, 'Transactions', 'Wallets')));
+    });
+    await act(async () => jest.advanceTimersByTime(2100));
+    expect(flow()).toBeNull();
+
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('Save expense'));
+    await act(async () => answerWrite({ data: createTransactionResponseDto() }));
+    fireEvent(screen.getByText('Transaction saved'), 'touchStart');
+    await act(async () => jest.advanceTimersByTime(10000));
+
+    expect(flow()?.view.name).toBe('created');
+    fireEvent.press(screen.getByText('Done'));
+    expect(flow()).toBeNull();
+  });
+
+  it('leaves the confirmation open in large type, where it could go before it is read', async () => {
+    jest.spyOn(PixelRatio, 'getFontScale').mockReturnValue(1.5);
+    const { open, flow } = renderFlow();
+
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('Save expense'));
+    await act(async () => answerWrite({ data: createTransactionResponseDto() }));
+    await act(async () => jest.advanceTimersByTime(10000));
+
+    expect(flow()?.view.name).toBe('created');
+  });
+
+  it('undoes the create by deleting that record at its version, locking the rest meanwhile', async () => {
+    const { open, flow } = renderFlow();
+
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('Save expense'));
+    await act(async () => answerWrite({ data: createTransactionResponseDto({ id: 'tx-9', version: 1 }) }));
+
+    fireEvent.press(screen.getByText('Undo'));
+    expect(screen.getByText('Undoing…')).toBeTruthy();
+    fireEvent.press(screen.getByText('Done'));
+    fireEvent.press(screen.getByText('Add another'));
+    pressBackdrop();
+    await act(async () => jest.advanceTimersByTime(6000));
+    expect(flow()?.view.name).toBe('created');
+
+    await act(async () => answerWrite({ data: true }));
+    await settle();
+
+    expect(mockedRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'DELETE',
+        url: '/spaces/1/transactions/tx-9',
+        headers: expect.objectContaining({ 'If-Match': '"1"' }),
+      }),
+    );
+    expect(flow()).toBeNull();
+    expect(mockAddAlert).toHaveBeenCalledWith('Transaction removed');
+  });
+
+  it('claims nothing about an undo that got no answer, and repeats it safely', async () => {
+    const { open, flow } = renderFlow();
+
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('Save expense'));
+    await act(async () => answerWrite({ data: createTransactionResponseDto() }));
+
+    fireEvent.press(screen.getByText('Undo'));
+    await act(async () => failWrite(new Error('Network Error')));
+    await settle();
+
+    expect(
+      screen.getByText('Couldn’t confirm the undo. Check your connection and try again; repeating it is safe.'),
+    ).toBeTruthy();
+    expect(flow()?.view.name).toBe('created');
+
+    fireEvent.press(screen.getByText('Try again'));
+    await act(async () => failWrite(refusal(404, 'TRANSACTION_NOT_FOUND')));
+    await settle();
+
+    expect(flow()).toBeNull();
+    expect(mockAddAlert).toHaveBeenCalledWith('Transaction removed');
+  });
+
+  it('offers the latest version when the created record changed before Undo', async () => {
+    const { open, flow } = renderFlow();
+
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('Save expense'));
+    await act(async () => answerWrite({ data: createTransactionResponseDto() }));
+
+    fireEvent.press(screen.getByText('Undo'));
+    await act(async () => failWrite(refusal(409, 'TRANSACTION_VERSION_CONFLICT')));
+    await settle();
+
+    expect(screen.getByText('This transaction was changed')).toBeTruthy();
+    stored = transactionDto({ amount: '30.00', version: 3 });
+    fireEvent.press(screen.getByText('Open'));
+    await settle();
+
+    expect(flow()).toMatchObject({ view: { name: 'details' }, check: 'done', saved: { amount: '30.00' } });
+  });
+
+  it('tells a record outside the viewed period from one hidden by a filter, and shows it on request', async () => {
+    const { open, flow } = renderFlow();
+    const september = { from: '2026-09-01T00:00:00.000Z', to: '2026-09-30T23:59:59.999Z' };
+
+    open(TransactionType.EXPENSE, 7, september);
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('Save expense'));
+    await act(async () => answerWrite({ data: createTransactionResponseDto({ id: 'tx-9' }) }));
+
+    expect(screen.getByText(/^Saved to Jan 5 — outside the period you’re viewing$/)).toBeTruthy();
+    fireEvent.press(screen.getByText('Show'));
+
+    expect(flow()).toBeNull();
+    expect(mockNavigate).toHaveBeenCalledWith(ScreenNames.HOME_SCREEN, {
+      screen: ScreenNames.TRANSACTIONS_TAB,
+      params: { reveal: { spaceId: 1, transactionId: 'tx-9', timestamp: '2026-01-05T10:00:00.000Z' } },
+    });
+
+    open(TransactionType.EXPENSE, 7, {
+      from: '2026-01-01T00:00:00.000Z',
+      to: '2026-01-31T23:59:59.999Z',
+      filter: { name: 'Taxi', transactionType: TransactionType.EXPENSE, categoryId: 2 },
+    });
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('Save expense'));
+    await act(async () => answerWrite({ data: createTransactionResponseDto() }));
+
+    expect(screen.getByText('Saved, but hidden by the “Taxi” filter')).toBeTruthy();
   });
 
   it('asks before discarding entered values, and closes at once without them', async () => {
@@ -515,8 +678,10 @@ describe('TransactionFlowSheet', () => {
     await act(async () => failWrite(new Error('Network Error')));
     await settle();
 
-    expect(flow()).toMatchObject({ view: { name: 'details' }, isSaving: false, notice: 'deleteFailed' });
-    expect(screen.getByText('Couldn’t delete. Check your connection and try again.')).toBeTruthy();
+    expect(flow()).toMatchObject({ view: { name: 'details' }, isSaving: false, notice: 'deleteUncertain' });
+    expect(
+      screen.getByText('Couldn’t confirm the delete. Check your connection and try again; repeating it is safe.'),
+    ).toBeTruthy();
 
     fireEvent.press(screen.getByText('Try again'));
     await act(async () => answerWrite({ data: true }));

@@ -7,10 +7,12 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { CategoryModel } from '@api/models';
 import CategoryEditorSheet, { CATEGORY_EDITOR_SNAP_POINT } from '@components/CategoryEditor/CategoryEditorSheet';
 import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
+import { useAlert } from '@hooks';
 import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
 import { hasUnsavedChanges, selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import type { FlowAway, TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { anotherStarted, awayEnded, awayStarted, categoryCreated, closed } from '@redux/state/transactionFlow/slice';
+import { deleteTransaction, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackParamList } from '@shared/types';
 import CategoriesPanel from './CategoriesPanel/CategoriesPanel';
@@ -35,6 +37,7 @@ const TransactionFlowSheet = () => {
   const save = useFlowSave();
   const { requestClose, back } = useFlowClose();
   const { requestDelete, retryDelete } = useTransactionDelete();
+  const { addAlert } = useAlert();
 
   // The content stays on screen while the sheet animates away after the flow ended.
   const [lastFlow, setLastFlow] = useState<TransactionFlow | null>(flow);
@@ -108,6 +111,36 @@ const TransactionFlowSheet = () => {
     if (current?.away === 'category') dispatch(awayEnded({ draftId: current.draftId }));
   };
 
+  // Undo deletes the record the create made, at the version it came back with.
+  const undoCreate = async () => {
+    const current = selectTransactionFlow(store.getState());
+    if (!current?.created || current.isSaving) return;
+
+    const result = await dispatch(
+      deleteTransaction({ spaceId: current.spaceId, transaction: current.created.transaction }),
+    );
+    if (result === 'deleted') addAlert('Transaction removed');
+  };
+
+  // Leaves the confirmation for the record: Show for its row in Transactions, Open for its latest version.
+  const leaveCreated = (target: 'row' | 'record') => {
+    const current = selectTransactionFlow(store.getState());
+    if (!current?.created || current.isSaving) return;
+
+    const { spaceId, created } = current;
+    const { id, timestamp } = created.transaction;
+    dispatch(closed());
+
+    if (target === 'record') {
+      dispatch(openTransactionDetails({ spaceId, transaction: created.transaction }));
+    } else {
+      navigation.navigate(ScreenNames.HOME_SCREEN, {
+        screen: ScreenNames.TRANSACTIONS_TAB,
+        params: { reveal: { spaceId, transactionId: id, timestamp } },
+      });
+    }
+  };
+
   const renderView = () => {
     if (!shown) return null;
 
@@ -158,7 +191,10 @@ const TransactionFlowSheet = () => {
       case 'created':
         return shown.created ? (
           <CreatedConfirmation
-            created={shown.created}
+            flow={{ ...shown, created: shown.created }}
+            onUndo={undoCreate}
+            onShow={() => leaveCreated('row')}
+            onOpenRecord={() => leaveCreated('record')}
             onAddAnother={() => dispatch(anotherStarted({ now: new Date().toISOString() }))}
             onDone={requestClose}
           />

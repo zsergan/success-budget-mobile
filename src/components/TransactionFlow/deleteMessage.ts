@@ -12,3 +12,12 @@ export const deleteMessage = (
     ? `${summary} The wallet balance will be adjusted.`
     : `${summary} It will be removed from history and period totals. No wallet balance will change.`;
 };
+
+// Without an answer the delete may have applied, so the text claims neither outcome; a repeat is safe either way.
+export const deleteFailureText = (notice: 'deleteFailed' | 'deleteUncertain', action: 'delete' | 'undo') => {
+  const verb = action === 'undo' ? 'undo' : 'delete';
+
+  return notice === 'deleteUncertain'
+    ? `Couldn’t confirm the ${verb}. Check your connection and try again; repeating it is safe.`
+    : `Couldn’t ${verb}. The transaction is still saved.`;
+};

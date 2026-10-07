@@ -67,7 +67,7 @@ const useFlowSave = () => {
     }
 
     if ('previousBalance' in outcome.result) {
-      dispatch(createSucceeded({ ...scope, result: outcome.result }));
+      dispatch(createSucceeded({ ...scope, result: outcome.result, now: Date.now() }));
     } else {
       dispatch(editSucceeded({ ...scope, transaction: outcome.result.transaction }));
       addAlert('Changes saved');

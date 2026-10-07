@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { skipToken } from '@reduxjs/toolkit/query';
 
 import { Fab, RootLayout, SpaceSwitcher, useTransactionDelete, useTransactionFlow } from '@components';
 import { getLoadState } from '@redux/api/loadState';
@@ -22,14 +23,17 @@ interface Props extends MainTabScreenProps<ScreenNames.HOME_TAB> {}
 
 const HomeScreen = ({ navigation }: Props) => {
   const [focusedWalletId, setFocusedWalletId] = useState<number | undefined>(undefined);
-  const { openCreate, openDetails } = useTransactionFlow();
   const { requestDelete } = useTransactionDelete();
 
   const spaceArg = useSpaceArg();
   const { currentData: walletsOverview } = useGetWalletsQuery(spaceArg);
   const { total, currencyCode, walletsCount, deltaPercent } = getTotalBalance(walletsOverview);
   const wallets = walletsOverview?.wallets ?? EMPTY_WALLETS;
-  const recentQuery = useGetTransactionsQuery(useCurrentMonthArg());
+  const recentArg = useCurrentMonthArg();
+  const recentQuery = useGetTransactionsQuery(recentArg);
+  const { openCreate, openDetails } = useTransactionFlow(
+    recentArg === skipToken ? null : { from: recentArg.from, to: recentArg.to },
+  );
   const { isLoading: isLoadingTransactions, hasError: hasTransactionsError } = getLoadState(recentQuery);
   const { isHidden, toggle } = useBalanceVisibility();
 

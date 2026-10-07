@@ -62,10 +62,15 @@ describe('deleteTransaction', () => {
     expect(rows()).toEqual([taxi]);
   });
 
-  it('keeps the row when the delete fails or the record changed meanwhile', async () => {
+  it('keeps the row when the delete gets no answer, is refused, or the record changed meanwhile', async () => {
     const { store, rows } = setUp();
 
     mockedRequest.mockRejectedValueOnce(new Error('Network Error'));
+    expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }))).toBe('uncertain');
+
+    mockedRequest.mockRejectedValueOnce({
+      response: { data: { statusCode: 400, code: 'TRANSACTION_IS_SYSTEM', message: 'System' } },
+    });
     expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }))).toBe('failed');
 
     mockedRequest.mockRejectedValueOnce({

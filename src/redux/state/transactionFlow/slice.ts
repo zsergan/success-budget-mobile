@@ -8,6 +8,7 @@ import { logoutMe } from '../auth/thunks';
 import { spaceAccessLost, spaceSelected } from '../space/thunks';
 import type { TransactionDraft } from './draft';
 import { createDraft, draftFromTransaction } from './draft';
+import type { ViewSelection } from './selection';
 
 export type FlowForm = 'create' | 'edit';
 
@@ -29,9 +30,12 @@ export type FlowAway = 'wallet' | 'category';
 export type FlowCheck = 'pending' | 'done' | 'failed';
 
 // `conflict`: the record changed after it was read, so a write at its version was refused.
-export type FlowNotice = 'conflict' | 'deleteFailed';
+// `deleteUncertain`: no answer, so the delete may have applied; repeating it is safe.
+export type FlowNotice = 'conflict' | 'deleteFailed' | 'deleteUncertain';
 
-export type DeleteResult = 'deleted' | 'conflict' | 'failed' | 'stale';
+export type DeleteResult = 'deleted' | 'conflict' | 'failed' | 'uncertain' | 'stale';
+
+export const CREATED_AUTO_CLOSE_MS = 5000;
 
 export interface TransactionFlow {
   // New for every draft, so a write's key or a late answer never carries over to the next one.
@@ -51,6 +55,10 @@ export interface TransactionFlow {
   promotedCategoryId: number | null;
   // The last create's result, for its confirmation and Undo.
   created: CreateTransactionResult | null;
+  // When the confirmation closes on its own; a touch clears it. A deadline, so a remount never restarts the timer.
+  autoCloseAt: number | null;
+  // What the screen the form opened from shows, so the confirmation can say where a hidden record went.
+  selection: ViewSelection | null;
   away: FlowAway | null;
 }
 
@@ -85,7 +93,7 @@ const idleFlow = (state: TransactionFlowState) => (state.flow && !state.flow.isS
 
 const startCreate = (
   state: TransactionFlowState,
-  flow: Pick<TransactionFlow, 'spaceId'>,
+  flow: Pick<TransactionFlow, 'spaceId' | 'selection'>,
   draft: Pick<TransactionDraft, 'transactionType' | 'walletId' | 'timestamp'>,
 ): TransactionFlow => {
   state.lastDraftId += 1;
@@ -104,8 +112,24 @@ const startCreate = (
     isSaving: false,
     promotedCategoryId: null,
     created: null,
+    autoCloseAt: null,
+    selection: flow.selection,
     away: null,
   };
+};
+
+// The record a delete from this flow acts on: the one shown, or the one just created.
+const recordIdOf = (flow: TransactionFlow) =>
+  flow.view.name === 'created'
+    ? flow.created?.transaction.id
+    : flow.view.name === 'details' || flow.view.name === 'edit'
+      ? flow.saved?.id
+      : undefined;
+
+const DELETE_NOTICES: Record<'conflict' | 'failed' | 'uncertain', FlowNotice> = {
+  conflict: 'conflict',
+  failed: 'deleteFailed',
+  uncertain: 'deleteUncertain',
 };
 
 const transactionFlowSlice = createSlice({
@@ -116,11 +140,21 @@ const transactionFlowSlice = createSlice({
       state,
       {
         payload,
-      }: PayloadAction<{ spaceId: number; transactionType: TransactionType; walletId: number | null; now: string }>,
+      }: PayloadAction<{
+        spaceId: number;
+        transactionType: TransactionType;
+        walletId: number | null;
+        now: string;
+        selection?: ViewSelection | null;
+      }>,
     ) => {
       if (state.flow) return;
 
-      state.flow = startCreate(state, payload, { ...payload, timestamp: payload.now });
+      state.flow = startCreate(
+        state,
+        { spaceId: payload.spaceId, selection: payload.selection ?? null },
+        { ...payload, timestamp: payload.now },
+      );
     },
     detailsOpened: (state, { payload }: PayloadAction<{ spaceId: number; transaction: TransactionModel }>) => {
       if (state.flow) return;
@@ -139,6 +173,8 @@ const transactionFlowSlice = createSlice({
         isSaving: false,
         promotedCategoryId: null,
         created: null,
+        autoCloseAt: null,
+        selection: null,
         away: null,
       };
     },
@@ -273,12 +309,13 @@ const transactionFlowSlice = createSlice({
       const flow = flowOf(state, payload.draftId);
       if (flow) flow.isSaving = false;
     },
-    createSucceeded: (state, { payload }: DraftScoped<{ result: CreateTransactionResult }>) => {
+    createSucceeded: (state, { payload }: DraftScoped<{ result: CreateTransactionResult; now: number }>) => {
       const flow = flowOf(state, payload.draftId);
       if (!flow) return;
 
       flow.isSaving = false;
       flow.created = payload.result;
+      flow.autoCloseAt = payload.now + CREATED_AUTO_CLOSE_MS;
       if (payload.result.transaction.wallet) state.lastWalletIds[flow.spaceId] = payload.result.transaction.wallet.id;
       flow.view = { name: 'created' };
     },
@@ -307,6 +344,16 @@ const transactionFlowSlice = createSlice({
       });
 
       state.flow = { ...next, followsNow: flow.followsNow };
+    },
+    // The user touched the confirmation, so it stays until they close it.
+    autoCloseStopped: (state, { payload }: DraftScoped) => {
+      const flow = flowOf(state, payload.draftId);
+      if (flow) flow.autoCloseAt = null;
+    },
+    // Only an untouched confirmation with nothing running closes by its timer.
+    autoClosed: (state, { payload }: DraftScoped) => {
+      const flow = flowOf(state, payload.draftId);
+      if (flow?.view.name === 'created' && flow.autoCloseAt !== null && !flow.isSaving) state.flow = null;
     },
     // A new draft's wallet, once the space's wallets are known; it is where the form starts, not a change.
     walletDefaulted: (state, { payload }: DraftScoped<{ walletId: number | null }>) => {
@@ -352,17 +399,16 @@ const transactionFlowSlice = createSlice({
 
       state.deletingIds.push(payload.transactionId);
       const flow = idleFlow(state);
-      if (flow?.saved?.id !== payload.transactionId || (flow.view.name !== 'details' && flow.view.name !== 'edit')) {
-        return;
-      }
+      if (!flow || recordIdOf(flow) !== payload.transactionId) return;
 
       flow.isSaving = true;
+      flow.autoCloseAt = null;
       flow.notice = null;
     },
     deleteSettled: (state, { payload }: PayloadAction<{ transactionId: string; result: DeleteResult }>) => {
       state.deletingIds = state.deletingIds.filter((id) => id !== payload.transactionId);
       const flow = state.flow;
-      if (flow?.saved?.id !== payload.transactionId || !flow.isSaving) return;
+      if (!flow?.isSaving || recordIdOf(flow) !== payload.transactionId) return;
 
       if (payload.result === 'deleted') {
         state.flow = null;
@@ -370,7 +416,7 @@ const transactionFlowSlice = createSlice({
       }
 
       flow.isSaving = false;
-      if (payload.result !== 'stale') flow.notice = payload.result === 'conflict' ? 'conflict' : 'deleteFailed';
+      if (payload.result !== 'stale') flow.notice = DELETE_NOTICES[payload.result];
     },
     closed: (state) => {
       if (idleFlow(state)) state.flow = null;
@@ -417,6 +463,8 @@ export const {
   createSucceeded,
   editSucceeded,
   anotherStarted,
+  autoCloseStopped,
+  autoClosed,
   walletDefaulted,
   awayStarted,
   walletCreated,

@@ -26,6 +26,7 @@ import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { TransactionType } from '@shared/enums';
 import theme, { colors } from '@shared/theme';
 import DeleteButton from '../DeleteButton/DeleteButton';
+import { deleteFailureText } from '../deleteMessage';
 import FlowBanner from '../FlowBanner/FlowBanner';
 import ActionRow from './ActionRow/ActionRow';
 import AmountField from './AmountField/AmountField';
@@ -302,10 +303,10 @@ const TransactionEditor = ({
               onAction={loadLatest}
             />
           ) : (
-            flow.notice === 'deleteFailed' && (
+            (flow.notice === 'deleteFailed' || flow.notice === 'deleteUncertain') && (
               <FlowBanner
                 tone="danger"
-                text="Couldn’t delete. Check your connection and try again."
+                text={deleteFailureText(flow.notice, 'delete')}
                 actionLabel="Try again"
                 onAction={onRetryDelete}
               />

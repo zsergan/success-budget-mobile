@@ -122,7 +122,9 @@ export const deleteTransaction =
           ? 'stale'
           : outcome.failure.kind === 'conflict'
             ? 'conflict'
-            : 'failed';
+            : outcome.failure.kind === 'uncertain'
+              ? 'uncertain'
+              : 'failed';
 
     if (result === 'deleted') dispatch(dropFromLists(spaceId, transactionId));
     dispatch(deleteSettled({ transactionId, result }));

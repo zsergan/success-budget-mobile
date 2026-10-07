@@ -67,7 +67,7 @@ describe('useTransactionDelete from a list row', () => {
     await confirm();
 
     const [message, action] = mockAddAlert.mock.calls[0];
-    expect(message).toBe('Couldn’t delete transaction');
+    expect(message).toBe('Couldn’t confirm the delete');
 
     mockedRequest.mockResolvedValueOnce({ data: true });
     await act(async () => action.onPress());
