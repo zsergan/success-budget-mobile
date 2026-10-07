@@ -13,9 +13,6 @@ jest.mock('@api/instance', () => ({
   createHttpClient: () => ({ request: jest.fn() }),
 }));
 jest.mock('expo-secure-store');
-jest.mock('@react-native-async-storage/async-storage', () =>
-  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
 jest.mock('@gorhom/bottom-sheet', () => ({ useBottomSheet: () => ({ close: jest.fn() }) }));
 
 const mockCreateLimit = jest.fn();

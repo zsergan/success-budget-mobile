@@ -96,10 +96,6 @@ jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
 }));
 
-jest.mock('@react-native-async-storage/async-storage', () =>
-  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
-
 jest.mock('@react-native-community/datetimepicker', () => () => null);
 
 const mockAddAlert = jest.fn();

@@ -16,9 +16,6 @@ import TransactionsScreen from './TransactionsScreen';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => jest.requireActual('react-native-reanimated/mock'));
-jest.mock('@react-native-async-storage/async-storage', () =>
-  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = jest.requireActual('react');
   const { ScrollView, View } = jest.requireActual('react-native');

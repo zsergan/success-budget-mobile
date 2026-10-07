@@ -14,9 +14,6 @@ jest.mock('@api/instance', () => ({
   createHttpClient: () => ({ request: jest.fn(() => new Promise(() => {})) }),
 }));
 jest.mock('expo-secure-store');
-jest.mock('@react-native-async-storage/async-storage', () =>
-  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => jest.requireActual('react-native-reanimated/mock'));
 

@@ -22,9 +22,6 @@ jest.mock('react-native-reanimated', () => ({
   ...jest.requireActual('react-native-reanimated/mock'),
   useReducedMotion: () => true,
 }));
-jest.mock('@react-native-async-storage/async-storage', () =>
-  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = jest.requireActual('react');
   const { ScrollView, TextInput, View } = jest.requireActual('react-native');

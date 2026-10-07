@@ -13,10 +13,6 @@ const mockAddAlert = jest.fn();
 jest.mock('@hooks/useAlert', () => () => ({ addAlert: mockAddAlert }));
 jest.mock('expo-crypto', () => ({ randomUUID: () => 'key-1' }));
 jest.mock('expo-secure-store');
-jest.mock('@react-native-async-storage/async-storage', () =>
-  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
-
 const mockedRequest = jest.fn();
 jest.mock('@api/instance', () => ({
   ApiClient: () => ({}),
