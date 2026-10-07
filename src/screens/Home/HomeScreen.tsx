@@ -47,8 +47,9 @@ const HomeScreen = ({ navigation }: Props) => {
   // An empty month tells a first run from a quiet month only by the latest record of the whole history.
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const latestQuery = useGetLatestTransactionQuery(recentQuery.currentData?.length === 0 ? spaceArg : skipToken);
+  // Only a month that loaded empty asks the history; a month still loading or failed has its own state.
   const emptyState =
-    recentArg === skipToken
+    recentArg === skipToken || recentQuery.currentData?.length !== 0
       ? 'trueEmpty'
       : getEmptyPeriodState(latestQuery, { from: new Date(recentArg.from), to: new Date(recentArg.to) });
   const latest = latestQuery.currentData;

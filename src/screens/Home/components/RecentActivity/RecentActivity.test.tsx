@@ -76,4 +76,10 @@ describe('RecentActivity', () => {
 
     expect(screen.getByText('Nothing here yet')).toBeTruthy();
   });
+
+  it('shows a failed month as a failure, never as loading', () => {
+    renderActivity({ hasError: true, emptyState: 'loading' });
+
+    expect(screen.getByText("Couldn't load recent activity")).toBeTruthy();
+  });
 });

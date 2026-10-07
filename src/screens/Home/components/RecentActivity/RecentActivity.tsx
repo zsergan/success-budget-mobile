@@ -62,7 +62,7 @@ const RecentActivity = ({
       />
 
       <View style={styles.section}>
-        {(isLoading || emptyState === 'loading') && transactions.length === 0 ? (
+        {(isLoading || (!hasError && emptyState === 'loading')) && transactions.length === 0 ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator color={colors.accent} />
           </View>
