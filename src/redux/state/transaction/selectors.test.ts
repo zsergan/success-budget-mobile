@@ -38,6 +38,12 @@ describe('initial balances in totals', () => {
     expect(getPeriodTotals(rows)).toEqual({ income: 100, expense: 12.5 });
   });
 
+  it('adds amounts in exact cents', () => {
+    const cents = [row('a', TransactionType.EXPENSE, '0.10'), row('b', TransactionType.EXPENSE, '0.20')];
+
+    expect(getPeriodTotals(cents).expense).toBe(0.3);
+  });
+
   it('lists them in their day but leaves them out of its total', () => {
     const [day] = groupTransactionsByDay(rows);
 

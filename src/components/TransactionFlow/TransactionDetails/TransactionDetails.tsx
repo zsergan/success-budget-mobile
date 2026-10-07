@@ -13,7 +13,7 @@ import { editStarted } from '@redux/state/transactionFlow/slice';
 import { checkFlowRecord, loadLatestRecord } from '@redux/state/transactionFlow/thunks';
 import { TransactionType } from '@shared/enums';
 import theme, { colors } from '@shared/theme';
-import { formatAmount, hexToRgba } from '@shared/utils';
+import { formatAmount, formatMoneyAmount, hexToRgba } from '@shared/utils';
 import DeleteButton from '../DeleteButton/DeleteButton';
 import { deleteFailureText } from '../deleteMessage';
 import FlowBanner from '../FlowBanner/FlowBanner';
@@ -81,7 +81,7 @@ const TransactionDetails = ({
 
           <Text style={[styles.amount, { color: typeColor }]}>
             {isSystem
-              ? formatAmount(transaction.amount, TransactionType.INCOME, currencyCode)
+              ? formatMoneyAmount(transaction.amount, currencyCode)
               : formatAmount(transaction.amount, transaction.transactionType, currencyCode)}
           </Text>
 

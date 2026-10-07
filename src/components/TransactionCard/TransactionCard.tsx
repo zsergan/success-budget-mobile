@@ -8,7 +8,7 @@ import { isInitialBalance } from '@api/models';
 import { useAppSelector } from '@redux/hooks';
 import { selectIsDeleting } from '@redux/state/transactionFlow/selectors';
 import Icon from '../Icon/Icon';
-import { formatAmount, formatCurrencyAmount, formatDateHHMM } from '@shared/utils';
+import { formatAmount, formatDateHHMM, formatMoneyAmount } from '@shared/utils';
 import { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
 
@@ -83,7 +83,7 @@ const TransactionCard = ({ transaction, currencyCode, isHighlighted = false, onP
       ) : (
         <Text style={[styles.amount, isIncome && styles.income]}>
           {isSystem
-            ? formatCurrencyAmount(transaction.amount, currencyCode)
+            ? formatMoneyAmount(transaction.amount, currencyCode)
             : formatAmount(transaction.amount, transaction.transactionType, currencyCode)}
         </Text>
       )}

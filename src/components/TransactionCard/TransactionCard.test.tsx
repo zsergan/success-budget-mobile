@@ -49,13 +49,13 @@ describe('TransactionCard', () => {
     fireEvent.press(screen.getByText('Food'));
 
     expect(onPress).not.toHaveBeenCalled();
-    expect(screen.queryByText('-12 USD')).toBeNull();
+    expect(screen.queryByText('-12.00 USD')).toBeNull();
   });
 
   it('shows an initial balance neutrally, without a sign or Delete', () => {
     renderCard({ kind: TransactionKind.INITIAL_BALANCE, transaction_type: TransactionType.INCOME });
 
-    expect(screen.getByText('12 USD')).toBeTruthy();
+    expect(screen.getByText('12.00 USD')).toBeTruthy();
     expect(screen.queryByLabelText('Delete')).toBeNull();
   });
 });

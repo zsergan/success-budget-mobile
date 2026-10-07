@@ -642,7 +642,7 @@ describe('TransactionFlowSheet', () => {
 
     const [title, message, buttons] = (Alert.alert as jest.Mock).mock.calls[0];
     expect(title).toBe('Delete transaction?');
-    expect(message).toBe('-50 · Food · Cash. The wallet balance will be adjusted.');
+    expect(message).toBe('-50.00 · Food · Cash. The wallet balance will be adjusted.');
 
     act(() => buttons[1].onPress?.());
     expect(flow()).toMatchObject({ view: { name: 'edit' }, draft: { amount: '70' } });

@@ -88,7 +88,7 @@ const TransactionsList = ({
           <Text style={styles.groupLabel}>{section.title}</Text>
 
           {section.total !== undefined && (
-            <Text style={[styles.groupTotal, section.total >= 0 && styles.groupTotalPositive]}>
+            <Text style={[styles.groupTotal, section.total > 0 && styles.groupTotalPositive]}>
               {formatSignedAmount(section.total, section.currencyCode)}
             </Text>
           )}
