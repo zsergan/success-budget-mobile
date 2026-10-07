@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { forwardRef, useCallback, useState } from 'react';
+import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
 import { useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,7 +26,8 @@ interface Props {
   snapPoint?: string;
   /** Replaces the backdrop's own close, for a sheet that decides itself whether it may close. */
   onBackdropPress?: () => void;
-  enablePanDownToClose?: boolean;
+  /** Asked when a swipe starts to close the sheet; true keeps it open, e.g. to confirm first. */
+  shouldKeepOpen?: () => boolean;
 }
 
 const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheetModal(
@@ -37,10 +38,13 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
     fitContent = false,
     snapPoint = '85%',
     onBackdropPress,
-    enablePanDownToClose = true,
+    shouldKeepOpen,
   },
   ref,
 ) {
+  const sheetRef = useRef<BottomSheetModal>(null);
+  useImperativeHandle(ref, () => sheetRef.current as BottomSheetModal, []);
+
   const { height: windowHeight } = useWindowDimensions();
   const { top } = useSafeAreaInsets();
   const maxHeight = windowHeight - top - theme.spacing.sm;
@@ -51,6 +55,13 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
     const height = Math.ceil(event.nativeEvent.layout.height);
     if (height > 0) setContentHeight(height);
   }, []);
+
+  const handleAnimate = useCallback(
+    (_fromIndex: number, toIndex: number) => {
+      if (toIndex === -1 && shouldKeepOpen?.()) sheetRef.current?.snapToIndex(0);
+    },
+    [shouldKeepOpen],
+  );
 
   const renderBackdrop = useCallback(
     (backdropProps: BottomSheetBackdropProps) => (
@@ -67,7 +78,7 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
 
   return (
     <BottomSheetModal
-      ref={ref}
+      ref={sheetRef}
       index={0}
       snapPoints={dynamicSizing ? undefined : [fitContent ? Math.min(contentHeight, maxHeight) : snapPoint]}
       enableDynamicSizing={dynamicSizing}
@@ -75,7 +86,7 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
       backgroundStyle={styles.background}
       handleComponent={null}
       onDismiss={onDismiss}
-      enablePanDownToClose={enablePanDownToClose}
+      onAnimate={shouldKeepOpen ? handleAnimate : undefined}
       keyboardBehavior="interactive"
       android_keyboardInputMode="adjustResize"
     >

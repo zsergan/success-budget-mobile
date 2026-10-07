@@ -20,12 +20,22 @@ import TransactionFlowSheet from './TransactionFlowSheet';
 
 interface SheetProps {
   children: ReactNode;
-  enablePanDownToClose?: boolean;
+  onAnimate?: (fromIndex: number, toIndex: number) => void;
   onDismiss?: () => void;
   backdropComponent?: (props: object) => ReactNode;
 }
 
-const mockSheet: { props?: SheetProps; presents: number; swipeDown?: () => void } = { presents: 0 };
+const mockSheet: { props?: SheetProps; presents: number; keptOpen: number; swipeDown?: () => void } = {
+  presents: 0,
+  keptOpen: 0,
+};
+
+// A swipe starting to close the flow sheet; true when the sheet snapped back instead.
+const startSwipeClose = () => {
+  const before = mockSheet.keptOpen;
+  act(() => mockSheet.props?.onAnimate?.(0, -1));
+  return mockSheet.keptOpen > before;
+};
 
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = jest.requireActual('react');
@@ -61,6 +71,9 @@ jest.mock('@gorhom/bottom-sheet', () => {
         setOpen(true);
       },
       dismiss,
+      snapToIndex: () => {
+        if (isFlowSheet) mockSheet.keptOpen += 1;
+      },
     }));
 
     return isOpen ? <SheetContext.Provider value={{ close: dismiss }}>{props.children}</SheetContext.Provider> : null;
@@ -257,6 +270,18 @@ describe('TransactionFlowSheet', () => {
     expect(screen.getByText('Save expense')).toBeTruthy();
   });
 
+  it('asks before a swipe discards entered values, and lets an untouched form go', async () => {
+    const { open } = renderFlow();
+    open();
+    await settle();
+    expect(startSwipeClose()).toBe(false);
+
+    fillExpense();
+
+    expect(startSwipeClose()).toBe(true);
+    expect(Alert.alert).toHaveBeenCalledWith('Discard transaction?', expect.any(String), expect.any(Array));
+  });
+
   it('confirms only after the API answers, locking the sheet meanwhile', async () => {
     const { open, flow } = renderFlow();
 
@@ -267,7 +292,7 @@ describe('TransactionFlowSheet', () => {
 
     expect(screen.getByText('Saving…')).toBeTruthy();
     expect(screen.queryByText('Transaction saved')).toBeNull();
-    expect(mockSheet.props?.enablePanDownToClose).toBe(false);
+    expect(startSwipeClose()).toBe(true);
 
     fireEvent.press(screen.getByLabelText('Close'));
     pressBackdrop();

@@ -27,7 +27,10 @@ const useSheetPresence = (isVisible: boolean) => {
     return closedByItself;
   }, []);
 
-  return { ref, settleDismiss };
+  // Whether a close now under way is one `isVisible` asked for.
+  const isDismissing = useCallback(() => isDismissingRef.current, []);
+
+  return { ref, settleDismiss, isDismissing };
 };
 
 export default useSheetPresence;

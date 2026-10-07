@@ -44,7 +44,7 @@ const TransactionFlowSheet = () => {
 
   const isVisible = !!flow && !flow.away;
   const isCreatingCategory = flow?.away === 'category';
-  const { ref: sheetRef, settleDismiss } = useSheetPresence(isVisible);
+  const { ref: sheetRef, settleDismiss, isDismissing } = useSheetPresence(isVisible);
   const { ref: categorySheetRef, settleDismiss: settleCategoryDismiss } = useSheetPresence(isCreatingCategory);
 
   useEffect(() => {
@@ -84,7 +84,16 @@ const TransactionFlowSheet = () => {
     if (current && !current.away) dispatch(closed());
   }, [dispatch, store, settleDismiss]);
 
-  const isGuarded = !!flow && (flow.isSaving || hasUnsavedChanges(flow));
+  // A swipe follows the same rules as ✕ and the backdrop: it waits for a running write and asks before discarding.
+  const keepOpen = useCallback(() => {
+    const current = selectTransactionFlow(store.getState());
+    if (isDismissing() || !current || current.away) return false;
+    if (current.isSaving) return true;
+    if (!hasUnsavedChanges(current)) return false;
+
+    requestClose();
+    return true;
+  }, [store, isDismissing, requestClose]);
 
   // Creating a wallet or a category hides the sheet; the draft waits in the flow and comes back with the new pick.
   const leaveFor = (target: FlowAway) => {
@@ -209,7 +218,7 @@ const TransactionFlowSheet = () => {
       <BottomModal
         ref={sheetRef}
         fitContent
-        enablePanDownToClose={!isGuarded}
+        shouldKeepOpen={keepOpen}
         onBackdropPress={requestClose}
         onDismiss={handleDismiss}
       >
