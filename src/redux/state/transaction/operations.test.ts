@@ -111,38 +111,20 @@ describe('submitTransactionRequest', () => {
     expect(first.headers).toEqual({ 'Idempotency-Key': 'key-1' });
   });
 
-  it('settles an unanswered create before saving a changed draft as an edit of what it made', async () => {
+  it('hands back the record an unanswered create made instead of sending the changed draft', async () => {
     const { submit } = setUp();
-    const dinner = { ...lunch, amount: '25', description: undefined };
     const sentLunch = { ...lunch, client_operation_id: 'key-1' };
 
-    mockedRequest
-      .mockImplementationOnce(noAnswer)
-      .mockImplementationOnce(answers(createTransactionResponseDto()))
-      .mockImplementationOnce(
-        answers({
-          transaction: transactionDto({ amount: '25.00', version: 2 }),
-          wallets: [{ id: 1, balance: 75, is_deleted: false }],
-        }),
-      );
+    mockedRequest.mockImplementationOnce(noAnswer).mockImplementationOnce(answers(createTransactionResponseDto()));
 
     await submit(create());
-    const outcome = await submit(create(dinner));
+    const outcome = await submit(create({ ...lunch, amount: '25' }));
 
     expect(sent()).toEqual([
       { method: 'POST', url: '/spaces/1/transactions', data: sentLunch, headers: { 'Idempotency-Key': 'key-1' } },
       { method: 'POST', url: '/spaces/1/transactions', data: sentLunch, headers: { 'Idempotency-Key': 'key-1' } },
-      {
-        method: 'PATCH',
-        url: '/spaces/1/transactions/tx-1',
-        data: { ...dinner, description: null },
-        headers: { 'Idempotency-Key': 'key-2', 'If-Match': '"1"' },
-      },
     ]);
-    expect(outcome).toEqual({
-      status: 'succeeded',
-      result: expect.objectContaining({ wallet: expect.objectContaining({ balance: 75 }), previousBalance: 100 }),
-    });
+    expect(outcome).toMatchObject({ status: 'recovered', transaction: { id: 'tx-1', version: 1 } });
   });
 
   it('sends a changed draft as a new create once the earlier one was refused', async () => {
@@ -184,13 +166,13 @@ describe('submitTransactionRequest', () => {
     expect(sent()).toHaveLength(2);
   });
 
-  it('edits at the version an unanswered edit turned out to make', async () => {
+  it('hands back the version an unanswered edit made, and sends the change only when saved against it', async () => {
     const { submit } = setUp();
-    const edit = (amount: string): TransactionRequest => ({
+    const edit = (amount: string, version: number): TransactionRequest => ({
       type: 'update',
       spaceId: 1,
       transactionId: 'tx-1',
-      version: 1,
+      version,
       data: { amount },
     });
     const edited = (version: number) =>
@@ -198,8 +180,9 @@ describe('submitTransactionRequest', () => {
 
     mockedRequest.mockImplementationOnce(noAnswer).mockImplementationOnce(edited(2)).mockImplementationOnce(edited(3));
 
-    await submit(edit('20'));
-    expect(await submit(edit('30'))).toMatchObject({ status: 'succeeded', result: { transaction: { version: 3 } } });
+    await submit(edit('20', 1));
+    expect(await submit(edit('30', 1))).toMatchObject({ status: 'recovered', transaction: { version: 2 } });
+    expect(await submit(edit('30', 2))).toMatchObject({ status: 'succeeded', result: { transaction: { version: 3 } } });
 
     expect(sent().map(({ headers }) => headers)).toEqual([
       { 'Idempotency-Key': 'key-1', 'If-Match': '"1"' },

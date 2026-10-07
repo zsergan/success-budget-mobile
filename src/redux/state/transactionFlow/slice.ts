@@ -34,8 +34,16 @@ export type FlowCheck = 'pending' | 'done' | 'failed';
 // `saveUnknown`: no answer, so the save may have applied; repeating it never applies it twice.
 // `saveRefused`: the server refused it, as `refusal` says. `saveNotSent`: it could not be stored, so it never went out.
 // `saveExpired`: a create the server never got before its key ran out; only the user sends it again.
+// `saveRecovered`: an unconfirmed earlier save turned out to have applied; later changes wait for a new save.
 export type FlowNotice =
-  'conflict' | 'deleteFailed' | 'deleteUncertain' | 'saveUnknown' | 'saveRefused' | 'saveNotSent' | 'saveExpired';
+  | 'conflict'
+  | 'deleteFailed'
+  | 'deleteUncertain'
+  | 'saveUnknown'
+  | 'saveRefused'
+  | 'saveNotSent'
+  | 'saveExpired'
+  | 'saveRecovered';
 
 export type SaveNotice = Extract<FlowNotice, `save${string}`>;
 
@@ -330,6 +338,23 @@ const transactionFlowSlice = createSlice({
       flow.notice = payload.notice ?? null;
       flow.refusal = payload.refusal ?? null;
     },
+    // The form now edits the record an earlier save made, from what the server holds; the draft keeps the changes
+    // typed since, so they show as changes of that record.
+    recordRecovered: (state, { payload }: DraftScoped<{ transaction: TransactionModel }>) => {
+      const flow = flowOf(state, payload.draftId);
+      if (!flow) return;
+
+      if (payload.transaction.wallet) state.lastWalletIds[flow.spaceId] = payload.transaction.wallet.id;
+
+      flow.isSaving = false;
+      flow.saved = payload.transaction;
+      flow.check = 'done';
+      flow.baseline = draftFromTransaction(payload.transaction);
+      flow.notice = 'saveRecovered';
+      flow.refusal = null;
+      if (flow.view.name === 'create') flow.view = { name: 'edit' };
+      else if (flow.view.name === 'categories' || flow.view.name === 'dateTime') flow.view.form = 'edit';
+    },
     // An earlier attempt of this create had applied: the form gives way to the record, or ends when it is deleted.
     createFound: (state, { payload }: DraftScoped<{ transaction: TransactionModel | null }>) => {
       const flow = flowOf(state, payload.draftId);
@@ -503,6 +528,7 @@ export const {
   saveStarted,
   saveFailed,
   createFound,
+  recordRecovered,
   createSucceeded,
   editSucceeded,
   anotherStarted,

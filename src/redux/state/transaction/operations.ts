@@ -5,7 +5,6 @@ import { ApiErrorCode } from '@api/dto';
 import type { CreateTransactionResult, TransactionModel, UpdateTransactionResult } from '@api/models';
 import { spaceTags } from '@redux/api/baseApi';
 import type { AppThunk, RootState } from '@redux/Store';
-import { TransactionType } from '@shared/enums';
 import { selectPendingWrite } from '../pendingWrite/selectors';
 import { writeRecorded, writeSettled } from '../pendingWrite/slice';
 import { forgetPendingWrite, persistPendingWrites } from '../pendingWrite/storage';
@@ -49,9 +48,12 @@ export interface TransactionFailure {
 
 // `stale`: the session or the space changed meanwhile, so nothing may surface in the current one.
 // `found`: an earlier attempt of the create applied; the record is null when it was deleted since.
+// `recovered`: an unconfirmed earlier attempt turned out to have made this record, so the changed request, whose
+// meaning that changes, was not sent.
 export type OperationOutcome<T extends RequestType = RequestType> =
   | { status: 'succeeded'; result: OperationResults[T] }
   | { status: 'found'; transaction: TransactionModel | null }
+  | { status: 'recovered'; transaction: TransactionModel }
   | { status: 'failed'; failure: TransactionFailure; operation: TransactionOperation }
   | { status: 'stale' };
 
@@ -60,8 +62,6 @@ export interface OperationMemory {
   sessionKey: number;
   spaceId: number;
   unresolved: { operation: TransactionOperation; failure: TransactionFailure } | null;
-  // The record this draft's own writes produced, so a later save edits it instead of creating another.
-  record: { transactionId: string; version: number; created: CreateTransactionResult | null } | null;
 }
 
 export const classifyTransactionError = (error: unknown): TransactionFailureKind => {
@@ -295,67 +295,15 @@ const isSameRequest = (operation: TransactionOperation, request: TransactionRequ
   return [...keys].every((key) => sent[key] === asked[key]);
 };
 
-// Once this draft has created or edited the record, a later save goes to that record at its new version.
-const toEffectiveRequest = (request: TransactionRequest, { record }: OperationMemory): TransactionRequest => {
-  if (!record) return request;
+const remember = (memory: OperationMemory, operation: TransactionOperation, outcome: OperationOutcome) =>
+  outcome.status === 'failed' ? { ...memory, unresolved: { operation, failure: outcome.failure } } : memory;
 
-  if (request.type === 'create') {
-    const { spaceId, data } = request;
+// The record an earlier attempt turned out to have made or changed.
+const recordOf = (outcome: OperationOutcome): TransactionModel | null => {
+  if (outcome.status === 'found' || outcome.status === 'recovered') return outcome.transaction;
+  if (outcome.status !== 'succeeded' || !outcome.result) return null;
 
-    return {
-      type: 'update',
-      spaceId,
-      transactionId: record.transactionId,
-      version: record.version,
-      data: { ...data, description: data.description ?? null },
-    };
-  }
-
-  return request.transactionId === record.transactionId && record.version > request.version
-    ? { ...request, version: record.version }
-    : request;
-};
-
-const remember = (memory: OperationMemory, operation: TransactionOperation, outcome: OperationOutcome) => {
-  if (outcome.status === 'stale') return memory;
-  if (outcome.status === 'failed') return { ...memory, unresolved: { operation, failure: outcome.failure } };
-  if (outcome.status === 'found') return { ...memory, unresolved: null };
-
-  const record = (() => {
-    switch (operation.type) {
-      case 'create': {
-        const created = outcome.result as CreateTransactionResult;
-
-        return { transactionId: created.transaction.id, version: created.transaction.version, created };
-      }
-      case 'update': {
-        const { transaction } = outcome.result as UpdateTransactionResult;
-
-        return { transactionId: transaction.id, version: transaction.version, created: memory.record?.created ?? null };
-      }
-      case 'delete':
-        return null;
-    }
-  })();
-
-  return { ...memory, unresolved: null, record };
-};
-
-// A create that ended up as an edit of the record it had already made still answers as a create.
-const asCreateResult = (
-  { transaction, wallets }: UpdateTransactionResult,
-  created: CreateTransactionResult | null,
-): CreateTransactionResult => {
-  const walletId = transaction.wallet?.id ?? created?.wallet.id;
-  const balance = wallets.find(({ id }) => id === walletId)?.balance ?? created?.wallet.balance ?? 0;
-  const sign = transaction.transactionType === TransactionType.EXPENSE ? -1 : 1;
-  const wallet = transaction.wallet ?? created!.wallet;
-
-  return {
-    transaction,
-    wallet: { id: wallet.id, wallet_name: wallet.wallet_name, design: wallet.design, balance },
-    previousBalance: balance - sign * Number(transaction.amount),
-  };
+  return (outcome.result as CreateTransactionResult | UpdateTransactionResult).transaction;
 };
 
 export interface Submission<T extends RequestType> {
@@ -363,8 +311,9 @@ export interface Submission<T extends RequestType> {
   memory: OperationMemory | null;
 }
 
-// The same request again reuses its operation and key. A changed one after an uncertain attempt first
-// settles that attempt with its own key, then sends the change against whatever it turned out to do.
+// The same request again reuses its operation and key. A changed one after an uncertain attempt first settles
+// that attempt with its own key. When it had applied, the change is not sent: it was meant for a form that did not
+// know the record, so the caller shows the record and the user saves the change again as an edit of it.
 export const submitTransactionRequest =
   <T extends RequestType>(
     request: Extract<TransactionRequest, { type: T }>,
@@ -374,21 +323,25 @@ export const submitTransactionRequest =
     const { sessionKey } = getState().auth;
     const { spaceId } = request;
     const isSameScope = previous?.sessionKey === sessionKey && previous.spaceId === spaceId;
-    let memory: OperationMemory = isSameScope ? previous : { sessionKey, spaceId, unresolved: null, record: null };
+    let memory: OperationMemory = isSameScope ? previous : { sessionKey, spaceId, unresolved: null };
     const pending = memory.unresolved;
 
-    if (pending && !isSameRequest(pending.operation, toEffectiveRequest(request, memory))) {
+    if (pending && !isSameRequest(pending.operation, request)) {
       let { failure } = pending;
 
       if (failure.kind === 'uncertain') {
         const prior = await dispatch(runTransactionOperation(pending.operation));
+        const record = recordOf(prior);
+
+        if (record) return { outcome: { status: 'recovered', transaction: record }, memory: null };
+        if (prior.status === 'stale' || prior.status === 'found')
+          return { outcome: prior as OperationOutcome<T>, memory };
 
         memory = remember(memory, pending.operation, prior);
 
-        if (prior.status === 'stale' || prior.status === 'found')
+        if (prior.status === 'failed' && !isRefusal(prior.failure)) {
           return { outcome: prior as OperationOutcome<T>, memory };
-        if (prior.status === 'failed' && !isRefusal(prior.failure))
-          return { outcome: prior as OperationOutcome<T>, memory };
+        }
         if (prior.status === 'failed') failure = prior.failure;
       }
 
@@ -398,11 +351,9 @@ export const submitTransactionRequest =
       memory = { ...memory, unresolved: null };
     }
 
-    const effective = toEffectiveRequest(request, memory);
-    const reused =
-      memory.unresolved && isSameRequest(memory.unresolved.operation, effective) ? memory.unresolved : null;
+    const reused = memory.unresolved && isSameRequest(memory.unresolved.operation, request) ? memory.unresolved : null;
     const operation = !reused
-      ? createOperation(effective, sessionKey)
+      ? createOperation(request, sessionKey)
       : reused.failure.kind === 'expired'
         ? renewOperation(reused.operation)
         : reused.operation;
@@ -412,10 +363,5 @@ export const submitTransactionRequest =
       return { outcome: outcome as OperationOutcome<T>, memory: remember(memory, operation, outcome) };
     }
 
-    const result =
-      request.type === 'create' && operation.type === 'update'
-        ? asCreateResult(outcome.result as UpdateTransactionResult, memory.record?.created ?? null)
-        : outcome.result;
-
-    return { outcome: { status: 'succeeded', result: result as OperationResults[T] }, memory: null };
+    return { outcome: outcome as OperationOutcome<T>, memory: null };
   };

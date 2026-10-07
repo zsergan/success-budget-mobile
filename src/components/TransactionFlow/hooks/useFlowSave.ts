@@ -8,6 +8,7 @@ import type { SaveNotice } from '@redux/state/transactionFlow/slice';
 import {
   createFound,
   createSucceeded,
+  recordRecovered,
   editSucceeded,
   recordGone,
   saveFailed,
@@ -70,6 +71,10 @@ const useFlowSave = () => {
           : 'This transaction was saved earlier and has since been deleted',
       );
       return;
+    }
+
+    if (outcome.status === 'recovered') {
+      return void dispatch(recordRecovered({ ...scope, transaction: outcome.transaction }));
     }
 
     if (outcome.status === 'failed' && saved) {

@@ -324,6 +324,16 @@ const TransactionEditor = ({
               actionLabel="Try again"
               onAction={onSave}
             />
+          ) : flow.notice === 'saveRecovered' ? (
+            <Banner
+              tone="warn"
+              title="Your earlier save went through"
+              text={
+                isChanged
+                  ? 'The form now edits that saved transaction. Changes made after it aren’t saved yet: review them and save again.'
+                  : 'It was saved as shown here; nothing else is waiting to be saved.'
+              }
+            />
           ) : flow.notice === 'saveRefused' ? (
             <Banner tone="danger" title="The server refused this save" text={flow.refusal ?? ''} />
           ) : flow.notice === 'saveNotSent' ? (

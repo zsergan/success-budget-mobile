@@ -370,6 +370,40 @@ describe('TransactionFlowSheet', () => {
     expect(screen.getByText('Transaction saved')).toBeTruthy();
   });
 
+  it('turns into an edit of the record an unconfirmed create made, and saves later changes only on request', async () => {
+    const { open, flow } = renderFlow();
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('Save expense'));
+    await act(async () => failWrite(new Error('Network Error')));
+    await settle();
+
+    fireEvent.changeText(screen.getByLabelText('Amount'), '25');
+    fireEvent.press(screen.getByText('Save expense'));
+    await act(async () => answerWrite({ data: createTransactionResponseDto({ amount: '12.00', version: 1 }) }));
+    await settle();
+
+    expect(screen.getByText('Edit transaction')).toBeTruthy();
+    expect(screen.getByText('Your earlier save went through')).toBeTruthy();
+    expect(flow()).toMatchObject({
+      view: { name: 'edit' },
+      saved: { id: 'tx-1', version: 1 },
+      baseline: { amount: '12.00' },
+      draft: { amount: '25' },
+    });
+    expect(mockedRequest.mock.calls.filter(([config]) => config.method !== 'GET')).toHaveLength(2);
+
+    fireEvent.press(screen.getByText('Save changes'));
+    await act(async () => failWrite(refusal(409, 'TRANSACTION_VERSION_CONFLICT')));
+    await settle();
+
+    const [patch] = mockedRequest.mock.calls.filter(([config]) => config.method === 'PATCH');
+    expect(patch[0]).toMatchObject({ data: { amount: '25.00' }, headers: { 'If-Match': '"1"' } });
+    expect(screen.getByText('This transaction was changed')).toBeTruthy();
+    expect(flow()).toMatchObject({ notice: 'conflict', draft: { amount: '25' } });
+  });
+
   it('closes on request with a save not confirmed, and keeps that save to settle later', async () => {
     const { store, open, flow } = renderFlow();
     open();
