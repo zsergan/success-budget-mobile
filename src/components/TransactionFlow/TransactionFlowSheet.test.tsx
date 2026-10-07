@@ -8,12 +8,13 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { Category, GetCategoriesResponse, GetLimitsResponse, WalletsOverviewResponse } from '@api/dto';
 import { createAppStore } from '@redux/Store';
 import { activateSpace } from '@redux/state/space/thunks';
+import { transactionApi } from '@redux/state/transaction/api';
 import { createTransactionResponseDto, transactionDto } from '@redux/state/transaction/fixtures';
 import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import { mapTransaction } from '@api/models';
 import { awayEnded, createOpened, walletCreated } from '@redux/state/transactionFlow/slice';
 import type { ViewSelection } from '@redux/state/transactionFlow/selection';
-import { openTransactionDetails } from '@redux/state/transactionFlow/thunks';
+import { checkFlowRecord, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { ScreenNames, AppColor, TransactionKind, TransactionType } from '@shared/enums';
 import TransactionFlowSheet from './TransactionFlowSheet';
@@ -210,6 +211,10 @@ const renderFlow = () => {
 
   return { store, open, openDetails, flow: () => selectTransactionFlow(store.getState()) };
 };
+
+// Keeps the record's cache entry, as an open screen would, so a failed read could fall back on it.
+const holdRecordInCache = (store: ReturnType<typeof createAppStore>) =>
+  store.dispatch(transactionApi.endpoints.getTransaction.initiate({ spaceId: 1, transactionId: 'tx-1' }));
 
 const settle = () => act(async () => jest.runOnlyPendingTimersAsync());
 
@@ -701,6 +706,46 @@ describe('TransactionFlowSheet', () => {
 
     expect(screen.queryByText('Try again')).toBeNull();
     expect(screen.getByRole('button', { name: 'Edit' })).toBeEnabled();
+  });
+
+  it('never takes the record it read before as an answer to a read that failed', async () => {
+    const { store, openDetails, flow } = renderFlow();
+    holdRecordInCache(store);
+    openDetails();
+    await settle();
+
+    answerRead = () => Promise.reject(new Error('Network Error'));
+    await act(async () => void (await store.dispatch(checkFlowRecord())));
+
+    expect(flow()).toMatchObject({ view: { name: 'details' }, check: 'failed' });
+    expect(screen.getByText('This may not be the latest version')).toBeTruthy();
+    expect(screen.getByText(/-50\.00/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeDisabled();
+
+    answerRead = () => Promise.reject(refusal(404, 'TRANSACTION_NOT_FOUND'));
+    await act(async () => void (await store.dispatch(checkFlowRecord())));
+
+    expect(screen.getByText('This transaction no longer exists')).toBeTruthy();
+  });
+
+  it('keeps the edits when the latest version cannot be loaded', async () => {
+    const { store, openDetails, flow } = renderFlow();
+    holdRecordInCache(store);
+    openDetails();
+    await settle();
+    fireEvent.press(screen.getByText('Edit'));
+    fireEvent.changeText(screen.getByLabelText('Amount'), '70');
+    fireEvent.press(screen.getByText('Save changes'));
+    await act(async () => failWrite(refusal(409, 'TRANSACTION_VERSION_CONFLICT')));
+    await settle();
+
+    answerRead = () => Promise.reject(new Error('Network Error'));
+    fireEvent.press(screen.getByText('Load latest'));
+    await settle();
+
+    expect(flow()).toMatchObject({ view: { name: 'edit' }, notice: 'conflict', draft: { amount: '70' } });
+    expect(screen.getByText('This transaction was changed')).toBeTruthy();
+    expect(mockAddAlert).toHaveBeenCalledWith('Couldn’t load the latest version. Check your connection and try again.');
   });
 
   it('keeps the edits after a conflict and replaces them only when the latest version is loaded', async () => {

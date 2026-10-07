@@ -121,8 +121,9 @@ const TransactionDetails = ({
         <>
           {check === 'failed' ? (
             <Banner
-              tone="danger"
-              text="Couldn’t load the latest version. Check your connection and try again."
+              tone="warn"
+              title="This may not be the latest version"
+              text="Couldn’t check it with the server. Edit and Delete come back once it’s checked."
               actionLabel="Try again"
               onAction={() => dispatch(checkFlowRecord())}
             />

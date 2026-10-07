@@ -30,7 +30,7 @@ const readFlowRecord =
     if (!flow?.saved) return 'stale';
 
     const { draftId, spaceId, saved } = flow;
-    const { data, error } = await dispatch(
+    const { data, error, isError } = await dispatch(
       transactionApi.endpoints.getTransaction.initiate(
         { spaceId, transactionId: saved.id },
         { subscribe: false, forceRefetch: true },
@@ -39,7 +39,9 @@ const readFlowRecord =
 
     if (selectTransactionFlow(getState())?.draftId !== draftId) return 'stale';
 
-    if (data) {
+    // A failed refetch still carries the last data cached for the record; that is no answer about it now.
+    if (!isError) {
+      if (!data) return 'failed';
       dispatch(onRead({ draftId, transaction: data }));
       return 'read';
     }
