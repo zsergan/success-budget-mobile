@@ -3,7 +3,9 @@ import { StyleSheet } from 'react-native';
 import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
+  // Shrinks under the sheet's maximum height; only the body scrolls, the header and actions stay.
   root: {
+    flexShrink: 1,
     paddingTop: theme.spacing.lg,
     paddingHorizontal: theme.spacing.xl,
     rowGap: theme.spacing.md,
@@ -29,6 +31,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flexGrow: 0,
+    flexShrink: 1,
   },
   body: {
     rowGap: theme.spacing.lg,
