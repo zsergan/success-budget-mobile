@@ -12,6 +12,7 @@ import { useGetLimitsQuery } from '@redux/state/limit/api';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import type { TransactionDraft } from '@redux/state/transactionFlow/draft';
 import {
+  changedFields,
   DESCRIPTION_MAX_LENGTH,
   descriptionLength,
   getDraftErrors,
@@ -27,6 +28,8 @@ import { colors } from '@shared/theme';
 import DeleteButton from '../DeleteButton/DeleteButton';
 import { deleteFailureText } from '../deleteMessage';
 import Banner from '@components/Banner/Banner';
+import type { ListLoad } from '../SectionLoad/SectionLoad';
+import { listLoad } from '../SectionLoad/SectionLoad';
 import ActionRow from './ActionRow/ActionRow';
 import AmountField from './AmountField/AmountField';
 import CategoryGrid from './CategoryGrid/CategoryGrid';
@@ -69,8 +72,12 @@ const TransactionEditor = ({
   const [isLoadingLatest, setLoadingLatest] = useState(false);
   const { addAlert } = useAlert();
   const spaceArg = useSpaceArg();
-  const { currentData: walletsOverview } = useGetWalletsQuery(spaceArg);
-  const { currentData: allCategories } = useGetCategoriesQuery(spaceArg);
+  const walletsQuery = useGetWalletsQuery(spaceArg);
+  const categoriesQuery = useGetCategoriesQuery(spaceArg);
+  const { currentData: walletsOverview } = walletsQuery;
+  const { currentData: allCategories } = categoriesQuery;
+  const walletsLoad = listLoad(walletsQuery);
+  const categoriesLoad = listLoad(categoriesQuery);
   const { currentData: limits } = useGetLimitsQuery(spaceArg);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
@@ -124,11 +131,25 @@ const TransactionEditor = ({
   });
   const isChanged = hasUnsavedChanges(flow);
   const hasConflict = flow.notice === 'conflict';
-  const ready = !hasDraftErrors(errors) && (!isEdit || isChanged) && !hasConflict;
+  // A pick is checked against its list, so Save waits for every list a new record or a changed pick needs.
+  const changed = isEdit && flow.baseline ? changedFields(draft, flow.baseline) : null;
+  const notLoaded = (load: ListLoad, name: string) =>
+    load === 'loading' ? `Loading ${name}…` : load === 'failed' ? `Retry loading ${name} to save` : undefined;
+  const categoriesNote =
+    !changed || changed.includes('categoryId') || changed.includes('transactionType')
+      ? notLoaded(categoriesLoad, 'categories')
+      : undefined;
+  const walletsNote = !changed || changed.includes('walletId') ? notLoaded(walletsLoad, 'wallets') : undefined;
+  const ready = !hasDraftErrors(errors) && !categoriesNote && !walletsNote && (!isEdit || isChanged) && !hasConflict;
   // A typed value that is not an amount, and a date out of range, are explained at their fields; the footer names
   // what is still missing.
   const amountError = draft.amount.trim() ? errors.amount : undefined;
-  const missing = [amountError ? undefined : errors.amount, errors.category, errors.wallet, errors.description];
+  const missing = [
+    amountError ? undefined : errors.amount,
+    categoriesNote ?? errors.category,
+    walletsNote ?? errors.wallet,
+    errors.description,
+  ];
   const helperText = isEdit && !isChanged ? undefined : missing.find(Boolean);
 
   const limitForecast = forecastLimit({
@@ -225,6 +246,7 @@ const TransactionEditor = ({
         >
           <View style={styles.container}>
             <CategoryGrid
+              load={categoriesLoad}
               tiles={grid.tiles}
               hasMore={grid.hasMore}
               selectedId={draft.categoryId}
@@ -234,9 +256,11 @@ const TransactionEditor = ({
               onSelect={(categoryId) => change({ categoryId })}
               onMore={() => dispatch(categoriesOpened())}
               onCreate={onCreateCategory}
+              onRetry={categoriesQuery.refetch}
             />
 
             <WalletPicker
+              load={walletsLoad}
               wallets={wallets}
               hasDeletedWallet={hasDeletedWallet}
               selectedId={draft.walletId}
@@ -244,6 +268,7 @@ const TransactionEditor = ({
               typeColor={typeColor}
               onSelect={(walletId) => change({ walletId })}
               onCreate={onCreateWallet}
+              onRetry={walletsQuery.refetch}
             />
 
             <DateChip timestamp={draft.timestamp} error={errors.timestamp} onPress={() => dispatch(dateTimeOpened())} />

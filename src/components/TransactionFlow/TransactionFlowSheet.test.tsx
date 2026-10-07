@@ -980,6 +980,63 @@ describe('TransactionFlowSheet', () => {
     expect(screen.getByText('New transaction')).toBeTruthy();
   });
 
+  it('tells lists that are loading or failed from empty ones, retries each, and saves only once they are there', async () => {
+    let failing = ['/categories', '/wallets'];
+    mockedRequest.mockImplementation((config: { url: string; method: string }) =>
+      config.method === 'GET' && failing.some((path) => config.url.endsWith(path))
+        ? Promise.reject(new Error('Network Error'))
+        : respond(config),
+    );
+    const { open } = renderFlow();
+
+    open();
+    expect(screen.getByLabelText('Loading categories')).toBeTruthy();
+    expect(screen.getByLabelText('Loading wallets')).toBeTruthy();
+    await settle();
+
+    expect(screen.getByText('Couldn’t load categories')).toBeTruthy();
+    expect(screen.getByText('Couldn’t load wallets')).toBeTruthy();
+    expect(screen.queryByText('No expense categories yet')).toBeNull();
+    expect(screen.queryByText('New wallet')).toBeNull();
+
+    fireEvent.changeText(screen.getByLabelText('Amount'), '12');
+    expect(screen.getByText('Save expense')).toBeDisabled();
+
+    failing = ['/wallets'];
+    fireEvent.press(screen.getByLabelText('Retry loading categories'));
+    await settle();
+    fireEvent.press(screen.getByText('Food'));
+
+    expect(screen.getByText('Couldn’t load wallets')).toBeTruthy();
+    expect(screen.getByText('Retry loading wallets to save')).toBeTruthy();
+    expect(screen.getByText('Save expense')).toBeDisabled();
+
+    failing = [];
+    fireEvent.press(screen.getByLabelText('Retry loading wallets'));
+    await settle();
+
+    expect(screen.getByText('Cash')).toBeTruthy();
+    expect(screen.getByText('Save expense')).toBeEnabled();
+  });
+
+  it('saves a changed amount of an edit without lists it does not need', async () => {
+    mockedRequest.mockImplementation((config: { url: string; method: string }) =>
+      config.method === 'GET' && (config.url.endsWith('/categories') || config.url.endsWith('/wallets'))
+        ? Promise.reject(new Error('Network Error'))
+        : respond(config),
+    );
+    const { openDetails } = renderFlow();
+
+    openDetails();
+    await settle();
+    fireEvent.press(screen.getByText('Edit'));
+    await settle();
+    fireEvent.changeText(screen.getByLabelText('Amount'), '70');
+
+    expect(screen.getByText('Couldn’t load categories')).toBeTruthy();
+    expect(screen.getByText('Save changes')).toBeEnabled();
+  });
+
   it('starts on an active wallet when none or a gone one was asked for, with nothing to discard', async () => {
     const { open, flow } = renderFlow();
 

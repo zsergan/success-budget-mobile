@@ -11,6 +11,7 @@ import { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
 import { hexToRgba } from '@shared/utils';
 import PanelHeader from '../PanelHeader/PanelHeader';
+import SectionLoad, { listLoad } from '../SectionLoad/SectionLoad';
 import useBoundedHeight from '../hooks/useBoundedHeight';
 
 import styles from './style';
@@ -28,7 +29,9 @@ interface Props {
 const CategoriesPanel = ({ transactionType, selectedId, onBack, onClose }: Props) => {
   const dispatch = useAppDispatch();
   const { height } = useBoundedHeight();
-  const { currentData } = useGetCategoriesQuery(useSpaceArg());
+  const categoriesQuery = useGetCategoriesQuery(useSpaceArg());
+  const { currentData } = categoriesQuery;
+  const load = listLoad(categoriesQuery);
   const { incomes, expenses } = useMemo(() => getActiveCategories(currentData), [currentData]);
   const [query, setQuery] = useState('');
 
@@ -45,6 +48,8 @@ const CategoriesPanel = ({ transactionType, selectedId, onBack, onClose }: Props
       <PanelHeader title="Categories" subtitle="Your transaction is kept" onBack={onBack} onClose={onClose} />
 
       <BottomSheetScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+        {load !== 'ready' && <SectionLoad load={load} name="categories" onRetry={categoriesQuery.refetch} />}
+
         {categories.length > SEARCH_THRESHOLD && (
           <BottomSheetTextInput
             style={styles.search}

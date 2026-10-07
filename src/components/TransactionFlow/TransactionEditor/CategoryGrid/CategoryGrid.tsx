@@ -3,11 +3,14 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import Icon from '@components/Icon/Icon';
 import { colors } from '@shared/theme';
 import { hexToRgba } from '@shared/utils';
+import type { ListLoad } from '@components/TransactionFlow/SectionLoad/SectionLoad';
+import SectionLoad from '@components/TransactionFlow/SectionLoad/SectionLoad';
 import type { GridCategory } from './categoryLayout';
 
 import styles from './style';
 
 interface Props {
+  load: ListLoad;
   tiles: GridCategory[];
   hasMore: boolean;
   selectedId: number | null;
@@ -17,9 +20,11 @@ interface Props {
   onSelect: (categoryId: number) => void;
   onMore: () => void;
   onCreate: () => void;
+  onRetry: () => void;
 }
 
 const CategoryGrid = ({
+  load,
   tiles,
   hasMore,
   selectedId,
@@ -29,6 +34,7 @@ const CategoryGrid = ({
   onSelect,
   onMore,
   onCreate,
+  onRetry,
 }: Props) => {
   const selected = tiles.find(({ id }) => id === selectedId);
   const hint =
@@ -41,7 +47,9 @@ const CategoryGrid = ({
         <Text style={[styles.sectionHint, selected && { color: typeColor }]}>{hint}</Text>
       </View>
 
-      {tiles.length === 0 ? (
+      {load !== 'ready' ? (
+        <SectionLoad load={load} name="categories" onRetry={onRetry} />
+      ) : tiles.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyText}>{emptyLabel}</Text>
 
