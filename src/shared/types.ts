@@ -24,9 +24,12 @@ export type HistoryFilter = {
   name: string;
 } & ({ categoryId: number; walletId?: never } | { walletId: number; categoryId?: never });
 
+// A one-time request to bring a saved transaction into view: its month, no filter, the row scrolled to.
+export type RevealTransaction = { spaceId: number; transactionId: string; timestamp: string };
+
 export type MainTabParamList = {
   [ScreenNames.HOME_TAB]: undefined;
-  [ScreenNames.TRANSACTIONS_TAB]: { filter?: HistoryFilter } | undefined;
+  [ScreenNames.TRANSACTIONS_TAB]: { filter?: HistoryFilter; reveal?: RevealTransaction } | undefined;
   [ScreenNames.STATS_TAB]: { composeWith?: ComposeWithWallet } | undefined;
   [ScreenNames.LIMITS_TAB]: undefined;
   [ScreenNames.SETTINGS_TAB]: undefined;

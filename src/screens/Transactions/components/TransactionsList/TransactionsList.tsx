@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react';
+import { useEffect, useRef } from 'react';
 import { SectionList, Text, View } from 'react-native';
 
 import { TransactionCard, useScreenTopInset } from '@components';
@@ -27,6 +28,8 @@ interface Props {
   placeholder: ReactElement;
   onPressTransaction: (transaction: TransactionModel) => void;
   onDeleteTransaction: (transaction: TransactionModel, onSettled: () => void) => void;
+  // A row to bring into view and light up once it is in the list.
+  highlightId?: string | null;
 }
 
 const TransactionsList = ({
@@ -36,8 +39,11 @@ const TransactionsList = ({
   placeholder,
   onPressTransaction,
   onDeleteTransaction,
+  highlightId = null,
 }: Props) => {
   const topInset = useScreenTopInset();
+  const listRef = useRef<SectionList<TransactionModel, Section>>(null);
+  const scrolledToRef = useRef<string | null>(null);
   const sections: Section[] = groups.map((group, index) => ({
     title: group.label,
     total: group.total,
@@ -46,8 +52,24 @@ const TransactionsList = ({
     data: group.items,
   }));
 
+  useEffect(() => {
+    if (!highlightId) {
+      scrolledToRef.current = null;
+      return;
+    }
+    if (scrolledToRef.current === highlightId) return;
+
+    const sectionIndex = groups.findIndex((group) => group.items.some(({ id }) => id === highlightId));
+    if (sectionIndex < 0) return;
+
+    scrolledToRef.current = highlightId;
+    const itemIndex = groups[sectionIndex].items.findIndex(({ id }) => id === highlightId);
+    listRef.current?.scrollToLocation({ sectionIndex, itemIndex, viewPosition: 0.4 });
+  }, [groups, highlightId]);
+
   return (
     <SectionList
+      ref={listRef}
       style={styles.body}
       contentContainerStyle={[styles.container, { paddingTop: topInset }]}
       sections={sections}
@@ -57,6 +79,10 @@ const TransactionsList = ({
       ItemSeparatorComponent={ItemSeparator}
       ListHeaderComponent={header}
       ListEmptyComponent={placeholder}
+      // Rows far below are not measured yet; scrolling there once they render lands on the row.
+      onScrollToIndexFailed={({ averageItemLength, index }) =>
+        listRef.current?.getScrollResponder()?.scrollTo({ y: averageItemLength * index, animated: true })
+      }
       renderSectionHeader={({ section }) => (
         <View style={[styles.groupHeader, section.isFirst ? styles.groupHeaderFirst : styles.groupHeaderSpaced]}>
           <Text style={styles.groupLabel}>{section.title}</Text>
@@ -72,6 +98,7 @@ const TransactionsList = ({
         <TransactionCard
           transaction={item}
           currencyCode={currencyCode}
+          isHighlighted={item.id === highlightId}
           onPress={onPressTransaction}
           onDelete={onDeleteTransaction}
         />

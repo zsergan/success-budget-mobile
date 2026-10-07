@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 import theme, { colors } from '@shared/theme';
+import { hexToRgba } from '@shared/utils';
 
 const styles = StyleSheet.create({
   root: {
@@ -12,6 +13,9 @@ const styles = StyleSheet.create({
   },
   rootPressed: {
     backgroundColor: colors.track,
+  },
+  rootHighlighted: {
+    backgroundColor: hexToRgba(colors.accent, 0.14),
   },
   rootBusy: {
     opacity: 0.5,

@@ -22,12 +22,13 @@ let openRow: SwipeableMethods | null = null;
 interface Props {
   transaction: TransactionModel;
   currencyCode?: string;
+  isHighlighted?: boolean;
   onPress?: (transaction: TransactionModel) => void;
   // Swiping left offers Delete; `onSettled` slides the row back once the confirmation closes.
   onDelete?: (transaction: TransactionModel, onSettled: () => void) => void;
 }
 
-const TransactionCard = ({ transaction, currencyCode, onPress, onDelete }: Props) => {
+const TransactionCard = ({ transaction, currencyCode, isHighlighted = false, onPress, onDelete }: Props) => {
   const swipeRef = useRef<SwipeableMethods>(null);
   const isDeleting = useAppSelector((state) => selectIsDeleting(state, transaction.id));
   const isSystem = isInitialBalance(transaction);
@@ -41,7 +42,12 @@ const TransactionCard = ({ transaction, currencyCode, onPress, onDelete }: Props
   // A row being deleted stays put, dimmed, until the server answers.
   const card = (
     <Pressable
-      style={({ pressed }) => [styles.root, pressed && styles.rootPressed, isDeleting && styles.rootBusy]}
+      style={({ pressed }) => [
+        styles.root,
+        isHighlighted && styles.rootHighlighted,
+        pressed && styles.rootPressed,
+        isDeleting && styles.rootBusy,
+      ]}
       onPress={onPress && (() => onPress(transaction))}
       disabled={!onPress || isDeleting}
       accessibilityRole={onPress ? 'button' : undefined}

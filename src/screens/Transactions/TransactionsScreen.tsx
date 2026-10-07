@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
@@ -15,7 +15,7 @@ import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { TransactionType } from '@shared/enums';
 import type { ScreenNames } from '@shared/enums';
-import type { MainTabNavigationProp, MainTabScreenProps } from '@shared/types';
+import type { MainTabNavigationProp, MainTabScreenProps, RevealTransaction } from '@shared/types';
 import { groupTransactionsByDay } from '@shared/utils';
 import AppliedFilter from './components/AppliedFilter/AppliedFilter';
 import FilterBar from './components/FilterBar/FilterBar';
@@ -24,6 +24,8 @@ import TransactionsEmptyState from './components/TransactionsEmptyState/Transact
 import TransactionsHeader from './components/TransactionsHeader/TransactionsHeader';
 import TransactionsList from './components/TransactionsList/TransactionsList';
 import useTransactionsData from './hooks/useTransactionsData';
+
+const HIGHLIGHT_MS = 2500;
 
 const TransactionsScreen = () => {
   const navigation = useNavigation<MainTabNavigationProp<ScreenNames.TRANSACTIONS_TAB>>();
@@ -45,10 +47,38 @@ const TransactionsScreen = () => {
   }, [navigation, requestedFilter, spaceId]);
 
   const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod, openMonthOf } = usePeriod();
+
+  // Show from a confirmation: the record's month with no filter, its row scrolled to and lit for a moment.
+  // The user's period changes only on this explicit request.
+  const reveal = route.params?.reveal;
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState<RevealTransaction | undefined>(undefined);
+
+  if (reveal && reveal !== revealed) {
+    setRevealed(reveal);
+    if (reveal.spaceId === spaceId) {
+      openMonthOf(reveal.timestamp);
+      setHighlightId(reveal.transactionId);
+    }
+  }
+
+  useEffect(() => {
+    if (reveal) navigation.setParams({ reveal: undefined, filter: undefined });
+  }, [navigation, reveal]);
+
   const { transactions, viewState, latest, income, expense, currencyCode, refetch, retryLatest } = useTransactionsData({
     range,
     filter,
   });
+  const isHighlightListed = transactions.some(({ id }) => id === highlightId);
+
+  // The light fades only once the row is on screen, however long its month takes to load.
+  useEffect(() => {
+    if (!isHighlightListed) return;
+
+    const timer = setTimeout(() => setHighlightId(null), HIGHLIGHT_MS);
+    return () => clearTimeout(timer);
+  }, [isHighlightListed]);
 
   return (
     <>
@@ -62,6 +92,7 @@ const TransactionsScreen = () => {
           currencyCode={currencyCode}
           onPressTransaction={openDetails}
           onDeleteTransaction={requestDelete}
+          highlightId={highlightId}
           header={
             <>
               <TransactionsHeader />
