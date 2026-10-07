@@ -25,7 +25,7 @@ interface SheetProps {
   backdropComponent?: (props: object) => ReactNode;
 }
 
-const mockSheet: { props?: SheetProps; presents: number } = { presents: 0 };
+const mockSheet: { props?: SheetProps; presents: number; swipeDown?: () => void } = { presents: 0 };
 
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = jest.requireActual('react');
@@ -33,21 +33,31 @@ jest.mock('@gorhom/bottom-sheet', () => {
   const SheetContext = React.createContext({ close: () => {} });
 
   // Shows its content only between present() and dismiss(), as the real modal does. The first sheet is the flow's.
+  // Like the library, a dismiss() of a sheet that is not shown leaves it stuck: no later present() shows it.
   const BottomSheetModal = React.forwardRef(function BottomSheetModal(props: SheetProps, ref: Ref<unknown>) {
     const [isOpen, setOpen] = React.useState(false);
+    const isOpenRef = React.useRef(false);
+    const isStuckRef = React.useRef(false);
     const isFlowSheet = React.useRef(mockSheet.props === undefined || mockSheet.props === props).current;
     if (isFlowSheet) mockSheet.props = props;
 
     const dismiss = () => {
-      setOpen((wasOpen: boolean) => {
-        if (wasOpen) props.onDismiss?.();
-        return false;
-      });
+      if (!isOpenRef.current) {
+        isStuckRef.current = true;
+        return;
+      }
+      isOpenRef.current = false;
+      setOpen(false);
+      props.onDismiss?.();
     };
+
+    if (isFlowSheet) mockSheet.swipeDown = dismiss;
 
     React.useImperativeHandle(ref, () => ({
       present: () => {
         if (isFlowSheet) mockSheet.presents += 1;
+        if (isStuckRef.current) return;
+        isOpenRef.current = true;
         setOpen(true);
       },
       dismiss,
@@ -222,6 +232,28 @@ describe('TransactionFlowSheet', () => {
 
     expect(mockSheet.presents).toBe(1);
     expect(screen.getAllByText('New transaction')).toHaveLength(1);
+    expect(screen.getByText('Save expense')).toBeTruthy();
+  });
+
+  it('opens again after it was closed by its button or by a swipe', async () => {
+    const { open, openDetails, flow } = renderFlow();
+
+    open();
+    await settle();
+    fireEvent.press(screen.getByLabelText('Close'));
+    await settle();
+    expect(flow()).toBeNull();
+
+    openDetails();
+    await settle();
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeTruthy();
+
+    act(() => mockSheet.swipeDown?.());
+    await settle();
+    expect(flow()).toBeNull();
+
+    open();
+    await settle();
     expect(screen.getByText('Save expense')).toBeTruthy();
   });
 

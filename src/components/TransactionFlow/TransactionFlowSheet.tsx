@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AppState, BackHandler } from 'react-native';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -20,6 +19,7 @@ import CreatedConfirmation from './CreatedConfirmation/CreatedConfirmation';
 import DateTimePanel from './DateTimePanel/DateTimePanel';
 import useFlowClose from './hooks/useFlowClose';
 import useFlowSave from './hooks/useFlowSave';
+import useSheetPresence from './hooks/useSheetPresence';
 import useTransactionDelete from './useTransactionDelete';
 import RecordGone from './RecordGone/RecordGone';
 import TransactionDetails from './TransactionDetails/TransactionDetails';
@@ -31,8 +31,6 @@ const TransactionFlowSheet = () => {
   const dispatch = useAppDispatch();
   const store = useAppStore();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const sheetRef = useRef<BottomSheetModal>(null);
-  const categorySheetRef = useRef<BottomSheetModal>(null);
   const flow = useAppSelector(selectTransactionFlow);
   const save = useFlowSave();
   const { requestClose, back } = useFlowClose();
@@ -46,22 +44,8 @@ const TransactionFlowSheet = () => {
 
   const isVisible = !!flow && !flow.away;
   const isCreatingCategory = flow?.away === 'category';
-  const isDismissingRef = useRef(false);
-
-  useEffect(() => {
-    if (isVisible) {
-      isDismissingRef.current = false;
-      sheetRef.current?.present();
-    } else {
-      isDismissingRef.current = true;
-      sheetRef.current?.dismiss();
-    }
-  }, [isVisible]);
-
-  useEffect(() => {
-    if (isCreatingCategory) categorySheetRef.current?.present();
-    else categorySheetRef.current?.dismiss();
-  }, [isCreatingCategory]);
+  const { ref: sheetRef, settleDismiss } = useSheetPresence(isVisible);
+  const { ref: categorySheetRef, settleDismiss: settleCategoryDismiss } = useSheetPresence(isCreatingCategory);
 
   useEffect(() => {
     if (!isVisible) return;
@@ -94,14 +78,11 @@ const TransactionFlowSheet = () => {
 
   // Only a swipe closes the sheet on its own; one we dismissed ourselves is not a close request.
   const handleDismiss = useCallback(() => {
-    if (isDismissingRef.current) {
-      isDismissingRef.current = false;
-      return;
-    }
+    if (!settleDismiss()) return;
 
     const current = selectTransactionFlow(store.getState());
     if (current && !current.away) dispatch(closed());
-  }, [dispatch, store]);
+  }, [dispatch, store, settleDismiss]);
 
   const isGuarded = !!flow && (flow.isSaving || hasUnsavedChanges(flow));
 
@@ -125,6 +106,7 @@ const TransactionFlowSheet = () => {
 
   // Closing the category sheet without saving returns to the form as it was.
   const handleCategoryDismiss = () => {
+    settleCategoryDismiss();
     const current = selectTransactionFlow(store.getState());
     if (current?.away === 'category') dispatch(awayEnded({ draftId: current.draftId }));
   };
