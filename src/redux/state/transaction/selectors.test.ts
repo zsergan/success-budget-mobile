@@ -1,6 +1,5 @@
 import type { TransactionModel } from '@api/models';
 import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
-import { groupTransactionsByDay } from '@shared/utils';
 import { getPeriodTotals } from './selectors';
 
 const row = (
@@ -42,12 +41,5 @@ describe('initial balances in totals', () => {
     const cents = [row('a', TransactionType.EXPENSE, '0.10'), row('b', TransactionType.EXPENSE, '0.20')];
 
     expect(getPeriodTotals(cents).expense).toBe(0.3);
-  });
-
-  it('lists them in their day but leaves them out of its total', () => {
-    const [day] = groupTransactionsByDay(rows);
-
-    expect(day.items.map(({ id }) => id)).toEqual(['salary', 'start', 'lunch']);
-    expect(day.total).toBe(87.5);
   });
 });

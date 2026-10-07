@@ -5,7 +5,7 @@ import type { TransactionModel } from '@api/models';
 import type { MainTabNavigationProp } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { colors } from '@shared/theme';
-import { formatSignedAmount, groupTransactionsByDay } from '@shared/utils';
+import { formatSignedAmount, groupTransactionsByDay, limitGroupRows } from '@shared/utils';
 
 import styles from './style';
 
@@ -34,7 +34,8 @@ const RecentActivity = ({
   onPressTransaction,
   onDeleteTransaction,
 }: Props) => {
-  const groups = groupTransactionsByDay(transactions.slice(0, RECENT_TRANSACTIONS_LIMIT), currencyCode);
+  // `transactions` is the whole current month, so every day's total covers all of it, not only the rows shown.
+  const groups = limitGroupRows(groupTransactionsByDay(transactions), RECENT_TRANSACTIONS_LIMIT);
 
   return (
     <>
@@ -76,13 +77,13 @@ const RecentActivity = ({
         ) : (
           <View style={styles.activity}>
             {groups.map((group) => (
-              <View key={group.label}>
+              <View key={group.key}>
                 <View style={styles.groupHeader}>
                   <Text style={styles.groupLabel}>{group.label}</Text>
 
-                  {group.total !== undefined && (
-                    <Text style={styles.groupTotal}>{formatSignedAmount(group.total, group.currencyCode)}</Text>
-                  )}
+                  <Text style={[styles.groupTotal, group.total > 0 && styles.groupTotalPositive]}>
+                    {formatSignedAmount(group.total, currencyCode)}
+                  </Text>
                 </View>
 
                 <View style={styles.groupItems}>

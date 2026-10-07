@@ -10,9 +10,9 @@ import { formatSignedAmount } from '@shared/utils';
 import styles from './style';
 
 interface Section {
+  key: string;
   title: string;
-  total?: number;
-  currencyCode?: string;
+  total: number;
   /** The first header sits right under the filter bar and takes a smaller gap above it. */
   isFirst: boolean;
   data: TransactionModel[];
@@ -45,9 +45,9 @@ const TransactionsList = ({
   const listRef = useRef<SectionList<TransactionModel, Section>>(null);
   const scrolledToRef = useRef<string | null>(null);
   const sections: Section[] = groups.map((group, index) => ({
+    key: group.key,
     title: group.label,
     total: group.total,
-    currencyCode: group.currencyCode,
     isFirst: index === 0,
     data: group.items,
   }));
@@ -87,11 +87,9 @@ const TransactionsList = ({
         <View style={[styles.groupHeader, section.isFirst ? styles.groupHeaderFirst : styles.groupHeaderSpaced]}>
           <Text style={styles.groupLabel}>{section.title}</Text>
 
-          {section.total !== undefined && (
-            <Text style={[styles.groupTotal, section.total > 0 && styles.groupTotalPositive]}>
-              {formatSignedAmount(section.total, section.currencyCode)}
-            </Text>
-          )}
+          <Text style={[styles.groupTotal, section.total > 0 && styles.groupTotalPositive]}>
+            {formatSignedAmount(section.total, currencyCode)}
+          </Text>
         </View>
       )}
       renderItem={({ item }) => (

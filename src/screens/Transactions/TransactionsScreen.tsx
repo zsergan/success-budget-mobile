@@ -102,7 +102,7 @@ const TransactionsScreen = () => {
 
       <ScreenFrame edges={['top', 'left', 'right']} blurredStatusBar>
         <TransactionsList
-          groups={viewState === 'ready' ? groupTransactionsByDay(transactions, currencyCode) : []}
+          groups={viewState === 'ready' ? groupTransactionsByDay(transactions) : []}
           currencyCode={currencyCode}
           onPressTransaction={openDetails}
           onDeleteTransaction={requestDelete}

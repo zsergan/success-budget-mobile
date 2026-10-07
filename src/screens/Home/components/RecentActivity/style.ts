@@ -30,6 +30,9 @@ const styles = StyleSheet.create({
     lineHeight: theme.lineHeights.caption,
     color: colors.muted,
   },
+  groupTotalPositive: {
+    color: colors.ok,
+  },
   groupItems: {
     rowGap: theme.spacing.sm,
   },
