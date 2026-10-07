@@ -45,6 +45,8 @@ export interface CreateTransactionRequest {
   amount: string;
   timestamp: string;
   description?: string | null;
+  // The create's Idempotency-Key; the server never applies two creates with one id in a space.
+  client_operation_id?: string;
 }
 
 export interface CreateTransactionResponse {
@@ -54,7 +56,17 @@ export interface CreateTransactionResponse {
 }
 
 // An absent field, or one equal to the stored value, keeps it; `null` only clears the description.
-export type UpdateTransactionRequest = Partial<CreateTransactionRequest>;
+export type UpdateTransactionRequest = Partial<Omit<CreateTransactionRequest, 'client_operation_id'>>;
+
+// What a create with this operation id did: `deleted` means it applied and the record was deleted since.
+export interface TransactionOperationResponse {
+  operation_id: string;
+  status: 'applied' | 'deleted';
+  transaction_id: string;
+  created_at: string;
+  deleted_at: string | null;
+  transaction: Transaction | null;
+}
 
 export interface TransactionWalletBalance {
   id: number;

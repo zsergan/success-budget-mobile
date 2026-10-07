@@ -3,6 +3,7 @@ import type {
   CreateTransactionResponse,
   ErrorResponse,
   Transaction,
+  TransactionOperationResponse,
   TransactionsCountResponse,
   UpdateTransactionRequest,
   UpdateTransactionResponse,
@@ -24,6 +25,16 @@ export interface TransactionsArg extends SpaceArg {
 
 export interface TransactionArg extends SpaceArg {
   transactionId: string;
+}
+
+export interface TransactionOperationArg extends SpaceArg {
+  operationId: string;
+}
+
+export interface CreateOperationStatus {
+  status: TransactionOperationResponse['status'];
+  // Null once the record is deleted.
+  transaction: TransactionModel | null;
 }
 
 // One key per user action, reused by every retry of it, so the server applies the action at most once.
@@ -100,6 +111,14 @@ export const transactionApi = baseApi.injectEndpoints({
       query: ({ spaceId, transactionId }) => ({ url: `/spaces/${spaceId}/transactions/${transactionId}` }),
       transformResponse: (response: Transaction) => mapTransaction(response),
       providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions'),
+    }),
+    getTransactionOperation: build.query<CreateOperationStatus, TransactionOperationArg>({
+      query: ({ spaceId, operationId }) => ({ url: `/spaces/${spaceId}/transactions/operations/${operationId}` }),
+      transformResponse: ({ status, transaction }: TransactionOperationResponse) => ({
+        status,
+        transaction: transaction && mapTransaction(transaction),
+      }),
+      keepUnusedDataFor: 0,
     }),
     createTransaction: build.mutation<CreateTransactionResult, CreateTransactionArg>({
       query: ({ spaceId, data, ...arg }) => ({

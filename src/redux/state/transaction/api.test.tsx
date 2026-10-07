@@ -47,6 +47,7 @@ const {
   getTransactions,
   getLatestTransaction,
   getTransaction,
+  getTransactionOperation,
   createTransaction,
   updateTransaction,
   deleteTransaction,
@@ -123,6 +124,30 @@ describe('transactionApi', () => {
 
     expect(mockedRequest).toHaveBeenCalledWith(expect.objectContaining({ url: '/spaces/3/transactions/tx-1' }));
     expect(result.data).toMatchObject({ id: 'tx-1', version: 1 });
+  });
+
+  it('asks what a create did by its operation id', async () => {
+    const store = createAppStore();
+    const arg = { spaceId: 3, operationId: 'op-1' };
+    const answer = { operation_id: 'op-1', transaction_id: 'tx-1', created_at: dto.timestamp };
+
+    mockedRequest.mockResolvedValueOnce({
+      data: { ...answer, status: 'applied', deleted_at: null, transaction: { ...dto, version: 2 } },
+    });
+    const applied = await store.dispatch(getTransactionOperation.initiate(arg, { subscribe: false }));
+
+    mockedRequest.mockResolvedValueOnce({
+      data: { ...answer, status: 'deleted', deleted_at: dto.timestamp, transaction: null },
+    });
+    const deleted = await store.dispatch(
+      getTransactionOperation.initiate(arg, { subscribe: false, forceRefetch: true }),
+    );
+
+    expect(mockedRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ url: '/spaces/3/transactions/operations/op-1' }),
+    );
+    expect(applied.data).toMatchObject({ status: 'applied', transaction: { id: 'tx-1', version: 2 } });
+    expect(deleted.data).toEqual({ status: 'deleted', transaction: null });
   });
 
   it('sends the action key with a create and maps its result', async () => {
