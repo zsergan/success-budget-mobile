@@ -2,9 +2,14 @@ import { randomUUID } from 'expo-crypto';
 
 import type { CreateTransactionRequest, ErrorResponse, UpdateTransactionRequest } from '@api/dto';
 import { ApiErrorCode } from '@api/dto';
-import type { CreateTransactionResult, UpdateTransactionResult } from '@api/models';
+import type { CreateTransactionResult, TransactionModel, UpdateTransactionResult } from '@api/models';
+import { spaceTags } from '@redux/api/baseApi';
 import type { AppThunk, RootState } from '@redux/Store';
 import { TransactionType } from '@shared/enums';
+import { selectPendingWrite } from '../pendingWrite/selectors';
+import { writeRecorded, writeSettled } from '../pendingWrite/slice';
+import { forgetPendingWrite, persistPendingWrites } from '../pendingWrite/storage';
+import { selectProfileId } from '../profile/selectors';
 import { loseSpaceAccess } from '../space/thunks';
 import { transactionApi } from './api';
 
@@ -16,8 +21,14 @@ export type TransactionRequest =
 
 type RequestType = TransactionRequest['type'];
 
-// A request as sent once: retrying it sends exactly this again, key included.
-export type TransactionOperation = Readonly<TransactionRequest & { sessionKey: number; idempotencyKey: string }>;
+// A request as sent once: retrying it sends exactly this again, key included. A create carries its key as
+// `client_operation_id` too. `firstSentAt` starts the key's lifetime on the server.
+export type StoredOperation = TransactionRequest & { idempotencyKey: string; firstSentAt: number };
+
+export type TransactionOperation = Readonly<StoredOperation & { sessionKey: number }>;
+
+// The server keeps a key's answer for 24 hours; past this a create is looked up by its operation id, never resent.
+export const KEY_LIFETIME_MS = 23 * 60 * 60 * 1000;
 
 interface OperationResults {
   create: CreateTransactionResult;
@@ -26,7 +37,10 @@ interface OperationResults {
 }
 
 // `uncertain`: no answer, or a server failure; the write may or may not have applied.
-export type TransactionFailureKind = 'validation' | 'conflict' | 'notFound' | 'accessLost' | 'uncertain' | 'rejected';
+// `expired`: a create whose key ran out with no trace of it on the server; only the user sends it again.
+// `notSent`: it could not be stored first, so it never went out.
+export type TransactionFailureKind =
+  'validation' | 'conflict' | 'notFound' | 'accessLost' | 'uncertain' | 'rejected' | 'expired' | 'notSent';
 
 export interface TransactionFailure {
   kind: TransactionFailureKind;
@@ -34,8 +48,10 @@ export interface TransactionFailure {
 }
 
 // `stale`: the session or the space changed meanwhile, so nothing may surface in the current one.
+// `found`: an earlier attempt of the create applied; the record is null when it was deleted since.
 export type OperationOutcome<T extends RequestType = RequestType> =
   | { status: 'succeeded'; result: OperationResults[T] }
+  | { status: 'found'; transaction: TransactionModel | null }
   | { status: 'failed'; failure: TransactionFailure; operation: TransactionOperation }
   | { status: 'stale' };
 
@@ -62,8 +78,9 @@ export const classifyTransactionError = (error: unknown): TransactionFailureKind
   return 'rejected';
 };
 
-// The server refused it as sent, so it is known not to have applied.
-const isRefusal = ({ kind }: TransactionFailure) => kind === 'validation' || kind === 'rejected';
+// The server refused it as sent, or it never went out, so it is known not to have applied.
+const isRefusal = ({ kind }: TransactionFailure) =>
+  kind === 'validation' || kind === 'rejected' || kind === 'expired' || kind === 'notSent';
 
 const isInScope = (state: RootState, { sessionKey, spaceId }: Pick<OperationMemory, 'sessionKey' | 'spaceId'>) =>
   state.auth.sessionKey === sessionKey && state.space.currentSpaceId === spaceId;
@@ -96,35 +113,173 @@ const send = async (operation: TransactionOperation, dispatch: Parameters<AppThu
   }
 };
 
+// What one attempt found out. `unknown`: no answer, or a server failure. `stale`: the session ended meanwhile.
+export type WriteResult =
+  | { kind: 'done'; result: OperationResults[RequestType] }
+  | { kind: 'applied'; transaction: TransactionModel }
+  | { kind: 'deleted' }
+  | { kind: 'refused'; error: unknown }
+  | { kind: 'unknown'; error: unknown }
+  | { kind: 'expired' }
+  | { kind: 'notSent' }
+  | { kind: 'stale' };
+
+const errorOf = (error: unknown) => (error ?? {}) as Partial<ErrorResponse>;
+
+// Only the operation id tells whether a create applied; `missing` is what the server having no trace of it means.
+const lookUpCreate =
+  (operation: TransactionOperation, missing: WriteResult): AppThunk<Promise<WriteResult>> =>
+  async (dispatch) => {
+    try {
+      const { transaction } = await dispatch(
+        transactionApi.endpoints.getTransactionOperation.initiate(
+          { spaceId: operation.spaceId, operationId: operation.idempotencyKey },
+          { subscribe: false, forceRefetch: true },
+        ),
+      ).unwrap();
+
+      dispatch(
+        transactionApi.util.invalidateTags(
+          spaceTags(operation.spaceId, 'Transactions', 'Wallets', 'Limits', 'Categories'),
+        ),
+      );
+
+      return transaction ? { kind: 'applied', transaction } : { kind: 'deleted' };
+    } catch (error) {
+      if (errorOf(error).isStale) return { kind: 'stale' };
+      if (errorOf(error).code === ApiErrorCode.TRANSACTION_OPERATION_NOT_FOUND) return missing;
+
+      return classifyTransactionError(error) === 'uncertain' ? { kind: 'unknown', error } : { kind: 'refused', error };
+    }
+  };
+
+const attemptWrite =
+  (operation: TransactionOperation, isRetry: boolean): AppThunk<Promise<WriteResult>> =>
+  async (dispatch) => {
+    const isCreate = operation.type === 'create';
+
+    if (isCreate && Date.now() - operation.firstSentAt >= KEY_LIFETIME_MS) {
+      return dispatch(lookUpCreate(operation, { kind: 'expired' }));
+    }
+
+    try {
+      return { kind: 'done', result: await send(operation, dispatch) };
+    } catch (error) {
+      const { isStale, code, statusCode } = errorOf(error);
+
+      if (isStale) return { kind: 'stale' };
+      if (classifyTransactionError(error) === 'uncertain') return { kind: 'unknown', error };
+
+      // The id is taken, or a resend is refused although the first attempt may have applied: ask what it did.
+      if (code === ApiErrorCode.TRANSACTION_OPERATION_EXISTS && isCreate) {
+        return dispatch(lookUpCreate(operation, { kind: 'unknown', error }));
+      }
+      if (isCreate && isRetry && (statusCode === 400 || statusCode === 403)) {
+        return dispatch(lookUpCreate(operation, { kind: 'refused', error }));
+      }
+
+      return { kind: 'refused', error };
+    }
+  };
+
+const toStored = ({ sessionKey: _sessionKey, ...stored }: TransactionOperation): StoredOperation => stored;
+
+// Stores the write before it goes out and keeps it until its outcome is known, through a closed form or a restart.
+// Nothing is sent when it cannot be stored first.
+export const settleWrite =
+  (operation: TransactionOperation): AppThunk<Promise<WriteResult>> =>
+  (dispatch, getState, { runningWrites }) => {
+    const key = operation.idempotencyKey;
+    const running = runningWrites.get(key) as Promise<WriteResult> | undefined;
+    if (running) return running;
+
+    const run = (async (): Promise<WriteResult> => {
+      const userId = selectProfileId(getState()) ?? getState().pendingWrite.userId ?? undefined;
+      if (userId === undefined) return { kind: 'notSent' };
+
+      const isRetry = selectPendingWrite(getState(), key) !== undefined;
+
+      dispatch(writeRecorded({ userId, operation: toStored(operation) }));
+      if (!(await dispatch(persistPendingWrites())) && !isRetry) {
+        dispatch(writeSettled({ key, status: null }));
+        return { kind: 'notSent' };
+      }
+
+      const result = await dispatch(attemptWrite(operation, isRetry));
+
+      // After a logout the stored write waits for the same user's next session.
+      if (result.kind === 'stale' || getState().pendingWrite.userId !== userId) return result;
+
+      const status = result.kind === 'unknown' ? 'unknown' : result.kind === 'expired' ? 'expired' : null;
+
+      dispatch(writeSettled({ key, status }));
+      await dispatch(persistPendingWrites());
+
+      if (result.kind === 'refused' && classifyTransactionError(result.error) === 'accessLost') {
+        dispatch(loseSpaceAccess(operation.spaceId));
+      }
+
+      return result;
+    })().finally(() => runningWrites.delete(key));
+
+    runningWrites.set(key, run);
+
+    return run;
+  };
+
 export const runTransactionOperation =
   (operation: TransactionOperation): AppThunk<Promise<OperationOutcome>> =>
   async (dispatch, getState) => {
     if (!isInScope(getState(), operation)) return { status: 'stale' };
 
-    try {
-      const result = await send(operation, dispatch);
+    const result = await dispatch(settleWrite(operation));
 
-      return isInScope(getState(), operation) ? { status: 'succeeded', result } : { status: 'stale' };
-    } catch (error) {
-      if (!isInScope(getState(), operation) || (error as Partial<ErrorResponse>)?.isStale) return { status: 'stale' };
+    if (result.kind === 'stale' || !isInScope(getState(), operation)) return { status: 'stale' };
 
-      const failure = { kind: classifyTransactionError(error), error };
+    const fail = (failure: TransactionFailure): OperationOutcome => ({ status: 'failed', failure, operation });
 
-      // Gone already, by an earlier attempt or another member: what the delete asked for is true.
-      if (operation.type === 'delete' && failure.kind === 'notFound') return { status: 'succeeded', result: null };
-      if (failure.kind === 'accessLost') dispatch(loseSpaceAccess(operation.spaceId));
+    switch (result.kind) {
+      case 'done':
+        return { status: 'succeeded', result: result.result };
+      case 'applied':
+        return { status: 'found', transaction: result.transaction };
+      case 'deleted':
+        return { status: 'found', transaction: null };
+      case 'unknown':
+        return fail({ kind: 'uncertain', error: result.error });
+      case 'expired':
+      case 'notSent':
+        return fail({ kind: result.kind, error: null });
+      case 'refused': {
+        const failure = { kind: classifyTransactionError(result.error), error: result.error };
 
-      return { status: 'failed', failure, operation };
+        // Gone already, by an earlier attempt or another member: what the delete asked for is true.
+        if (operation.type === 'delete' && failure.kind === 'notFound') return { status: 'succeeded', result: null };
+
+        return fail(failure);
+      }
     }
   };
 
-const createOperation = (request: TransactionRequest, sessionKey: number): TransactionOperation =>
-  Object.freeze({
+const createOperation = (request: TransactionRequest, sessionKey: number): TransactionOperation => {
+  const idempotencyKey = randomUUID();
+  const data =
+    request.type === 'create'
+      ? { ...request.data, client_operation_id: idempotencyKey }
+      : 'data' in request && { ...request.data };
+
+  return Object.freeze({
     ...request,
-    ...('data' in request && { data: Object.freeze({ ...request.data }) }),
+    ...(data && { data: Object.freeze(data) }),
     sessionKey,
-    idempotencyKey: randomUUID(),
+    idempotencyKey,
+    firstSentAt: Date.now(),
   }) as TransactionOperation;
+};
+
+// Sending an expired create again is the user's call; it starts a new key lifetime under the same operation id.
+const renewOperation = (operation: TransactionOperation): TransactionOperation =>
+  Object.freeze({ ...operation, firstSentAt: Date.now() });
 
 const isSameRequest = (operation: TransactionOperation, request: TransactionRequest) => {
   if (operation.type !== request.type || operation.spaceId !== request.spaceId) return false;
@@ -135,6 +290,7 @@ const isSameRequest = (operation: TransactionOperation, request: TransactionRequ
   const sent: Record<string, unknown> = 'data' in operation ? operation.data : {};
   const asked: Record<string, unknown> = 'data' in request ? request.data : {};
   const keys = new Set([...Object.keys(sent), ...Object.keys(asked)]);
+  keys.delete('client_operation_id');
 
   return [...keys].every((key) => sent[key] === asked[key]);
 };
@@ -163,6 +319,7 @@ const toEffectiveRequest = (request: TransactionRequest, { record }: OperationMe
 const remember = (memory: OperationMemory, operation: TransactionOperation, outcome: OperationOutcome) => {
   if (outcome.status === 'stale') return memory;
   if (outcome.status === 'failed') return { ...memory, unresolved: { operation, failure: outcome.failure } };
+  if (outcome.status === 'found') return { ...memory, unresolved: null };
 
   const record = (() => {
     switch (operation.type) {
@@ -221,24 +378,34 @@ export const submitTransactionRequest =
     const pending = memory.unresolved;
 
     if (pending && !isSameRequest(pending.operation, toEffectiveRequest(request, memory))) {
-      if (pending.failure.kind === 'uncertain') {
+      let { failure } = pending;
+
+      if (failure.kind === 'uncertain') {
         const prior = await dispatch(runTransactionOperation(pending.operation));
 
         memory = remember(memory, pending.operation, prior);
 
-        if (prior.status === 'stale' || (prior.status === 'failed' && !isRefusal(prior.failure))) {
+        if (prior.status === 'stale' || prior.status === 'found')
           return { outcome: prior as OperationOutcome<T>, memory };
-        }
+        if (prior.status === 'failed' && !isRefusal(prior.failure))
+          return { outcome: prior as OperationOutcome<T>, memory };
+        if (prior.status === 'failed') failure = prior.failure;
       }
+
+      // A create the server never got stays offered elsewhere unless this changed draft takes its place.
+      if (failure.kind === 'expired') dispatch(forgetPendingWrite(pending.operation.idempotencyKey));
 
       memory = { ...memory, unresolved: null };
     }
 
     const effective = toEffectiveRequest(request, memory);
-    const operation =
-      memory.unresolved && isSameRequest(memory.unresolved.operation, effective)
-        ? memory.unresolved.operation
-        : createOperation(effective, sessionKey);
+    const reused =
+      memory.unresolved && isSameRequest(memory.unresolved.operation, effective) ? memory.unresolved : null;
+    const operation = !reused
+      ? createOperation(effective, sessionKey)
+      : reused.failure.kind === 'expired'
+        ? renewOperation(reused.operation)
+        : reused.operation;
     const outcome = await dispatch(runTransactionOperation(operation));
 
     if (outcome.status !== 'succeeded') {

@@ -1,17 +1,16 @@
-import type { ListenerMiddlewareInstance } from '@reduxjs/toolkit';
 import { isRejectedWithValue } from '@reduxjs/toolkit';
 
 import type { ErrorResponse } from '@api/dto';
 import type { SpaceArg } from '@redux/api/baseApi';
 import { baseApi } from '@redux/api/baseApi';
-import type { RootState } from '@redux/Store';
+import type { AppListener } from '@redux/Store';
 import { spaceApi } from './api';
 import { pickFallbackSpaceId, selectSpacesResult } from './selectors';
 import { activateSpace, dropSpaceData } from './thunks';
 
 // Keeps a valid space selected as the spaces list arrives: picks one when
 // none is selected, and moves off a space the user no longer belongs to.
-export const startSpaceSelectionListener = (listener: ListenerMiddlewareInstance<RootState>) => {
+export const startSpaceSelectionListener = (listener: AppListener) => {
   listener.startListening({
     matcher: spaceApi.endpoints.getSpaces.matchFulfilled,
     effect: (action, { dispatch, getState }) => {

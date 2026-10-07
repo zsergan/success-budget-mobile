@@ -120,7 +120,7 @@ export const deleteTransaction =
     const result: DeleteResult =
       outcome.status === 'succeeded'
         ? 'deleted'
-        : outcome.status === 'stale' || outcome.failure.kind === 'accessLost'
+        : outcome.status !== 'failed' || outcome.failure.kind === 'accessLost'
           ? 'stale'
           : outcome.failure.kind === 'conflict'
             ? 'conflict'

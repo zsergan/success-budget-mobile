@@ -14,7 +14,8 @@ members.
 
 - State: Redux Toolkit. Each domain lives under `src/redux/state/<domain>/`
   (domains: `auth`, `wallet`, `transaction`, `category`, `limit`,
-  `currency`, `profile`, `space`, `member`, `transactionFlow`).
+  `currency`, `profile`, `space`, `member`, `transactionFlow`,
+  `pendingWrite`).
 - Server data lives in RTK Query (see `docs/server-data.md` for the tag
   and invalidation rules). One `createApi` lives in
   `src/redux/api/baseApi.ts` over the shared axios client; each domain
@@ -24,7 +25,9 @@ members.
   `sessionKey`), `space` (the selected space), `member` (the invite
   cooldown) and `transactionFlow` (the open transaction sheet: its view,
   draft, saved record and request state; it ends on a logout or a space
-  switch). Selecting a space after create/accept/leave goes through
+  switch) and `pendingWrite` (every transaction write stored in
+  AsyncStorage, per user, before it is sent, until its outcome is known;
+  see `transaction/operations.ts`). Selecting a space after create/accept/leave goes through
   `space/thunks.ts`, which checks the session is still current; the
   spaces list refreshes separately through its tag.
 - Space-scoped endpoints take `spaceId` in their argument (`useSpaceArg()`

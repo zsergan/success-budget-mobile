@@ -5,6 +5,7 @@ import { act, renderHook } from '@testing-library/react-native';
 
 import { mapTransaction } from '@api/models';
 import { createAppStore } from '@redux/Store';
+import { withProfile } from '@redux/state/profile/fixtures';
 import { activateSpace } from '@redux/state/space/thunks';
 import { transactionDto } from '@redux/state/transaction/fixtures';
 import useTransactionDelete from './useTransactionDelete';
@@ -25,6 +26,7 @@ const lunch = mapTransaction(transactionDto({ amount: '12.00' }));
 
 const setUp = () => {
   const store = createAppStore();
+  withProfile(store);
 
   store.dispatch(activateSpace(1));
   const wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;

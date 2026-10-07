@@ -7,6 +7,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { Category, GetCategoriesResponse, GetLimitsResponse, WalletsOverviewResponse } from '@api/dto';
 import { createAppStore } from '@redux/Store';
+import { withProfile } from '@redux/state/profile/fixtures';
 import { activateSpace } from '@redux/state/space/thunks';
 import { transactionApi } from '@redux/state/transaction/api';
 import { createTransactionResponseDto, transactionDto } from '@redux/state/transaction/fixtures';
@@ -147,8 +148,29 @@ let walletsResponse = wallets;
 let categoriesResponse = categories;
 let limitsResponse = noLimits;
 
-let answerWrite: (value: unknown) => void = () => {};
-let failWrite: (reason: unknown) => void = () => {};
+interface Answer {
+  promise: Promise<unknown>;
+  resolve: (value: unknown) => void;
+  reject: (reason: unknown) => void;
+}
+
+// Writes are answered in the order they are sent, also when the answer is given before the write goes out.
+let writeAnswers: Answer[] = [];
+let sentWrites = 0;
+let answeredWrites = 0;
+
+const writeAnswer = (index: number) => {
+  while (writeAnswers.length <= index) {
+    const answer = {} as Answer;
+    answer.promise = new Promise((resolve, reject) => Object.assign(answer, { resolve, reject }));
+    answer.promise.catch(() => {});
+    writeAnswers.push(answer);
+  }
+  return writeAnswers[index];
+};
+
+const answerWrite = (value: unknown) => writeAnswer(answeredWrites++).resolve(value);
+const failWrite = (reason: unknown) => writeAnswer(answeredWrites++).reject(reason);
 let answerRead: (() => Promise<unknown>) | null = null;
 
 const refusal = (statusCode: number, code: string) => ({ response: { data: { statusCode, code, message: code } } });
@@ -160,10 +182,7 @@ const respond = ({ url, method }: { url: string; method: string }) => {
     return Promise.resolve({ data: category(30, 'Bonus', TransactionType.INCOME) });
   }
   if (method === 'POST' || method === 'PATCH' || method === 'DELETE') {
-    return new Promise((resolve, reject) => {
-      answerWrite = resolve;
-      failWrite = reject;
-    });
+    return writeAnswer(sentWrites++).promise;
   }
   if (url.endsWith('/transactions/tx-1')) return answerRead ? answerRead() : Promise.resolve({ data: stored });
   if (url.endsWith('/wallets')) return Promise.resolve({ data: walletsResponse });
@@ -175,6 +194,7 @@ const respond = ({ url, method }: { url: string; method: string }) => {
 
 const renderFlow = () => {
   const store = createAppStore();
+  withProfile(store);
 
   store.dispatch(activateSpace(1));
 
@@ -224,6 +244,9 @@ const pressBackdrop = () =>
 
 beforeEach(() => {
   jest.clearAllMocks();
+  writeAnswers = [];
+  sentWrites = 0;
+  answeredWrites = 0;
   mockSheet.props = undefined;
   stored = transactionDto({ amount: '50.00', version: 2 });
   answerRead = null;
@@ -901,6 +924,7 @@ describe('TransactionFlowSheet', () => {
     fireEvent.press(screen.getByText('Edit'));
     fireEvent.changeText(screen.getByLabelText('Note'), 'Lunch');
     fireEvent.press(screen.getByText('Save changes'));
+    await settle();
 
     const [[patch]] = mockedRequest.mock.calls.filter(([config]) => config.method === 'PATCH');
     expect(patch.data).not.toHaveProperty('wallet_id');

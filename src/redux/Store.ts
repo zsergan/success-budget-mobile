@@ -1,4 +1,4 @@
-import type { Action, ThunkAction } from '@reduxjs/toolkit';
+import type { Action, ListenerMiddlewareInstance, ThunkAction, ThunkDispatch, UnknownAction } from '@reduxjs/toolkit';
 import { combineReducers, configureStore, createListenerMiddleware } from '@reduxjs/toolkit';
 
 import { bindHttpSession } from '@api/session';
@@ -8,12 +8,14 @@ import authReducer from './state/auth/slice';
 import { logoutMe } from './state/auth/thunks';
 import { startSpaceSelectionListener } from './state/space/listeners';
 import memberReducer from './state/member/slice';
+import pendingWriteReducer from './state/pendingWrite/slice';
 import spaceReducer from './state/space/slice';
 import transactionFlowReducer from './state/transactionFlow/slice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
   member: memberReducer,
+  pendingWrite: pendingWriteReducer,
   space: spaceReducer,
   transactionFlow: transactionFlowReducer,
   [baseApi.reducerPath]: baseApi.reducer,
@@ -21,8 +23,15 @@ const rootReducer = combineReducers({
 
 export type RootState = ReturnType<typeof rootReducer>;
 
+export interface ThunkExtra {
+  // One attempt per write key at a time; whoever asks while it runs gets the same answer.
+  runningWrites: Map<string, Promise<unknown>>;
+}
+
+export type AppListener = ListenerMiddlewareInstance<RootState, ThunkDispatch<RootState, ThunkExtra, UnknownAction>>;
+
 export const createAppStore = (preloadedState?: Partial<RootState>) => {
-  const sessionListener = createListenerMiddleware<RootState>();
+  const sessionListener: AppListener = createListenerMiddleware();
 
   // Runs right after the slices reset, before React unmounts the signed-in
   // screens; resetApiState also aborts every running query and mutation.
@@ -39,7 +48,9 @@ export const createAppStore = (preloadedState?: Partial<RootState>) => {
     reducer: rootReducer,
     preloadedState,
     middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware().prepend(sessionListener.middleware).concat(baseApi.middleware),
+      getDefaultMiddleware({ thunk: { extraArgument: { runningWrites: new Map() } satisfies ThunkExtra } })
+        .prepend(sessionListener.middleware)
+        .concat(baseApi.middleware),
   });
 };
 
@@ -53,4 +64,4 @@ bindHttpSession({
 export default store;
 export type AppStore = typeof store;
 export type AppDispatch = typeof store.dispatch;
-export type AppThunk<ReturnType = void> = ThunkAction<ReturnType, RootState, unknown, Action>;
+export type AppThunk<ReturnType = void> = ThunkAction<ReturnType, RootState, ThunkExtra, Action>;

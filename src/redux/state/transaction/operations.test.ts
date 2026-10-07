@@ -1,5 +1,6 @@
 import type { CreateTransactionRequest } from '@api/dto';
 import { createAppStore } from '@redux/Store';
+import { withProfile } from '@redux/state/profile/fixtures';
 import { logoutMe } from '@redux/state/auth/thunks';
 import { spaceApi } from '@redux/state/space/api';
 import { activateSpace } from '@redux/state/space/thunks';
@@ -35,6 +36,11 @@ const fails = (statusCode: number, code: string) => () =>
   Promise.reject({ response: { data: { statusCode, code, message: code } } });
 const answers = (data: unknown) => () => Promise.resolve({ data });
 
+// A write goes out once it is stored, a few promise turns after it is submitted.
+const untilSent = async (count: number) => {
+  while (mockedRequest.mock.calls.length < count) await Promise.resolve();
+};
+
 const sent = () =>
   mockedRequest.mock.calls.map(([{ method, url, data, headers }]: [SentRequest]) => ({ method, url, data, headers }));
 
@@ -51,6 +57,7 @@ const create = (data = lunch): TransactionRequest & { type: 'create' } => ({ typ
 
 const setUp = () => {
   const store = createAppStore();
+  withProfile(store);
 
   store.dispatch(activateSpace(1));
 
@@ -107,6 +114,7 @@ describe('submitTransactionRequest', () => {
   it('settles an unanswered create before saving a changed draft as an edit of what it made', async () => {
     const { submit } = setUp();
     const dinner = { ...lunch, amount: '25', description: undefined };
+    const sentLunch = { ...lunch, client_operation_id: 'key-1' };
 
     mockedRequest
       .mockImplementationOnce(noAnswer)
@@ -122,8 +130,8 @@ describe('submitTransactionRequest', () => {
     const outcome = await submit(create(dinner));
 
     expect(sent()).toEqual([
-      { method: 'POST', url: '/spaces/1/transactions', data: lunch, headers: { 'Idempotency-Key': 'key-1' } },
-      { method: 'POST', url: '/spaces/1/transactions', data: lunch, headers: { 'Idempotency-Key': 'key-1' } },
+      { method: 'POST', url: '/spaces/1/transactions', data: sentLunch, headers: { 'Idempotency-Key': 'key-1' } },
+      { method: 'POST', url: '/spaces/1/transactions', data: sentLunch, headers: { 'Idempotency-Key': 'key-1' } },
       {
         method: 'PATCH',
         url: '/spaces/1/transactions/tx-1',
@@ -235,6 +243,7 @@ describe('submitTransactionRequest', () => {
 
     const inOtherSpace = submit(create());
 
+    await untilSent(1);
     store.dispatch(activateSpace(2));
     finish({ data: createTransactionResponseDto() });
     expect(await inOtherSpace).toEqual({ status: 'stale' });
@@ -242,6 +251,7 @@ describe('submitTransactionRequest', () => {
     store.dispatch(activateSpace(1));
     const afterLogout = submit(create());
 
+    await untilSent(2);
     await store.dispatch(logoutMe());
     finish({ data: createTransactionResponseDto() });
     expect(await afterLogout).toEqual({ status: 'stale' });

@@ -3,6 +3,7 @@ import { Provider } from 'react-redux';
 import { act, renderHook } from '@testing-library/react-native';
 
 import { createAppStore } from '@redux/Store';
+import { withProfile } from '@redux/state/profile/fixtures';
 import { activateSpace } from '@redux/state/space/thunks';
 import { createTransactionResponseDto } from '@redux/state/transaction/fixtures';
 import type { TransactionRequest } from '@redux/state/transaction/operations';
@@ -38,6 +39,7 @@ const keysSent = () =>
 
 const renderOperation = () => {
   const store = createAppStore();
+  withProfile(store);
 
   store.dispatch(activateSpace(1));
 

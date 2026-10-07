@@ -1,5 +1,6 @@
 import { mapTransaction } from '@api/models';
 import { createAppStore } from '@redux/Store';
+import { withProfile } from '@redux/state/profile/fixtures';
 import { activateSpace } from '@redux/state/space/thunks';
 import { periodArg, transactionApi } from '@redux/state/transaction/api';
 import { transactionDto } from '@redux/state/transaction/fixtures';
@@ -23,6 +24,7 @@ const taxi = mapTransaction(transactionDto({ id: 'tx-2' }));
 
 const setUp = () => {
   const store = createAppStore();
+  withProfile(store);
 
   store.dispatch(activateSpace(1));
   store.dispatch(
@@ -55,6 +57,7 @@ describe('deleteTransaction', () => {
     expect(rows()).toEqual([lunch, taxi]);
     expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }))).toBe('stale');
 
+    while (!mockedRequest.mock.calls.some(([{ method }]) => method === 'DELETE')) await Promise.resolve();
     finish({ data: true });
 
     expect(await pending).toBe('deleted');

@@ -6,6 +6,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { createAppStore } from '@redux/Store';
+import { withProfile } from '@redux/state/profile/fixtures';
 import { activateSpace } from '@redux/state/space/thunks';
 import { transactionDto } from '@redux/state/transaction/fixtures';
 import { deleteTransaction } from '@redux/state/transactionFlow/thunks';
@@ -67,6 +68,7 @@ const taxi = transactionDto({
 
 const renderTransactions = (params: MainTabParamList[ScreenNames.TRANSACTIONS_TAB]) => {
   const store = createAppStore();
+  withProfile(store);
   store.dispatch(activateSpace(1));
 
   render(
