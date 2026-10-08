@@ -1,21 +1,21 @@
-import { Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { Controller } from 'react-hook-form';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetScrollView, BottomSheetTextInput, useBottomSheet } from '@gorhom/bottom-sheet';
 
 import Icon from '@components/Icon/Icon';
 import type { CategoryModel } from '@api/models';
 import { toBackendIcon } from '@api/models';
 import { TransactionType } from '@shared/enums';
 import { CATEGORY_COLOR_NAMES } from '@shared/categoryColors';
-import { colors } from '@shared/theme';
+import theme, { colors } from '@shared/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import useBoundedHeight from '@components/Modals/BottomSheetModal/useBoundedHeight';
 import CategoryIconBox from '../CategoryIconBox/CategoryIconBox';
 import ColorPicker from './ColorPicker/ColorPicker';
 import IconPicker from './IconPicker/IconPicker';
 import useCategoryEditorForm, { NAME_MAX_LENGTH } from './useCategoryEditorForm';
 
 import styles from './style';
-
-export const CATEGORY_EDITOR_SNAP_POINT = '94%';
 
 const TYPE_LABEL: Record<TransactionType, string> = {
   [TransactionType.EXPENSE]: 'Expense',
@@ -30,7 +30,9 @@ interface Props {
 }
 
 const CategoryEditorSheet = ({ category, defaultTransactionType, onRequestDelete, onSaved }: Props) => {
-  const { height: windowHeight } = useWindowDimensions();
+  const { height, keyboardHeight } = useBoundedHeight(0.94);
+  const insets = useSafeAreaInsets();
+  const { close } = useBottomSheet();
   const { isNewCategory, control, watch, onSubmit, isSubmitDisabled } = useCategoryEditorForm({
     category,
     defaultTransactionType,
@@ -53,12 +55,18 @@ const CategoryEditorSheet = ({ category, defaultTransactionType, onRequestDelete
     : `${TYPE_LABEL[transactionType]} · ${countText}${category?.limit ? ` · in «${category.limit.name ?? 'group'}» limit` : ''}`;
 
   return (
-    <View style={[styles.root, { height: windowHeight * parseFloat(CATEGORY_EDITOR_SNAP_POINT) * 0.01 }]}>
+    <View style={[styles.root, { height }]}>
       <View style={styles.topBlock}>
-        <View style={styles.handle} />
-
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{isNewCategory ? 'New category' : 'Edit category'}</Text>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => close()}
+            disabled={isSubmitDisabled}
+            accessibilityLabel="Close category"
+          >
+            <Icon name="close" size={14} color={colors.text} />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.preview}>
@@ -90,7 +98,7 @@ const CategoryEditorSheet = ({ category, defaultTransactionType, onRequestDelete
             control={control}
             render={({ field: { onChange, value, onBlur }, fieldState: { isTouched } }) => (
               <View style={[styles.nameField, isTouched && styles.nameFieldFocused]}>
-                <TextInput
+                <BottomSheetTextInput
                   style={styles.nameInput}
                   value={value}
                   onChangeText={(text) => onChange(text.slice(0, NAME_MAX_LENGTH))}
@@ -213,7 +221,7 @@ const CategoryEditorSheet = ({ category, defaultTransactionType, onRequestDelete
         )}
       </BottomSheetScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { marginBottom: theme.spacing.md + (keyboardHeight > 0 ? 0 : insets.bottom) }]}>
         <TouchableOpacity
           style={[styles.saveButton, isSubmitDisabled && styles.saveButtonDisabled]}
           onPress={onSubmit}

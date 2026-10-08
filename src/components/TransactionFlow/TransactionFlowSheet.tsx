@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { CategoryModel } from '@api/models';
-import CategoryEditorSheet, { CATEGORY_EDITOR_SNAP_POINT } from '@components/CategoryEditor/CategoryEditorSheet';
+import CategoryEditorSheet from '@components/CategoryEditor/CategoryEditorSheet';
 import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
 import { useAlert } from '@hooks';
 import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
@@ -225,7 +225,7 @@ const TransactionFlowSheet = () => {
         {renderView()}
       </BottomModal>
 
-      <BottomModal ref={categorySheetRef} snapPoint={CATEGORY_EDITOR_SNAP_POINT} onDismiss={handleCategoryDismiss}>
+      <BottomModal ref={categorySheetRef} fitContent onDismiss={handleCategoryDismiss}>
         {shown?.draft && (
           <CategoryEditorSheet defaultTransactionType={shown.draft.transactionType} onSaved={handleCategorySaved} />
         )}

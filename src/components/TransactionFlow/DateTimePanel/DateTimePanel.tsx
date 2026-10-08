@@ -12,7 +12,7 @@ import { compareDays } from '@shared/utils/compare';
 import { MIN_TIMESTAMP } from '@redux/state/transactionFlow/draft';
 import { formatDateTime } from '../format';
 import PanelHeader from '../PanelHeader/PanelHeader';
-import useBoundedHeight from '../hooks/useBoundedHeight';
+import useBoundedHeight from '@components/Modals/BottomSheetModal/useBoundedHeight';
 import type { PickBounds } from './pickDateTime';
 import { pickDay, pickTime } from './pickDateTime';
 import TimeField from './TimeField';

@@ -12,7 +12,7 @@ import { colors } from '@shared/theme';
 import { hexToRgba } from '@shared/utils';
 import PanelHeader from '../PanelHeader/PanelHeader';
 import SectionLoad, { listLoad } from '../SectionLoad/SectionLoad';
-import useBoundedHeight from '../hooks/useBoundedHeight';
+import useBoundedHeight from '@components/Modals/BottomSheetModal/useBoundedHeight';
 
 import styles from './style';
 

@@ -7,15 +7,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   topBlock: {
-    paddingTop: theme.spacing.lg,
+    paddingTop: theme.spacing.sm,
     rowGap: theme.spacing.md + 2,
-  },
-  handle: {
-    width: 44,
-    height: 5,
-    borderRadius: 3,
-    alignSelf: 'center',
-    backgroundColor: colors.track,
   },
   header: {
     paddingHorizontal: theme.spacing.xl,
@@ -24,6 +17,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerTitle: {
+    flex: 1,
     fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.titleSm,
     lineHeight: theme.lineHeights.titleSm,

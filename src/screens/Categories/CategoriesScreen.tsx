@@ -2,13 +2,7 @@ import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DraggableFlatList from 'react-native-draggable-flatlist';
 
-import {
-  BottomSheetModal as BottomModal,
-  CATEGORY_EDITOR_SNAP_POINT,
-  CategoryEditorSheet,
-  EmptyState,
-  Icon,
-} from '@components';
+import { BottomSheetModal as BottomModal, CategoryEditorSheet, EmptyState, Icon } from '@components';
 import { useConfirmAction, useSpaceRefresh } from '@hooks';
 import type { CategoryModel } from '@api/models';
 import type { RootStackScreenProps } from '@shared/types';
@@ -71,7 +65,7 @@ const CategoriesScreen = ({ navigation }: Props) => {
 
   return (
     <>
-      <BottomModal ref={editorRef} snapPoint={CATEGORY_EDITOR_SNAP_POINT}>
+      <BottomModal ref={editorRef} fitContent>
         <CategoryEditorSheet
           key={editingCategory?.id ?? 'new'}
           category={editingCategory}

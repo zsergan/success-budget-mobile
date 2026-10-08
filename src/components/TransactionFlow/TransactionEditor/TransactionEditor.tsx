@@ -39,7 +39,7 @@ import { forecastLimit } from './LimitHint/limitForecast';
 import LimitHint from './LimitHint/LimitHint';
 import TypeToggle from './TypeToggle/TypeToggle';
 import useDefaultWallet from './useDefaultWallet';
-import useBoundedHeight from '../hooks/useBoundedHeight';
+import useBoundedHeight from '@components/Modals/BottomSheetModal/useBoundedHeight';
 import WalletPicker from './WalletPicker/WalletPicker';
 
 import styles from './style';

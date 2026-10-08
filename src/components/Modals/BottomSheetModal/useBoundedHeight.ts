@@ -5,11 +5,9 @@ import theme from '@shared/theme';
 import { FITTED_SHEET_HANDLE_HEIGHT } from '@components/Modals/BottomSheetModal/BottomSheetModal';
 import useKeyboardHeight from './useKeyboardHeight';
 
-const HEIGHT_FRACTION = 0.86;
-
 // The form and its panels take most of the screen, and above the keyboard only what is left, so Save stays in view.
 // Android already resizes the window for the keyboard (adjustResize), so only iOS takes its height off again.
-const useBoundedHeight = () => {
+const useBoundedHeight = (heightFraction = 0.86) => {
   const { height: windowHeight } = useWindowDimensions();
   const { top } = useSafeAreaInsets();
   const keyboardHeight = useKeyboardHeight();
@@ -17,10 +15,8 @@ const useBoundedHeight = () => {
 
   const height = Math.max(
     0,
-    Math.min(
-      windowHeight * HEIGHT_FRACTION,
-      keyboardHeight > 0 ? windowHeight - keyboardInset - top - theme.spacing.sm : Infinity,
-    ) - FITTED_SHEET_HANDLE_HEIGHT,
+    Math.min(windowHeight * heightFraction, windowHeight - keyboardInset - top - theme.spacing.sm) -
+      FITTED_SHEET_HANDLE_HEIGHT,
   );
 
   return { height, keyboardHeight };
