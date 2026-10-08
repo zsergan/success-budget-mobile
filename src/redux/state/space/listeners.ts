@@ -1,12 +1,13 @@
 import { isRejectedWithValue } from '@reduxjs/toolkit';
 
 import type { ErrorResponse } from '@api/dto';
+import { ApiErrorCode } from '@api/dto';
 import type { SpaceArg } from '@redux/api/baseApi';
 import { baseApi } from '@redux/api/baseApi';
 import type { AppListener } from '@redux/Store';
 import { spaceApi } from './api';
 import { pickFallbackSpaceId, selectSpacesResult } from './selectors';
-import { activateSpace, dropSpaceData } from './thunks';
+import { activateSpace, dropSpaceData, loseSpaceAccess } from './thunks';
 
 // Keeps a valid space selected as the spaces list arrives: picks one when
 // none is selected, and moves off a space the user no longer belongs to.
@@ -32,18 +33,24 @@ export const startSpaceSelectionListener = (listener: AppListener) => {
     },
   });
 
-  // A read refused for the current space is checked against a fresh spaces list instead of being retried.
+  // A read refused with FORBIDDEN_SPACE ends that space at once; any other 403 for the current space is checked
+  // against a fresh spaces list instead of being retried.
   listener.startListening({
-    predicate: (action, state) => {
+    predicate: (action) => {
       if (!isRejectedWithValue(action) || !action.type.startsWith(`${baseApi.reducerPath}/executeQuery/`)) return false;
 
       const error = action.payload as Partial<ErrorResponse> | undefined;
-      const arg = (action.meta.arg as { originalArgs?: Partial<SpaceArg> }).originalArgs;
 
-      return error?.statusCode === 403 && !error.isStale && arg?.spaceId === state.space.currentSpaceId;
+      return error?.statusCode === 403 && !error.isStale;
     },
-    effect: (_action, { dispatch }) => {
-      dispatch(spaceApi.util.invalidateTags(['Spaces']));
+    effect: (action, { dispatch, getState }) => {
+      const { code } = action.payload as Partial<ErrorResponse>;
+      const spaceId = (action as unknown as { meta: { arg: { originalArgs?: Partial<SpaceArg> } } }).meta.arg
+        .originalArgs?.spaceId;
+
+      if (spaceId === undefined) return;
+      if (code === ApiErrorCode.FORBIDDEN_SPACE) dispatch(loseSpaceAccess(spaceId));
+      else if (spaceId === getState().space.currentSpaceId) dispatch(spaceApi.util.invalidateTags(['Spaces']));
     },
   });
 };

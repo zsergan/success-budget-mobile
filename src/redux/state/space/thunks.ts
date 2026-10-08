@@ -57,12 +57,18 @@ export const dropSpaceData =
     });
   };
 
-// The server refused the space itself (the user was removed, or it was deleted): its data goes at once, and the
-// refreshed spaces list moves the selection to one the user still has.
+// The server refused the space itself (the user was removed, or it was deleted): its open flow and data go at once,
+// and the selection moves to another space the user has, without waiting for the spaces list to load again.
 export const loseSpaceAccess =
   (spaceId: number): AppThunk =>
-  (dispatch) => {
+  (dispatch, getState) => {
+    const remaining = selectSpaces(getState()).filter(({ id }) => id !== spaceId);
+
     dispatch(dropSpaceData(spaceId));
+    dispatch(
+      spaceApi.util.updateQueryData('getSpaces', undefined, (spaces) => spaces.filter(({ id }) => id !== spaceId)),
+    );
+    if (getState().space.currentSpaceId === spaceId) dispatch(activateSpace(pickFallbackSpaceId(remaining)));
     dispatch(spaceApi.util.invalidateTags(['Spaces']));
   };
 

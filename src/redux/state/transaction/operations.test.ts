@@ -211,10 +211,11 @@ describe('submitTransactionRequest', () => {
     );
     mockedRequest.mockImplementation(fails(403, 'FORBIDDEN_SPACE'));
 
-    expect(await submit(create())).toMatchObject({ status: 'failed', failure: { kind: 'accessLost' } });
-    await jest.runOnlyPendingTimersAsync();
-
+    expect(await submit(create())).toEqual({ status: 'stale' });
     expect(selectTransactionFlow(store.getState())).toBeNull();
+    expect(store.getState().space.currentSpaceId).toBeNull();
+
+    await jest.runOnlyPendingTimersAsync();
     expect(sent().filter(({ url }) => url === '/spaces')).toHaveLength(2);
   });
 

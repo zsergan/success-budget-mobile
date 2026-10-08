@@ -2,6 +2,7 @@ import type { Space } from '@api/dto';
 import { createAppStore } from '@redux/Store';
 import { SpaceType } from '@shared/enums';
 import { spaceApi } from './api';
+import { walletApi } from '@redux/state/wallet/api';
 import { activateSpace } from './thunks';
 
 const mockedRequest = jest.fn();
@@ -95,5 +96,50 @@ describe('space selection from the spaces list', () => {
     await oldList;
 
     expect(store.getState().space.currentSpaceId).toBe(7);
+  });
+});
+
+describe('a read refused for a space', () => {
+  const setUp = async () => {
+    const store = createAppStore();
+
+    respondWith([space(1), space(2, SpaceType.PERSONAL)]);
+    await loadSpaces(store);
+    store.dispatch(activateSpace(1));
+    jest.advanceTimersByTime(1);
+    // The spaces list asked for again never answers here: nothing may wait for it.
+    mockedRequest.mockImplementation(({ url }: { url: string }) => (url === '/spaces' ? new Promise(() => {}) : null));
+
+    return store;
+  };
+
+  const refuseRead = (store: ReturnType<typeof createAppStore>, code: string) => {
+    mockedRequest.mockImplementationOnce(() =>
+      Promise.reject({ response: { data: { statusCode: 403, code, message: code } } }),
+    );
+    return store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId: 1 }, { forceRefetch: true }));
+  };
+
+  it('ends the space at once on FORBIDDEN_SPACE: its data, its place in the list and the selection', async () => {
+    const store = await setUp();
+
+    await refuseRead(store, 'FORBIDDEN_SPACE');
+
+    expect(store.getState().space.currentSpaceId).toBe(2);
+    expect(
+      spaceApi.endpoints.getSpaces
+        .select()(store.getState())
+        .data?.map(({ id }) => id),
+    ).toEqual([2]);
+    expect(walletApi.endpoints.getWallets.select({ spaceId: 1 })(store.getState()).data).toBeUndefined();
+  });
+
+  it('only asks for the spaces list again on any other 403', async () => {
+    const store = await setUp();
+
+    await refuseRead(store, 'FORBIDDEN_WALLET');
+
+    expect(store.getState().space.currentSpaceId).toBe(1);
+    expect(mockedRequest).toHaveBeenLastCalledWith(expect.objectContaining({ url: '/spaces' }));
   });
 });
