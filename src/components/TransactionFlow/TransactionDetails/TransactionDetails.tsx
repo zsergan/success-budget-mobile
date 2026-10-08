@@ -54,8 +54,6 @@ const TransactionDetails = ({
 
   return (
     <View style={[styles.root, { paddingBottom: theme.spacing.xl + insets.bottom }]}>
-      <View style={styles.handle} />
-
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.closeButton}
@@ -79,7 +77,12 @@ const TransactionDetails = ({
             {transaction.category.name}
           </Text>
 
-          <Text style={[styles.amount, { color: typeColor }]}>
+          <Text
+            style={[styles.amount, { color: typeColor }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.5}
+          >
             {isSystem
               ? formatMoneyAmount(transaction.amount, currencyCode)
               : formatAmount(transaction.amount, transaction.transactionType, currencyCode)}

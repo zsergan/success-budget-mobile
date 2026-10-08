@@ -4,16 +4,9 @@ import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
-    paddingTop: theme.spacing.lg,
+    paddingTop: theme.spacing.sm,
     paddingHorizontal: theme.spacing.xl,
     rowGap: theme.spacing.md,
-  },
-  handle: {
-    width: 44,
-    height: 5,
-    borderRadius: 3,
-    alignSelf: 'center',
-    backgroundColor: colors.track,
   },
   header: {
     flexDirection: 'row',

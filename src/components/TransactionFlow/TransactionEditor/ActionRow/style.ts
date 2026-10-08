@@ -16,13 +16,16 @@ const styles = StyleSheet.create({
     columnGap: 6,
   },
   helperText: {
+    flexShrink: 1,
+    textAlign: 'center',
     fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.caption,
     lineHeight: theme.lineHeights.caption,
     color: colors.muted,
   },
   saveButton: {
-    height: 54,
+    minHeight: 54,
+    paddingVertical: theme.spacing.md,
     borderRadius: 15,
     flexDirection: 'row',
     alignItems: 'center',
@@ -36,6 +39,8 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
   },
   saveButtonText: {
+    flexShrink: 1,
+    textAlign: 'center',
     fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.bodyLg,
     letterSpacing: -0.1,

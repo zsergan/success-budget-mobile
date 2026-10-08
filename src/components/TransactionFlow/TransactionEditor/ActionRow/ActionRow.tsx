@@ -40,7 +40,7 @@ const ActionRow = ({
 
   return (
     <View
-      style={[styles.footer, { marginBottom: isAboveKeyboard ? theme.spacing.md : theme.spacing.xl + insets.bottom }]}
+      style={[styles.footer, { marginBottom: isAboveKeyboard ? theme.spacing.md : theme.spacing.md + insets.bottom }]}
     >
       {banner}
 

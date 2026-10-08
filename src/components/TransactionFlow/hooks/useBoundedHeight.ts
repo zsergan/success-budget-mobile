@@ -2,6 +2,7 @@ import { Platform, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import theme from '@shared/theme';
+import { FITTED_SHEET_HANDLE_HEIGHT } from '@components/Modals/BottomSheetModal/BottomSheetModal';
 import useKeyboardHeight from './useKeyboardHeight';
 
 const HEIGHT_FRACTION = 0.86;
@@ -14,9 +15,12 @@ const useBoundedHeight = () => {
   const keyboardHeight = useKeyboardHeight();
   const keyboardInset = Platform.OS === 'ios' ? keyboardHeight : 0;
 
-  const height = Math.min(
-    windowHeight * HEIGHT_FRACTION,
-    keyboardHeight > 0 ? windowHeight - keyboardInset - top - theme.spacing.sm : Infinity,
+  const height = Math.max(
+    0,
+    Math.min(
+      windowHeight * HEIGHT_FRACTION,
+      keyboardHeight > 0 ? windowHeight - keyboardInset - top - theme.spacing.sm : Infinity,
+    ) - FITTED_SHEET_HANDLE_HEIGHT,
   );
 
   return { height, keyboardHeight };

@@ -4,17 +4,18 @@ import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   root: {
-    paddingTop: theme.spacing.lg,
+    flexShrink: 1,
+    paddingTop: theme.spacing.sm,
     paddingHorizontal: theme.spacing.xl,
-    alignItems: 'center',
     rowGap: theme.spacing.sm,
   },
-  handle: {
-    width: 44,
-    height: 5,
-    borderRadius: 3,
-    marginBottom: theme.spacing.md,
-    backgroundColor: colors.track,
+  scroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  body: {
+    alignItems: 'center',
+    rowGap: theme.spacing.sm,
   },
   timerTrack: {
     alignSelf: 'stretch',
@@ -92,6 +93,7 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
   },
   undoButton: {
+    alignSelf: 'center',
     height: 40,
     marginTop: theme.spacing.sm,
     flexDirection: 'row',

@@ -6,16 +6,9 @@ const styles = StyleSheet.create({
   // Shrinks under the sheet's maximum height; only the body scrolls, the header and actions stay.
   root: {
     flexShrink: 1,
-    paddingTop: theme.spacing.lg,
+    paddingTop: theme.spacing.sm,
     paddingHorizontal: theme.spacing.xl,
     rowGap: theme.spacing.md,
-  },
-  handle: {
-    width: 44,
-    height: 5,
-    borderRadius: 3,
-    alignSelf: 'center',
-    backgroundColor: colors.track,
   },
   header: {
     flexDirection: 'row',

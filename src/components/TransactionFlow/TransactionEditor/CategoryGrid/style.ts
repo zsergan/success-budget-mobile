@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     rowGap: 6,
   },
   categoryIconBox: {
-    width: '100%',
+    width: 52,
     height: 52,
     borderRadius: 16,
     alignItems: 'center',

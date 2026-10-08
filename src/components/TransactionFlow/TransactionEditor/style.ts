@@ -7,9 +7,8 @@ const styles = StyleSheet.create({
   root: {
     width: '100%',
   },
-  // Shared top inset + gap for the handle, header, type switch and hero, instead of each carrying its own margin.
   topBlock: {
-    paddingTop: theme.spacing.lg,
+    paddingTop: theme.spacing.sm,
     rowGap: theme.spacing.md + 2,
   },
   topFields: {
@@ -24,13 +23,6 @@ const styles = StyleSheet.create({
   },
   limitHint: {
     marginHorizontal: theme.spacing.xl,
-  },
-  handle: {
-    width: 44,
-    height: 5,
-    borderRadius: 3,
-    alignSelf: 'center',
-    backgroundColor: colors.track,
   },
   header: {
     paddingHorizontal: theme.spacing.xl,
@@ -57,10 +49,11 @@ const styles = StyleSheet.create({
   // Without an explicit flex the ScrollView sizes to content instead of the sheet's remaining height, breaking the keyboard inset.
   body: {
     flex: 1,
-    marginTop: theme.spacing.lg,
   },
   container: {
     marginHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
     rowGap: theme.spacing.xl,
   },
   section: {

@@ -188,8 +188,6 @@ const TransactionEditor = ({
   return (
     <View style={[styles.root, { height }]}>
       <View style={styles.topBlock}>
-        <View style={styles.handle} />
-
         <View style={styles.header}>
           {isEdit && (
             <TouchableOpacity
@@ -220,32 +218,38 @@ const TransactionEditor = ({
       </View>
 
       <View style={[styles.fields, isSaving && styles.fieldsLocked]} pointerEvents={isSaving ? 'none' : 'auto'}>
-        <View style={styles.topFields}>
-          <TypeToggle value={draft.transactionType} onChange={changeType} />
-
-          <AmountField
-            value={draft.amount}
-            onChange={(amount) => change({ amount })}
-            autoFocus={flow.view.name === 'create' && flow.view.focusAmount}
-            typeColor={typeColor}
-            isIncome={isIncome}
-            currencyCode={currencyCode}
-            error={amountError}
-          />
-
-          {limitForecast && (
-            <View style={styles.limitHint}>
-              <LimitHint forecast={limitForecast} currencyCode={currencyCode} />
-            </View>
-          )}
-        </View>
-
         <BottomSheetScrollView
           ref={scrollRef}
           style={styles.body}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
+          onLayout={() => {
+            if (isNoteFocused) scrollRef.current?.scrollToEnd({ animated: true });
+          }}
+          onContentSizeChange={() => {
+            if (isNoteFocused) scrollRef.current?.scrollToEnd({ animated: true });
+          }}
         >
+          <View style={styles.topFields}>
+            <TypeToggle value={draft.transactionType} onChange={changeType} />
+
+            <AmountField
+              value={draft.amount}
+              onChange={(amount) => change({ amount })}
+              autoFocus={flow.view.name === 'create' && flow.view.focusAmount}
+              typeColor={typeColor}
+              isIncome={isIncome}
+              currencyCode={currencyCode}
+              error={amountError}
+            />
+
+            {limitForecast && (
+              <View style={styles.limitHint}>
+                <LimitHint forecast={limitForecast} currencyCode={currencyCode} />
+              </View>
+            )}
+          </View>
+
           <View style={styles.container}>
             <CategoryGrid
               load={categoriesLoad}

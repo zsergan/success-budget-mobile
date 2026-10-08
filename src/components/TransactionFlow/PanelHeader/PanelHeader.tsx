@@ -14,8 +14,6 @@ interface Props {
 
 const PanelHeader = ({ title, subtitle, onBack, onClose }: Props) => (
   <View style={styles.root}>
-    <View style={styles.handle} />
-
     <View style={styles.header}>
       <TouchableOpacity
         style={styles.button}

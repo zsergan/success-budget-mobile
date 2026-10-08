@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Keyboard, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
@@ -33,6 +33,7 @@ interface Props {
 // Picks into the flow's pending value; only Apply moves it into the draft, Back and Cancel drop it.
 const DateTimePanel = ({ pending, original, onBack, onClose }: Props) => {
   const dispatch = useAppDispatch();
+  useEffect(() => Keyboard.dismiss(), []);
   const insets = useSafeAreaInsets();
   const { height } = useBoundedHeight();
   const now = useNow();

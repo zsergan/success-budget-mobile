@@ -11,6 +11,7 @@ import theme from '@shared/theme';
 import styles from './style';
 
 export type Ref = BottomSheetModal;
+export const FITTED_SHEET_HANDLE_HEIGHT = 24;
 
 interface Props {
   children: ReactNode;
@@ -80,21 +81,29 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
     <BottomSheetModal
       ref={sheetRef}
       index={0}
-      snapPoints={dynamicSizing ? undefined : [fitContent ? Math.min(contentHeight, maxHeight) : snapPoint]}
+      snapPoints={
+        dynamicSizing
+          ? undefined
+          : [fitContent ? Math.min(contentHeight + FITTED_SHEET_HANDLE_HEIGHT, maxHeight) : snapPoint]
+      }
       enableDynamicSizing={dynamicSizing}
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.background}
-      handleComponent={null}
+      handleComponent={fitContent ? undefined : null}
+      handleStyle={fitContent ? styles.handle : undefined}
+      handleIndicatorStyle={styles.handleIndicator}
+      enableContentPanningGesture={!fitContent}
       onDismiss={onDismiss}
       onAnimate={shouldKeepOpen ? handleAnimate : undefined}
       keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
     >
       {dynamicSizing ? (
         // Dynamic sizing needs the content itself as the measured root; an extra BottomSheetView here would compete with it.
         children
       ) : fitContent ? (
-        <View style={{ maxHeight }} onLayout={handleContentLayout}>
+        <View style={{ maxHeight: maxHeight - FITTED_SHEET_HANDLE_HEIGHT }} onLayout={handleContentLayout}>
           {children}
         </View>
       ) : (
