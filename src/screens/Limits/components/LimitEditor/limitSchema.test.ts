@@ -95,8 +95,8 @@ describe('name', () => {
 });
 
 describe('toLimitRequest', () => {
-  it('sends the name only for a group', () => {
-    expect(toLimitRequest(values({ scope: 'group', categoryIds: [1, 2], name: 'Fun' }))).toEqual({
+  it('sends the name only for a group, and each category once', () => {
+    expect(toLimitRequest(values({ scope: 'group', categoryIds: [1, 2, 1], name: 'Fun' }))).toEqual({
       amount: '100',
       category_ids: [1, 2],
       name: 'Fun',
