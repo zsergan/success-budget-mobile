@@ -289,7 +289,7 @@ describe('transaction flow', () => {
     store.dispatch(walletCreated({ draftId, walletId: 9 }));
     expect(flow()).toMatchObject({ away: 'wallet', draft: { walletId: 9 } });
     store.dispatch(awayEnded({ draftId }));
-    expect(flow()?.away).toBeNull();
+    expect(flow()).toMatchObject({ away: null, view: { name: 'create', focusAmount: false } });
 
     store.dispatch(categoriesOpened());
     store.dispatch(awayStarted({ draftId, target: 'category' }));

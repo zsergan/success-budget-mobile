@@ -435,6 +435,8 @@ const transactionFlowSlice = createSlice({
       if (!flow || flow.isSaving || !activeForm(flow)) return;
 
       flow.away = payload.target;
+      // The form comes back as from a panel, without the keyboard over it.
+      if (flow.view.name === 'create') flow.view.focusAmount = false;
     },
     // The new wallet or category is saved on its own; discarding the draft later does not remove it.
     // The form comes back with awayEnded, once the wallet screen has gone.
