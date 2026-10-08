@@ -41,6 +41,7 @@ const AMOUNT_MESSAGES: Record<AmountProblem, string> = {
 
 // Thousands groups of a pasted amount: "1 234,50", "1,234.50" or "1.234.567".
 const GROUPED = /^\d{1,3}(?:([.,])\d{3})(?:\1\d{3})*$/;
+const DIGITS = /^\d*$/;
 
 const splitAmount = (text: string): { whole: string; fraction: string } | null => {
   const compact = text.replace(/(\d)[\s\u00A0\u202F']+(?=\d)/g, '$1');
@@ -52,10 +53,9 @@ const splitAmount = (text: string): { whole: string; fraction: string } | null =
     const decimalMark = separators[separators.length - 1];
 
     if (decimalMark !== separators[0] && isGroupedWhole && GROUPED.test(compact.slice(0, lastSeparator))) {
-      return {
-        whole: compact.slice(0, lastSeparator).replace(/[.,]/g, ''),
-        fraction: compact.slice(lastSeparator + 1),
-      };
+      const fraction = compact.slice(lastSeparator + 1);
+
+      return DIGITS.test(fraction) ? { whole: compact.slice(0, lastSeparator).replace(/[.,]/g, ''), fraction } : null;
     }
 
     return GROUPED.test(compact) ? { whole: compact.replace(/[.,]/g, ''), fraction: '' } : null;
@@ -63,7 +63,7 @@ const splitAmount = (text: string): { whole: string; fraction: string } | null =
 
   const [whole, fraction = ''] = compact.split(/[.,]/);
 
-  return /^\d*$/.test(whole) && /^\d*$/.test(fraction) && (whole + fraction).length > 0 ? { whole, fraction } : null;
+  return DIGITS.test(whole) && DIGITS.test(fraction) && (whole + fraction).length > 0 ? { whole, fraction } : null;
 };
 
 // Reads an amount as typed or pasted, with either decimal separator; never cuts or rounds it.

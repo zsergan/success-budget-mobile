@@ -46,13 +46,18 @@ describe('normalizeAmount', () => {
     ['1 234,50', '1234.50'],
     ['1,234.50', '1234.50'],
     ['1.234.567', '1234567.00'],
+    ['1.234,5', '1234.50'],
+    ["1'234.05", '1234.05'],
   ])('reads %j as %s', (input, expected) => {
     expect(normalizeAmount(input)).toBe(expected);
   });
 
-  it.each(['', '-1', '1.234', '1,234,5', '1.2.3', '1e3', '12a', '.'])('rejects %j', (input) => {
-    expect(normalizeAmount(input)).toBeNull();
-  });
+  it.each(['', '-1', '1.234', '1,234,5', '1.2.3', '1e3', '12a', '.', '1,234.a', '1,234.5x', '1 234,5a', '1.234,-5'])(
+    'rejects %j',
+    (input) => {
+      expect(normalizeAmount(input)).toBeNull();
+    },
+  );
 });
 
 describe('amount errors', () => {
@@ -67,6 +72,8 @@ describe('amount errors', () => {
     expect(amountError('-12')).toBe('Enter the amount without a sign: the type sets it');
     expect(amountError('12.345')).toBe('Use at most two decimal places');
     expect(amountError('12,5,0')).toBe('Use digits and one decimal separator');
+    expect(amountError('1,234.a')).toBe('Use digits and one decimal separator');
+    expect(amountError('1,234.567')).toBe('Use at most two decimal places');
     expect(amountError('0,00')).toBe('Enter an amount greater than zero');
     expect(amountError('0.01')).toBeUndefined();
     expect(amountError('100000000')).toBe('The maximum amount is 99,999,999.99');
