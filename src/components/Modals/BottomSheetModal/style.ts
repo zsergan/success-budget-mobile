@@ -12,11 +12,13 @@ const styles = StyleSheet.create({
   handle: {
     height: 24,
     paddingVertical: 0,
+    alignItems: 'center',
     justifyContent: 'center',
   },
   handleIndicator: {
     width: 44,
     height: 5,
+    borderRadius: 3,
     backgroundColor: colors.track,
   },
 });

@@ -10,7 +10,14 @@ import { useAlert } from '@hooks';
 import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
 import { hasOpenSave, hasUnsavedChanges, selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import type { FlowAway, TransactionFlow } from '@redux/state/transactionFlow/slice';
-import { anotherStarted, awayEnded, awayStarted, categoryCreated, closed } from '@redux/state/transactionFlow/slice';
+import {
+  anotherStarted,
+  autoCloseStopped,
+  awayEnded,
+  awayStarted,
+  categoryCreated,
+  closed,
+} from '@redux/state/transactionFlow/slice';
 import { checkFlowRecord, deleteTransaction, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackParamList } from '@shared/types';
@@ -218,6 +225,9 @@ const TransactionFlowSheet = () => {
       <BottomModal
         ref={sheetRef}
         fitContent
+        onHandleTouch={() => {
+          if (flow?.view.name === 'created') dispatch(autoCloseStopped({ draftId: flow.draftId }));
+        }}
         shouldKeepOpen={keepOpen}
         onBackdropPress={requestClose}
         onDismiss={handleDismiss}

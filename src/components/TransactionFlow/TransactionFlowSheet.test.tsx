@@ -1,6 +1,6 @@
 import type { ReactNode, Ref } from 'react';
 import type { AppStateStatus } from 'react-native';
-import { Alert, AppState, PixelRatio } from 'react-native';
+import { AccessibilityInfo, Alert, AppState, PixelRatio } from 'react-native';
 import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
@@ -25,6 +25,7 @@ interface SheetProps {
   onAnimate?: (fromIndex: number, toIndex: number) => void;
   onDismiss?: () => void;
   backdropComponent?: (props: object) => ReactNode;
+  handleComponent?: (() => ReactNode) | null;
 }
 
 const mockSheet: { props?: SheetProps; presents: number; keptOpen: number; swipeDown?: () => void } = {
@@ -78,7 +79,12 @@ jest.mock('@gorhom/bottom-sheet', () => {
       },
     }));
 
-    return isOpen ? <SheetContext.Provider value={{ close: dismiss }}>{props.children}</SheetContext.Provider> : null;
+    return isOpen ? (
+      <SheetContext.Provider value={{ close: dismiss }}>
+        {props.handleComponent?.()}
+        {props.children}
+      </SheetContext.Provider>
+    ) : null;
   });
 
   return {
@@ -537,6 +543,34 @@ describe('TransactionFlowSheet', () => {
     await act(async () => answerWrite({ data: createTransactionResponseDto() }));
     await act(async () => jest.advanceTimersByTime(10000));
 
+    expect(flow()?.view.name).toBe('created');
+  });
+
+  it('stops the countdown when the sheet handle is touched', async () => {
+    const { open, flow } = renderFlow();
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('Save expense'));
+    await act(async () => answerWrite({ data: createTransactionResponseDto() }));
+    fireEvent(screen.getByTestId('bottom-sheet-handle'), 'touchStart');
+    await act(async () => jest.advanceTimersByTime(10000));
+    expect(flow()?.view.name).toBe('created');
+  });
+
+  it('stops the countdown if a screen reader is enabled while the confirmation is open', async () => {
+    const subscribe = jest.spyOn(AccessibilityInfo, 'addEventListener');
+    const { open, flow } = renderFlow();
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('Save expense'));
+    await act(async () => answerWrite({ data: createTransactionResponseDto() }));
+    const subscriptions = subscribe.mock.calls as unknown as [string, (enabled: boolean) => void][];
+    const readerChanged = subscriptions.find(([event]) => event === 'screenReaderChanged')?.[1];
+    expect(readerChanged).toBeDefined();
+    act(() => readerChanged?.(true));
+    await act(async () => jest.advanceTimersByTime(10000));
     expect(flow()?.view.name).toBe('created');
   });
 

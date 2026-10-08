@@ -7,6 +7,7 @@ import {
   PixelRatio,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -49,6 +50,7 @@ const savedToLabel = (timestamp: string) =>
 const CreatedConfirmation = ({ flow, onUndo, onShow, onOpenRecord, onAddAnother, onDone }: Props) => {
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
   const {
     draftId,
@@ -68,9 +70,17 @@ const CreatedConfirmation = ({ flow, onUndo, onShow, onOpenRecord, onAddAnother,
 
   useEffect(() => {
     if (PixelRatio.getFontScale() >= LARGE_FONT_SCALE) dispatch(autoCloseStopped({ draftId }));
+  }, [dispatch, draftId, fontScale]);
+
+  useEffect(() => {
+    const stopForReader = (isEnabled: boolean) => {
+      if (isEnabled) dispatch(autoCloseStopped({ draftId }));
+    };
     AccessibilityInfo.isScreenReaderEnabled()
-      .then((isEnabled) => isEnabled && dispatch(autoCloseStopped({ draftId })))
+      .then(stopForReader)
       .catch(() => {});
+    const subscription = AccessibilityInfo.addEventListener('screenReaderChanged', stopForReader);
+    return () => subscription.remove();
   }, [dispatch, draftId]);
 
   useEffect(() => {

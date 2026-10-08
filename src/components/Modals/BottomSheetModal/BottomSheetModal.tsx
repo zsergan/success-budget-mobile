@@ -29,6 +29,7 @@ interface Props {
   onBackdropPress?: () => void;
   /** Asked when a swipe starts to close the sheet; true keeps it open, e.g. to confirm first. */
   shouldKeepOpen?: () => boolean;
+  onHandleTouch?: () => void;
 }
 
 const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheetModal(
@@ -40,6 +41,7 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
     snapPoint = '85%',
     onBackdropPress,
     shouldKeepOpen,
+    onHandleTouch,
   },
   ref,
 ) {
@@ -62,6 +64,15 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
       if (toIndex === -1 && shouldKeepOpen?.()) sheetRef.current?.snapToIndex(0);
     },
     [shouldKeepOpen],
+  );
+
+  const renderHandle = useCallback(
+    () => (
+      <View style={styles.handle} onTouchStart={onHandleTouch} testID="bottom-sheet-handle">
+        <View style={styles.handleIndicator} />
+      </View>
+    ),
+    [onHandleTouch],
   );
 
   const renderBackdrop = useCallback(
@@ -89,9 +100,7 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
       enableDynamicSizing={dynamicSizing}
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.background}
-      handleComponent={fitContent ? undefined : null}
-      handleStyle={fitContent ? styles.handle : undefined}
-      handleIndicatorStyle={styles.handleIndicator}
+      handleComponent={fitContent ? renderHandle : null}
       enableContentPanningGesture={!fitContent}
       onDismiss={onDismiss}
       onAnimate={shouldKeepOpen ? handleAnimate : undefined}
