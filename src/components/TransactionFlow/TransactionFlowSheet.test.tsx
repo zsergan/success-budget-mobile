@@ -708,6 +708,48 @@ describe('TransactionFlowSheet', () => {
     expect(screen.getByText('New transaction')).toBeTruthy();
   });
 
+  it('starts another on a wallet created for the last one and its picked date, after an unanswered Undo', async () => {
+    const { store, open, flow } = renderFlow();
+
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText(/^Today, /));
+    fireEvent.press(screen.getByText('Yesterday'));
+    fireEvent.press(screen.getByText('Apply'));
+    fireEvent.press(screen.getByText('New wallet'));
+    const { draftId } = flow()!;
+    walletsResponse = {
+      ...wallets,
+      wallets: [
+        ...wallets.wallets,
+        { wallet: { id: 8, wallet_name: 'Card', design: AppColor.SLATE, balance: 0 }, total_income: 0, total_spend: 0 },
+      ],
+    };
+    await act(async () => {
+      store.dispatch(walletCreated({ draftId, walletId: 8 }));
+      store.dispatch(baseApi.util.invalidateTags(spaceTags(1, 'Wallets')));
+      store.dispatch(awayEnded({ draftId }));
+    });
+    await settle();
+    const { timestamp } = flow()!.draft!;
+
+    fireEvent.press(screen.getByText('Save expense'));
+    await act(async () => answerWrite({ data: createTransactionResponseDto() }));
+    fireEvent.press(screen.getByText('Undo'));
+    await act(async () => failWrite(new Error('Network Error')));
+    await settle();
+    fireEvent.press(screen.getByText('Add another'));
+
+    expect(flow()).toMatchObject({
+      view: { name: 'create', focusAmount: true },
+      notice: null,
+      draft: { transactionType: TransactionType.EXPENSE, walletId: 8, timestamp, amount: '', categoryId: null },
+    });
+    expect(flow()!.draftId).not.toBe(draftId);
+    expect(screen.getByText('Save expense')).toBeDisabled();
+  });
+
   it('keeps the draft through More and the date panel, and takes a date only on Apply', async () => {
     const { open, flow } = renderFlow();
 
@@ -1319,6 +1361,62 @@ describe('TransactionFlowSheet', () => {
     fireEvent.press(screen.getByText('Expense'));
     expect(flow()?.draft?.categoryId).toBeNull();
     expect(screen.getByText('Old gym')).toBeTruthy();
+  });
+
+  it('keeps an edit of an archived category and a deleted wallet through the panels and a new wallet', async () => {
+    stored = transactionDto({
+      wallet: null,
+      version: 2,
+      category: { ...transactionDto().category, id: 40, name: 'Old gym', is_active: 0, is_archived: true },
+    });
+    const { store, openDetails, flow } = renderFlow();
+
+    openDetails();
+    await settle();
+    fireEvent.press(screen.getByText('Edit'));
+    await settle();
+    fireEvent.changeText(screen.getByLabelText('Amount'), '70');
+    fireEvent.changeText(screen.getByLabelText('Note'), 'Yearly pass');
+
+    fireEvent.press(screen.getByText('More'));
+    fireEvent.press(screen.getByLabelText('Back to the form'));
+    fireEvent.press(screen.getByText(/, \d{2}:\d{2}$/));
+    fireEvent.press(screen.getByText('Yesterday'));
+    fireEvent.press(screen.getByText('Apply'));
+    const { timestamp } = flow()!.draft!;
+
+    fireEvent.press(screen.getByText('New wallet'));
+    const { draftId } = flow()!;
+    walletsResponse = {
+      ...wallets,
+      wallets: [
+        ...wallets.wallets,
+        { wallet: { id: 8, wallet_name: 'Card', design: AppColor.SLATE, balance: 0 }, total_income: 0, total_spend: 0 },
+      ],
+    };
+    await act(async () => {
+      store.dispatch(walletCreated({ draftId, walletId: 8 }));
+      store.dispatch(baseApi.util.invalidateTags(spaceTags(1, 'Wallets')));
+      store.dispatch(awayEnded({ draftId }));
+    });
+    await settle();
+
+    expect(screen.getByText('Edit transaction')).toBeTruthy();
+    expect(flow()).toMatchObject({
+      view: { name: 'edit' },
+      draftId,
+      draft: { amount: '70', description: 'Yearly pass', categoryId: 40, walletId: 8, timestamp },
+    });
+
+    fireEvent.press(screen.getByText('Save changes'));
+    await settle();
+    expect(mockedRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'PATCH',
+        data: expect.objectContaining({ amount: '70.00', category_id: 40, wallet_id: 8, description: 'Yearly pass' }),
+        headers: expect.objectContaining({ 'If-Match': '"2"' }),
+      }),
+    );
   });
 
   it("forecasts an edit of a deleted wallet's expense by replacing its share, without blocking Save", async () => {
