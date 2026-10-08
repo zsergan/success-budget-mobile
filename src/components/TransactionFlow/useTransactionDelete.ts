@@ -16,33 +16,46 @@ const useTransactionDelete = () => {
   const dispatch = useAppDispatch();
   const store = useAppStore();
   const { addAlert } = useAlert();
-  const spaceId = useAppSelector(selectCurrentSpaceId);
+  const currentSpaceId = useAppSelector(selectCurrentSpaceId);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
   // Retry from a toast runs the delete again without asking; the ref lets the delete offer itself.
-  const runRef = useRef<(transaction: TransactionModel) => Promise<void>>(async () => {});
+  const runRef = useRef<(transaction: TransactionModel, spaceId: number) => Promise<void>>(async () => {});
 
+  // A toast's Retry and Open act on the record, space and session the delete ran in, and on nothing once the user
+  // has moved on from them.
   const runDelete = useCallback(
-    async (transaction: TransactionModel) => {
+    async (transaction: TransactionModel, spaceId = currentSpaceId) => {
       if (spaceId === null) return;
 
+      const { sessionKey } = store.getState().auth;
+      const isStillThere = () => {
+        const { auth, space } = store.getState();
+        return auth.sessionKey === sessionKey && space.currentSpaceId === spaceId;
+      };
       const isInSheet = selectTransactionFlow(store.getState())?.saved?.id === transaction.id;
       const result = await dispatch(deleteTransaction({ spaceId, transaction }));
+
+      if (!isStillThere()) return;
 
       if (result === 'deleted') {
         addAlert('Transaction deleted');
       } else if (!isInSheet && result === 'conflict') {
         addAlert('This transaction was changed by someone else', {
           label: 'Open',
-          onPress: () => dispatch(openTransactionDetails({ spaceId, transaction })),
+          onPress: () => {
+            if (isStillThere()) dispatch(openTransactionDetails({ spaceId, transaction }));
+          },
         });
       } else if (!isInSheet && (result === 'failed' || result === 'uncertain')) {
         addAlert(result === 'uncertain' ? 'Couldn’t confirm the delete' : 'Couldn’t delete transaction', {
           label: 'Retry',
-          onPress: () => void runRef.current(transaction),
+          onPress: () => {
+            if (isStillThere()) void runRef.current(transaction, spaceId);
+          },
         });
       }
     },
-    [dispatch, store, addAlert, spaceId],
+    [dispatch, store, addAlert, currentSpaceId],
   );
 
   useEffect(() => {
@@ -74,7 +87,9 @@ const useTransactionDelete = () => {
     [currencyCode, runDelete],
   );
 
-  return { requestDelete, retryDelete: runDelete };
+  const retryDelete = useCallback((transaction: TransactionModel) => runDelete(transaction), [runDelete]);
+
+  return { requestDelete, retryDelete };
 };
 
 export default useTransactionDelete;

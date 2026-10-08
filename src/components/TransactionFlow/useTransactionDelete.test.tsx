@@ -7,6 +7,7 @@ import { mapTransaction } from '@api/models';
 import { createAppStore } from '@redux/Store';
 import { withProfile } from '@redux/state/profile/fixtures';
 import { activateSpace } from '@redux/state/space/thunks';
+import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import { transactionDto } from '@redux/state/transaction/fixtures';
 import useTransactionDelete from './useTransactionDelete';
 
@@ -31,7 +32,7 @@ const setUp = () => {
   store.dispatch(activateSpace(1));
   const wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
 
-  return renderHook(() => useTransactionDelete(), { wrapper }).result;
+  return { result: renderHook(() => useTransactionDelete(), { wrapper }).result, store };
 };
 
 const confirm = async (index = 0) => {
@@ -47,7 +48,7 @@ beforeEach(() => {
 
 describe('useTransactionDelete from a list row', () => {
   it('slides the row back on Cancel and sends nothing', () => {
-    const result = setUp();
+    const { result } = setUp();
     const onSettled = jest.fn();
 
     result.current.requestDelete(lunch, onSettled);
@@ -58,7 +59,7 @@ describe('useTransactionDelete from a list row', () => {
   });
 
   it('offers Retry after a failure, which deletes again without asking', async () => {
-    const result = setUp();
+    const { result } = setUp();
 
     mockedRequest.mockRejectedValueOnce(new Error('Network Error'));
     result.current.requestDelete(lunch);
@@ -77,7 +78,7 @@ describe('useTransactionDelete from a list row', () => {
   });
 
   it('offers to open the details when someone changed the record meanwhile', async () => {
-    const result = setUp();
+    const { result } = setUp();
 
     mockedRequest.mockRejectedValueOnce({
       response: { data: { statusCode: 409, code: 'TRANSACTION_VERSION_CONFLICT', message: 'Conflict' } },
@@ -89,5 +90,27 @@ describe('useTransactionDelete from a list row', () => {
       label: 'Open',
       onPress: expect.any(Function),
     });
+  });
+
+  it('lets Retry and Open act only in the space and session the delete ran in', async () => {
+    const { result, store } = setUp();
+
+    mockedRequest.mockRejectedValueOnce(new Error('Network Error')).mockRejectedValueOnce({
+      response: { data: { statusCode: 409, code: 'TRANSACTION_VERSION_CONFLICT', message: 'Conflict' } },
+    });
+    result.current.requestDelete(lunch);
+    await confirm(0);
+    result.current.requestDelete(lunch);
+    await confirm(1);
+
+    const [[, retry], [, open]] = mockAddAlert.mock.calls;
+    act(() => {
+      store.dispatch(activateSpace(2));
+    });
+    await act(async () => retry.onPress());
+    act(() => open.onPress());
+
+    expect(mockedRequest.mock.calls.filter(([{ method }]) => method === 'DELETE')).toHaveLength(2);
+    expect(selectTransactionFlow(store.getState())).toBeNull();
   });
 });
