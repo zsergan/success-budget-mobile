@@ -65,7 +65,8 @@ const useTransactionDelete = () => {
   // `onSettled` runs when the confirmation closes either way, e.g. to slide a row back.
   const requestDelete = useCallback(
     (transaction: TransactionModel, onSettled?: () => void) => {
-      if (isInitialBalance(transaction)) return;
+      if (isInitialBalance(transaction) || currentSpaceId === null) return;
+      const sessionKey = store.getState().auth.sessionKey;
 
       Alert.alert(
         'Delete transaction?',
@@ -76,7 +77,10 @@ const useTransactionDelete = () => {
             style: 'destructive',
             onPress: () => {
               onSettled?.();
-              void runDelete(transaction);
+              const { auth, space } = store.getState();
+              if (auth.sessionKey === sessionKey && space.currentSpaceId === currentSpaceId) {
+                void runDelete(transaction, currentSpaceId);
+              }
             },
           },
           { text: 'Cancel', style: 'cancel', isPreferred: true, onPress: onSettled },
@@ -84,7 +88,7 @@ const useTransactionDelete = () => {
         { onDismiss: onSettled },
       );
     },
-    [currencyCode, runDelete],
+    [currencyCode, runDelete, currentSpaceId, store],
   );
 
   const retryDelete = useCallback((transaction: TransactionModel) => runDelete(transaction), [runDelete]);

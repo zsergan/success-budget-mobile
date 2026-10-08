@@ -6,6 +6,7 @@ import { act, renderHook } from '@testing-library/react-native';
 import { mapTransaction } from '@api/models';
 import { createAppStore } from '@redux/Store';
 import { withProfile } from '@redux/state/profile/fixtures';
+import { logoutMe } from '@redux/state/auth/thunks';
 import { activateSpace } from '@redux/state/space/thunks';
 import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import { transactionDto } from '@redux/state/transaction/fixtures';
@@ -47,6 +48,19 @@ beforeEach(() => {
 });
 
 describe('useTransactionDelete from a list row', () => {
+  it('does not accept a delete confirmation from a previous login', async () => {
+    const { result, store } = setUp();
+    result.current.requestDelete(lunch);
+    act(() => {
+      store.dispatch(logoutMe.fulfilled(undefined, 'logout', undefined));
+      withProfile(store);
+      store.dispatch(activateSpace(1));
+    });
+
+    await confirm();
+    expect(mockedRequest.mock.calls.filter(([{ method }]) => method === 'DELETE')).toHaveLength(0);
+  });
+
   it('slides the row back on Cancel and sends nothing', () => {
     const { result } = setUp();
     const onSettled = jest.fn();

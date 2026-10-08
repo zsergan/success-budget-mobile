@@ -7,13 +7,15 @@ const useSheetPresence = (isVisible: boolean) => {
   const ref = useRef<BottomSheetModal>(null);
   const isShownRef = useRef(false);
   const isDismissingRef = useRef(false);
+  const wantsVisibleRef = useRef(isVisible);
+  wantsVisibleRef.current = isVisible;
 
   useEffect(() => {
     if (isVisible) {
+      if (isShownRef.current || isDismissingRef.current) return;
       isShownRef.current = true;
-      isDismissingRef.current = false;
       ref.current?.present();
-    } else if (isShownRef.current) {
+    } else if (isShownRef.current && !isDismissingRef.current) {
       isDismissingRef.current = true;
       ref.current?.dismiss();
     }
@@ -24,6 +26,11 @@ const useSheetPresence = (isVisible: boolean) => {
     const closedByItself = !isDismissingRef.current;
     isShownRef.current = false;
     isDismissingRef.current = false;
+    // present() during forceClose() is lost when the old animation unmounts the modal.
+    if (!closedByItself && wantsVisibleRef.current) {
+      isShownRef.current = true;
+      ref.current?.present();
+    }
     return closedByItself;
   }, []);
 

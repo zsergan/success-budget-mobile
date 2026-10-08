@@ -45,7 +45,9 @@ const useFlowClose = () => {
     const flow = getFlow();
     if (!flow) return;
 
-    const close = () => dispatch(closed());
+    const close = () => {
+      if (getFlow()?.draftId === flow.draftId) dispatch(closed());
+    };
 
     if (hasOpenSave(flow)) confirmLeavingSave(flow.notice as 'saveUnknown' | 'saveExpired', close);
     else if (hasUnsavedChanges(flow)) confirmDiscard(flow.saved !== null, close);
@@ -59,7 +61,9 @@ const useFlowClose = () => {
     if (flow.view.name === 'categories' || flow.view.name === 'dateTime') {
       dispatch(panelClosed());
     } else if (flow.view.name === 'edit') {
-      const leave = () => dispatch(editLeft());
+      const leave = () => {
+        if (getFlow()?.draftId === flow.draftId) dispatch(editLeft());
+      };
 
       if (flow.notice === 'saveUnknown') confirmLeavingSave(flow.notice, leave);
       else if (hasUnsavedChanges(flow)) confirmDiscard(true, leave);
