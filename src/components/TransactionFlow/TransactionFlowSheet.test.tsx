@@ -1059,6 +1059,42 @@ describe('TransactionFlowSheet', () => {
     expect(patch.data).not.toHaveProperty('wallet_id');
   });
 
+  it('never reports the deleted wallet as kept once an unconfirmed move to another one went through', async () => {
+    stored = transactionDto({ wallet: null });
+    const { openDetails, flow } = renderFlow();
+    openDetails();
+    await settle();
+    fireEvent.press(screen.getByText('Edit'));
+    await settle();
+
+    fireEvent.press(screen.getByText('Cash'));
+    fireEvent.press(screen.getByText('Save changes'));
+    await act(async () => failWrite(new Error('Network Error')));
+    await settle();
+
+    fireEvent.press(screen.getByText('Deleted wallet'));
+    fireEvent.changeText(screen.getByLabelText('Note'), 'Lunch');
+    fireEvent.press(screen.getByText('Save changes'));
+    await act(async () =>
+      answerWrite({
+        data: {
+          transaction: transactionDto({
+            wallet: { id: 7, wallet_name: 'Cash', design: AppColor.SLATE, created_at: '', updated_at: '' },
+            version: 2,
+          }),
+          wallets: [{ id: 7, balance: 90, is_deleted: false }],
+        },
+      }),
+    );
+    await settle();
+
+    expect(flow()).toMatchObject({ view: { name: 'edit' }, saved: { wallet: { id: 7 } }, draft: { walletId: null } });
+    expect(screen.getByText('The deleted wallet can’t be picked again. Choose a wallet')).toBeTruthy();
+    expect(screen.getByText('Save changes')).toBeDisabled();
+    expect(mockAddAlert).not.toHaveBeenCalledWith('Changes saved');
+    expect(mockedRequest.mock.calls.filter(([config]) => config.method === 'PATCH')).toHaveLength(2);
+  });
+
   it('offers no edit for an initial balance', async () => {
     stored = transactionDto({ kind: TransactionKind.INITIAL_BALANCE, transaction_type: TransactionType.INCOME });
     const { openDetails } = renderFlow();

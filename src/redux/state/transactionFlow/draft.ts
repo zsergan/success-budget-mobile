@@ -174,6 +174,9 @@ export const getDraftErrors = (
 
   if ((!baseline && draft.walletId === null) || isGone(draft.walletId, available?.walletIds, changed.has('walletId'))) {
     errors.wallet = 'Choose a wallet';
+  } else if (draft.walletId === null && baseline && baseline.walletId !== null) {
+    // No wallet keeps the record's deleted one; once it is in another wallet, that would keep that one instead.
+    errors.wallet = 'The deleted wallet can’t be picked again. Choose a wallet';
   }
 
   if (changed.has('timestamp') && Date.parse(draft.timestamp) > now + FUTURE_MARGIN_MS) {

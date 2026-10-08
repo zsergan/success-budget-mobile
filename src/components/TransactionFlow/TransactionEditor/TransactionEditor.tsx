@@ -165,9 +165,11 @@ const TransactionEditor = ({
     ? hasNoWallets
       ? 'This wallet was deleted and you have no other wallets. Keep it, or create a new one to move the transaction.'
       : 'This wallet was deleted. You can keep it or move the transaction to another wallet.'
-    : !isEdit && hasNoWallets
-      ? 'Create a wallet to save this transaction.'
-      : undefined;
+    : isEdit && draft.walletId === null
+      ? errors.wallet
+      : !isEdit && hasNoWallets
+        ? 'Create a wallet to save this transaction.'
+        : undefined;
 
   useEffect(() => {
     if (isNoteFocused && keyboardHeight > 0) scrollRef.current?.scrollToEnd({ animated: true });

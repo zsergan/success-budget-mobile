@@ -135,7 +135,15 @@ describe('getDraftErrors', () => {
 
     expect(getDraftErrors({ ...legacy, description: 'Dinner' }, { baseline: legacy, now: NOW })).toEqual({});
     expect(getDraftErrors({ ...legacy, amount: '0' }, { baseline: legacy, now: NOW })).toEqual({});
-    expect(getDraftErrors({ ...legacy, walletId: null }, { baseline: legacy, now: NOW })).toEqual({});
+  });
+
+  it('keeps a deleted wallet only while the record is still in it', () => {
+    const inDeleted = { ...baseline, walletId: null };
+
+    expect(getDraftErrors({ ...inDeleted, amount: '70' }, { baseline: inDeleted, now: NOW })).toEqual({});
+    expect(getDraftErrors({ ...baseline, walletId: null }, { baseline, now: NOW })).toEqual({
+      wallet: 'The deleted wallet can’t be picked again. Choose a wallet',
+    });
   });
 });
 
