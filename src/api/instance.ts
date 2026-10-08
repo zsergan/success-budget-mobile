@@ -9,12 +9,9 @@ import { endHttpSession, getHttpSessionKey } from './session';
 
 declare module 'axios' {
   interface AxiosRequestConfig {
+    sessionKey?: number;
     // A caller that handles this 429 body itself keeps the generic alert quiet.
     isHandledRateLimit?: (body: unknown) => boolean;
-  }
-
-  interface InternalAxiosRequestConfig {
-    sessionKey?: number;
   }
 }
 
@@ -28,9 +25,17 @@ export const createHttpClient = () => {
   api.interceptors.request.use(
     async (config) => {
       // Captured before the token read, so a logout during it marks the request stale.
-      config.sessionKey = getHttpSessionKey();
+      config.sessionKey ??= getHttpSessionKey();
+
+      if (config.sessionKey !== getHttpSessionKey()) {
+        throw new axios.CanceledError('The request’s session has ended.', config);
+      }
 
       const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+
+      if (config.sessionKey !== getHttpSessionKey()) {
+        throw new axios.CanceledError('The request’s session has ended.', config);
+      }
 
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;

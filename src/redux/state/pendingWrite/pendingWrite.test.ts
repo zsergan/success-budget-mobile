@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CreateTransactionRequest } from '@api/dto';
 import { createAppStore } from '@redux/Store';
 import { withProfile } from '@redux/state/profile/fixtures';
+import { logoutMe } from '@redux/state/auth/thunks';
 import { activateSpace } from '@redux/state/space/thunks';
 import { createTransactionResponseDto, transactionDto } from '@redux/state/transaction/fixtures';
 import type { OperationMemory, TransactionRequest } from '@redux/state/transaction/operations';
@@ -93,6 +94,42 @@ beforeEach(async () => {
 });
 
 describe('pending writes', () => {
+  it('does not send an old user’s write if the session ends while it is being stored', async () => {
+    const store = signIn(1);
+    const setItem = AsyncStorage.setItem.bind(AsyncStorage);
+    let release!: () => void;
+    let entered!: () => void;
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const storing = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    jest.spyOn(AsyncStorage, 'setItem').mockImplementationOnce(async (key, value) => {
+      await setItem(key, value);
+      entered();
+      await blocked;
+    });
+    mockedRequest.mockImplementation(answers(createTransactionResponseDto()));
+
+    const submission = submit(store);
+    await storing;
+    store.dispatch(logoutMe.fulfilled(undefined, 'logout'));
+    withProfile(store, 2);
+    store.dispatch(activateSpace(1));
+    release();
+
+    expect((await submission).outcome.status).toBe('stale');
+    expect(posts()).toEqual([]);
+    expect(await stored(1)).toHaveLength(1);
+    expect(await stored(2)).toEqual([]);
+
+    const originalUser = await restart(1);
+    expect(await results(originalUser)).toMatchObject([{ kind: 'done' }]);
+    expect(posts()).toHaveLength(1);
+    expect(posts()[0]).toMatchObject({ data: sentLunch });
+  });
+
   it('stores the user, space, key, exact body and first send time before the write goes out', async () => {
     let storedWhenSent: unknown;
     mockedRequest.mockImplementationOnce(async () => {

@@ -38,6 +38,7 @@ describe('httpBaseQuery', () => {
       params: { from: '2026-01-01T00:00:00.000Z' },
       headers: undefined,
       signal: api.signal,
+      sessionKey: 1,
     });
     expect(result).toEqual({ data: { ok: true } });
   });

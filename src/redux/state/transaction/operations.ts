@@ -189,6 +189,7 @@ const toStored = ({ sessionKey: _sessionKey, ...stored }: TransactionOperation):
 export const settleWrite =
   (operation: TransactionOperation): AppThunk<Promise<WriteResult>> =>
   (dispatch, getState, { runningWrites }) => {
+    if (getState().auth.sessionKey !== operation.sessionKey) return Promise.resolve({ kind: 'stale' });
     const key = operation.idempotencyKey;
     const running = runningWrites.get(key) as Promise<WriteResult> | undefined;
     if (running) return running;
@@ -200,7 +201,11 @@ export const settleWrite =
       const isRetry = selectPendingWrite(getState(), key) !== undefined;
 
       dispatch(writeRecorded({ userId, operation: toStored(operation) }));
-      if (!(await dispatch(persistPendingWrites())) && !isRetry) {
+      const persisted = await dispatch(persistPendingWrites());
+      if (getState().auth.sessionKey !== operation.sessionKey || getState().pendingWrite.userId !== userId) {
+        return { kind: 'stale' };
+      }
+      if (!persisted && !isRetry) {
         dispatch(writeSettled({ key, status: null }));
         return { kind: 'notSent' };
       }

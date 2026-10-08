@@ -34,7 +34,7 @@ export const httpBaseQuery: BaseQueryFn<HttpRequest, unknown, ErrorResponse> = a
   const isSessionCurrent = () => (getState() as RootState).auth.sessionKey === sessionKey;
 
   try {
-    const response = await http.request({ url, method, data: body, params, headers, signal });
+    const response = await http.request({ url, method, data: body, params, headers, signal, sessionKey });
 
     // RTK Query treats `data: undefined` as a malformed result; empty bodies (void handlers) become null.
     return isSessionCurrent() ? { data: response.data ?? null } : { error: sessionEndedError(url) };
