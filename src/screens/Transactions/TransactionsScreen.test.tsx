@@ -2,6 +2,7 @@ import type { ReactNode, Ref } from 'react';
 import { Provider } from 'react-redux';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { SectionList, StyleSheet } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { baseApi, spaceTags } from '@redux/api/baseApi';
@@ -12,7 +13,9 @@ import { transactionDto } from '@redux/state/transaction/fixtures';
 import { deleteTransaction } from '@redux/state/transactionFlow/thunks';
 import { mapTransaction } from '@api/models';
 import { ScreenNames, TransactionType } from '@shared/enums';
+import { colors } from '@shared/theme';
 import type { MainTabParamList } from '@shared/types';
+import { hexToRgba } from '@shared/utils';
 import TransactionsScreen from './TransactionsScreen';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
@@ -122,6 +125,38 @@ describe('TransactionsScreen', () => {
     });
     expect(screen.getByText('Taxi')).toBeTruthy();
     expect(navigationRef.getCurrentRoute()?.params).toEqual({ filter: undefined, reveal: undefined });
+  });
+
+  it('lands on a revealed row once it is measured, and fades it only after it has been on screen', async () => {
+    const scrollToLocation = jest.spyOn(SectionList.prototype, 'scrollToLocation').mockImplementation(() => {});
+    renderTransactions({ reveal: { spaceId: 1, transactionId: 'tx-aug', timestamp: august } });
+    await settle();
+
+    const list = screen.UNSAFE_getByType(SectionList);
+    const ancestors = () => {
+      const nodes = [];
+      for (let node = screen.getByText('Taxi').parent; node; node = node.parent) nodes.push(node);
+      return nodes;
+    };
+    const isLit = () =>
+      ancestors().some(
+        (node) => StyleSheet.flatten(node.props.style)?.backgroundColor === hexToRgba(colors.accent, 0.14),
+      );
+    const row = ancestors().find(({ props }) => Object.keys(props).join() === 'onLayout,children')!;
+
+    expect(scrollToLocation).toHaveBeenCalledTimes(1);
+    act(() => list.props.onScrollToIndexFailed({ index: 1, highestMeasuredFrameIndex: 0, averageItemLength: 70 }));
+    fireEvent(row, 'layout', { nativeEvent: { layout: { x: 0, y: 900, width: 300, height: 70 } } });
+    expect(scrollToLocation).toHaveBeenCalledTimes(2);
+    expect(scrollToLocation).toHaveBeenLastCalledWith({ sectionIndex: 0, itemIndex: 0, viewPosition: 0.4 });
+
+    await act(async () => jest.advanceTimersByTimeAsync(5000));
+    expect(isLit()).toBe(true);
+
+    act(() => list.props.onViewableItemsChanged({ viewableItems: [{ item: mapTransaction(taxi), isViewable: true }] }));
+    await act(async () => jest.advanceTimersByTimeAsync(2500));
+    expect(isLit()).toBe(false);
+    scrollToLocation.mockRestore();
   });
 
   it('ignores a reveal meant for another space', async () => {

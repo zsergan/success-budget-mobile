@@ -102,15 +102,16 @@ const TransactionsScreen = () => {
     range,
     filter,
   });
-  const isHighlightListed = transactions.some(({ id }) => id === highlightId);
+  const [seenId, setSeenId] = useState<string | null>(null);
+  const isHighlightSeen = highlightId !== null && seenId === highlightId;
 
-  // The light fades only once the row is on screen, however long its month takes to load.
+  // The light fades only once the row is on screen, however long its month takes to load and the list to scroll.
   useEffect(() => {
-    if (!isHighlightListed) return;
+    if (!isHighlightSeen) return;
 
     const timer = setTimeout(() => setHighlightId(null), HIGHLIGHT_MS);
     return () => clearTimeout(timer);
-  }, [isHighlightListed]);
+  }, [isHighlightSeen]);
 
   return (
     <>
@@ -129,6 +130,7 @@ const TransactionsScreen = () => {
           onPressTransaction={openDetails}
           onDeleteTransaction={requestDelete}
           highlightId={highlightId}
+          onHighlightSeen={() => setSeenId(highlightId)}
           header={
             <>
               <TransactionsHeader />
