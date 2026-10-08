@@ -2,6 +2,7 @@ import type { Space } from '@api/dto';
 import { createAppStore } from '@redux/Store';
 import { SpaceType } from '@shared/enums';
 import { spaceApi } from './api';
+import { categoryApi } from '@redux/state/category/api';
 import { walletApi } from '@redux/state/wallet/api';
 import { activateSpace } from './thunks';
 
@@ -99,7 +100,7 @@ describe('space selection from the spaces list', () => {
   });
 });
 
-describe('a read refused for a space', () => {
+describe('a read or a write refused for a space', () => {
   const setUp = async () => {
     const store = createAppStore();
 
@@ -132,6 +133,24 @@ describe('a read refused for a space', () => {
         .data?.map(({ id }) => id),
     ).toEqual([2]);
     expect(walletApi.endpoints.getWallets.select({ spaceId: 1 })(store.getState()).data).toBeUndefined();
+  });
+
+  it('ends the space at once when a write is refused with FORBIDDEN_SPACE, and only then', async () => {
+    const store = await setUp();
+    const refuseWrite = (code: string) => {
+      mockedRequest.mockImplementationOnce(() =>
+        Promise.reject({ response: { data: { statusCode: 403, code, message: code } } }),
+      );
+      return store.dispatch(categoryApi.endpoints.reorderCategories.initiate({ spaceId: 1, categoryIds: [1, 2] }));
+    };
+
+    mockedRequest.mockClear();
+    await refuseWrite('FORBIDDEN_CATEGORY');
+    expect(store.getState().space.currentSpaceId).toBe(1);
+    expect(mockedRequest).not.toHaveBeenCalledWith(expect.objectContaining({ url: '/spaces' }));
+
+    await refuseWrite('FORBIDDEN_SPACE');
+    expect(store.getState().space.currentSpaceId).toBe(2);
   });
 
   it('only asks for the spaces list again on any other 403', async () => {
