@@ -122,7 +122,7 @@ const TransactionFlowSheet = () => {
 
   // Closing the category sheet without saving returns to the form as it was.
   const handleCategoryDismiss = () => {
-    settleCategoryDismiss();
+    if (!settleCategoryDismiss()) return;
     const current = selectTransactionFlow(store.getState());
     if (current?.away === 'category') dispatch(awayEnded({ draftId: current.draftId }));
   };

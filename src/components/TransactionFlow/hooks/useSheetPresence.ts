@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 
 // Shows the sheet while `isVisible`. The library leaves a sheet dismissed before it was ever shown, or after it
@@ -8,7 +8,9 @@ const useSheetPresence = (isVisible: boolean) => {
   const isShownRef = useRef(false);
   const isDismissingRef = useRef(false);
   const wantsVisibleRef = useRef(isVisible);
-  wantsVisibleRef.current = isVisible;
+  useLayoutEffect(() => {
+    wantsVisibleRef.current = isVisible;
+  }, [isVisible]);
 
   useEffect(() => {
     if (isVisible) {

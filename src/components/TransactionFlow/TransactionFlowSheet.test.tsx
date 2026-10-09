@@ -13,7 +13,7 @@ import { transactionApi } from '@redux/state/transaction/api';
 import { createTransactionResponseDto, transactionDto } from '@redux/state/transaction/fixtures';
 import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import { mapTransaction } from '@api/models';
-import { awayEnded, createOpened, walletCreated } from '@redux/state/transactionFlow/slice';
+import { awayEnded, awayStarted, createOpened, walletCreated } from '@redux/state/transactionFlow/slice';
 import type { ViewSelection } from '@redux/state/transactionFlow/selection';
 import { checkFlowRecord, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { baseApi, spaceTags } from '@redux/api/baseApi';
@@ -27,6 +27,8 @@ interface SheetProps {
   backdropComponent?: (props: object) => ReactNode;
   handleComponent?: (() => ReactNode) | null;
 }
+
+const mockCategorySheet: { holdDismiss: boolean; finishDismiss?: () => void } = { holdDismiss: false };
 
 const mockSheet: { props?: SheetProps; presents: number; keptOpen: number; swipeDown?: () => void } = {
   presents: 0,
@@ -59,9 +61,13 @@ jest.mock('@gorhom/bottom-sheet', () => {
         isStuckRef.current = true;
         return;
       }
-      isOpenRef.current = false;
-      setOpen(false);
-      props.onDismiss?.();
+      const finish = () => {
+        isOpenRef.current = false;
+        setOpen(false);
+        props.onDismiss?.();
+      };
+      if (!isFlowSheet && mockCategorySheet.holdDismiss) mockCategorySheet.finishDismiss = finish;
+      else finish();
     };
 
     if (isFlowSheet) mockSheet.swipeDown = dismiss;
@@ -264,6 +270,8 @@ const pressBackdrop = () =>
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockCategorySheet.holdDismiss = false;
+  mockCategorySheet.finishDismiss = undefined;
   writeAnswers = [];
   sentWrites = 0;
   answeredWrites = 0;
@@ -1239,6 +1247,20 @@ describe('TransactionFlowSheet', () => {
 
     expect(flow()).toMatchObject({ away: null, draft: { categoryId: null } });
     expect(screen.getByText('New transaction')).toBeTruthy();
+  });
+
+  it('keeps a reopened category editor when its previous dismissal finishes late', async () => {
+    const { store, open, flow } = renderFlow();
+    open(TransactionType.INCOME);
+    await settle();
+    fireEvent.press(screen.getByText('Create category'));
+    mockCategorySheet.holdDismiss = true;
+    act(() => store.dispatch(awayEnded({ draftId: flow()!.draftId })));
+    act(() => store.dispatch(awayStarted({ draftId: flow()!.draftId, target: 'category' })));
+    expect(flow()?.away).toBe('category');
+    act(() => mockCategorySheet.finishDismiss?.());
+    expect(flow()?.away).toBe('category');
+    expect(screen.getByPlaceholderText('My category')).toBeTruthy();
   });
 
   it('tells lists that are loading or failed from empty ones, retries each, and saves only once they are there', async () => {
