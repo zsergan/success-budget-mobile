@@ -2,7 +2,7 @@ import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
 
 import type { LimitModel } from '@api/models';
 import { BottomSheetModal as BottomModal, EmptyState, FrameScrollView, Icon, ScreenFrame } from '@components';
-import { useConfirmAction } from '@hooks';
+import { useConfirmAction, useSpaceRefresh } from '@hooks';
 import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetLimitsQuery } from '@redux/state/limit/api';
@@ -21,6 +21,7 @@ import useLimitEditor from './hooks/useLimitEditor';
 import styles from './style';
 
 const LimitsScreen = () => {
+  useSpaceRefresh();
   const limitsQuery = useGetLimitsQuery(useSpaceArg());
   const { currentData, refetch } = limitsQuery;
   const { isLoading, hasError } = getLoadState(limitsQuery);

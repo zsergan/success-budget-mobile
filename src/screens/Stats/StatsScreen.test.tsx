@@ -15,15 +15,13 @@ import type { MainTabParamList, MainTabScreenProps } from '@shared/types';
 import type { StatsFixture } from './fixtures/statsFixtures';
 import { STATS_FIXTURES } from './fixtures/statsFixtures';
 import StatsScreen from './StatsScreen';
+import { createTransactionResponseDto } from '@redux/state/transaction/fixtures';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => ({
   ...jest.requireActual('react-native-reanimated/mock'),
   useReducedMotion: () => true,
 }));
-jest.mock('@react-native-async-storage/async-storage', () =>
-  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = jest.requireActual('react');
   const { ScrollView, TextInput, View } = jest.requireActual('react-native');
@@ -166,6 +164,8 @@ beforeEach(() => {
 
       return fail[block]?.() ?? answer(config);
     }
+
+    if (config.method === 'POST') return Promise.resolve({ data: createTransactionResponseDto() });
 
     return config.url === '/spaces' ? respondSpaces() : Promise.resolve({ data: null });
   });
@@ -371,6 +371,7 @@ describe('StatsScreen', () => {
         await store.dispatch(
           transactionApi.endpoints.createTransaction.initiate({
             spaceId: 1,
+            idempotencyKey: 'key-1',
             data: {
               wallet_id: 1,
               category_id: 1,

@@ -1,16 +1,41 @@
-import type { TransactionType } from '@shared/enums';
-import type { Category } from './categoryDto';
-import type { Wallet, WalletWithBalance } from './walletDto';
+import type { AppColor, TransactionKind, TransactionType } from '@shared/enums';
+import type { CategoryIconApi } from './categoryDto';
+import type { Wallet } from './walletDto';
 
-// The backend excludes `wallet_id`/`category_id` from every response; read them off the joined relations.
+export interface TransactionWallet extends Wallet {
+  created_at: string;
+  updated_at: string;
+}
+
+// Not the Categories API item: transaction_count, limit and sort are absent.
+export interface TransactionCategory {
+  id: number;
+  name: string;
+  transaction_type: TransactionType;
+  icon: CategoryIconApi | string;
+  color: AppColor;
+  is_active: number;
+  is_archived: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// One shape for the list, latest, details and every write result; `wallet_id`/`category_id` are not in it.
 export interface Transaction {
   id: string;
+  kind: TransactionKind;
   transaction_type: TransactionType;
   amount: string;
   timestamp: string;
   description: string | null;
-  wallet: Wallet | null;
-  category: Category;
+  version: number;
+  wallet: TransactionWallet | null;
+  category: TransactionCategory;
+}
+
+// The number of rows the list returns for the same query, initial balances included.
+export interface TransactionsCountResponse {
+  count: number;
 }
 
 export interface CreateTransactionRequest {
@@ -19,13 +44,38 @@ export interface CreateTransactionRequest {
   transaction_type: TransactionType;
   amount: string;
   timestamp: string;
-  description?: string;
+  description?: string | null;
+  // The create's Idempotency-Key; the server never applies two creates with one id in a space.
+  client_operation_id?: string;
 }
 
-// The created transaction has no `category`/`wallet` relation loaded (a
-// plain create+save, no join) -- unlike GET, which eager-joins both.
 export interface CreateTransactionResponse {
-  transaction: Omit<Transaction, 'wallet' | 'category'>;
-  wallet: WalletWithBalance;
+  transaction: Transaction;
+  wallet: TransactionWallet & { balance: number };
   previous_balance: number;
+}
+
+// An absent field, or one equal to the stored value, keeps it; `null` only clears the description.
+export type UpdateTransactionRequest = Partial<Omit<CreateTransactionRequest, 'client_operation_id'>>;
+
+// What a create with this operation id did: `deleted` means it applied and the record was deleted since.
+export interface TransactionOperationResponse {
+  operation_id: string;
+  status: 'applied' | 'deleted';
+  transaction_id: string;
+  created_at: string;
+  deleted_at: string | null;
+  transaction: Transaction | null;
+}
+
+export interface TransactionWalletBalance {
+  id: number;
+  balance: number;
+  is_deleted: boolean;
+}
+
+export interface UpdateTransactionResponse {
+  transaction: Transaction;
+  // Every wallet the edit touched, the previous one first when it moved.
+  wallets: TransactionWalletBalance[];
 }

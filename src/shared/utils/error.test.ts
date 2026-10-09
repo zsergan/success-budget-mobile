@@ -41,12 +41,12 @@ describe('getErrorMessage', () => {
 });
 
 describe('isApiError', () => {
-  const error = { message: 'Email is already verified', statusCode: 409 };
+  const error = { message: 'Email is already verified', statusCode: 409, code: 'CONFLICT' };
 
-  it('matches on the status, and on the message when one is given', () => {
+  it('matches on the status, and on the code when one is given', () => {
     expect(isApiError(error, 409)).toBe(true);
-    expect(isApiError(error, 409, 'Email is already verified')).toBe(true);
-    expect(isApiError(error, 409, 'Not found')).toBe(false);
+    expect(isApiError(error, 409, 'CONFLICT')).toBe(true);
+    expect(isApiError(error, 409, 'Email is already verified')).toBe(false);
     expect(isApiError(error, 400)).toBe(false);
   });
 

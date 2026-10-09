@@ -14,23 +14,43 @@ interface Props {
   onSelectDay: (date: Date) => void;
   // Without it the grid shows no month header and stays on the month it was given.
   onNavigate?: (delta: 1 | -1) => void;
+  // Days after it can't be picked, and the grid doesn't step past its month.
+  maxDate?: Date;
+  // Days before its day can't be picked, and the grid doesn't step back past its month.
+  minDate?: Date;
 }
 
-const CalendarGrid = ({ month, range, onSelectDay, onNavigate }: Props) => {
+const CalendarGrid = ({ month, range, onSelectDay, onNavigate, maxDate, minDate }: Props) => {
   const days = getCalendarMonthGrid(month, range);
   const rows = Array.from({ length: 6 }, (_, i) => days.slice(i * 7, i * 7 + 7));
+  const lastDay = maxDate && new Date(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate(), 23, 59, 59, 999);
+  const isLastMonth =
+    !!maxDate && month.getFullYear() === maxDate.getFullYear() && month.getMonth() >= maxDate.getMonth();
+  const firstDay = minDate && new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate());
+  const isFirstMonth =
+    !!minDate && month.getFullYear() === minDate.getFullYear() && month.getMonth() <= minDate.getMonth();
 
   return (
     <View style={styles.calendarRoot}>
       {onNavigate && (
         <View style={styles.navRow}>
-          <TouchableOpacity style={styles.navButton} onPress={() => onNavigate(-1)} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={[styles.navButton, isFirstMonth && styles.navButtonDisabled]}
+            onPress={() => onNavigate(-1)}
+            disabled={isFirstMonth}
+            activeOpacity={0.7}
+          >
             <Icon name="back" size={14} color={colors.text} strokeWidth={2} />
           </TouchableOpacity>
 
           <Text style={styles.monthLabel}>{formatMonthYear(month)}</Text>
 
-          <TouchableOpacity style={styles.navButton} onPress={() => onNavigate(1)} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={[styles.navButton, isLastMonth && styles.navButtonDisabled]}
+            onPress={() => onNavigate(1)}
+            disabled={isLastMonth}
+            activeOpacity={0.7}
+          >
             <Icon name="forward" size={14} color={colors.text} strokeWidth={2} />
           </TouchableOpacity>
         </View>
@@ -51,13 +71,16 @@ const CalendarGrid = ({ month, range, onSelectDay, onNavigate }: Props) => {
             // Approximates the design's gradient-edged pill band with a flat
             // tint between the edges plus a solid circle on the edges.
             const showBand = day.isInRange && !isEdge;
+            const isOutside =
+              (!!lastDay && day.date.getTime() > lastDay.getTime()) ||
+              (!!firstDay && day.date.getTime() < firstDay.getTime());
 
             return (
               <TouchableOpacity
                 key={day.date.toISOString()}
-                style={[styles.dayCell, showBand && styles.dayCellBand]}
+                style={[styles.dayCell, showBand && styles.dayCellBand, isOutside && styles.dayCellDisabled]}
                 onPress={() => onSelectDay(day.date)}
-                disabled={!day.inCurrentMonth}
+                disabled={!day.inCurrentMonth || isOutside}
                 activeOpacity={0.6}
               >
                 <View style={[styles.dayCircle, isEdge && styles.dayCircleActive]}>

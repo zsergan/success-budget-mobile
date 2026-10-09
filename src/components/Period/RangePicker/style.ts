@@ -164,6 +164,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  dayCellDisabled: {
+    opacity: 0.35,
+  },
   dayCellBand: {
     backgroundColor: `${colors.accent}1A`,
   },

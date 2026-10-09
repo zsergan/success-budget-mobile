@@ -2,14 +2,13 @@ import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DraggableFlatList from 'react-native-draggable-flatlist';
 
-import { BottomSheetModal as BottomModal, EmptyState, Icon } from '@components';
-import { useConfirmAction } from '@hooks';
+import { BottomSheetModal as BottomModal, CategoryEditorSheet, EmptyState, Icon } from '@components';
+import { useConfirmAction, useSpaceRefresh } from '@hooks';
 import type { CategoryModel } from '@api/models';
 import type { RootStackScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
 import { colors } from '@shared/theme';
 import CategoriesEmptyState from './components/CategoriesEmptyState/CategoriesEmptyState';
-import CategoryEditorSheet, { CATEGORY_EDITOR_SNAP_POINT } from './components/CategoryEditor/CategoryEditorSheet';
 import DeleteCategoryDialog from './components/DeleteCategoryDialog/DeleteCategoryDialog';
 import CategoryRow from './components/CategoryRow/CategoryRow';
 import SegmentedControl from './components/SegmentedControl/SegmentedControl';
@@ -25,6 +24,7 @@ const ARCHIVE_FOOTNOTE =
   'Restoring puts a category back into the picker. It does not re-join limits automatically — add it to a limit again if you want it counted.';
 
 const CategoriesScreen = ({ navigation }: Props) => {
+  useSpaceRefresh();
   const categoryDeletion = useConfirmAction<CategoryModel>();
 
   const {
@@ -65,7 +65,7 @@ const CategoriesScreen = ({ navigation }: Props) => {
 
   return (
     <>
-      <BottomModal ref={editorRef} snapPoint={CATEGORY_EDITOR_SNAP_POINT}>
+      <BottomModal ref={editorRef} fitContent>
         <CategoryEditorSheet
           key={editingCategory?.id ?? 'new'}
           category={editingCategory}

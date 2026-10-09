@@ -9,25 +9,33 @@ import { endHttpSession, getHttpSessionKey } from './session';
 
 declare module 'axios' {
   interface AxiosRequestConfig {
+    sessionKey?: number;
     // A caller that handles this 429 body itself keeps the generic alert quiet.
     isHandledRateLimit?: (body: unknown) => boolean;
   }
-
-  interface InternalAxiosRequestConfig {
-    sessionKey?: number;
-  }
 }
+
+// A request with no answer by then fails like a lost connection; a write it carried may still have applied.
+export const REQUEST_TIMEOUT_MS = 20_000;
 
 // Sign-in/up (auth.api.ts) and the RTK Query base query share this auth, 401 and 429 handling.
 export const createHttpClient = () => {
-  const api = axios.create({ baseURL: BASE_API_URL });
+  const api = axios.create({ baseURL: BASE_API_URL, timeout: REQUEST_TIMEOUT_MS });
 
   api.interceptors.request.use(
     async (config) => {
       // Captured before the token read, so a logout during it marks the request stale.
-      config.sessionKey = getHttpSessionKey();
+      config.sessionKey ??= getHttpSessionKey();
+
+      if (config.sessionKey !== getHttpSessionKey()) {
+        throw new axios.CanceledError('The request’s session has ended.', config);
+      }
 
       const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+
+      if (config.sessionKey !== getHttpSessionKey()) {
+        throw new axios.CanceledError('The request’s session has ended.', config);
+      }
 
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;

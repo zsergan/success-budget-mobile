@@ -6,9 +6,9 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    // The height the search button gave the header, so the list below stays where it was.
+    minHeight: 36 + theme.spacing.md * 2,
+    justifyContent: 'center',
   },
   title: {
     fontFamily: theme.fonts.semiBold,
@@ -16,14 +16,6 @@ const styles = StyleSheet.create({
     lineHeight: theme.lineHeights.titleLg,
     letterSpacing: theme.letterSpacing.titleLg,
     color: colors.text,
-  },
-  searchButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.track,
   },
 });
 

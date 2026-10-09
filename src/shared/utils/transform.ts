@@ -5,9 +5,21 @@ export const formatNumber = (num: number | string) => Number(num).toLocaleString
 export const formatCurrencyAmount = (amount: number | string, currencyCode?: string) =>
   currencyCode ? `${formatNumber(amount)} ${currencyCode}` : formatNumber(amount);
 
-/** Always sign-prefixed, for day totals that can net out either way. */
-export const formatSignedAmount = (amount: number, currencyCode?: string) =>
-  `${amount >= 0 ? '+' : '-'}${formatCurrencyAmount(Math.abs(amount), currencyCode)}`;
+// History money: always two decimal places.
+export const formatMoneyAmount = (amount: number | string, currencyCode?: string) => {
+  const text = Number(amount)
+    .toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    .replace(/,/g, ' ');
+
+  return currencyCode ? `${text} ${currencyCode}` : text;
+};
+
+// A total that nets out either way; zero takes no sign.
+export const formatSignedAmount = (amount: number, currencyCode?: string) => {
+  const sign = amount > 0 ? '+' : amount < 0 ? '-' : '';
+
+  return `${sign}${formatMoneyAmount(Math.abs(amount), currencyCode)}`;
+};
 
 export const hexToRgba = (hex: string, alpha: number) => {
   const value = hex.replace('#', '');
@@ -18,15 +30,8 @@ export const hexToRgba = (hex: string, alpha: number) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-export const formatAmount = (amount: number | string, transactionType: TransactionType, currency?: string) => {
-  let formattedAmount = formatNumber(amount);
-
-  if (currency) {
-    formattedAmount = `${formattedAmount} ${currency}`;
-  }
-
-  return transactionType === TransactionType.EXPENSE ? `-${formattedAmount}` : formattedAmount;
-};
+export const formatAmount = (amount: number | string, transactionType: TransactionType, currency?: string) =>
+  `${transactionType === TransactionType.EXPENSE ? '-' : '+'}${formatMoneyAmount(amount, currency)}`;
 
 export const formatDateDDMMYYYY = (d: Date | string) => {
   const date = new Date(d);

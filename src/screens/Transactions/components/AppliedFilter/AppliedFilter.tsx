@@ -4,7 +4,7 @@ import { Icon } from '@components';
 import { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
 import type { HistoryFilter } from '@shared/types';
-import { formatCurrencyAmount, formatRangeLabel } from '@shared/utils';
+import { formatMoneyAmount, formatRangeLabel } from '@shared/utils';
 
 import styles from './style';
 
@@ -40,7 +40,7 @@ const AppliedFilter = ({ filter, total, currencyCode, onClear }: Props) => {
         </Text>
       </View>
 
-      <Text style={styles.total}>{formatCurrencyAmount(total, currencyCode)}</Text>
+      <Text style={styles.total}>{formatMoneyAmount(total, currencyCode)}</Text>
 
       <TouchableOpacity
         style={styles.clearButton}

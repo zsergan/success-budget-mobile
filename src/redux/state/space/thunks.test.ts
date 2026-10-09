@@ -6,7 +6,14 @@ import { baseApi } from '@redux/api/baseApi';
 import { memberApi } from '../member/api';
 import { profileApi } from '../profile/api';
 import { spaceApi } from './api';
-import { acceptInviteAndSelect, activateSpace, createSpaceAndSelect, leaveCurrentSpace } from './thunks';
+import { walletApi } from '../wallet/api';
+import {
+  acceptInviteAndSelect,
+  activateSpace,
+  createSpaceAndSelect,
+  leaveCurrentSpace,
+  loseSpaceAccess,
+} from './thunks';
 
 const mockedRequest = jest.fn();
 
@@ -284,4 +291,62 @@ describe('a request from before a logout and a new login', () => {
       expect(store.getState().space.currentSpaceId).toBe(99);
     },
   );
+});
+
+describe('loseSpaceAccess', () => {
+  it("drops the lost space's cached data and moves to a space the refreshed list still has", async () => {
+    const store = signedInStore();
+    const overview = { total_balance: 0, total_balance_currency: 'USD', delta_percent: 0, wallets: [] };
+
+    mockedRequest.mockResolvedValue({ data: [space({ id: 10, type: SpaceType.GROUP }), space({ id: 20 })] });
+    store.dispatch(spaceApi.endpoints.getSpaces.initiate());
+    await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
+    store.dispatch(activateSpace(10));
+    store.dispatch(
+      walletApi.util.upsertQueryEntries([
+        { endpointName: 'getWallets', arg: { spaceId: 10 }, value: overview },
+        { endpointName: 'getWallets', arg: { spaceId: 20 }, value: overview },
+      ]),
+    );
+
+    mockedRequest.mockResolvedValue({ data: [space({ id: 20 })] });
+    jest.advanceTimersByTime(1);
+    store.dispatch(loseSpaceAccess(10));
+
+    expect(walletApi.endpoints.getWallets.select({ spaceId: 10 })(store.getState()).data).toBeUndefined();
+    expect(walletApi.endpoints.getWallets.select({ spaceId: 20 })(store.getState()).data).toBe(overview);
+
+    await jest.runOnlyPendingTimersAsync();
+    await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
+    expect(store.getState().space.currentSpaceId).toBe(20);
+  });
+
+  it('starts from any read the server refuses for the current space, and clears that space once the list drops it', async () => {
+    const store = signedInStore();
+    const overview = { total_balance: 0, total_balance_currency: 'USD', delta_percent: 0, wallets: [] };
+    let isMember = true;
+    mockedRequest.mockImplementation(async ({ url }: { url: string }) => {
+      if (url === '/spaces') return { data: isMember ? [space({ id: 10 }), space({ id: 20 })] : [space({ id: 20 })] };
+      if (url === '/spaces/10/wallets' && !isMember) {
+        throw { response: { data: { statusCode: 403, code: 'FORBIDDEN_SPACE', message: 'No access' } } };
+      }
+      return { data: overview };
+    });
+
+    store.dispatch(spaceApi.endpoints.getSpaces.initiate());
+    await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
+    store.dispatch(activateSpace(10));
+    store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId: 10 }));
+    await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
+
+    isMember = false;
+    jest.advanceTimersByTime(1);
+    store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId: 10 }, { forceRefetch: true }));
+    await jest.runOnlyPendingTimersAsync();
+    await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
+    await jest.runOnlyPendingTimersAsync();
+
+    expect(store.getState().space.currentSpaceId).toBe(20);
+    expect(walletApi.endpoints.getWallets.select({ spaceId: 10 })(store.getState()).data).toBeUndefined();
+  });
 });

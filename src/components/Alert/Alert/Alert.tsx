@@ -5,9 +5,16 @@ import TinyButton from '@components/Buttons/TinyButton/TinyButton';
 
 import styles from './style';
 
+export interface AlertAction {
+  label: string;
+  onPress: () => void;
+}
+
 export interface AlertItem {
   id: number;
   message: string;
+  // Takes the place of Dismiss, and dismisses too.
+  action?: AlertAction;
 }
 
 interface Props {
@@ -16,12 +23,22 @@ interface Props {
   style?: StyleProp<ViewStyle>;
 }
 
-const Alert = ({ alertItem: { message }, dismissAlert, style }: Props) => (
+const Alert = ({ alertItem: { message, action }, dismissAlert, style }: Props) => (
   <View style={[styles.root, style]}>
     <View style={styles.container}>
       <Text style={styles.text}>{message}</Text>
 
-      {dismissAlert && <TinyButton title="Dismiss" onPress={dismissAlert} />}
+      {action ? (
+        <TinyButton
+          title={action.label}
+          onPress={() => {
+            dismissAlert?.();
+            action.onPress();
+          }}
+        />
+      ) : (
+        dismissAlert && <TinyButton title="Dismiss" onPress={dismissAlert} />
+      )}
     </View>
   </View>
 );

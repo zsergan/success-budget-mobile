@@ -7,7 +7,8 @@ import type { ScreenNames, AppColor, TransactionType } from '@shared/enums';
 export type AddTransactionIntent = { returnTo: ScreenNames.STATS_TAB; spaceId: number };
 
 type AddWalletParams =
-  | { id: 'new'; addTransaction?: AddTransactionIntent }
+  // `forDraft`: the transaction draft waiting for this wallet; it gets it on save, and its form back on leaving.
+  | { id: 'new'; addTransaction?: AddTransactionIntent; forDraft?: number }
   | { id: number; walletName: string; balance: string; design: AppColor };
 
 // A one-time request to open the composer on a wallet that was just created.
@@ -23,9 +24,12 @@ export type HistoryFilter = {
   name: string;
 } & ({ categoryId: number; walletId?: never } | { walletId: number; categoryId?: never });
 
+// A one-time request to bring a saved transaction into view: its month, no filter, the row scrolled to.
+export type RevealTransaction = { spaceId: number; transactionId: string; timestamp: string };
+
 export type MainTabParamList = {
   [ScreenNames.HOME_TAB]: undefined;
-  [ScreenNames.TRANSACTIONS_TAB]: { filter?: HistoryFilter } | undefined;
+  [ScreenNames.TRANSACTIONS_TAB]: { filter?: HistoryFilter; reveal?: RevealTransaction } | undefined;
   [ScreenNames.STATS_TAB]: { composeWith?: ComposeWithWallet } | undefined;
   [ScreenNames.LIMITS_TAB]: undefined;
   [ScreenNames.SETTINGS_TAB]: undefined;

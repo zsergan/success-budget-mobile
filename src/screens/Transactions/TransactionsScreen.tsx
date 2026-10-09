@@ -1,29 +1,44 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { View } from 'react-native';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
-import type { TransactionComposerHandle } from '@components';
-import { BottomSheetModal as BottomModal, Fab, RangePickerSheet, ScreenFrame, TransactionComposer } from '@components';
-import { usePeriod } from '@hooks';
-import { useAppSelector, useSpaceArg } from '@redux/hooks';
+import {
+  Banner,
+  PendingWritesBanner,
+  BottomSheetModal as BottomModal,
+  Fab,
+  RangePickerSheet,
+  ScreenFrame,
+  useTransactionDelete,
+  useTransactionFlow,
+} from '@components';
+import { usePeriod, useSpaceRefresh } from '@hooks';
+import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
-import { useGetWalletsQuery } from '@redux/state/wallet/api';
+import { rangeSelection } from '@redux/state/transactionFlow/selection';
 import { TransactionType } from '@shared/enums';
 import type { ScreenNames } from '@shared/enums';
-import type { MainTabNavigationProp, MainTabScreenProps } from '@shared/types';
+import type { MainTabNavigationProp, MainTabScreenProps, RevealTransaction } from '@shared/types';
 import { groupTransactionsByDay } from '@shared/utils';
 import AppliedFilter from './components/AppliedFilter/AppliedFilter';
 import FilterBar from './components/FilterBar/FilterBar';
+import RangeCount from './components/RangeCount/RangeCount';
 import TransactionsSkeleton from './components/Skeleton/TransactionsSkeleton';
 import TransactionsEmptyState from './components/TransactionsEmptyState/TransactionsEmptyState';
 import TransactionsHeader from './components/TransactionsHeader/TransactionsHeader';
 import TransactionsList from './components/TransactionsList/TransactionsList';
 import useTransactionsData from './hooks/useTransactionsData';
 
+import styles from './style';
+
+const HIGHLIGHT_MS = 2500;
+
 const TransactionsScreen = () => {
+  useSpaceRefresh();
   const navigation = useNavigation<MainTabNavigationProp<ScreenNames.TRANSACTIONS_TAB>>();
   const route = useRoute<MainTabScreenProps<ScreenNames.TRANSACTIONS_TAB>['route']>();
-  const composerRef = useRef<TransactionComposerHandle>(null);
+  const { requestDelete } = useTransactionDelete();
   const rangePickerRef = useRef<BottomSheetModal>(null);
 
   const handleOpenPicker = () => rangePickerRef.current?.present();
@@ -39,26 +54,83 @@ const TransactionsScreen = () => {
   }, [navigation, requestedFilter, spaceId]);
 
   const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod, openMonthOf } = usePeriod();
-  const { transactions, viewState, latest, income, expense, currencyCode, refetch, retryLatest } = useTransactionsData({
+
+  // Show from a confirmation: the record's month with no filter, its row scrolled to and lit for a moment.
+  // The user's period changes only on this explicit request.
+  const reveal = route.params?.reveal;
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState<RevealTransaction | undefined>(undefined);
+
+  if (reveal && reveal !== revealed) {
+    setRevealed(reveal);
+    if (reveal.spaceId === spaceId) {
+      openMonthOf(reveal.timestamp);
+      setHighlightId(reveal.transactionId);
+    }
+  }
+
+  useEffect(() => {
+    if (reveal) navigation.setParams({ reveal: undefined, filter: undefined });
+  }, [navigation, reveal]);
+
+  const { openCreate, openDetails } = useTransactionFlow(
+    filter
+      ? {
+          from: filter.from,
+          to: filter.to,
+          filter: {
+            name: filter.name,
+            transactionType: filter.transactionType,
+            categoryId: filter.categoryId,
+            walletId: filter.walletId,
+          },
+        }
+      : rangeSelection(range),
+  );
+  const {
+    transactions,
+    viewState,
+    latest,
+    income,
+    expense,
+    currencyCode,
+    refreshFailed,
+    retryRefresh,
+    refetch,
+    retryLatest,
+  } = useTransactionsData({
     range,
     filter,
   });
+  const [seenId, setSeenId] = useState<string | null>(null);
+  const isHighlightSeen = highlightId !== null && seenId === highlightId;
 
-  const { currentData: walletsOverview } = useGetWalletsQuery(useSpaceArg());
-  const firstWalletId = walletsOverview?.wallets[0]?.wallet.id ?? -1;
+  // The light fades only once the row is on screen, however long its month takes to load and the list to scroll.
+  useEffect(() => {
+    if (!isHighlightSeen) return;
+
+    const timer = setTimeout(() => setHighlightId(null), HIGHLIGHT_MS);
+    return () => clearTimeout(timer);
+  }, [isHighlightSeen]);
 
   return (
     <>
-      <TransactionComposer ref={composerRef} initialWalletId={firstWalletId} />
-
       <BottomModal ref={rangePickerRef} dynamicSizing>
-        <RangePickerSheet period={period} onApply={applyPeriod} />
+        <RangePickerSheet
+          period={period}
+          onApply={applyPeriod}
+          renderRangeNote={(draft) => <RangeCount range={draft} />}
+        />
       </BottomModal>
 
       <ScreenFrame edges={['top', 'left', 'right']} blurredStatusBar>
         <TransactionsList
-          groups={viewState === 'ready' ? groupTransactionsByDay(transactions, currencyCode) : []}
+          groups={viewState === 'ready' ? groupTransactionsByDay(transactions) : []}
           currencyCode={currencyCode}
+          onPressTransaction={openDetails}
+          onDeleteTransaction={requestDelete}
+          highlightId={highlightId}
+          onHighlightSeen={() => setSeenId(highlightId)}
           header={
             <>
               <TransactionsHeader />
@@ -81,6 +153,19 @@ const TransactionsScreen = () => {
                   onReset={resetPeriod}
                 />
               )}
+
+              <PendingWritesBanner style={styles.banner} />
+
+              {refreshFailed && (
+                <View style={styles.banner}>
+                  <Banner
+                    tone="danger"
+                    text="Couldn’t update the list. It shows what was loaded before."
+                    actionLabel="Retry"
+                    onAction={retryRefresh}
+                  />
+                </View>
+              )}
             </>
           }
           placeholder={
@@ -90,7 +175,7 @@ const TransactionsScreen = () => {
               {viewState === 'trueEmpty' && (
                 <TransactionsEmptyState
                   variant="trueEmpty"
-                  onAddTransaction={() => composerRef.current?.openExpense()}
+                  onAddTransaction={() => openCreate(TransactionType.EXPENSE)}
                 />
               )}
 
@@ -115,7 +200,10 @@ const TransactionsScreen = () => {
       </ScreenFrame>
 
       {viewState !== 'loading' && (
-        <Fab onExpense={() => composerRef.current?.openExpense()} onIncome={() => composerRef.current?.openIncome()} />
+        <Fab
+          onExpense={() => openCreate(TransactionType.EXPENSE)}
+          onIncome={() => openCreate(TransactionType.INCOME)}
+        />
       )}
     </>
   );

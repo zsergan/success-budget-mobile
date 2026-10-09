@@ -9,6 +9,7 @@ import { createAppStore } from '@redux/Store';
 import { TransactionType } from '@shared/enums';
 import type { DateRange } from '@shared/utils';
 import useStatsData, { STATS_STALE_AFTER_MS } from './useStatsData';
+import { createTransactionResponseDto } from '@redux/state/transaction/fixtures';
 
 const mockedRequest = jest.fn();
 
@@ -96,7 +97,7 @@ beforeEach(() => {
   respond = { summary: ok, trend: ok, breakdown: ok };
   mockedRequest.mockImplementation((config: RequestConfig) => {
     if (config.url.includes('/statistics/')) return respond[blockOf(config.url)](config);
-    if (config.method === 'POST') return Promise.resolve({ data: {} });
+    if (config.method === 'POST') return Promise.resolve({ data: createTransactionResponseDto() });
 
     return Promise.resolve({ data: [] });
   });
@@ -351,6 +352,7 @@ const createTransaction = (store: ReturnType<typeof createAppStore>) =>
     await store.dispatch(
       transactionApi.endpoints.createTransaction.initiate({
         spaceId: 1,
+        idempotencyKey: 'key-1',
         data: {
           wallet_id: 1,
           category_id: 1,
@@ -481,6 +483,7 @@ describe('after a mutation', () => {
       await store.dispatch(
         transactionApi.endpoints.createTransaction.initiate({
           spaceId: 1,
+          idempotencyKey: 'key-1',
           data: {
             wallet_id: 1,
             category_id: 1,
@@ -510,6 +513,7 @@ describe('after a mutation', () => {
       await store.dispatch(
         transactionApi.endpoints.createTransaction.initiate({
           spaceId: 1,
+          idempotencyKey: 'key-1',
           data: {
             wallet_id: 1,
             category_id: 1,

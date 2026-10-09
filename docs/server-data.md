@@ -11,9 +11,20 @@ now follows the "Stale" column through RTK Query tags (`src/redux/state/<domain>
 columns and the lifecycle section record the thunk-era behavior.
 Invalidation happens only after a successful mutation (an empty body
 counts as success), so a failed or session-stale write refreshes nothing.
-One exception: a limit create or edit rejected with `400 An archived
-category cannot be added to a limit` refreshes Limits and Categories,
+One exception: a limit create or edit rejected with
+`400 CATEGORY_ARCHIVED` refreshes Limits and Categories,
 because the error itself shows a category was archived elsewhere.
+Likewise a transaction write refused with `TRANSACTION_NOT_FOUND`,
+`TRANSACTION_VERSION_CONFLICT`, `WALLET_DELETED`, `CATEGORY_ARCHIVED`,
+`FORBIDDEN_WALLET` or `FORBIDDEN_CATEGORY` refreshes everything a
+transaction write does, since the cached record, wallet or category is
+behind the server.
+A transaction request refused with `403 FORBIDDEN_SPACE` removes every
+cached entry of that space and refreshes Spaces, whose fallback moves the
+selection to a space the user still belongs to.
+Any read refused with `403` for the current space refreshes Spaces too;
+once the list no longer has the space, the selection moves off it and its
+cached entries are removed.
 `History.Recent` is no longer a separate request: Home asks for the
 current month by the same client-local bounds as the Transactions tab's
 default period (`periodArg`), so both read one `History.Range` entry.
@@ -24,22 +35,23 @@ end to end.
 
 Every resource except Profile and Currencies is scoped to the active space.
 
-| Key              | Endpoint                                                   | Client state today              | Contents that other mutations can change                                                                                                |
-| ---------------- | ---------------------------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `Spaces`         | `GET /spaces`                                              | `space.spaces`                  | Caller's `role`, `member_count`, space list itself                                                                                      |
-| `Profile`        | `GET /users/profile`                                       | `profile`                       | — (no mutation endpoint)                                                                                                                |
-| `Currencies`     | `GET /currencies`                                          | `currency.currencies`           | — (reference data)                                                                                                                      |
-| `Wallets`        | `GET /spaces/:id/wallets`                                  | `wallet`                        | All-time `balance` per wallet, current-month `total_income`/`total_spend`, `total_balance`, `delta_percent`; deleted wallets excluded   |
-| `Categories`     | `GET /spaces/:id/categories`                               | `category`                      | `transaction_count` (all transactions, incl. deleted wallets), `limit: {id, name}` membership, `is_active`/`archived_at`, `sort`        |
-| `Limits`         | `GET /spaces/:id/limits`                                   | `limit`                         | Current-month `spent`/`in_percent` per limit (incl. deleted-wallet history), embedded category `name`/`icon`/`color`, `over_allocation` |
-| `History.Recent` | `GET /spaces/:id/transactions` (no params → current month) | `transaction.transactions`      | Rows with embedded `wallet` (null once deleted) and `category`; Home shows the first `RECENT_TRANSACTIONS_LIMIT`                        |
-| `History.Range`  | `GET /spaces/:id/transactions?from&to`                     | `transaction.rangeTransactions` | Same row shape, for the period picked on the Transactions tab; period totals are derived from it client-side                            |
-| `History.Latest` | `GET /spaces/:id/transactions/latest`                      | `transaction.latest`            | Single most recent row (or `null`); tells "no transactions at all" apart from "none in this period"                                     |
-| `Members`        | `GET /spaces/:id/members`                                  | `member.members`                | Member rows and pending invite rows                                                                                                     |
-| `Statistics`     | `GET /spaces/:id/statistics/{summary,trend,breakdown}`     | — (RTK Query only)              | Every transaction sum and count; category and wallet names, colors, archived and deleted state                                          |
+| Key              | Endpoint                                                   | Client state today              | Contents that other mutations can change                                                                                                                                    |
+| ---------------- | ---------------------------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Spaces`         | `GET /spaces`                                              | `space.spaces`                  | Caller's `role`, `member_count`, space list itself                                                                                                                          |
+| `Profile`        | `GET /users/profile`                                       | `profile`                       | — (no mutation endpoint)                                                                                                                                                    |
+| `Currencies`     | `GET /currencies`                                          | `currency.currencies`           | — (reference data)                                                                                                                                                          |
+| `Wallets`        | `GET /spaces/:id/wallets`                                  | `wallet`                        | All-time `balance` per wallet, current-month `total_income`/`total_spend`, `total_balance`, `delta_percent`; deleted wallets excluded                                       |
+| `Categories`     | `GET /spaces/:id/categories`                               | `category`                      | `transaction_count` (all transactions, incl. deleted wallets), `limit: {id, name}` membership, `is_active`/`archived_at`, `sort`                                            |
+| `Limits`         | `GET /spaces/:id/limits?time_zone=`                        | `limit`                         | `spent`/`in_percent` per limit over the device zone's month returned as `period` (incl. deleted-wallet history), embedded category `name`/`icon`/`color`, `over_allocation` |
+| `History.Recent` | `GET /spaces/:id/transactions` (no params → current month) | `transaction.transactions`      | Rows with embedded `wallet` (null once deleted) and `category`; Home shows the first `RECENT_TRANSACTIONS_LIMIT`                                                            |
+| `History.Range`  | `GET /spaces/:id/transactions?from&to`                     | `transaction.rangeTransactions` | Same row shape, for the period picked on the Transactions tab; period totals are derived from it client-side                                                                |
+| `History.Latest` | `GET /spaces/:id/transactions/latest`                      | `transaction.latest`            | Single most recent row (or `null`); tells "no transactions at all" apart from "none in this period"                                                                         |
+| `History.Count`  | `GET /spaces/:id/transactions/count?from&to`               | — (RTK Query only)              | Number of rows `History.Range` would return, initial balances included; the period picker's counter                                                                         |
+| `Members`        | `GET /spaces/:id/members`                                  | `member.members`                | Member rows and pending invite rows                                                                                                                                         |
+| `Statistics`     | `GET /spaces/:id/statistics/{summary,trend,breakdown}`     | — (RTK Query only)              | Every transaction sum and count; category and wallet names, colors, archived and deleted state                                                                              |
 
-"History" below means all three of `History.Recent`, `History.Range` and
-`History.Latest`.
+"History" below means all of `History.Recent`, `History.Range`,
+`History.Latest` and `History.Count`.
 
 ## Invalidation rules
 
@@ -52,6 +64,7 @@ Space-scoped endpoints are written without their `/spaces/:id` prefix.
 | ----------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- | -------------------------------- |
 | Create transaction                  | `POST /transactions`                                                             | History; Wallets (balance, month totals, total, delta); Limits (spent, if expense in current month); Categories (`transaction_count`)                                    | `History.Recent`, Wallets, Limits, `History.Range` + `History.Latest` (via `dataRevision`)           | **Categories**                   |
 | Delete transaction                  | `DELETE /transactions/:id`                                                       | Same as create                                                                                                                                                           | — (`deleteTransaction` exists in `transaction.api.ts`, no thunk or UI)                               | Whole row once wired             |
+| Edit transaction                    | `PATCH /transactions/:id`                                                        | Same as create                                                                                                                                                           | — (new endpoint)                                                                                     | —                                |
 | Create category                     | `POST /categories`                                                               | Categories                                                                                                                                                               | Categories                                                                                           | —                                |
 | Edit category (name/icon/color)     | `PUT /categories/:id`                                                            | Categories; Limits (embedded category); History (embedded category)                                                                                                      | Categories, `History.Range`, `History.Latest`                                                        | **Limits**, **`History.Recent`** |
 | Archive category                    | `PUT /categories/:id` with `is_active: 0`                                        | Categories; Limits (category unlinked, limit deleted if it was its last category); History (embedded category)                                                           | Categories, `History.Range`, `History.Latest`                                                        | **Limits**, **`History.Recent`** |
@@ -78,30 +91,30 @@ described in the lifecycle section.
 
 ### Staleness with no local mutation
 
-- **Other members of a shared space.** Nothing is re-fetched on screen
-  focus, app foreground, pull-to-refresh or a timer, so their changes only
-  appear after the next local mutation that happens to refresh the same
-  resource, or a space switch / re-login.
-- **Month rollover.** Wallets month totals, Limits and `History.Recent`
-  are computed by the server for the month containing "now". If the app
-  stays open across the boundary they keep showing the previous month.
+- **Other members of a shared space.** Home, Transactions, Limits and
+  Categories call `useSpaceRefresh`: a return to the screen, or to the app
+  while it shows one of them, invalidates the space's `Transactions`,
+  `Wallets`, `Limits` and `Categories` (`refreshSpaceData`), at most once
+  every 30 s per space. Stats follows through its revision and also
+  restarts its own cycle when it is older than 30 s. Open details are read
+  again on a return to the app; a form being edited keeps its draft.
+- **Month rollover.** `useSpaceRefresh` also wakes when a new month begins:
+  it renders the screen again, so a current period moves onto the new
+  month, and refreshes the space's data regardless of the 30 s limit.
 
 ## Notes for the RTK Query design
 
-- `POST /transactions` returns the bare transaction with no `wallet` or
-  `category` relation, so it can't be inserted into a cached history list
-  as-is; invalidating is the straightforward option.
+- Every transaction read and write result is the backend's transaction
+  view (`docs/transactions-contract.md`): `kind`, `version`, a nullable
+  `wallet` and a compact `category` without `transaction_count`, `limit`
+  or `sort`, mapped to `TransactionCategoryModel` rather than the
+  Categories API's `CategoryModel`. `wallet_id` and `category_id` are not
+  in it.
 - A transaction created outside the currently cached period does not
   change `History.Recent`/`History.Range` rows, but invalidating them
   anyway is correct and cheap; no need to match on timestamps.
 - An income transaction does not change Limits; a per-type rule is
   possible but not required.
-- History rows still differ from the client `Transaction` DTO: the
-  backend excludes `wallet_id` and `category_id` (so `walletId` and
-  `categoryId` on `TransactionModel` are always `undefined`), and the
-  embedded `category` is the bare entity without `transaction_count`,
-  `limit` or `archived_at`, although it is mapped as a full
-  `CategoryModel`. Nothing reads those fields from history today.
 
 ## Statistics
 
@@ -147,9 +160,8 @@ something to drop on purpose.
   `transactionsInvalidated` after mutations that affect history. The
   Members screen fetches `Members` on mount and on space change. Sign-up
   and Create Space fetch `Currencies` on mount.
-- **No other triggers.** No refetch on screen focus, app foreground,
-  reconnect, pull-to-refresh or interval (see "Staleness with no local
-  mutation" above).
+- **Returns and a new month.** See "Staleness with no local mutation"
+  above; there is no refetch on reconnect, pull-to-refresh or interval.
 - **Stale responses.** Each list fetch stores its `requestId` on pending
   and ignores a fulfilled/rejected action with a different id, so an older
   request cannot overwrite a newer one. `fetchSpaces` additionally only

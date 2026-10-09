@@ -23,7 +23,19 @@ export interface OverAllocation {
   difference: number;
 }
 
+// The month `spent` was counted over, in the zone the request named.
+export interface LimitsPeriod {
+  time_zone: string;
+  start_date: string;
+  end_date: string;
+  from: string;
+  // Inclusive, to the millisecond.
+  to: string;
+}
+
 export interface GetLimitsResponse {
+  // Absent from servers that predate the time zone contract.
+  period?: LimitsPeriod;
   total: LimitView | null;
   categories: LimitView[];
   over_allocation: OverAllocation | null;

@@ -1,10 +1,9 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import { Icon } from '@components';
+import { CategoryIconBox, Icon } from '@components';
 import type { CategoryModel } from '@api/models';
 import { colors } from '@shared/theme';
 import { formatDayMonth } from '@shared/utils';
-import CategoryIconBox from '../CategoryIconBox/CategoryIconBox';
 
 import styles from './style';
 

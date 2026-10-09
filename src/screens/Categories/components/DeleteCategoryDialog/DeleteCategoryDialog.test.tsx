@@ -13,10 +13,6 @@ import DeleteCategoryDialog from './DeleteCategoryDialog';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => jest.requireActual('react-native-reanimated/mock'));
-jest.mock('@react-native-async-storage/async-storage', () =>
-  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
-
 const mockedRequest = jest.fn();
 
 jest.mock('@api/instance', () => ({

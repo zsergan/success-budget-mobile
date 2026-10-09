@@ -1,15 +1,25 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
+import { View } from 'react-native';
+import { skipToken } from '@reduxjs/toolkit/query';
 
-import type { TransactionComposerHandle } from '@components';
-import { Fab, RootLayout, SpaceSwitcher, TransactionComposer } from '@components';
+import {
+  Banner,
+  Fab,
+  PendingWritesBanner,
+  RootLayout,
+  SpaceSwitcher,
+  useTransactionDelete,
+  useTransactionFlow,
+} from '@components';
 import { getLoadState } from '@redux/api/loadState';
-import { useCurrentMonthArg, useSpaceArg } from '@redux/hooks';
+import { useAppSelector, useCurrentMonthArg, useSpaceArg } from '@redux/hooks';
+import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { EMPTY_WALLETS, getTotalBalance } from '@redux/state/wallet/selectors';
-import { useGetTransactionsQuery } from '@redux/state/transaction/api';
-import { EMPTY_TRANSACTIONS } from '@redux/state/transaction/selectors';
-import { useBalanceVisibility } from '@hooks';
-import type { ScreenNames } from '@shared/enums';
+import { useGetLatestTransactionQuery, useGetTransactionsQuery } from '@redux/state/transaction/api';
+import { EMPTY_TRANSACTIONS, getEmptyPeriodState } from '@redux/state/transaction/selectors';
+import { useBalanceVisibility, useSpaceRefresh } from '@hooks';
+import { ScreenNames, TransactionType } from '@shared/enums';
 import type { MainTabScreenProps } from '@shared/types';
 import { FAB_SCROLL_CLEARANCE } from '@shared/constants';
 import BalanceOverview from './components/BalanceOverview/BalanceOverview';
@@ -21,27 +31,43 @@ import styles from './style';
 interface Props extends MainTabScreenProps<ScreenNames.HOME_TAB> {}
 
 const HomeScreen = ({ navigation }: Props) => {
+  useSpaceRefresh();
   const [focusedWalletId, setFocusedWalletId] = useState<number | undefined>(undefined);
-  const composerRef = useRef<TransactionComposerHandle>(null);
+  const { requestDelete } = useTransactionDelete();
 
   const spaceArg = useSpaceArg();
-  const { currentData: walletsOverview } = useGetWalletsQuery(spaceArg);
+  const walletsQuery = useGetWalletsQuery(spaceArg);
+  const walletsOverview = walletsQuery.currentData;
   const { total, currencyCode, walletsCount, deltaPercent } = getTotalBalance(walletsOverview);
   const wallets = walletsOverview?.wallets ?? EMPTY_WALLETS;
-  const recentQuery = useGetTransactionsQuery(useCurrentMonthArg());
-  const { isLoading: isLoadingTransactions, hasError: hasTransactionsError } = getLoadState(recentQuery);
+  const recentArg = useCurrentMonthArg();
+  const recentQuery = useGetTransactionsQuery(recentArg);
+  const { openCreate, openDetails } = useTransactionFlow(
+    recentArg === skipToken ? null : { from: recentArg.from, to: recentArg.to },
+  );
+  const {
+    isLoading: isLoadingTransactions,
+    hasError: hasTransactionsError,
+    hasRefreshError: hasRecentRefreshError,
+  } = getLoadState(recentQuery);
+  // Balances and activity stay, but a refresh, e.g. after a saved change, could not bring them up to date.
+  const refreshFailed = hasRecentRefreshError || getLoadState(walletsQuery).hasRefreshError;
+  // An empty month tells a first run from a quiet month only by the latest record of the whole history.
+  const spaceId = useAppSelector(selectCurrentSpaceId);
+  const latestQuery = useGetLatestTransactionQuery(recentQuery.currentData?.length === 0 ? spaceArg : skipToken);
+  // Only a month that loaded empty asks the history; a month still loading or failed has its own state.
+  const emptyState =
+    recentArg === skipToken || recentQuery.currentData?.length !== 0
+      ? 'trueEmpty'
+      : getEmptyPeriodState(latestQuery, { from: new Date(recentArg.from), to: new Date(recentArg.to) });
+  const latest = latestQuery.currentData;
   const { isHidden, toggle } = useBalanceVisibility();
 
-  // The focused wallet can disappear (deleted, or a space switch replaced the list), so fall back to the first one.
-  const composerWalletId =
-    focusedWalletId !== undefined && wallets.some(({ wallet }) => wallet.id === focusedWalletId)
-      ? focusedWalletId
-      : (wallets[0]?.wallet.id ?? -1);
+  // A wallet the user swiped to opens the form on it; otherwise the form picks the last used one.
+  const composerWalletId = wallets.some(({ wallet }) => wallet.id === focusedWalletId) ? focusedWalletId : undefined;
 
   return (
     <>
-      <TransactionComposer ref={composerRef} initialWalletId={composerWalletId} />
-
       <RootLayout
         style={styles.container}
         contentContainerStyle={{ paddingBottom: FAB_SCROLL_CLEARANCE }}
@@ -50,6 +76,22 @@ const HomeScreen = ({ navigation }: Props) => {
         blurredStatusBar
       >
         <SpaceSwitcher navigation={navigation} />
+
+        {refreshFailed && (
+          <View style={styles.banner}>
+            <Banner
+              tone="danger"
+              text="Couldn’t update. Balances and activity show what was loaded before."
+              actionLabel="Retry"
+              onAction={() => {
+                walletsQuery.refetch();
+                recentQuery.refetch();
+              }}
+            />
+          </View>
+        )}
+
+        <PendingWritesBanner style={styles.banner} />
 
         <BalanceOverview
           total={total}
@@ -70,10 +112,24 @@ const HomeScreen = ({ navigation }: Props) => {
           isLoading={isLoadingTransactions}
           hasError={hasTransactionsError}
           onRetry={recentQuery.refetch}
+          emptyState={emptyState}
+          latest={latest ?? null}
+          onRetryLatest={latestQuery.refetch}
+          onJumpToLatest={(transaction) =>
+            spaceId !== null &&
+            navigation.navigate(ScreenNames.TRANSACTIONS_TAB, {
+              reveal: { spaceId, transactionId: transaction.id, timestamp: transaction.timestamp },
+            })
+          }
+          onPressTransaction={openDetails}
+          onDeleteTransaction={requestDelete}
         />
       </RootLayout>
 
-      <Fab onExpense={() => composerRef.current?.openExpense()} onIncome={() => composerRef.current?.openIncome()} />
+      <Fab
+        onExpense={() => openCreate(TransactionType.EXPENSE, composerWalletId)}
+        onIncome={() => openCreate(TransactionType.INCOME, composerWalletId)}
+      />
     </>
   );
 };

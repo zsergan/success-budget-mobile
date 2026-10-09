@@ -2,14 +2,16 @@ import type { MutableRefObject, ReactNode } from 'react';
 import { useCallback, useEffect, useState, createContext, useRef } from 'react';
 import { Animated, Dimensions, Easing } from 'react-native';
 
-import type { AlertItem } from '../Alert/Alert';
+import { useAppSelector } from '@redux/hooks';
+
+import type { AlertAction, AlertItem } from '../Alert/Alert';
 import Alert from '../Alert/Alert';
 import { registerGlobalAlertHandler } from './globalAlert';
 
 import styles from './style';
 
 interface AlertContextData {
-  addAlert(message: string): void;
+  addAlert(message: string, action?: AlertAction): void;
   dismissAlert(id: number): void;
 }
 
@@ -49,14 +51,14 @@ const AlertProvider = ({ children }: AlertProviderProps) => {
   );
 
   const addAlert = useCallback(
-    (message: string) => {
+    (message: string, action?: AlertAction) => {
       if (timeout.current) {
         clearTimeout(timeout.current);
       }
 
       const id = Math.floor(Math.random() * 9000000) + 1000000;
 
-      setAlert({ id, message });
+      setAlert({ id, message, action });
 
       showAlert();
 
@@ -75,6 +77,17 @@ const AlertProvider = ({ children }: AlertProviderProps) => {
       hideAlert();
     }
   }, [hideAlert]);
+
+  // An action belongs to the session and space it was offered in; a switch takes it away with its toast.
+  const scope = useAppSelector(({ auth, space }) => `${auth.sessionKey}:${space.currentSpaceId}`);
+  const scopeRef = useRef(scope);
+
+  useEffect(() => {
+    if (scopeRef.current === scope) return;
+
+    scopeRef.current = scope;
+    if (alert?.action) dismissAlert();
+  }, [scope, alert, dismissAlert]);
 
   useEffect(() => {
     registerGlobalAlertHandler(addAlert);

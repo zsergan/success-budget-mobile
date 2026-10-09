@@ -1,7 +1,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { HomeScreen, LimitsScreen, SettingsScreen, StatsScreen, TransactionsScreen } from '@screens';
-import { Icon } from '@components';
+import { Icon, TransactionFlowSheet } from '@components';
 import { colors } from '@shared/theme';
 import { ScreenNames } from '@shared/enums';
 import type { MainTabParamList } from '@shared/types';
@@ -21,44 +21,48 @@ const SettingsIcon = ({ color, size }: IconProps) => <Icon name="settings" size=
 
 const MainNavigator = () => {
   return (
-    <Tab.Navigator
-      screenOptions={{
-        sceneStyle: { backgroundColor: colors.bg },
-        tabBarStyle: { backgroundColor: colors.bg },
-        tabBarActiveTintColor: colors.text,
-        tabBarInactiveTintColor: colors.muted,
-      }}
-    >
-      <Tab.Screen
-        name={ScreenNames.HOME_TAB}
-        component={HomeScreen}
-        options={{ tabBarIcon: HomeIcon, headerShown: false }}
-      />
+    <>
+      <TransactionFlowSheet />
 
-      <Tab.Screen
-        name={ScreenNames.TRANSACTIONS_TAB}
-        component={TransactionsScreen}
-        options={{ tabBarIcon: TransactionsIcon, tabBarLabel: 'History', headerShown: false }}
-      />
+      <Tab.Navigator
+        screenOptions={{
+          sceneStyle: { backgroundColor: colors.bg },
+          tabBarStyle: { backgroundColor: colors.bg },
+          tabBarActiveTintColor: colors.text,
+          tabBarInactiveTintColor: colors.muted,
+        }}
+      >
+        <Tab.Screen
+          name={ScreenNames.HOME_TAB}
+          component={HomeScreen}
+          options={{ tabBarIcon: HomeIcon, headerShown: false }}
+        />
 
-      <Tab.Screen
-        name={ScreenNames.STATS_TAB}
-        component={StatsScreen}
-        options={{ tabBarIcon: StatsIcon, headerShown: false }}
-      />
+        <Tab.Screen
+          name={ScreenNames.TRANSACTIONS_TAB}
+          component={TransactionsScreen}
+          options={{ tabBarIcon: TransactionsIcon, tabBarLabel: 'History', headerShown: false }}
+        />
 
-      <Tab.Screen
-        name={ScreenNames.LIMITS_TAB}
-        component={LimitsScreen}
-        options={{ tabBarIcon: LimitsIcon, headerShown: false }}
-      />
+        <Tab.Screen
+          name={ScreenNames.STATS_TAB}
+          component={StatsScreen}
+          options={{ tabBarIcon: StatsIcon, headerShown: false }}
+        />
 
-      <Tab.Screen
-        name={ScreenNames.SETTINGS_TAB}
-        component={SettingsScreen}
-        options={{ tabBarIcon: SettingsIcon, tabBarLabel: 'Profile', headerShown: false }}
-      />
-    </Tab.Navigator>
+        <Tab.Screen
+          name={ScreenNames.LIMITS_TAB}
+          component={LimitsScreen}
+          options={{ tabBarIcon: LimitsIcon, headerShown: false }}
+        />
+
+        <Tab.Screen
+          name={ScreenNames.SETTINGS_TAB}
+          component={SettingsScreen}
+          options={{ tabBarIcon: SettingsIcon, tabBarLabel: 'Profile', headerShown: false }}
+        />
+      </Tab.Navigator>
+    </>
   );
 };
 

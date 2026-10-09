@@ -8,6 +8,7 @@ import { transactionApi } from '@redux/state/transaction/api';
 import { walletApi } from '@redux/state/wallet/api';
 import { AppColor, SpaceType, TransactionType } from '@shared/enums';
 import { baseApi } from './baseApi';
+import { createTransactionResponseDto, transactionDto } from '@redux/state/transaction/fixtures';
 
 const mockedRequest = jest.fn();
 
@@ -112,7 +113,43 @@ const rules = [
   {
     name: 'create transaction',
     mutate: (store: ReturnType<typeof createAppStore>) =>
-      store.dispatch(transactionApi.endpoints.createTransaction.initiate({ spaceId: 1, data: transactionData })),
+      store.dispatch(
+        transactionApi.endpoints.createTransaction.initiate({
+          spaceId: 1,
+          idempotencyKey: 'key-1',
+          data: transactionData,
+        }),
+      ),
+    response: createTransactionResponseDto(),
+    expected: [...ALL_HISTORY, '1:wallets', '1:limits', '1:categories'],
+  },
+  {
+    name: 'edit transaction',
+    mutate: (store: ReturnType<typeof createAppStore>) =>
+      store.dispatch(
+        transactionApi.endpoints.updateTransaction.initiate({
+          spaceId: 1,
+          transactionId: 'tx-1',
+          version: 1,
+          idempotencyKey: 'key-1',
+          data: { amount: '20' },
+        }),
+      ),
+    response: { transaction: transactionDto({ version: 2 }), wallets: [{ id: 1, balance: 80, is_deleted: false }] },
+    expected: [...ALL_HISTORY, '1:wallets', '1:limits', '1:categories'],
+  },
+  {
+    name: 'delete transaction',
+    mutate: (store: ReturnType<typeof createAppStore>) =>
+      store.dispatch(
+        transactionApi.endpoints.deleteTransaction.initiate({
+          spaceId: 1,
+          transactionId: 'tx-1',
+          version: 1,
+          idempotencyKey: 'key-1',
+        }),
+      ),
+    response: true,
     expected: [...ALL_HISTORY, '1:wallets', '1:limits', '1:categories'],
   },
   {
@@ -249,10 +286,31 @@ describe('invalidation rules (docs/server-data.md)', () => {
     ],
   ])('a limit %s rejected for an archived category refreshes categories and limits', async (_write, mutate) => {
     mutationFails = true;
-    mutationError = { statusCode: 400, message: 'An archived category cannot be added to a limit' };
+    mutationError = { statusCode: 400, code: 'CATEGORY_ARCHIVED', message: 'The category is archived' };
 
     expect(await refetchedAfter(mutate)).toEqual(['1:categories', '1:limits']);
   });
+
+  it.each(['TRANSACTION_NOT_FOUND', 'TRANSACTION_VERSION_CONFLICT', 'WALLET_DELETED', 'CATEGORY_ARCHIVED'])(
+    'a transaction write refused with %s refreshes what it shows to be stale',
+    async (code) => {
+      mutationFails = true;
+      mutationError = { statusCode: 409, code, message: 'Refused' };
+
+      const refetched = await refetchedAfter((store) =>
+        store.dispatch(
+          transactionApi.endpoints.deleteTransaction.initiate({
+            spaceId: 1,
+            transactionId: 'tx-1',
+            version: 1,
+            idempotencyKey: 'key-1',
+          }),
+        ),
+      );
+
+      expect(refetched).toEqual([...ALL_HISTORY, '1:categories', '1:limits', '1:wallets'].sort());
+    },
+  );
 
   it('treats a success without a response body as a success', async () => {
     mutationResponse = undefined;
@@ -276,7 +334,11 @@ describe('session isolation', () => {
     signIn();
     mockedRequest.mockImplementationOnce(() => new Promise((resolve) => (finishOldMutation = resolve)));
     const oldMutation = store.dispatch(
-      transactionApi.endpoints.createTransaction.initiate({ spaceId: 1, data: transactionData }),
+      transactionApi.endpoints.createTransaction.initiate({
+        spaceId: 1,
+        idempotencyKey: 'key-1',
+        data: transactionData,
+      }),
     );
 
     await store.dispatch(logoutMe());

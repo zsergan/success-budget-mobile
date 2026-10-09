@@ -100,6 +100,7 @@ describe('registerMe', () => {
     mockedRegister.mockRejectedValue(
       axiosErrorFor({
         message: 'A confirmation email was already requested, please try again shortly',
+        code: 'CONFIRMATION_EMAIL_RATE_LIMITED',
         statusCode: 429,
         path: '/users/register',
         timestamp: '2026-01-01T00:00:00.000Z',

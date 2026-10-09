@@ -4,7 +4,8 @@ import * as SecureStore from 'expo-secure-store';
 import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
 import { createAppStore } from '@redux/Store';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
-import { createHttpClient } from './instance';
+import { getRejectValue } from '@redux/createAppAsyncThunk';
+import { createHttpClient, REQUEST_TIMEOUT_MS } from './instance';
 import { bindHttpSession } from './session';
 
 jest.mock('expo-secure-store');
@@ -54,6 +55,14 @@ beforeEach(() => {
 afterAll(() => bindHttpSession(null));
 
 describe('401 handling', () => {
+  it('cancels a queued request whose session ended before the interceptor ran', async () => {
+    const { prepare } = interceptorsOf(createHttpClient());
+    sessionKey = 1;
+    await expect(prepare({ headers: {}, sessionKey: 0 } as InternalAxiosRequestConfig)).rejects.toMatchObject({
+      code: 'ERR_CANCELED',
+    });
+    expect(mockedGetItemAsync).not.toHaveBeenCalled();
+  });
   it('ends the session that sent the request', async () => {
     await sendAndFail(401);
 
@@ -66,14 +75,17 @@ describe('401 handling', () => {
     expect(endSession).not.toHaveBeenCalled();
   });
 
-  it('treats a request as stale when the session ends while its token is being read', async () => {
+  it('cancels a request before sending when the session ends while its token is being read', async () => {
     mockedGetItemAsync.mockImplementation(async () => {
       sessionKey += 1;
 
       return 'token';
     });
 
-    await sendAndFail(401);
+    const { prepare } = interceptorsOf(createHttpClient());
+    await expect(prepare({ headers: {} } as InternalAxiosRequestConfig)).rejects.toMatchObject({
+      code: 'ERR_CANCELED',
+    });
 
     expect(endSession).not.toHaveBeenCalled();
   });
@@ -142,4 +154,11 @@ describe('a late response after a logout and a new login', () => {
     expect(mockedShowGlobalAlert).not.toHaveBeenCalled();
     expect(store.getState().auth.isSignedIn).toBe(true);
   });
+});
+
+it('gives up on a request after the timeout, as on a lost connection', () => {
+  const timedOut = { code: 'ECONNABORTED', message: 'timeout of 20000ms exceeded', config: {} };
+
+  expect(createHttpClient().defaults.timeout).toBe(REQUEST_TIMEOUT_MS);
+  expect(getRejectValue(timedOut)).toMatchObject({ statusCode: 0 });
 });

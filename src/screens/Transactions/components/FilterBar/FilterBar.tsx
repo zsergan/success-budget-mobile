@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import { Icon, PeriodBar } from '@components';
 import { colors } from '@shared/theme';
 import type { Period, PeriodUnit } from '@shared/utils';
-import { formatCurrencyAmount } from '@shared/utils';
+import { formatMoneyAmount } from '@shared/utils';
 
 import styles from './style';
 
@@ -28,7 +28,7 @@ const FilterBar = ({ period, income, expense, currencyCode, onPresetPress, onOpe
           <Text style={styles.totalLabel}>Income</Text>
         </View>
 
-        <Text style={styles.totalValue}>{formatCurrencyAmount(income, currencyCode)}</Text>
+        <Text style={styles.totalValue}>{formatMoneyAmount(income, currencyCode)}</Text>
       </View>
 
       <View style={styles.totalCard}>
@@ -37,7 +37,7 @@ const FilterBar = ({ period, income, expense, currencyCode, onPresetPress, onOpe
           <Text style={styles.totalLabel}>Expense</Text>
         </View>
 
-        <Text style={styles.totalValue}>{formatCurrencyAmount(expense, currencyCode)}</Text>
+        <Text style={styles.totalValue}>{formatMoneyAmount(expense, currencyCode)}</Text>
       </View>
     </View>
   </View>
