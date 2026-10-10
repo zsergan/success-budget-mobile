@@ -120,6 +120,7 @@ const StatsList = ({
               totalAmount={item.totalAmount}
               sourceCount={item.sourceCount}
               currency={item.currency}
+              type={item.type}
               mode={mode}
               selectedKey={selectedSegmentKey}
               onSelect={onSelectSegment}

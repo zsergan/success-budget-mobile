@@ -6,6 +6,7 @@ import type {
   StatisticsBreakdown,
   WalletBreakdownItem,
 } from '@api/dto';
+import type { TransactionType } from '@shared/enums';
 
 export type BreakdownMode = 'category' | 'wallet';
 
@@ -34,6 +35,7 @@ export type StatsItem =
   | {
       kind: 'donut';
       key: 'donut';
+      type: TransactionType;
       groups: BreakdownGroup[];
       totalAmount: Money;
       sourceCount: number;
@@ -74,24 +76,24 @@ export const buildStatsItems = ({
   if (!breakdown) return [...items, { kind: 'breakdownStatus', key: 'breakdownStatus' }];
   if (!hasSources) return [...items, { kind: 'breakdownEmpty', key: 'breakdownEmpty' }];
 
-  const { currency } = breakdown;
+  const { currency, transaction_type: type } = breakdown;
   const groups = toGroups(breakdown, mode);
   const { total_amount, source_count } = mode === 'category' ? breakdown.by_category : breakdown.by_wallet;
 
   const rows: Omit<BreakdownRowItem, 'isFirst' | 'isLast'>[] = [];
   groups.forEach((group) => {
-    rows.push({ kind: 'row', key: `${mode}:${group.key}`, group, currency, isChild: false });
+    rows.push({ kind: 'row', key: `${type}:${mode}:${group.key}`, group, currency, isChild: false });
 
     if (group.kind === 'other' && isOtherExpanded) {
       group.children.forEach((child) =>
-        rows.push({ kind: 'row', key: `${mode}:other:${child.key}`, group: child, currency, isChild: true }),
+        rows.push({ kind: 'row', key: `${type}:${mode}:other:${child.key}`, group: child, currency, isChild: true }),
       );
     }
   });
 
   return [
     ...items,
-    { kind: 'donut', key: 'donut', groups, totalAmount: total_amount, sourceCount: source_count, currency },
+    { kind: 'donut', key: 'donut', type, groups, totalAmount: total_amount, sourceCount: source_count, currency },
     ...rows.map((row, index) => ({ ...row, isFirst: index === 0, isLast: index === rows.length - 1 })),
   ];
 };

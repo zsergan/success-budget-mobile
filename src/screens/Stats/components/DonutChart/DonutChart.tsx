@@ -5,6 +5,8 @@ import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from '
 import Svg, { Circle, G } from 'react-native-svg';
 
 import type { Money } from '@api/dto';
+import { Icon } from '@components';
+import { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
 import { getBreakdownAppearance } from '@screens/Stats/breakdownAppearance';
 import { formatMoney } from '@screens/Stats/format';
@@ -52,6 +54,11 @@ const Reveal = ({ duration }: { duration: number }) => {
   );
 };
 
+const TYPE_LOOK = {
+  [TransactionType.EXPENSE]: { label: 'Spent', subject: 'Expenses', icon: 'expense', color: colors.danger },
+  [TransactionType.INCOME]: { label: 'Income', subject: 'Income', icon: 'income', color: colors.ok },
+} as const;
+
 const countLabel = (count: number, mode: BreakdownMode) =>
   mode === 'wallet'
     ? `${count} ${count === 1 ? 'wallet' : 'wallets'}`
@@ -62,6 +69,7 @@ interface Props {
   totalAmount: Money;
   sourceCount: number;
   currency: string;
+  type: TransactionType;
   mode: BreakdownMode;
   selectedKey: string | null;
   onSelect: (key: string | null) => void;
@@ -74,6 +82,7 @@ const DonutChart = ({
   totalAmount,
   sourceCount,
   currency,
+  type,
   mode,
   selectedKey,
   onSelect,
@@ -82,8 +91,9 @@ const DonutChart = ({
   const { isAnimated, duration } = useChartMotion();
   const segments = toDonutSegments(groups);
   const selected = groups.find((group) => group.key === selectedKey) ?? null;
+  const look = TYPE_LOOK[type];
 
-  const dataKey = `${mode}:${groups.map((group) => `${group.key}=${group.amount}`).join(',')}`;
+  const dataKey = `${type}:${mode}:${groups.map((group) => `${group.key}=${group.amount}`).join(',')}`;
 
   const handlePress = (event: GestureResponderEvent) => {
     const key = hitTestDonut(event.nativeEvent.locationX, event.nativeEvent.locationY, segments);
@@ -91,14 +101,12 @@ const DonutChart = ({
   };
 
   const center = !selected
-    ? { label: 'Spent', amount: totalAmount, sub: countLabel(sourceCount, mode) }
-    : selected.kind === 'other'
-      ? { label: 'Other', amount: selected.amount, sub: countLabel(selected.children.length, mode) }
-      : {
-          label: getBreakdownAppearance(selected).name,
-          amount: selected.amount,
-          sub: `${selected.percent.toFixed(1)}%`,
-        };
+    ? { label: look.label, amount: totalAmount, sub: countLabel(sourceCount, mode) }
+    : {
+        label: getBreakdownAppearance(selected).name,
+        amount: selected.amount,
+        sub: `${selected.percent.toFixed(1)}%`,
+      };
 
   // Screen readers step through the segments in order; past either end the selection clears.
   const handleAccessibilityAction = ({ nativeEvent }: AccessibilityActionEvent) => {
@@ -118,7 +126,7 @@ const DonutChart = ({
       onPress={handlePress}
       onTouchStart={onTouchInside}
       accessibilityRole="adjustable"
-      accessibilityLabel={mode === 'wallet' ? 'Spending by wallet' : 'Spending by category'}
+      accessibilityLabel={`${look.subject} by ${mode}`}
       accessibilityValue={{ text: `${center.label}, ${formatMoney(center.amount, currency)}, ${center.sub}` }}
       accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
       onAccessibilityAction={handleAccessibilityAction}
@@ -153,9 +161,12 @@ const DonutChart = ({
       </Svg>
 
       <View style={styles.center} pointerEvents="none">
-        <Text maxFontSizeMultiplier={CHART_MAX_FONT_SCALE} style={styles.centerLabel} numberOfLines={1}>
-          {center.label}
-        </Text>
+        <View style={styles.centerHead}>
+          <Icon name={look.icon} size={10} color={look.color} strokeWidth={2.6} />
+          <Text maxFontSizeMultiplier={CHART_MAX_FONT_SCALE} style={styles.centerLabel} numberOfLines={1}>
+            {center.label}
+          </Text>
+        </View>
         <Text
           maxFontSizeMultiplier={CHART_MAX_FONT_SCALE}
           style={styles.centerAmount}

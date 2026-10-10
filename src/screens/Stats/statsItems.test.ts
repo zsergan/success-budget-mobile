@@ -1,5 +1,5 @@
 import type { CategoryBreakdownItem, StatisticsBreakdown, WalletBreakdownItem } from '@api/dto';
-import { AppColor } from '@shared/enums';
+import { AppColor, TransactionType } from '@shared/enums';
 import { buildStatsItems } from './statsItems';
 
 const category = (id: number): CategoryBreakdownItem => ({
@@ -30,8 +30,9 @@ const wallet = (id: number): WalletBreakdownItem => ({
 
 const service = { id: null, name: null, icon: null, color: null, is_archived: false, opens_history: false } as const;
 
-const breakdown = (sourceCount = 8): StatisticsBreakdown =>
+const breakdown = (sourceCount = 8, type = TransactionType.EXPENSE): StatisticsBreakdown =>
   ({
+    transaction_type: type,
     total: { amount: '80.00', count: sourceCount },
     by_category: {
       total_amount: '80.00',
@@ -71,9 +72,9 @@ describe('buildStatsItems', () => {
       'trend',
       'breakdownHeader',
       'donut',
-      'category:category:1',
-      'category:category:2',
-      'category:other',
+      'expense:category:category:1',
+      'expense:category:category:2',
+      'expense:category:other',
     ]);
   });
 
@@ -82,11 +83,11 @@ describe('buildStatsItems', () => {
     const rows = items.filter((item) => item.kind === 'row');
 
     expect(rows.map((row) => [row.key, row.isChild])).toEqual([
-      ['category:category:1', false],
-      ['category:category:2', false],
-      ['category:other', false],
-      ['category:other:category:3', true],
-      ['category:other:category:4', true],
+      ['expense:category:category:1', false],
+      ['expense:category:category:2', false],
+      ['expense:category:other', false],
+      ['expense:category:other:category:3', true],
+      ['expense:category:other:category:4', true],
     ]);
     expect(rows.map((row) => row.isFirst)).toEqual([true, false, false, false, false]);
     expect(rows.map((row) => row.isLast)).toEqual([false, false, false, false, true]);
@@ -95,7 +96,26 @@ describe('buildStatsItems', () => {
   it('puts deleted wallets before Other in the wallet breakdown', () => {
     const items = buildStatsItems({ breakdown: breakdown(), mode: 'wallet', isOtherExpanded: false });
 
-    expect(keys(items).slice(4)).toEqual(['wallet:wallet:1', 'wallet:deleted_wallets', 'wallet:other']);
+    expect(keys(items).slice(4)).toEqual([
+      'expense:wallet:wallet:1',
+      'expense:wallet:deleted_wallets',
+      'expense:wallet:other',
+    ]);
+  });
+
+  it('keys the rows and the donut data by the breakdown type', () => {
+    const items = buildStatsItems({
+      breakdown: breakdown(8, TransactionType.INCOME),
+      mode: 'category',
+      isOtherExpanded: false,
+    });
+
+    expect(items.find((item) => item.kind === 'donut')).toMatchObject({ type: TransactionType.INCOME });
+    expect(keys(items).slice(4)).toEqual([
+      'income:category:category:1',
+      'income:category:category:2',
+      'income:category:other',
+    ]);
   });
 
   it('shows the no-spending message by count, without the mode switch', () => {
