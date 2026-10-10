@@ -231,6 +231,43 @@ describe('StatsScreen', () => {
     expect(screen.getByRole('tab', { name: 'By category' })).toBeTruthy();
   });
 
+  it('drops a picked segment whose group a refresh took away, and does not bring it back', async () => {
+    const { store } = renderStats();
+    await settle();
+    const donutText = () => screen.getByRole('adjustable').props.accessibilityValue.text as string;
+    const changeData = (stats: StatsFixture) =>
+      act(async () => {
+        fixture = stats;
+        await store.dispatch(
+          transactionApi.endpoints.createTransaction.initiate({
+            spaceId: 1,
+            idempotencyKey: `key-${stats.breakdown.expense.total.amount}`,
+            data: {
+              wallet_id: 1,
+              category_id: 1,
+              transaction_type: TransactionType.EXPENSE,
+              amount: '1.00',
+              timestamp: '2026-09-28T09:00:00.000Z',
+            },
+          }),
+        );
+      });
+
+    for (let step = 0; step < 6; step += 1) {
+      fireEvent(screen.getByRole('adjustable'), 'accessibilityAction', { nativeEvent: { actionName: 'increment' } });
+    }
+    expect(donutText()).toMatch(/^Kids & School Supply/);
+
+    await changeData(STATS_FIXTURES.week);
+    await settle();
+    expect(donutText()).toMatch(/^Spent/);
+
+    await changeData(STATS_FIXTURES.month);
+    await settle();
+    expect(screen.getByText('Kids & School Supply')).toBeTruthy();
+    expect(donutText()).toMatch(/^Spent/);
+  });
+
   it('retries only the block that failed, in its own place', async () => {
     fail.trend = failure(500);
     renderStats();
