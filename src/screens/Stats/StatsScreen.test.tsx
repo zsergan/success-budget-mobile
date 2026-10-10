@@ -98,7 +98,10 @@ const statsRequests = (block?: Block) => statsCalls(block).map(({ url }) => url)
 const lastParams = (block: Block) => statsCalls(block).at(-1)?.params;
 
 const answer = (config: RequestConfig) => {
-  const data = fixtureFor(config)[blockOf(config.url)];
+  const block = blockOf(config.url);
+  const stats = fixtureFor(config);
+  const data =
+    block === 'breakdown' ? stats.breakdown[config.params?.transaction_type as TransactionType] : stats[block];
   if (serverNow === null) return Promise.resolve({ data });
 
   const asOf = config.params?.as_of;
@@ -281,8 +284,8 @@ describe('StatsScreen', () => {
     expect(JSON.parse(String(screen.getByTestId('history-filter').props.children))).toEqual({
       spaceId: 1,
       name: 'Gifts',
-      from: fixture.breakdown.period.from,
-      to: fixture.breakdown.period.actual_to,
+      from: fixture.breakdown.expense.period.from,
+      to: fixture.breakdown.expense.period.actual_to,
       transactionType: 'expense',
       categoryId: 10,
     });

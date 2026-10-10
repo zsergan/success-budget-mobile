@@ -1,5 +1,6 @@
 import type {
   CategoryBreakdownItem,
+  MoneyCount,
   StatisticsBreakdown,
   StatisticsPeriod,
   StatisticsPeriodType,
@@ -31,6 +32,11 @@ const CATEGORIES: Record<string, Category> = {
   clothes: ['Clothes', AppColor.PLUM, 'Clothes'],
   gifts: ['Gifts', AppColor.CLAY, 'Gifts'],
   travel: ['Travel', AppColor.INDIGO, 'Travel'],
+  salary: ['Salary', AppColor.EVERGREEN, 'Salary'],
+  freelance: ['Freelance', AppColor.INDIGO, 'Freelance'],
+  bonus: ['Bonus', AppColor.AMBER, 'Bonus'],
+  dividends: ['Dividends', AppColor.PLUM, 'Dividends'],
+  refund: ['Refund', AppColor.SLATE, 'Refund'],
 };
 
 const WALLETS: Record<string, [name: string, color: AppColor]> = {
@@ -64,6 +70,9 @@ interface FixtureSpec {
   archived?: string[];
   wallets?: [key: string, cents: number][];
   deletedWallets?: number;
+  // All income lands as Salary in Everyday unless set.
+  incomeCategories?: [key: string, cents: number][];
+  incomeWallets?: [key: string, cents: number][];
   // Transactions of $0.00 still count.
   counts?: { income: number; expense: number };
   hasAnyTransactions?: boolean;
@@ -75,7 +84,7 @@ interface FixtureSpec {
 export interface StatsFixture {
   summary: StatisticsSummary;
   trend: StatisticsTrend;
-  breakdown: StatisticsBreakdown;
+  breakdown: Record<TransactionType, StatisticsBreakdown>;
 }
 
 const money = (cents: number) => (cents / 100).toFixed(2);
@@ -129,56 +138,73 @@ const group = <Item extends CategoryBreakdownItem | WalletBreakdownItem>(items: 
   };
 };
 
-const buildBreakdown = (spec: FixtureSpec, period: StatisticsPeriod, expenseCount: number): StatisticsBreakdown => {
-  const categories = (spec.categories ?? []).map(([key, cents], index): CategoryBreakdownItem => {
+interface BreakdownSpec {
+  type: TransactionType;
+  total: MoneyCount;
+  categories: [key: string, cents: number][];
+  wallets: [key: string, cents: number][];
+  deletedWallets: number;
+  // Ids stay unique across both types, and one wallet keeps its id in each.
+  firstCategoryId: number;
+  walletKeys: string[];
+}
+
+const buildBreakdown = (
+  spec: FixtureSpec,
+  period: StatisticsPeriod,
+  { type, total, categories: categorySpecs, wallets: walletSpecs, deletedWallets: deleted, ...ids }: BreakdownSpec,
+): StatisticsBreakdown => {
+  const cents = Math.round(Number(total.amount) * 100);
+  const categories = categorySpecs.map(([key, amount], index): CategoryBreakdownItem => {
     const [name, color, icon] = CATEGORIES[key];
+    const id = ids.firstCategoryId + index;
 
     return {
       kind: 'category',
-      key: `category:${index + 1}`,
-      id: index + 1,
+      key: `category:${id}`,
+      id,
       name: spec.names?.[key] ?? name,
       icon,
       color,
       is_archived: !!spec.archived?.includes(key),
       opens_history: true,
-      amount: money(cents),
-      percent: share(cents, spec.expense),
+      amount: money(amount),
+      percent: share(amount, cents),
     };
   });
-  const wallets = (spec.wallets ?? []).map(([key, cents], index): WalletBreakdownItem => {
+  const wallets = walletSpecs.map(([key, amount]): WalletBreakdownItem => {
     const [name, color] = WALLETS[key];
+    const id = ids.walletKeys.indexOf(key) + 1;
 
     return {
       kind: 'wallet',
-      key: `wallet:${index + 1}`,
-      id: index + 1,
+      key: `wallet:${id}`,
+      id,
       name,
       icon: null,
       color,
       is_archived: false,
       opens_history: true,
-      amount: money(cents),
-      percent: share(cents, spec.expense),
+      amount: money(amount),
+      percent: share(amount, cents),
     };
   });
-  const byCategory = group(categories, spec.expense);
-  const byWallet = group(wallets, spec.expense);
-  const deleted = spec.deletedWallets ?? 0;
+  const byCategory = group(categories, cents);
+  const byWallet = group(wallets, cents);
 
   return {
     period,
     currency: 'USD',
-    transaction_type: TransactionType.EXPENSE,
-    total: { amount: money(spec.expense), count: expenseCount },
+    transaction_type: type,
+    total,
     by_category: {
-      total_amount: money(spec.expense),
+      total_amount: total.amount,
       source_count: categories.length,
       primary_items: byCategory.primary,
       other: byCategory.other,
     },
     by_wallet: {
-      total_amount: money(spec.expense),
+      total_amount: total.amount,
       source_count: wallets.length + (deleted ? 1 : 0),
       primary_items: byWallet.primary,
       deleted_wallets: deleted
@@ -193,7 +219,7 @@ const buildBreakdown = (spec: FixtureSpec, period: StatisticsPeriod, expenseCoun
             opens_history: false,
             wallets_count: 1,
             amount: money(deleted),
-            percent: share(deleted, spec.expense),
+            percent: share(deleted, cents),
           }
         : null,
       other: byWallet.other,
@@ -207,6 +233,11 @@ export const buildStatsFixture = (spec: FixtureSpec): StatsFixture => {
   const expense = { amount: money(spec.expense), count: spec.counts?.expense ?? count(spec.expense) };
   const transactionsCount = income.count + expense.count;
   const previous = spec.previous;
+  const expenseCategories = spec.categories ?? [];
+  const expenseWallets = spec.wallets ?? [];
+  const incomeCategories = spec.incomeCategories ?? (spec.income ? [['salary', spec.income]] : []);
+  const incomeWallets = spec.incomeWallets ?? (spec.income ? [['everyday', spec.income]] : []);
+  const walletKeys = [...new Set([...expenseWallets, ...incomeWallets].map(([key]) => key))];
 
   return {
     summary: {
@@ -260,7 +291,26 @@ export const buildStatsFixture = (spec: FixtureSpec): StatsFixture => {
         };
       }),
     },
-    breakdown: buildBreakdown(spec, period, expense.count),
+    breakdown: {
+      [TransactionType.EXPENSE]: buildBreakdown(spec, period, {
+        type: TransactionType.EXPENSE,
+        total: expense,
+        categories: expenseCategories,
+        wallets: expenseWallets,
+        deletedWallets: spec.deletedWallets ?? 0,
+        firstCategoryId: 1,
+        walletKeys,
+      }),
+      [TransactionType.INCOME]: buildBreakdown(spec, period, {
+        type: TransactionType.INCOME,
+        total: income,
+        categories: incomeCategories,
+        wallets: incomeWallets,
+        deletedWallets: 0,
+        firstCategoryId: expenseCategories.length + 1,
+        walletKeys,
+      }),
+    },
   };
 };
 
@@ -299,6 +349,14 @@ const MONTH: FixtureSpec = {
     ['everyday', 184210],
     ['travel', 62030],
     ['savings', 40200],
+  ],
+  incomeCategories: [
+    ['salary', 320000],
+    ['freelance', 85000],
+  ],
+  incomeWallets: [
+    ['everyday', 320000],
+    ['savings', 85000],
   ],
 };
 
@@ -358,6 +416,17 @@ export const STATS_FIXTURES = {
       ['everyday', sum(YEAR_EXPENSE) - 1016400],
       ['travel', 623000],
       ['savings', 393400],
+    ],
+    incomeCategories: [
+      ['salary', 2880000],
+      ['bonus', 180000],
+      ['freelance', sum(YEAR_INCOME) - 3140000],
+      ['dividends', 60000],
+      ['refund', 20000],
+    ],
+    incomeWallets: [
+      ['everyday', 2880000],
+      ['savings', sum(YEAR_INCOME) - 2880000],
     ],
   }),
   // L8: the current week, by day, mostly ahead
@@ -495,7 +564,7 @@ export const STATS_FIXTURES = {
   }),
   // L17
   archived: buildStatsFixture({ ...MONTH, archived: ['subscriptions'] }),
-  // L18: income only, so no breakdown
+  // L18: income only, so no expense breakdown
   incomeOnly: buildStatsFixture({
     ...MONTH,
     income: 170000,
@@ -508,6 +577,8 @@ export const STATS_FIXTURES = {
     })),
     categories: [],
     wallets: [],
+    incomeCategories: [['freelance', 170000]],
+    incomeWallets: [['savings', 170000]],
   }),
   // L19: a finished week in deficit
   expenseOnly: buildStatsFixture({
@@ -567,6 +638,8 @@ export const STATS_FIXTURES = {
     })),
     categories: [['housing', 125000]],
     wallets: [['everyday', 125000]],
+    incomeCategories: [['salary', 140000]],
+    incomeWallets: [['everyday', 140000]],
   }),
   // L5: no transactions ever
   noHistory: buildStatsFixture({
@@ -577,6 +650,8 @@ export const STATS_FIXTURES = {
     buckets: MONTH_BUCKETS.map((bucket) => ({ ...bucket, income: 0, expense: 0 })),
     categories: [],
     wallets: [],
+    incomeCategories: [],
+    incomeWallets: [],
     hasAnyTransactions: false,
     lastTransactionDate: null,
   }),
@@ -589,6 +664,8 @@ export const STATS_FIXTURES = {
     buckets: MONTH_BUCKETS.map((bucket) => ({ ...bucket, income: 0, expense: 0 })),
     categories: [],
     wallets: [],
+    incomeCategories: [],
+    incomeWallets: [],
     lastTransactionDate: '2026-08-29',
   }),
   // Not in the design: the longest names and amounts the layout has to hold.
@@ -612,6 +689,8 @@ export const STATS_FIXTURES = {
       ['jointTravel', 98765432101 - 1000],
       ['savings', 1000],
     ],
+    incomeCategories: [['salary', 123456789012]],
+    incomeWallets: [['jointTravel', 123456789012]],
   }),
 } satisfies Record<string, StatsFixture>;
 
