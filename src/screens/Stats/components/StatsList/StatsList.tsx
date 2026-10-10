@@ -3,7 +3,7 @@ import type { ListRenderItem } from 'react-native';
 import { FlatList, Text, View } from 'react-native';
 
 import { Icon } from '@components';
-import type { TransactionType } from '@shared/enums';
+import { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
 import type { StatisticsBreakdown, StatisticsSummary, StatisticsTrend } from '@api/dto';
 import type { StatsBlock } from '@screens/Stats/hooks/useStatsData';
@@ -17,6 +17,25 @@ import SummaryCards from '../SummaryCards/SummaryCards';
 import TrendBlock from '../TrendBlock/TrendBlock';
 
 import styles, { BREAKDOWN_PLACEHOLDER_HEIGHT } from './style';
+
+type BreakdownEmptyItem = Extract<StatsItem, { kind: 'breakdownEmpty' }>;
+
+const emptyCopy = ({ type, isZeroTotal, canSwitch }: BreakdownEmptyItem) => {
+  const isIncome = type === TransactionType.INCOME;
+  // Zero-amount transactions still exist, so the title must not claim there are none.
+  const title = isZeroTotal
+    ? `${isIncome ? 'Income' : 'Expense'} total is zero`
+    : `No ${isIncome ? 'income' : 'expenses'} in this period`;
+  const text = canSwitch
+    ? isIncome
+      ? 'Switch to Expense to see where the money went.'
+      : 'Switch to Income to see what came in.'
+    : isZeroTotal
+      ? `${isIncome ? 'Income in this period adds' : 'Expenses in this period add'} up to zero.`
+      : `It appears once ${isIncome ? 'income' : 'an expense'} is recorded in this period.`;
+
+  return { title, text };
+};
 
 interface Props {
   items: StatsItem[];
@@ -99,19 +118,20 @@ const StatsList = ({
         ) : (
           <BlockPlaceholder height={BREAKDOWN_PLACEHOLDER_HEIGHT} />
         );
-      case 'breakdownEmpty':
+      case 'breakdownEmpty': {
+        const copy = emptyCopy(item);
+
         return (
           <View style={styles.emptyCard}>
             <View style={styles.emptyIcon}>
               <Icon name="pie" size={20} color={colors.muted} strokeWidth={1.8} />
             </View>
 
-            <Text style={styles.emptyTitle}>No expenses in this period</Text>
-            <Text style={styles.emptyText}>
-              The breakdown shows spending only. It appears once an expense is recorded in this period.
-            </Text>
+            <Text style={styles.emptyTitle}>{copy.title}</Text>
+            <Text style={styles.emptyText}>{copy.text}</Text>
           </View>
         );
+      }
       case 'donut':
         return (
           <View style={styles.cardTop}>

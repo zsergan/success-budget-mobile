@@ -231,6 +231,57 @@ describe('StatsScreen', () => {
     expect(screen.getByRole('tab', { name: 'By category' })).toBeTruthy();
   });
 
+  it('charts income by category and by wallet under its own label', async () => {
+    renderStats();
+    await settle();
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    await settle();
+
+    const donut = screen.getByRole('adjustable');
+    expect(donut.props.accessibilityLabel).toBe('Income by category');
+    expect(donut.props.accessibilityValue.text).toBe('Income, $4,050.00, 2 categories');
+    expect(screen.getByText('Freelance')).toBeTruthy();
+
+    fireEvent.press(screen.getByRole('tab', { name: 'By wallet' }));
+    expect(screen.getByRole('adjustable').props.accessibilityValue.text).toBe('Income, $4,050.00, 2 wallets');
+    expect(screen.getByText('Savings')).toBeTruthy();
+  });
+
+  it('points to the other type when the selected one is empty', async () => {
+    fixture = STATS_FIXTURES.incomeOnly;
+    renderStats();
+    await settle();
+
+    expect(screen.getByText('No expenses in this period')).toBeTruthy();
+    expect(screen.getByText('Switch to Income to see what came in.')).toBeTruthy();
+    expect(screen.queryByRole('adjustable')).toBeNull();
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    await settle();
+    expect(screen.getByRole('adjustable').props.accessibilityValue.text).toBe('Income, $1,700.00, 1 category');
+
+    fixture = STATS_FIXTURES.expenseOnly;
+    fireEvent.press(screen.getByText('Week'));
+    await settle();
+    expect(screen.getByText('No income in this period')).toBeTruthy();
+    expect(screen.getByText('Switch to Expense to see where the money went.')).toBeTruthy();
+    expect(screen.queryByRole('adjustable')).toBeNull();
+  });
+
+  it('calls a total of zero-amount transactions zero rather than empty', async () => {
+    fixture = STATS_FIXTURES.zero;
+    renderStats();
+    await settle();
+
+    expect(screen.getByText('Expense total is zero')).toBeTruthy();
+    expect(screen.getByText('Expenses in this period add up to zero.')).toBeTruthy();
+    expect(screen.queryByRole('adjustable')).toBeNull();
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    await settle();
+    expect(screen.getByText('Income total is zero')).toBeTruthy();
+  });
+
   it('drops a picked segment whose group a refresh took away, and does not bring it back', async () => {
     const { store } = renderStats();
     await settle();

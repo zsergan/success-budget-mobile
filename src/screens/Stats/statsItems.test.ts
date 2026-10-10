@@ -1,4 +1,4 @@
-import type { CategoryBreakdownItem, StatisticsBreakdown, WalletBreakdownItem } from '@api/dto';
+import type { CategoryBreakdownItem, StatisticsBreakdown, StatisticsSummary, WalletBreakdownItem } from '@api/dto';
 import { AppColor, TransactionType } from '@shared/enums';
 import { buildStatsItems } from './statsItems';
 
@@ -67,7 +67,9 @@ const keys = (items: ReturnType<typeof buildStatsItems>) => items.map((item) => 
 
 describe('buildStatsItems', () => {
   it('lays out the blocks, then the donut and one row per group', () => {
-    expect(keys(buildStatsItems({ breakdown: breakdown(), mode: 'category', isOtherExpanded: false }))).toEqual([
+    expect(
+      keys(buildStatsItems({ breakdown: breakdown(), summary: undefined, mode: 'category', isOtherExpanded: false })),
+    ).toEqual([
       'summary',
       'trend',
       'breakdownHeader',
@@ -79,7 +81,12 @@ describe('buildStatsItems', () => {
   });
 
   it('inserts the expanded children right after Other and closes the card on the last one', () => {
-    const items = buildStatsItems({ breakdown: breakdown(), mode: 'category', isOtherExpanded: true });
+    const items = buildStatsItems({
+      breakdown: breakdown(),
+      summary: undefined,
+      mode: 'category',
+      isOtherExpanded: true,
+    });
     const rows = items.filter((item) => item.kind === 'row');
 
     expect(rows.map((row) => [row.key, row.isChild])).toEqual([
@@ -94,7 +101,12 @@ describe('buildStatsItems', () => {
   });
 
   it('puts deleted wallets before Other in the wallet breakdown', () => {
-    const items = buildStatsItems({ breakdown: breakdown(), mode: 'wallet', isOtherExpanded: false });
+    const items = buildStatsItems({
+      breakdown: breakdown(),
+      summary: undefined,
+      mode: 'wallet',
+      isOtherExpanded: false,
+    });
 
     expect(keys(items).slice(4)).toEqual([
       'expense:wallet:wallet:1',
@@ -106,6 +118,7 @@ describe('buildStatsItems', () => {
   it('keys the rows and the donut data by the breakdown type', () => {
     const items = buildStatsItems({
       breakdown: breakdown(8, TransactionType.INCOME),
+      summary: undefined,
       mode: 'category',
       isOtherExpanded: false,
     });
@@ -118,21 +131,38 @@ describe('buildStatsItems', () => {
     ]);
   });
 
-  it('shows the no-spending message by count, without the mode switch', () => {
-    const items = buildStatsItems({ breakdown: breakdown(0), mode: 'category', isOtherExpanded: false });
+  it('shows the empty message by count, with no donut, telling no data from a zero total', () => {
+    const empty = (breakdownData: StatisticsBreakdown, summary?: Partial<StatisticsSummary>) =>
+      buildStatsItems({
+        breakdown: breakdownData,
+        summary: summary as StatisticsSummary | undefined,
+        mode: 'category',
+        isOtherExpanded: false,
+      }).slice(3);
 
-    expect(items.slice(2)).toEqual([
-      { kind: 'breakdownHeader', key: 'breakdownHeader' },
-      { kind: 'breakdownEmpty', key: 'breakdownEmpty' },
+    expect(empty(breakdown(0))).toEqual([
+      {
+        kind: 'breakdownEmpty',
+        key: 'breakdownEmpty',
+        type: TransactionType.EXPENSE,
+        isZeroTotal: false,
+        canSwitch: false,
+      },
     ]);
+    expect(
+      empty({ ...breakdown(0), total: { amount: '0.00', count: 2 } }, { income: { amount: '17.00', count: 1 } }),
+    ).toMatchObject([{ isZeroTotal: true, canSwitch: true }]);
+    expect(
+      empty(breakdown(0, TransactionType.INCOME), {
+        income: { amount: '0.00', count: 0 },
+        expense: { amount: '0.00', count: 3 },
+      }),
+    ).toMatchObject([{ type: TransactionType.INCOME, canSwitch: false }]);
   });
 
   it('holds the breakdown place while it has no data', () => {
-    expect(keys(buildStatsItems({ breakdown: undefined, mode: 'category', isOtherExpanded: false }))).toEqual([
-      'summary',
-      'trend',
-      'breakdownHeader',
-      'breakdownStatus',
-    ]);
+    expect(
+      keys(buildStatsItems({ breakdown: undefined, summary: undefined, mode: 'category', isOtherExpanded: false })),
+    ).toEqual(['summary', 'trend', 'breakdownHeader', 'breakdownStatus']);
   });
 });

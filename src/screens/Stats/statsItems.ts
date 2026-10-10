@@ -4,9 +4,10 @@ import type {
   DeletedWalletsBreakdownItem,
   OtherBreakdownItem,
   StatisticsBreakdown,
+  StatisticsSummary,
   WalletBreakdownItem,
 } from '@api/dto';
-import type { TransactionType } from '@shared/enums';
+import { TransactionType } from '@shared/enums';
 
 export type BreakdownMode = 'category' | 'wallet';
 
@@ -31,7 +32,15 @@ export type StatsItem =
   | { kind: 'trend'; key: 'trend' }
   | { kind: 'breakdownHeader'; key: 'breakdownHeader' }
   | { kind: 'breakdownStatus'; key: 'breakdownStatus' }
-  | { kind: 'breakdownEmpty'; key: 'breakdownEmpty' }
+  | {
+      kind: 'breakdownEmpty';
+      key: 'breakdownEmpty';
+      type: TransactionType;
+      // There are transactions of this type, all of zero amount.
+      isZeroTotal: boolean;
+      // The other type has a positive total in the same space and period.
+      canSwitch: boolean;
+    }
   | {
       kind: 'donut';
       key: 'donut';
@@ -59,10 +68,12 @@ const toGroups = (breakdown: StatisticsBreakdown, mode: BreakdownMode): Breakdow
 // so expanding Other only inserts items instead of growing a nested list.
 export const buildStatsItems = ({
   breakdown,
+  summary,
   mode,
   isOtherExpanded,
 }: {
   breakdown: StatisticsBreakdown | undefined;
+  summary: StatisticsSummary | undefined;
   mode: BreakdownMode;
   isOtherExpanded: boolean;
 }): StatsItem[] => {
@@ -74,9 +85,22 @@ export const buildStatsItems = ({
   ];
 
   if (!breakdown) return [...items, { kind: 'breakdownStatus', key: 'breakdownStatus' }];
-  if (!hasSources) return [...items, { kind: 'breakdownEmpty', key: 'breakdownEmpty' }];
 
   const { currency, transaction_type: type } = breakdown;
+
+  if (!hasSources) {
+    const otherType = type === TransactionType.EXPENSE ? TransactionType.INCOME : TransactionType.EXPENSE;
+    const empty: StatsItem = {
+      kind: 'breakdownEmpty',
+      key: 'breakdownEmpty',
+      type,
+      isZeroTotal: breakdown.total.count > 0,
+      canSwitch: Number(summary?.[otherType].amount ?? 0) > 0,
+    };
+
+    return [...items, empty];
+  }
+
   const groups = toGroups(breakdown, mode);
   const { total_amount, source_count } = mode === 'category' ? breakdown.by_category : breakdown.by_wallet;
 

@@ -99,7 +99,12 @@ const StatsScreen = () => {
   const viewState = getStatsViewState(summary.data);
   const showsBlocks = !failure && (viewState === 'data' || viewState === 'pending');
   const items = showsBlocks
-    ? buildStatsItems({ breakdown: breakdown.data, mode, isOtherExpanded: selection.isOtherExpanded })
+    ? buildStatsItems({
+        breakdown: breakdown.data,
+        summary: summary.data,
+        mode,
+        isOtherExpanded: selection.isOtherExpanded,
+      })
     : [];
 
   // A pick whose group a refresh took away is dropped, so it does not come back with the group.
