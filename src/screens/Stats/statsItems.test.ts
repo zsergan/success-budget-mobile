@@ -102,7 +102,7 @@ describe('buildStatsItems', () => {
     const items = buildStatsItems({ breakdown: breakdown(0), mode: 'category', isOtherExpanded: false });
 
     expect(items.slice(2)).toEqual([
-      { kind: 'breakdownHeader', key: 'breakdownHeader', hasSpending: false },
+      { kind: 'breakdownHeader', key: 'breakdownHeader' },
       { kind: 'breakdownEmpty', key: 'breakdownEmpty' },
     ]);
   });

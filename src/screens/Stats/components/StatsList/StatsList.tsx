@@ -3,6 +3,7 @@ import type { ListRenderItem } from 'react-native';
 import { FlatList, Text, View } from 'react-native';
 
 import { Icon } from '@components';
+import type { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
 import type { StatisticsBreakdown, StatisticsSummary, StatisticsTrend } from '@api/dto';
 import type { StatsBlock } from '@screens/Stats/hooks/useStatsData';
@@ -28,11 +29,13 @@ interface Props {
   showComparison: boolean;
   // Shown in place of the blocks when the period has nothing to chart.
   placeholder: ReactElement | null;
+  breakdownType: TransactionType;
   mode: BreakdownMode;
   selectedSegmentKey: string | null;
   onSelectSegment: (key: string | null) => void;
   onDonutTouch: () => void;
   isOtherExpanded: boolean;
+  onBreakdownTypeChange: (type: TransactionType) => void;
   onModeChange: (mode: BreakdownMode) => void;
   onToggleOther: () => void;
   onOpenHistory: (group: BreakdownGroup) => void;
@@ -50,11 +53,13 @@ const StatsList = ({
   onTrendTouch,
   showComparison,
   placeholder,
+  breakdownType,
   mode,
   selectedSegmentKey,
   onSelectSegment,
   onDonutTouch,
   isOtherExpanded,
+  onBreakdownTypeChange,
   onModeChange,
   onToggleOther,
   onOpenHistory,
@@ -80,7 +85,14 @@ const StatsList = ({
           />
         );
       case 'breakdownHeader':
-        return <BreakdownHeader mode={mode} showModes={item.hasSpending} onModeChange={onModeChange} />;
+        return (
+          <BreakdownHeader
+            type={breakdownType}
+            mode={mode}
+            onTypeChange={onBreakdownTypeChange}
+            onModeChange={onModeChange}
+          />
+        );
       case 'breakdownStatus':
         return breakdown.hasError ? (
           <BlockError title="Couldn’t load the breakdown" onRetry={breakdown.retry} style={styles.breakdownError} />
@@ -143,7 +155,16 @@ const StatsList = ({
       data={items}
       keyExtractor={(item) => item.key}
       renderItem={renderItem}
-      extraData={[isOtherExpanded, summary, trend, breakdown, selectedTrendKey, selectedSegmentKey, showComparison]}
+      extraData={[
+        breakdownType,
+        isOtherExpanded,
+        summary,
+        trend,
+        breakdown,
+        selectedTrendKey,
+        selectedSegmentKey,
+        showComparison,
+      ]}
       ListEmptyComponent={placeholder}
       showsVerticalScrollIndicator={false}
     />

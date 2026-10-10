@@ -44,8 +44,9 @@ const StatsScreen = () => {
   const spacesSheetRef = useRef<BottomSheetModal>(null);
   const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod } = usePeriod();
   const { openCreate } = useTransactionFlow(rangeSelection(range));
+  const [breakdownType, setBreakdownType] = useState(TransactionType.EXPENSE);
   const { summary, trend, breakdown, refreshIfStale, updateFailed, retryFailed, loadFailed, loadError, accessDenied } =
-    useStatsData(range, TransactionType.EXPENSE);
+    useStatsData(range, breakdownType);
   useRefreshOnReturn(refreshIfStale);
 
   const spaceId = useAppSelector(selectCurrentSpaceId);
@@ -168,11 +169,13 @@ const StatsScreen = () => {
             onTrendTouch={selection.markTrendTouch}
             showComparison={hasComparison(period)}
             placeholder={placeholder}
+            breakdownType={breakdownType}
             mode={mode}
             selectedSegmentKey={selectedSegmentKey}
             onSelectSegment={selection.selectSegment}
             onDonutTouch={selection.markDonutTouch}
             isOtherExpanded={selection.isOtherExpanded}
+            onBreakdownTypeChange={setBreakdownType}
             onModeChange={setMode}
             onToggleOther={selection.toggleOther}
             onOpenHistory={openHistory}

@@ -28,7 +28,7 @@ export type BreakdownRowItem = {
 export type StatsItem =
   | { kind: 'summary'; key: 'summary' }
   | { kind: 'trend'; key: 'trend' }
-  | { kind: 'breakdownHeader'; key: 'breakdownHeader'; hasSpending: boolean }
+  | { kind: 'breakdownHeader'; key: 'breakdownHeader' }
   | { kind: 'breakdownStatus'; key: 'breakdownStatus' }
   | { kind: 'breakdownEmpty'; key: 'breakdownEmpty' }
   | {
@@ -64,15 +64,15 @@ export const buildStatsItems = ({
   mode: BreakdownMode;
   isOtherExpanded: boolean;
 }): StatsItem[] => {
-  const hasSpending = !!breakdown && breakdown.by_category.source_count > 0;
+  const hasSources = !!breakdown && breakdown.by_category.source_count > 0;
   const items: StatsItem[] = [
     { kind: 'summary', key: 'summary' },
     { kind: 'trend', key: 'trend' },
-    { kind: 'breakdownHeader', key: 'breakdownHeader', hasSpending },
+    { kind: 'breakdownHeader', key: 'breakdownHeader' },
   ];
 
   if (!breakdown) return [...items, { kind: 'breakdownStatus', key: 'breakdownStatus' }];
-  if (!hasSpending) return [...items, { kind: 'breakdownEmpty', key: 'breakdownEmpty' }];
+  if (!hasSources) return [...items, { kind: 'breakdownEmpty', key: 'breakdownEmpty' }];
 
   const { currency } = breakdown;
   const groups = toGroups(breakdown, mode);

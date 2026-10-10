@@ -191,6 +191,46 @@ describe('StatsScreen', () => {
     expect(statsRequests()).toHaveLength(0);
   });
 
+  it('switches the breakdown to income asking only for the breakdown, and not again for the active type', async () => {
+    renderStats();
+    await settle();
+    mockedRequest.mockClear();
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    await settle();
+
+    expect(statsRequests()).toEqual(['/spaces/1/statistics/breakdown']);
+    expect(lastParams('breakdown')?.transaction_type).toBe('income');
+    expect(screen.getByText('Salary')).toBeTruthy();
+    expect(screen.queryByText('Housing')).toBeNull();
+
+    mockedRequest.mockClear();
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    fireEvent.press(screen.getByRole('tab', { name: 'By category' }));
+    await settle();
+
+    expect(statsRequests()).toHaveLength(0);
+  });
+
+  it('keeps both switches over an empty or failed breakdown', async () => {
+    fixture = STATS_FIXTURES.incomeOnly;
+    renderStats();
+    await settle();
+
+    expect(screen.getByText('No expenses in this period')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Income' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'By wallet' })).toBeTruthy();
+
+    fail.breakdown = failure(500);
+    fireEvent.press(screen.getByRole('tab', { name: 'By wallet' }));
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    await settle();
+
+    expect(screen.getByText('Couldn’t load the breakdown')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Expense' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'By category' })).toBeTruthy();
+  });
+
   it('retries only the block that failed, in its own place', async () => {
     fail.trend = failure(500);
     renderStats();
