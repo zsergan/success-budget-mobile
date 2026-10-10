@@ -1,4 +1,5 @@
 import type { StatisticsBreakdown, StatisticsSummary, StatisticsTrend } from '@api/dto';
+import { TransactionType } from '@shared/enums';
 import type { PeriodUnit } from '@shared/utils';
 import { toDateRange, unitPeriodOf } from '@shared/utils';
 import { areStatisticsConsistent, isAsOfRejected, toStatisticsQuery } from './selectors';
@@ -7,7 +8,7 @@ const money = (amount: string, count: number) => ({ amount, count });
 
 const summary = { income: money('100.00', 1), expense: money('40.50', 3) } as StatisticsSummary;
 const trend = { totals: { income: money('100.00', 1), expense: money('40.50', 3) } } as StatisticsTrend;
-const breakdown = { total: money('40.50', 3) } as StatisticsBreakdown;
+const breakdown = { transaction_type: TransactionType.EXPENSE, total: money('40.50', 3) } as StatisticsBreakdown;
 
 describe('toStatisticsQuery', () => {
   it('sends a standard period as its anchor day', () => {
@@ -54,7 +55,14 @@ describe('areStatisticsConsistent', () => {
   });
 
   it('rejects a breakdown total that differs only in count', () => {
-    expect(areStatisticsConsistent(summary, trend, { total: money('40.50', 4) } as StatisticsBreakdown)).toBe(false);
+    expect(areStatisticsConsistent(summary, trend, { ...breakdown, total: money('40.50', 4) })).toBe(false);
+  });
+
+  it('checks a breakdown against the summary total of its own type', () => {
+    const income = { transaction_type: TransactionType.INCOME, total: money('100.00', 1) } as StatisticsBreakdown;
+
+    expect(areStatisticsConsistent(summary, trend, income)).toBe(true);
+    expect(areStatisticsConsistent(summary, trend, { ...income, total: summary.expense })).toBe(false);
   });
 });
 

@@ -59,7 +59,11 @@ const body = (config: RequestConfig) => {
     case 'trend':
       return { period: period(config), totals: { income: money('100.00'), expense: money(expense) }, buckets: [] };
     default:
-      return { period: period(config), total: money(expense) };
+      return {
+        period: period(config),
+        transaction_type: config.params?.transaction_type,
+        total: money(config.params?.transaction_type === 'income' ? '100.00' : expense),
+      };
   }
 };
 
