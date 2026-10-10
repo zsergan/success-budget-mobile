@@ -84,15 +84,17 @@ const renderForSpace = (spaceId: number, range = september) => {
   store.dispatch(activateSpace(spaceId));
 
   const wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
-  const rendered = renderHook((props: { range: DateRange }) => useStatsData(props.range), {
-    wrapper,
-    initialProps: { range },
-  });
+  const rendered = renderHook(
+    (props: { range: DateRange; type?: TransactionType }) =>
+      useStatsData(props.range, props.type ?? TransactionType.EXPENSE),
+    { wrapper, initialProps: { range } },
+  );
 
   return { store, ...rendered };
 };
 
 const expenseOf = (data: unknown) => (data as { expense: { amount: string } } | undefined)?.expense.amount;
+const typeOf = (data: unknown) => (data as { transaction_type?: string } | undefined)?.transaction_type;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -323,7 +325,192 @@ describe('switching scope', () => {
   });
 });
 
+describe('switching the breakdown type', () => {
+  const income = { range: september, type: TransactionType.INCOME };
+  const expenses = { range: september, type: TransactionType.EXPENSE };
+
+  it("asks only for the breakdown, on the cycle's as_of, and reuses an answer it already has", async () => {
+    const { result, rerender, unmount } = renderForSpace(1);
+
+    await loaded(result);
+    const asOf = lastAsOf('summary');
+
+    rerender(income);
+    await waitFor(() => expect(typeOf(result.current.breakdown.data)).toBe('income'));
+
+    expect(requestsTo('breakdown').at(-1)?.params).toMatchObject({ transaction_type: 'income', as_of: asOf });
+    expect(requestsTo('summary')).toHaveLength(1);
+    expect(requestsTo('trend')).toHaveLength(1);
+
+    rerender(expenses);
+
+    expect(typeOf(result.current.breakdown.data)).toBe('expense');
+    expect(requestsTo('breakdown')).toHaveLength(2);
+
+    unmount();
+  });
+
+  it('loads a new type on its own instead of showing the other one', async () => {
+    const { result, rerender, unmount } = renderForSpace(1);
+
+    await loaded(result);
+    respond.breakdown = hang;
+
+    rerender(income);
+
+    expect(result.current.breakdown.data).toBeUndefined();
+    expect(result.current.breakdown.isLoading).toBe(true);
+    expect(result.current.summary.data).toBeDefined();
+    expect(result.current.isUpdating).toBe(false);
+
+    unmount();
+  });
+
+  it('shows only the selected type when answers arrive in reverse order', async () => {
+    const pending: Partial<Record<string, () => void>> = {};
+    respond.breakdown = (config) =>
+      new Promise((resolve) => {
+        pending[config.params?.transaction_type ?? ''] = () => resolve({ data: body(config) });
+      });
+
+    const { result, rerender, unmount } = renderForSpace(1);
+
+    await waitFor(() => expect(pending.expense).toBeDefined());
+    rerender(income);
+    await waitFor(() => expect(pending.income).toBeDefined());
+
+    await act(async () => pending.income?.());
+    await act(async () => pending.expense?.());
+
+    await waitFor(() => expect(typeOf(result.current.breakdown.data)).toBe('income'));
+
+    rerender(expenses);
+    expect(typeOf(result.current.breakdown.data)).toBe('expense');
+
+    unmount();
+  });
+
+  it('drops an answer built for another type', async () => {
+    respond.breakdown = (config) =>
+      Promise.resolve({ data: { ...body(config), transaction_type: TransactionType.EXPENSE } });
+
+    const { result, rerender, unmount } = renderForSpace(1);
+
+    await loaded(result);
+    rerender(income);
+    await waitFor(() => expect(requestsTo('breakdown')).toHaveLength(2));
+    await act(async () => {
+      jest.advanceTimersByTime(10);
+    });
+
+    expect(result.current.breakdown.data).toBeUndefined();
+
+    unmount();
+  });
+
+  it('fails an income breakdown inside the block and still switches back to expenses', async () => {
+    respond.breakdown = (config) => (config.params?.transaction_type === 'income' ? serverError(config) : ok(config));
+
+    const { result, rerender, unmount } = renderForSpace(1);
+
+    await loaded(result);
+    rerender(income);
+
+    await waitFor(() => expect(result.current.breakdown.hasError).toBe(true));
+    expect(result.current.breakdown.data).toBeUndefined();
+    expect(result.current.summary.data).toBeDefined();
+    expect(result.current.loadFailed).toBe(false);
+    expect(result.current.updateFailed).toBe(false);
+
+    rerender(expenses);
+
+    expect(typeOf(result.current.breakdown.data)).toBe('expense');
+    expect(result.current.breakdown.hasError).toBe(false);
+
+    unmount();
+  });
+
+  it('keeps each type its own last answer while a refresh runs', async () => {
+    const { result, rerender, unmount } = renderForSpace(1);
+
+    await loaded(result);
+    rerender(income);
+    await waitFor(() => expect(typeOf(result.current.breakdown.data)).toBe('income'));
+    respond = { summary: hang, trend: hang, breakdown: hang };
+
+    act(() => result.current.refresh());
+
+    expect(typeOf(result.current.breakdown.data)).toBe('income');
+    expect(result.current.breakdown.isUpdating).toBe(true);
+
+    rerender(expenses);
+
+    expect(typeOf(result.current.breakdown.data)).toBe('expense');
+    expect(result.current.breakdown.isUpdating).toBe(true);
+
+    unmount();
+  });
+
+  it('forgets both types on a new period', async () => {
+    const { result, rerender, unmount } = renderForSpace(1);
+
+    await loaded(result);
+    rerender(income);
+    await waitFor(() => expect(typeOf(result.current.breakdown.data)).toBe('income'));
+    respond = { summary: hang, trend: hang, breakdown: hang };
+
+    rerender({ range: august, type: TransactionType.INCOME });
+    expect(result.current.breakdown.data).toBeUndefined();
+
+    rerender({ range: august, type: TransactionType.EXPENSE });
+    expect(result.current.breakdown.data).toBeUndefined();
+
+    unmount();
+  });
+});
+
 describe('control sums', () => {
+  it('checks a breakdown against the summary total of its own type', async () => {
+    const { result, rerender, unmount } = renderForSpace(1);
+
+    await loaded(result);
+    rerender({ range: september, type: TransactionType.INCOME });
+    await waitFor(() => expect(typeOf(result.current.breakdown.data)).toBe('income'));
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(requestsTo('summary')).toHaveLength(1);
+
+    unmount();
+  });
+
+  it('reloads once when a switched-to type disagrees, and switching again does not reload more', async () => {
+    respond.breakdown = (config) =>
+      config.params?.transaction_type === 'income'
+        ? Promise.resolve({ data: { ...body(config), total: money('999.00') } })
+        : ok(config);
+
+    const { result, rerender, unmount } = renderForSpace(1);
+
+    await loaded(result);
+    rerender({ range: september, type: TransactionType.INCOME });
+    await waitFor(() => expect(requestsTo('summary')).toHaveLength(2));
+    await waitFor(() => expect(typeOf(result.current.breakdown.data)).toBe('income'));
+
+    rerender({ range: september, type: TransactionType.EXPENSE });
+    await waitFor(() => expect(typeOf(result.current.breakdown.data)).toBe('expense'));
+    rerender({ range: september, type: TransactionType.INCOME });
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(requestsTo('summary')).toHaveLength(2);
+    expect(requestsTo('trend')).toHaveLength(2);
+
+    unmount();
+  });
+
   it('reloads every block once with a new as_of when the sums disagree, then shows what it gets', async () => {
     respond.breakdown = (config) => Promise.resolve({ data: { ...body(config), total: money('999.00') } });
 

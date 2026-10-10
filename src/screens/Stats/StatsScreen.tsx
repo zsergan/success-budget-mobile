@@ -45,7 +45,7 @@ const StatsScreen = () => {
   const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod } = usePeriod();
   const { openCreate } = useTransactionFlow(rangeSelection(range));
   const { summary, trend, breakdown, refreshIfStale, updateFailed, retryFailed, loadFailed, loadError, accessDenied } =
-    useStatsData(range);
+    useStatsData(range, TransactionType.EXPENSE);
   useRefreshOnReturn(refreshIfStale);
 
   const spaceId = useAppSelector(selectCurrentSpaceId);
