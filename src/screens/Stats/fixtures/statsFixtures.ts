@@ -8,7 +8,7 @@ import type {
   StatisticsTrend,
   WalletBreakdownItem,
 } from '@api/dto';
-import { AppColor } from '@shared/enums';
+import { AppColor, TransactionType } from '@shared/enums';
 
 // The design's L1–L26 data as API responses, in UTC so every machine renders the same dates.
 // Amounts are in cents to keep the sums exact; the backend's grouping (six groups, then Other) is mirrored here.
@@ -169,6 +169,7 @@ const buildBreakdown = (spec: FixtureSpec, period: StatisticsPeriod, expenseCoun
   return {
     period,
     currency: 'USD',
+    transaction_type: TransactionType.EXPENSE,
     total: { amount: money(spec.expense), count: expenseCount },
     by_category: {
       total_amount: money(spec.expense),

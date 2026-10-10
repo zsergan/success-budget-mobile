@@ -4,7 +4,7 @@ import { skipToken } from '@reduxjs/toolkit/query';
 import type { ErrorResponse, StatisticsQuery } from '@api/dto';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
-import type { StatisticsArg } from '@redux/state/statistics/api';
+import type { StatisticsArg, StatisticsBreakdownArg } from '@redux/state/statistics/api';
 import {
   useGetStatisticsBreakdownQuery,
   useGetStatisticsRevisionQuery,
@@ -17,6 +17,7 @@ import {
   isAsOfRejected,
   toStatisticsQuery,
 } from '@redux/state/statistics/selectors';
+import { TransactionType } from '@shared/enums';
 import type { DateRange } from '@shared/utils';
 
 // A return to the screen or the app refreshes only data older than this.
@@ -25,6 +26,14 @@ export const STATS_STALE_AFTER_MS = 30_000;
 const BLOCKS = ['summary', 'trend', 'breakdown'] as const;
 
 type BlockName = (typeof BLOCKS)[number];
+
+interface BlockArgs {
+  summary: StatisticsArg;
+  trend: StatisticsArg;
+  breakdown: StatisticsBreakdownArg;
+}
+
+type CurrentArgs = { [Block in BlockName]: BlockArgs[Block] | typeof skipToken };
 
 // One load cycle: all three blocks share its space, period, zone and as_of.
 interface Cycle {
@@ -42,7 +51,7 @@ interface Cycle {
 interface CycleState {
   cycle: Cycle | null;
   // Per block, the latest cycle of this scope whose request succeeded, kept on screen while a newer one runs.
-  lastGood: Partial<Record<BlockName, StatisticsArg>>;
+  lastGood: Partial<BlockArgs>;
   useServerClock: boolean;
   seenRevision: { spaceId: number | null; revision: number } | null;
 }
@@ -187,14 +196,11 @@ const useStatsData = (range: DateRange) => {
   const blockArg = cycle && !isWaitingForAsOf ? cycleArg(cycle, sharedAsOf) : skipToken;
 
   const trend = useGetStatisticsTrendQuery(blockArg);
-  const breakdown = useGetStatisticsBreakdownQuery(blockArg);
+  const breakdownArg = blockArg === skipToken ? skipToken : { ...blockArg, transactionType: TransactionType.EXPENSE };
+  const breakdown = useGetStatisticsBreakdownQuery(breakdownArg);
 
   const current = { summary, trend, breakdown };
-  const currentArgs: Record<BlockName, StatisticsArg | typeof skipToken> = {
-    summary: summaryArg,
-    trend: blockArg,
-    breakdown: blockArg,
-  };
+  const currentArgs: CurrentArgs = { summary: summaryArg, trend: blockArg, breakdown: breakdownArg };
 
   const succeeded = BLOCKS.filter(
     (block) =>
@@ -202,18 +208,18 @@ const useStatsData = (range: DateRange) => {
       argKey(state.lastGood[block] ?? skipToken) !== argKey(currentArgs[block]),
   );
   if (succeeded.length > 0) {
-    const lastGood = { ...state.lastGood };
-    succeeded.forEach((block) => {
-      lastGood[block] = currentArgs[block] as StatisticsArg;
-    });
+    const lastGood = succeeded.reduce<Partial<BlockArgs>>(
+      (args, block) => ({ ...args, [block]: currentArgs[block] }),
+      state.lastGood,
+    );
     state = { ...state, lastGood };
     setStored(state);
   }
 
-  const fallbackArg = (block: BlockName) => {
+  const fallbackArg = <Block extends BlockName>(block: Block): BlockArgs[Block] | typeof skipToken => {
     const arg = state.lastGood[block];
 
-    return arg && argKey(arg) !== argKey(currentArgs[block]) ? arg : skipToken;
+    return arg && argKey(arg) !== argKey(currentArgs[block]) ? (arg as BlockArgs[Block]) : skipToken;
   };
 
   const summaryFallback = useGetStatisticsSummaryQuery(fallbackArg('summary'));

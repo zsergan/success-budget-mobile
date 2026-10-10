@@ -128,7 +128,7 @@ describe('a load cycle', () => {
     expect(summary.params?.as_of).toMatch(/Z$/);
     expect(summary.params).not.toHaveProperty('cycleId');
     expect(requestsTo('trend')[0].params).toEqual(summary.params);
-    expect(requestsTo('breakdown')[0].params).toEqual(summary.params);
+    expect(requestsTo('breakdown')[0].params).toEqual({ ...summary.params, transaction_type: 'expense' });
 
     unmount();
   });

@@ -406,7 +406,7 @@ describe('StatsScreen', () => {
       expect(params).toMatchObject({ period: 'month', anchor_date: '2026-08-01' });
       expect(params).not.toHaveProperty('from_date');
       expect(lastParams('trend')).toEqual(params);
-      expect(lastParams('breakdown')).toEqual(params);
+      expect(lastParams('breakdown')).toEqual({ ...params, transaction_type: 'expense' });
 
       expect(screen.getByText('1–31 Aug 2026')).toBeTruthy();
       expect(screen.queryByText('Reset')).toBeNull();
