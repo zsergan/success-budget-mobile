@@ -21,7 +21,12 @@ const useStatsSelection = (scope: string) => {
   const [breakdownType, setBreakdownType] = useState(TransactionType.EXPENSE);
   const [mode, setMode] = useState<BreakdownMode>('category');
   const [stored, setStored] = useState<Selection>(() => initial(scope));
-  const current = stored.scope === scope ? stored : initial(scope);
+  // Stored in this render, so a return to the previous scope does not bring its picks back.
+  let current = stored;
+  if (stored.scope !== scope) {
+    current = initial(scope);
+    setStored(current);
+  }
   const view = `${breakdownType}:${mode}` as const;
 
   const update = (change: (selection: Selection) => Partial<Selection>) =>

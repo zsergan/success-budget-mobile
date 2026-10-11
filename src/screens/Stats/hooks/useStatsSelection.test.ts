@@ -92,6 +92,27 @@ describe('useStatsSelection', () => {
     });
   });
 
+  it.each([
+    ['period', 'september', 'october'],
+    ['space', '[1,"september"]', '[2,"september"]'],
+  ])('does not bring the old picks back on a return to the previous %s', (_name, first, second) => {
+    const { result, rerender } = setup(first);
+
+    act(() => {
+      result.current.toggleOther();
+      result.current.selectSegment('category:12');
+      result.current.selectTrend('2026-W39');
+    });
+    rerender({ scope: second });
+    rerender({ scope: first });
+
+    expect(result.current).toMatchObject({
+      isOtherExpanded: false,
+      selectedSegmentKey: null,
+      selectedTrendKey: null,
+    });
+  });
+
   it('drops a pick on a touch outside its chart and keeps it on a touch inside', () => {
     const { result } = setup();
 
