@@ -97,11 +97,13 @@ const StatsScreen = () => {
   const showsUpdateFailed = updateFailed && !failure;
 
   const viewState = getStatsViewState(summary.data);
+  // Neither block shows an earlier cycle's answer, so both come from the current one.
+  const isSameCycle = [summary, breakdown].every((block) => !block.isUpdating && !block.updateFailed);
   const showsBlocks = !failure && (viewState === 'data' || viewState === 'pending');
   const items = showsBlocks
     ? buildStatsItems({
         breakdown: breakdown.data,
-        summary: summary.data,
+        cycleSummary: isSameCycle ? summary.data : undefined,
         mode,
         isOtherExpanded: selection.isOtherExpanded,
       })

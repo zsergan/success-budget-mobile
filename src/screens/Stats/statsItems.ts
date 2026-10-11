@@ -68,12 +68,13 @@ const toGroups = (breakdown: StatisticsBreakdown, mode: BreakdownMode): Breakdow
 // so expanding Other only inserts items instead of growing a nested list.
 export const buildStatsItems = ({
   breakdown,
-  summary,
+  cycleSummary,
   mode,
   isOtherExpanded,
 }: {
   breakdown: StatisticsBreakdown | undefined;
-  summary: StatisticsSummary | undefined;
+  // The summary of the breakdown's own cycle; an earlier cycle's one may no longer hold.
+  cycleSummary: StatisticsSummary | undefined;
   mode: BreakdownMode;
   isOtherExpanded: boolean;
 }): StatsItem[] => {
@@ -95,7 +96,7 @@ export const buildStatsItems = ({
       key: 'breakdownEmpty',
       type,
       isZeroTotal: breakdown.total.count > 0,
-      canSwitch: Number(summary?.[otherType].amount ?? 0) > 0,
+      canSwitch: Number(cycleSummary?.[otherType].amount ?? 0) > 0,
     };
 
     return [...items, empty];

@@ -68,7 +68,9 @@ const keys = (items: ReturnType<typeof buildStatsItems>) => items.map((item) => 
 describe('buildStatsItems', () => {
   it('lays out the blocks, then the donut and one row per group', () => {
     expect(
-      keys(buildStatsItems({ breakdown: breakdown(), summary: undefined, mode: 'category', isOtherExpanded: false })),
+      keys(
+        buildStatsItems({ breakdown: breakdown(), cycleSummary: undefined, mode: 'category', isOtherExpanded: false }),
+      ),
     ).toEqual([
       'summary',
       'trend',
@@ -83,7 +85,7 @@ describe('buildStatsItems', () => {
   it('inserts the expanded children right after Other and closes the card on the last one', () => {
     const items = buildStatsItems({
       breakdown: breakdown(),
-      summary: undefined,
+      cycleSummary: undefined,
       mode: 'category',
       isOtherExpanded: true,
     });
@@ -103,7 +105,7 @@ describe('buildStatsItems', () => {
   it('puts deleted wallets before Other in the wallet breakdown', () => {
     const items = buildStatsItems({
       breakdown: breakdown(),
-      summary: undefined,
+      cycleSummary: undefined,
       mode: 'wallet',
       isOtherExpanded: false,
     });
@@ -118,7 +120,7 @@ describe('buildStatsItems', () => {
   it('keys the rows and the donut data by the breakdown type', () => {
     const items = buildStatsItems({
       breakdown: breakdown(8, TransactionType.INCOME),
-      summary: undefined,
+      cycleSummary: undefined,
       mode: 'category',
       isOtherExpanded: false,
     });
@@ -135,7 +137,7 @@ describe('buildStatsItems', () => {
     const empty = (breakdownData: StatisticsBreakdown, summary?: Partial<StatisticsSummary>) =>
       buildStatsItems({
         breakdown: breakdownData,
-        summary: summary as StatisticsSummary | undefined,
+        cycleSummary: summary as StatisticsSummary | undefined,
         mode: 'category',
         isOtherExpanded: false,
       }).slice(3);
@@ -162,7 +164,9 @@ describe('buildStatsItems', () => {
 
   it('holds the breakdown place while it has no data', () => {
     expect(
-      keys(buildStatsItems({ breakdown: undefined, summary: undefined, mode: 'category', isOtherExpanded: false })),
+      keys(
+        buildStatsItems({ breakdown: undefined, cycleSummary: undefined, mode: 'category', isOtherExpanded: false }),
+      ),
     ).toEqual(['summary', 'trend', 'breakdownHeader', 'breakdownStatus']);
   });
 });

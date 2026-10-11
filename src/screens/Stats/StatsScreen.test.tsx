@@ -332,6 +332,34 @@ describe('StatsScreen', () => {
     expect(screen.queryByRole('adjustable')).toBeNull();
   });
 
+  it('does not point to the other type from a summary left by an earlier cycle', async () => {
+    fixture = STATS_FIXTURES.expenseOnly;
+    const { store } = renderStats();
+    await settle();
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    await settle();
+    expect(screen.getByText('Switch to Expense to see where the money went.')).toBeTruthy();
+
+    fixture = STATS_FIXTURES.noHistory;
+    fail.summary = failure(500);
+    await act(async () => {
+      await store.dispatch(
+        transactionApi.endpoints.deleteTransaction.initiate({
+          spaceId: 1,
+          transactionId: 'tx-1',
+          idempotencyKey: 'key-delete',
+          version: 1,
+        }),
+      );
+    });
+    await settle();
+
+    expect(screen.getByText('Couldn’t update')).toBeTruthy();
+    expect(screen.getByText('No income in this period')).toBeTruthy();
+    expect(screen.queryByText('Switch to Expense to see where the money went.')).toBeNull();
+    expect(screen.getByText('It appears once income is recorded in this period.')).toBeTruthy();
+  });
+
   it('calls a total of zero-amount transactions zero rather than empty', async () => {
     fixture = STATS_FIXTURES.zero;
     renderStats();
