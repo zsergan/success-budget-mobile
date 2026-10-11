@@ -1,6 +1,6 @@
 import { mapTransaction } from '@api/models';
 import { transactionDto } from '@redux/state/transaction/fixtures';
-import { TransactionType } from '@shared/enums';
+import { TransactionKind, TransactionType } from '@shared/enums';
 import { whereSaved } from './selection';
 
 const january = { from: '2026-01-01T00:00:00.000Z', to: '2026-01-31T23:59:59.999Z' };
@@ -30,6 +30,16 @@ describe('whereSaved', () => {
     expect(
       whereSaved(lunch, { ...filter({}), filter: { ...filter({}).filter, transactionType: TransactionType.INCOME } }),
     ).toBe('filtered');
+  });
+
+  it('says a filter of regular transactions hides a starting balance', () => {
+    const regularOnly = {
+      ...january,
+      filter: { name: 'Cash', transactionType: TransactionType.EXPENSE, kind: TransactionKind.REGULAR, walletId: 1 },
+    };
+
+    expect(whereSaved(lunch, regularOnly)).toBe('shown');
+    expect(whereSaved({ ...lunch, kind: TransactionKind.INITIAL_BALANCE }, regularOnly)).toBe('filtered');
   });
 
   it('puts the period first when both would hide the record', () => {

@@ -1,5 +1,5 @@
 import type { TransactionModel } from '@api/models';
-import type { TransactionType } from '@shared/enums';
+import type { TransactionKind, TransactionType } from '@shared/enums';
 
 // What the screen a transaction was created from lists or counts: its period, and the filter on top of it.
 export interface ViewSelection {
@@ -9,6 +9,7 @@ export interface ViewSelection {
     // The filter's name, as the screen shows it.
     name: string;
     transactionType: TransactionType;
+    kind?: TransactionKind;
     categoryId?: number;
     walletId?: number;
   };
@@ -21,9 +22,10 @@ export const whereSaved = (
   {
     timestamp,
     transactionType,
+    kind,
     category,
     wallet,
-  }: Pick<TransactionModel, 'timestamp' | 'transactionType' | 'category' | 'wallet'>,
+  }: Pick<TransactionModel, 'timestamp' | 'transactionType' | 'kind' | 'category' | 'wallet'>,
   selection: ViewSelection | null,
 ): SavedPlace => {
   if (!selection) return 'shown';
@@ -36,6 +38,7 @@ export const whereSaved = (
 
   const matches =
     filter.transactionType === transactionType &&
+    (filter.kind === undefined || filter.kind === kind) &&
     (filter.categoryId === undefined || filter.categoryId === category.id) &&
     (filter.walletId === undefined || filter.walletId === wallet?.id);
 

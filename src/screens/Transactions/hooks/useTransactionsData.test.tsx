@@ -145,6 +145,7 @@ describe('a Stats filter', () => {
     from: '2026-08-31T21:00:00.000Z',
     to: '2026-09-30T09:15:42.123Z',
     transactionType: TransactionType.EXPENSE,
+    kind: TransactionKind.REGULAR,
     categoryId: 1,
   };
 
@@ -163,6 +164,7 @@ describe('a Stats filter', () => {
       from: filter.from,
       to: filter.to,
       transaction_type: TransactionType.EXPENSE,
+      kind: TransactionKind.REGULAR,
       category_id: 1,
     });
 

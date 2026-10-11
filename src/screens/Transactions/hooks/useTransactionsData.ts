@@ -21,11 +21,20 @@ interface UseTransactionsDataProps {
   filter: HistoryFilter | null;
 }
 
-const toFilterArg = ({ spaceId, from, to, transactionType, categoryId, walletId }: HistoryFilter): TransactionsArg => ({
+const toFilterArg = ({
   spaceId,
   from,
   to,
   transactionType,
+  kind,
+  categoryId,
+  walletId,
+}: HistoryFilter): TransactionsArg => ({
+  spaceId,
+  from,
+  to,
+  transactionType,
+  kind,
   ...(categoryId !== undefined ? { categoryId } : { walletId }),
 });
 

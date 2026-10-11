@@ -114,7 +114,7 @@ const StatsScreen = () => {
   const selectedSegmentKey = isSegmentShown ? selection.selectedSegmentKey : null;
 
   const openHistory = (group: BreakdownGroup) => {
-    const filter = breakdown.data && spaceId !== null && toHistoryFilter(group, breakdown.data.period, spaceId);
+    const filter = breakdown.data && spaceId !== null && toHistoryFilter(group, breakdown.data, spaceId);
     if (filter) navigation.navigate(ScreenNames.TRANSACTIONS_TAB, { filter });
   };
 

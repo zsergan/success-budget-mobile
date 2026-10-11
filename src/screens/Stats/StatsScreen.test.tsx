@@ -415,6 +415,7 @@ describe('StatsScreen', () => {
       from: fixture.breakdown.expense.period.from,
       to: fixture.breakdown.expense.period.actual_to,
       transactionType: 'expense',
+      kind: 'regular',
       categoryId: 10,
     });
 
@@ -422,6 +423,36 @@ describe('StatsScreen', () => {
     await settle();
 
     expect(screen.getByText('Gifts')).toBeTruthy();
+    expect(statsRequests()).toHaveLength(0);
+  });
+
+  it('opens the regular income of a wallet from Income by wallet, and comes back to the same view', async () => {
+    renderStats();
+    await settle();
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    await settle();
+    fireEvent.press(screen.getByRole('tab', { name: 'By wallet' }));
+    mockedRequest.mockClear();
+
+    const { period, by_wallet: byWallet } = fixture.breakdown.income;
+    const savings = byWallet.primary_items.find((item) => item.name === 'Savings')!;
+    fireEvent.press(screen.getByText('Savings'));
+    expect(JSON.parse(String(screen.getByTestId('history-filter').props.children))).toEqual({
+      spaceId: 1,
+      name: 'Savings',
+      from: period.from,
+      to: period.actual_to,
+      transactionType: 'income',
+      kind: 'regular',
+      walletId: savings.id,
+    });
+
+    act(() => navigationRef.navigate(ScreenNames.STATS_TAB));
+    await settle();
+
+    expect(screen.getByRole('tab', { name: 'Income' }).props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByRole('tab', { name: 'By wallet' }).props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByRole('adjustable').props.accessibilityValue.text).toBe('Income, $4,050.00, 2 wallets');
     expect(statsRequests()).toHaveLength(0);
   });
 
