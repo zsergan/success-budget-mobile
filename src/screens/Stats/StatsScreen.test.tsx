@@ -1,5 +1,5 @@
 import type { ReactNode, Ref } from 'react';
-import { FlatList, Text } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Provider } from 'react-redux';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -229,6 +229,15 @@ describe('StatsScreen', () => {
     expect(screen.getByText('Couldn’t load the breakdown')).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Expense' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'By category' })).toBeTruthy();
+
+    delete fail.breakdown;
+    mockedRequest.mockClear();
+    fireEvent.press(screen.getByText('Retry'));
+    await settle();
+
+    expect(statsRequests()).toEqual(['/spaces/1/statistics/breakdown']);
+    expect(lastParams('breakdown')?.transaction_type).toBe('income');
+    expect(screen.getByRole('adjustable').props.accessibilityLabel).toBe('Income by wallet');
   });
 
   it('charts income by category and by wallet under its own label', async () => {
@@ -245,6 +254,61 @@ describe('StatsScreen', () => {
     fireEvent.press(screen.getByRole('tab', { name: 'By wallet' }));
     expect(screen.getByRole('adjustable').props.accessibilityValue.text).toBe('Income, $4,050.00, 2 wallets');
     expect(screen.getByText('Savings')).toBeTruthy();
+  });
+
+  it('keeps the grouping across a change of type', async () => {
+    renderStats();
+    await settle();
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    await settle();
+    fireEvent.press(screen.getByRole('tab', { name: 'By wallet' }));
+    fireEvent.press(screen.getByRole('tab', { name: 'Expense' }));
+    await settle();
+
+    expect(screen.getByRole('tab', { name: 'By wallet' }).props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByRole('adjustable').props.accessibilityLabel).toBe('Expenses by wallet');
+    expect(screen.getByText('Everyday')).toBeTruthy();
+  });
+
+  it('draws a single group as the whole share', async () => {
+    fixture = STATS_FIXTURES.incomeOnly;
+    renderStats();
+    await settle();
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    await settle();
+
+    let shareRow = screen.getByText('100.0%').parent;
+    while (shareRow && shareRow.type !== View) shareRow = shareRow.parent;
+    const fill = shareRow?.findAll(
+      (node) => node.type === View && !!StyleSheet.flatten(node.props.style)?.backgroundColor,
+    );
+
+    expect(screen.getByText('Freelance')).toBeTruthy();
+    expect(fill?.map((node) => StyleSheet.flatten(node.props.style).width)).toContain('100%');
+  });
+
+  it('opens History for an archived category but not for deleted wallets', async () => {
+    fixture = STATS_FIXTURES.deletedWallets;
+    renderStats();
+    await settle();
+    fireEvent.press(screen.getByRole('tab', { name: 'By wallet' }));
+
+    fireEvent.press(screen.getByText('Deleted wallets'));
+    expect(navigationRef.getCurrentRoute()?.name).toBe(ScreenNames.STATS_TAB);
+
+    fixture = STATS_FIXTURES.archived;
+    fireEvent.press(screen.getByText('Week'));
+    await settle();
+    fireEvent.press(screen.getByRole('tab', { name: 'By category' }));
+    expect(screen.getByText('Archived')).toBeTruthy();
+
+    fireEvent.press(screen.getByText('Subscriptions'));
+    expect(navigationRef.getCurrentRoute()?.name).toBe(ScreenNames.TRANSACTIONS_TAB);
+    expect(JSON.parse(String(screen.getByTestId('history-filter').props.children))).toMatchObject({
+      name: 'Subscriptions',
+      transactionType: 'expense',
+      kind: 'regular',
+    });
   });
 
   it('points to the other type when the selected one is empty', async () => {

@@ -35,6 +35,7 @@ const SERVER_NOW = '2026-09-28T12:00:00.000Z';
 
 let serverNow: string;
 let expense: string;
+let incomeTotal: string;
 let respond: Record<Block, Responder>;
 
 const blockOf = (url: string) => url.split('/').pop() as Block;
@@ -55,14 +56,15 @@ const money = (amount: string) => ({ amount, count: 1 });
 const body = (config: RequestConfig) => {
   switch (blockOf(config.url)) {
     case 'summary':
-      return { period: period(config), income: money('100.00'), expense: money(expense), label: config.url };
+      return { period: period(config), income: money(incomeTotal), expense: money(expense), label: config.url };
     case 'trend':
-      return { period: period(config), totals: { income: money('100.00'), expense: money(expense) }, buckets: [] };
+      return { period: period(config), totals: { income: money(incomeTotal), expense: money(expense) }, buckets: [] };
     default:
       return {
         period: period(config),
         transaction_type: config.params?.transaction_type,
-        total: money(config.params?.transaction_type === 'income' ? '100.00' : expense),
+        total: money(config.params?.transaction_type === 'income' ? incomeTotal : expense),
+        label: config.url,
       };
   }
 };
@@ -94,12 +96,15 @@ const renderForSpace = (spaceId: number, range = september) => {
 };
 
 const expenseOf = (data: unknown) => (data as { expense: { amount: string } } | undefined)?.expense.amount;
+const totalOf = (data: unknown) => (data as { total: { amount: string } } | undefined)?.total.amount;
+const labelOf = (data: unknown) => (data as { label?: string } | undefined)?.label;
 const typeOf = (data: unknown) => (data as { transaction_type?: string } | undefined)?.transaction_type;
 
 beforeEach(() => {
   jest.clearAllMocks();
   serverNow = SERVER_NOW;
   expense = '40.00';
+  incomeTotal = '100.00';
   respond = { summary: ok, trend: ok, breakdown: ok };
   mockedRequest.mockImplementation((config: RequestConfig) => {
     if (config.url.includes('/statistics/')) return respond[blockOf(config.url)](config);
@@ -447,6 +452,64 @@ describe('switching the breakdown type', () => {
 
     expect(typeOf(result.current.breakdown.data)).toBe('expense');
     expect(result.current.breakdown.isUpdating).toBe(true);
+
+    unmount();
+  });
+
+  it('never shows an income answer for the previous space', async () => {
+    const late: (() => void)[] = [];
+    const { store, result, rerender, unmount } = renderForSpace(1);
+
+    await loaded(result);
+    respond.breakdown = (config) =>
+      config.url.startsWith('/spaces/1/')
+        ? new Promise((resolve) => late.push(() => resolve({ data: body(config) })))
+        : ok(config);
+    rerender(income);
+    await waitFor(() => expect(late).toHaveLength(1));
+
+    act(() => {
+      store.dispatch(activateSpace(2));
+    });
+    await act(async () => late.forEach((resolve) => resolve()));
+    await waitFor(() => expect(typeOf(result.current.breakdown.data)).toBe('income'));
+
+    expect(labelOf(result.current.breakdown.data)).toBe('/spaces/2/statistics/breakdown');
+
+    unmount();
+  });
+
+  it('brings both types up to date after a change seen under either of them', async () => {
+    const { store, result, rerender, unmount } = renderForSpace(1);
+
+    await loaded(result);
+    rerender(income);
+    await waitFor(() => expect(typeOf(result.current.breakdown.data)).toBe('income'));
+    expense = '55.00';
+    incomeTotal = '130.00';
+
+    await act(async () => {
+      await store.dispatch(
+        transactionApi.endpoints.createTransaction.initiate({
+          spaceId: 1,
+          idempotencyKey: 'key-both',
+          data: {
+            wallet_id: 1,
+            category_id: 1,
+            transaction_type: TransactionType.INCOME,
+            amount: '30.00',
+            timestamp: SERVER_NOW,
+          },
+        }),
+      );
+    });
+
+    await waitFor(() => expect(totalOf(result.current.breakdown.data)).toBe('130.00'));
+
+    rerender(expenses);
+    expect(totalOf(result.current.breakdown.data)).not.toBe('130.00');
+    await waitFor(() => expect(totalOf(result.current.breakdown.data)).toBe('55.00'));
+    expect(typeOf(result.current.breakdown.data)).toBe('expense');
 
     unmount();
   });
