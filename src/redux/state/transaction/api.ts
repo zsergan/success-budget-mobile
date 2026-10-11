@@ -13,12 +13,14 @@ import type { CreateTransactionResult, TransactionModel, UpdateTransactionResult
 import { mapCreateTransactionResponse, mapTransaction, mapUpdateTransactionResponse } from '@api/models';
 import type { SpaceArg } from '@redux/api/baseApi';
 import { baseApi, spaceTags } from '@redux/api/baseApi';
-import type { TransactionType } from '@shared/enums';
+import type { TransactionKind, TransactionType } from '@shared/enums';
 
 export interface TransactionsArg extends SpaceArg {
   from: string;
   to: string;
   transactionType?: TransactionType;
+  // Absent lists both regular transactions and starting balances.
+  kind?: TransactionKind;
   categoryId?: number;
   walletId?: number;
 }
@@ -58,10 +60,11 @@ export const periodArg = (spaceId: number, { from, to }: { from: Date; to: Date 
   to: to.toISOString(),
 });
 
-const listParams = ({ from, to, transactionType, categoryId, walletId }: TransactionsArg) => ({
+const listParams = ({ from, to, transactionType, kind, categoryId, walletId }: TransactionsArg) => ({
   from,
   to,
   ...(transactionType && { transaction_type: transactionType }),
+  ...(kind && { kind }),
   ...(categoryId !== undefined && { category_id: categoryId }),
   ...(walletId !== undefined && { wallet_id: walletId }),
 });
