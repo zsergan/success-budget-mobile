@@ -3,6 +3,7 @@ import type { ListRenderItem } from 'react-native';
 import { FlatList, Text, View } from 'react-native';
 
 import { Icon } from '@components';
+import { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
 import type { StatisticsBreakdown, StatisticsSummary, StatisticsTrend } from '@api/dto';
 import type { StatsBlock } from '@screens/Stats/hooks/useStatsData';
@@ -17,6 +18,25 @@ import TrendBlock from '../TrendBlock/TrendBlock';
 
 import styles, { BREAKDOWN_PLACEHOLDER_HEIGHT } from './style';
 
+type BreakdownEmptyItem = Extract<StatsItem, { kind: 'breakdownEmpty' }>;
+
+const emptyCopy = ({ type, isZeroTotal, canSwitch }: BreakdownEmptyItem) => {
+  const isIncome = type === TransactionType.INCOME;
+  // Zero-amount transactions still exist, so the title must not claim there are none.
+  const title = isZeroTotal
+    ? `${isIncome ? 'Income' : 'Expense'} total is zero`
+    : `No ${isIncome ? 'income' : 'expenses'} in this period`;
+  const text = canSwitch
+    ? isIncome
+      ? 'Switch to Expense to see where the money went.'
+      : 'Switch to Income to see what came in.'
+    : isZeroTotal
+      ? `${isIncome ? 'Income in this period adds' : 'Expenses in this period add'} up to zero.`
+      : `It appears once ${isIncome ? 'income' : 'an expense'} is recorded in this period.`;
+
+  return { title, text };
+};
+
 interface Props {
   items: StatsItem[];
   summary: StatsBlock<StatisticsSummary>;
@@ -28,11 +48,13 @@ interface Props {
   showComparison: boolean;
   // Shown in place of the blocks when the period has nothing to chart.
   placeholder: ReactElement | null;
+  breakdownType: TransactionType;
   mode: BreakdownMode;
   selectedSegmentKey: string | null;
   onSelectSegment: (key: string | null) => void;
   onDonutTouch: () => void;
   isOtherExpanded: boolean;
+  onBreakdownTypeChange: (type: TransactionType) => void;
   onModeChange: (mode: BreakdownMode) => void;
   onToggleOther: () => void;
   onOpenHistory: (group: BreakdownGroup) => void;
@@ -50,11 +72,13 @@ const StatsList = ({
   onTrendTouch,
   showComparison,
   placeholder,
+  breakdownType,
   mode,
   selectedSegmentKey,
   onSelectSegment,
   onDonutTouch,
   isOtherExpanded,
+  onBreakdownTypeChange,
   onModeChange,
   onToggleOther,
   onOpenHistory,
@@ -80,26 +104,34 @@ const StatsList = ({
           />
         );
       case 'breakdownHeader':
-        return <BreakdownHeader mode={mode} showModes={item.hasSpending} onModeChange={onModeChange} />;
+        return (
+          <BreakdownHeader
+            type={breakdownType}
+            mode={mode}
+            onTypeChange={onBreakdownTypeChange}
+            onModeChange={onModeChange}
+          />
+        );
       case 'breakdownStatus':
         return breakdown.hasError ? (
           <BlockError title="Couldn’t load the breakdown" onRetry={breakdown.retry} style={styles.breakdownError} />
         ) : (
           <BlockPlaceholder height={BREAKDOWN_PLACEHOLDER_HEIGHT} />
         );
-      case 'breakdownEmpty':
+      case 'breakdownEmpty': {
+        const copy = emptyCopy(item);
+
         return (
           <View style={styles.emptyCard}>
             <View style={styles.emptyIcon}>
               <Icon name="pie" size={20} color={colors.muted} strokeWidth={1.8} />
             </View>
 
-            <Text style={styles.emptyTitle}>No expenses in this period</Text>
-            <Text style={styles.emptyText}>
-              The breakdown shows spending only. It appears once an expense is recorded in this period.
-            </Text>
+            <Text style={styles.emptyTitle}>{copy.title}</Text>
+            <Text style={styles.emptyText}>{copy.text}</Text>
           </View>
         );
+      }
       case 'donut':
         return (
           <View style={styles.cardTop}>
@@ -108,6 +140,7 @@ const StatsList = ({
               totalAmount={item.totalAmount}
               sourceCount={item.sourceCount}
               currency={item.currency}
+              type={item.type}
               mode={mode}
               selectedKey={selectedSegmentKey}
               onSelect={onSelectSegment}
@@ -143,7 +176,16 @@ const StatsList = ({
       data={items}
       keyExtractor={(item) => item.key}
       renderItem={renderItem}
-      extraData={[isOtherExpanded, summary, trend, breakdown, selectedTrendKey, selectedSegmentKey, showComparison]}
+      extraData={[
+        breakdownType,
+        isOtherExpanded,
+        summary,
+        trend,
+        breakdown,
+        selectedTrendKey,
+        selectedSegmentKey,
+        showComparison,
+      ]}
       ListEmptyComponent={placeholder}
       showsVerticalScrollIndicator={false}
     />

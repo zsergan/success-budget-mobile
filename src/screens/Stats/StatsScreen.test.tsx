@@ -1,5 +1,5 @@
 import type { ReactNode, Ref } from 'react';
-import { FlatList, Text } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Provider } from 'react-redux';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -98,7 +98,10 @@ const statsRequests = (block?: Block) => statsCalls(block).map(({ url }) => url)
 const lastParams = (block: Block) => statsCalls(block).at(-1)?.params;
 
 const answer = (config: RequestConfig) => {
-  const data = fixtureFor(config)[blockOf(config.url)];
+  const block = blockOf(config.url);
+  const stats = fixtureFor(config);
+  const data =
+    block === 'breakdown' ? stats.breakdown[config.params?.transaction_type as TransactionType] : stats[block];
   if (serverNow === null) return Promise.resolve({ data });
 
   const asOf = config.params?.as_of;
@@ -186,6 +189,226 @@ describe('StatsScreen', () => {
     await settle();
 
     expect(statsRequests()).toHaveLength(0);
+  });
+
+  it('switches the breakdown to income asking only for the breakdown, and not again for the active type', async () => {
+    renderStats();
+    await settle();
+    mockedRequest.mockClear();
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    await settle();
+
+    expect(statsRequests()).toEqual(['/spaces/1/statistics/breakdown']);
+    expect(lastParams('breakdown')?.transaction_type).toBe('income');
+    expect(screen.getByText('Salary')).toBeTruthy();
+    expect(screen.queryByText('Housing')).toBeNull();
+
+    mockedRequest.mockClear();
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    fireEvent.press(screen.getByRole('tab', { name: 'By category' }));
+    await settle();
+
+    expect(statsRequests()).toHaveLength(0);
+  });
+
+  it('keeps both switches over an empty or failed breakdown', async () => {
+    fixture = STATS_FIXTURES.incomeOnly;
+    renderStats();
+    await settle();
+
+    expect(screen.getByText('No expenses in this period')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Income' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'By wallet' })).toBeTruthy();
+
+    fail.breakdown = failure(500);
+    fireEvent.press(screen.getByRole('tab', { name: 'By wallet' }));
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    await settle();
+
+    expect(screen.getByText('Couldn’t load the breakdown')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Expense' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'By category' })).toBeTruthy();
+
+    delete fail.breakdown;
+    mockedRequest.mockClear();
+    fireEvent.press(screen.getByText('Retry'));
+    await settle();
+
+    expect(statsRequests()).toEqual(['/spaces/1/statistics/breakdown']);
+    expect(lastParams('breakdown')?.transaction_type).toBe('income');
+    expect(screen.getByRole('adjustable').props.accessibilityLabel).toBe('Income by wallet');
+  });
+
+  it('charts income by category and by wallet under its own label', async () => {
+    renderStats();
+    await settle();
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    await settle();
+
+    const donut = screen.getByRole('adjustable');
+    expect(donut.props.accessibilityLabel).toBe('Income by category');
+    expect(donut.props.accessibilityValue.text).toBe('Income, $4,050.00, 2 categories');
+    expect(screen.getByText('Freelance')).toBeTruthy();
+
+    fireEvent.press(screen.getByRole('tab', { name: 'By wallet' }));
+    expect(screen.getByRole('adjustable').props.accessibilityValue.text).toBe('Income, $4,050.00, 2 wallets');
+    expect(screen.getByText('Savings')).toBeTruthy();
+  });
+
+  it('keeps the grouping across a change of type', async () => {
+    renderStats();
+    await settle();
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    await settle();
+    fireEvent.press(screen.getByRole('tab', { name: 'By wallet' }));
+    fireEvent.press(screen.getByRole('tab', { name: 'Expense' }));
+    await settle();
+
+    expect(screen.getByRole('tab', { name: 'By wallet' }).props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByRole('adjustable').props.accessibilityLabel).toBe('Expenses by wallet');
+    expect(screen.getByText('Everyday')).toBeTruthy();
+  });
+
+  it('draws a single group as the whole share', async () => {
+    fixture = STATS_FIXTURES.incomeOnly;
+    renderStats();
+    await settle();
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    await settle();
+
+    let shareRow = screen.getByText('100.0%').parent;
+    while (shareRow && shareRow.type !== View) shareRow = shareRow.parent;
+    const fill = shareRow?.findAll(
+      (node) => node.type === View && !!StyleSheet.flatten(node.props.style)?.backgroundColor,
+    );
+
+    expect(screen.getByText('Freelance')).toBeTruthy();
+    expect(fill?.map((node) => StyleSheet.flatten(node.props.style).width)).toContain('100%');
+  });
+
+  it('opens History for an archived category but not for deleted wallets', async () => {
+    fixture = STATS_FIXTURES.deletedWallets;
+    renderStats();
+    await settle();
+    fireEvent.press(screen.getByRole('tab', { name: 'By wallet' }));
+
+    fireEvent.press(screen.getByText('Deleted wallets'));
+    expect(navigationRef.getCurrentRoute()?.name).toBe(ScreenNames.STATS_TAB);
+
+    fixture = STATS_FIXTURES.archived;
+    fireEvent.press(screen.getByText('Week'));
+    await settle();
+    fireEvent.press(screen.getByRole('tab', { name: 'By category' }));
+    expect(screen.getByText('Archived')).toBeTruthy();
+
+    fireEvent.press(screen.getByText('Subscriptions'));
+    expect(navigationRef.getCurrentRoute()?.name).toBe(ScreenNames.TRANSACTIONS_TAB);
+    expect(JSON.parse(String(screen.getByTestId('history-filter').props.children))).toMatchObject({
+      name: 'Subscriptions',
+      transactionType: 'expense',
+      kind: 'regular',
+    });
+  });
+
+  it('points to the other type when the selected one is empty', async () => {
+    fixture = STATS_FIXTURES.incomeOnly;
+    renderStats();
+    await settle();
+
+    expect(screen.getByText('No expenses in this period')).toBeTruthy();
+    expect(screen.getByText('Switch to Income to see what came in.')).toBeTruthy();
+    expect(screen.queryByRole('adjustable')).toBeNull();
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    await settle();
+    expect(screen.getByRole('adjustable').props.accessibilityValue.text).toBe('Income, $1,700.00, 1 category');
+
+    fixture = STATS_FIXTURES.expenseOnly;
+    fireEvent.press(screen.getByText('Week'));
+    await settle();
+    expect(screen.getByText('No income in this period')).toBeTruthy();
+    expect(screen.getByText('Switch to Expense to see where the money went.')).toBeTruthy();
+    expect(screen.queryByRole('adjustable')).toBeNull();
+  });
+
+  it('does not point to the other type from a summary left by an earlier cycle', async () => {
+    fixture = STATS_FIXTURES.expenseOnly;
+    const { store } = renderStats();
+    await settle();
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    await settle();
+    expect(screen.getByText('Switch to Expense to see where the money went.')).toBeTruthy();
+
+    fixture = STATS_FIXTURES.noHistory;
+    fail.summary = failure(500);
+    await act(async () => {
+      await store.dispatch(
+        transactionApi.endpoints.deleteTransaction.initiate({
+          spaceId: 1,
+          transactionId: 'tx-1',
+          idempotencyKey: 'key-delete',
+          version: 1,
+        }),
+      );
+    });
+    await settle();
+
+    expect(screen.getByText('Couldn’t update')).toBeTruthy();
+    expect(screen.getByText('No income in this period')).toBeTruthy();
+    expect(screen.queryByText('Switch to Expense to see where the money went.')).toBeNull();
+    expect(screen.getByText('It appears once income is recorded in this period.')).toBeTruthy();
+  });
+
+  it('calls a total of zero-amount transactions zero rather than empty', async () => {
+    fixture = STATS_FIXTURES.zero;
+    renderStats();
+    await settle();
+
+    expect(screen.getByText('Expense total is zero')).toBeTruthy();
+    expect(screen.getByText('Expenses in this period add up to zero.')).toBeTruthy();
+    expect(screen.queryByRole('adjustable')).toBeNull();
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    await settle();
+    expect(screen.getByText('Income total is zero')).toBeTruthy();
+  });
+
+  it('drops a picked segment whose group a refresh took away, and does not bring it back', async () => {
+    const { store } = renderStats();
+    await settle();
+    const donutText = () => screen.getByRole('adjustable').props.accessibilityValue.text as string;
+    const changeData = (stats: StatsFixture) =>
+      act(async () => {
+        fixture = stats;
+        await store.dispatch(
+          transactionApi.endpoints.createTransaction.initiate({
+            spaceId: 1,
+            idempotencyKey: `key-${stats.breakdown.expense.total.amount}`,
+            data: {
+              wallet_id: 1,
+              category_id: 1,
+              transaction_type: TransactionType.EXPENSE,
+              amount: '1.00',
+              timestamp: '2026-09-28T09:00:00.000Z',
+            },
+          }),
+        );
+      });
+
+    for (let step = 0; step < 6; step += 1) {
+      fireEvent(screen.getByRole('adjustable'), 'accessibilityAction', { nativeEvent: { actionName: 'increment' } });
+    }
+    expect(donutText()).toMatch(/^Kids & School Supply/);
+
+    await changeData(STATS_FIXTURES.week);
+    await settle();
+    expect(donutText()).toMatch(/^Spent/);
+
+    await changeData(STATS_FIXTURES.month);
+    await settle();
+    expect(screen.getByText('Kids & School Supply')).toBeTruthy();
+    expect(donutText()).toMatch(/^Spent/);
   });
 
   it('retries only the block that failed, in its own place', async () => {
@@ -281,9 +504,10 @@ describe('StatsScreen', () => {
     expect(JSON.parse(String(screen.getByTestId('history-filter').props.children))).toEqual({
       spaceId: 1,
       name: 'Gifts',
-      from: fixture.breakdown.period.from,
-      to: fixture.breakdown.period.actual_to,
+      from: fixture.breakdown.expense.period.from,
+      to: fixture.breakdown.expense.period.actual_to,
       transactionType: 'expense',
+      kind: 'regular',
       categoryId: 10,
     });
 
@@ -291,6 +515,36 @@ describe('StatsScreen', () => {
     await settle();
 
     expect(screen.getByText('Gifts')).toBeTruthy();
+    expect(statsRequests()).toHaveLength(0);
+  });
+
+  it('opens the regular income of a wallet from Income by wallet, and comes back to the same view', async () => {
+    renderStats();
+    await settle();
+    fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
+    await settle();
+    fireEvent.press(screen.getByRole('tab', { name: 'By wallet' }));
+    mockedRequest.mockClear();
+
+    const { period, by_wallet: byWallet } = fixture.breakdown.income;
+    const savings = byWallet.primary_items.find((item) => item.name === 'Savings')!;
+    fireEvent.press(screen.getByText('Savings'));
+    expect(JSON.parse(String(screen.getByTestId('history-filter').props.children))).toEqual({
+      spaceId: 1,
+      name: 'Savings',
+      from: period.from,
+      to: period.actual_to,
+      transactionType: 'income',
+      kind: 'regular',
+      walletId: savings.id,
+    });
+
+    act(() => navigationRef.navigate(ScreenNames.STATS_TAB));
+    await settle();
+
+    expect(screen.getByRole('tab', { name: 'Income' }).props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByRole('tab', { name: 'By wallet' }).props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByRole('adjustable').props.accessibilityValue.text).toBe('Income, $4,050.00, 2 wallets');
     expect(statsRequests()).toHaveLength(0);
   });
 
@@ -406,7 +660,7 @@ describe('StatsScreen', () => {
       expect(params).toMatchObject({ period: 'month', anchor_date: '2026-08-01' });
       expect(params).not.toHaveProperty('from_date');
       expect(lastParams('trend')).toEqual(params);
-      expect(lastParams('breakdown')).toEqual(params);
+      expect(lastParams('breakdown')).toEqual({ ...params, transaction_type: 'expense' });
 
       expect(screen.getByText('1–31 Aug 2026')).toBeTruthy();
       expect(screen.queryByText('Reset')).toBeNull();

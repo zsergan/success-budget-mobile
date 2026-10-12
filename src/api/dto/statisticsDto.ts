@@ -1,4 +1,4 @@
-import type { AppColor } from '@shared/enums';
+import type { AppColor, TransactionType } from '@shared/enums';
 import type { CategoryIconApi } from './categoryDto';
 
 export type StatisticsPeriodType = 'week' | 'month' | 'year' | 'custom';
@@ -15,6 +15,11 @@ export interface StatisticsQuery {
   from_date?: string;
   to_date?: string;
   as_of?: string;
+}
+
+// Only breakdown takes a type; summary and trend refuse it.
+export interface StatisticsBreakdownQuery extends StatisticsQuery {
+  transaction_type: TransactionType;
 }
 
 export interface StatisticsPeriod {
@@ -135,6 +140,7 @@ export interface OtherBreakdownItem<Child> extends ServiceBreakdownItem {
 }
 
 export interface StatisticsBreakdown extends StatisticsBlock {
+  transaction_type: TransactionType;
   total: MoneyCount;
   by_category: {
     total_amount: Money;

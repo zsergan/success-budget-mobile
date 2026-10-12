@@ -81,6 +81,7 @@ const TransactionsScreen = () => {
           filter: {
             name: filter.name,
             transactionType: filter.transactionType,
+            kind: filter.kind,
             categoryId: filter.categoryId,
             walletId: filter.walletId,
           },

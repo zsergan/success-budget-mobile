@@ -1,5 +1,5 @@
-import type { CategoryBreakdownItem, StatisticsBreakdown, WalletBreakdownItem } from '@api/dto';
-import { AppColor } from '@shared/enums';
+import type { CategoryBreakdownItem, StatisticsBreakdown, StatisticsSummary, WalletBreakdownItem } from '@api/dto';
+import { AppColor, TransactionType } from '@shared/enums';
 import { buildStatsItems } from './statsItems';
 
 const category = (id: number): CategoryBreakdownItem => ({
@@ -30,8 +30,9 @@ const wallet = (id: number): WalletBreakdownItem => ({
 
 const service = { id: null, name: null, icon: null, color: null, is_archived: false, opens_history: false } as const;
 
-const breakdown = (sourceCount = 8): StatisticsBreakdown =>
+const breakdown = (sourceCount = 8, type = TransactionType.EXPENSE): StatisticsBreakdown =>
   ({
+    transaction_type: type,
     total: { amount: '80.00', count: sourceCount },
     by_category: {
       total_amount: '80.00',
@@ -66,53 +67,106 @@ const keys = (items: ReturnType<typeof buildStatsItems>) => items.map((item) => 
 
 describe('buildStatsItems', () => {
   it('lays out the blocks, then the donut and one row per group', () => {
-    expect(keys(buildStatsItems({ breakdown: breakdown(), mode: 'category', isOtherExpanded: false }))).toEqual([
+    expect(
+      keys(
+        buildStatsItems({ breakdown: breakdown(), cycleSummary: undefined, mode: 'category', isOtherExpanded: false }),
+      ),
+    ).toEqual([
       'summary',
       'trend',
       'breakdownHeader',
       'donut',
-      'category:category:1',
-      'category:category:2',
-      'category:other',
+      'expense:category:category:1',
+      'expense:category:category:2',
+      'expense:category:other',
     ]);
   });
 
   it('inserts the expanded children right after Other and closes the card on the last one', () => {
-    const items = buildStatsItems({ breakdown: breakdown(), mode: 'category', isOtherExpanded: true });
+    const items = buildStatsItems({
+      breakdown: breakdown(),
+      cycleSummary: undefined,
+      mode: 'category',
+      isOtherExpanded: true,
+    });
     const rows = items.filter((item) => item.kind === 'row');
 
     expect(rows.map((row) => [row.key, row.isChild])).toEqual([
-      ['category:category:1', false],
-      ['category:category:2', false],
-      ['category:other', false],
-      ['category:other:category:3', true],
-      ['category:other:category:4', true],
+      ['expense:category:category:1', false],
+      ['expense:category:category:2', false],
+      ['expense:category:other', false],
+      ['expense:category:other:category:3', true],
+      ['expense:category:other:category:4', true],
     ]);
     expect(rows.map((row) => row.isFirst)).toEqual([true, false, false, false, false]);
     expect(rows.map((row) => row.isLast)).toEqual([false, false, false, false, true]);
   });
 
   it('puts deleted wallets before Other in the wallet breakdown', () => {
-    const items = buildStatsItems({ breakdown: breakdown(), mode: 'wallet', isOtherExpanded: false });
+    const items = buildStatsItems({
+      breakdown: breakdown(),
+      cycleSummary: undefined,
+      mode: 'wallet',
+      isOtherExpanded: false,
+    });
 
-    expect(keys(items).slice(4)).toEqual(['wallet:wallet:1', 'wallet:deleted_wallets', 'wallet:other']);
+    expect(keys(items).slice(4)).toEqual([
+      'expense:wallet:wallet:1',
+      'expense:wallet:deleted_wallets',
+      'expense:wallet:other',
+    ]);
   });
 
-  it('shows the no-spending message by count, without the mode switch', () => {
-    const items = buildStatsItems({ breakdown: breakdown(0), mode: 'category', isOtherExpanded: false });
+  it('keys the rows and the donut data by the breakdown type', () => {
+    const items = buildStatsItems({
+      breakdown: breakdown(8, TransactionType.INCOME),
+      cycleSummary: undefined,
+      mode: 'category',
+      isOtherExpanded: false,
+    });
 
-    expect(items.slice(2)).toEqual([
-      { kind: 'breakdownHeader', key: 'breakdownHeader', hasSpending: false },
-      { kind: 'breakdownEmpty', key: 'breakdownEmpty' },
+    expect(items.find((item) => item.kind === 'donut')).toMatchObject({ type: TransactionType.INCOME });
+    expect(keys(items).slice(4)).toEqual([
+      'income:category:category:1',
+      'income:category:category:2',
+      'income:category:other',
     ]);
+  });
+
+  it('shows the empty message by count, with no donut, telling no data from a zero total', () => {
+    const empty = (breakdownData: StatisticsBreakdown, summary?: Partial<StatisticsSummary>) =>
+      buildStatsItems({
+        breakdown: breakdownData,
+        cycleSummary: summary as StatisticsSummary | undefined,
+        mode: 'category',
+        isOtherExpanded: false,
+      }).slice(3);
+
+    expect(empty(breakdown(0))).toEqual([
+      {
+        kind: 'breakdownEmpty',
+        key: 'breakdownEmpty',
+        type: TransactionType.EXPENSE,
+        isZeroTotal: false,
+        canSwitch: false,
+      },
+    ]);
+    expect(
+      empty({ ...breakdown(0), total: { amount: '0.00', count: 2 } }, { income: { amount: '17.00', count: 1 } }),
+    ).toMatchObject([{ isZeroTotal: true, canSwitch: true }]);
+    expect(
+      empty(breakdown(0, TransactionType.INCOME), {
+        income: { amount: '0.00', count: 0 },
+        expense: { amount: '0.00', count: 3 },
+      }),
+    ).toMatchObject([{ type: TransactionType.INCOME, canSwitch: false }]);
   });
 
   it('holds the breakdown place while it has no data', () => {
-    expect(keys(buildStatsItems({ breakdown: undefined, mode: 'category', isOtherExpanded: false }))).toEqual([
-      'summary',
-      'trend',
-      'breakdownHeader',
-      'breakdownStatus',
-    ]);
+    expect(
+      keys(
+        buildStatsItems({ breakdown: undefined, cycleSummary: undefined, mode: 'category', isOtherExpanded: false }),
+      ),
+    ).toEqual(['summary', 'trend', 'breakdownHeader', 'breakdownStatus']);
   });
 });

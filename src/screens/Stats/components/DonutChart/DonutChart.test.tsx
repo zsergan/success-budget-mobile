@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { CategoryBreakdownItem, OtherBreakdownItem } from '@api/dto';
-import { AppColor } from '@shared/enums';
+import { AppColor, TransactionType } from '@shared/enums';
 import DonutChart from './DonutChart';
 import { DONUT_SIZE, RADIUS } from './donutGeometry';
 
@@ -41,7 +41,7 @@ const other: OtherBreakdownItem<CategoryBreakdownItem> = {
 
 const GROUPS = [category(1, '500.00', 50), category(2, '250.00', 25), other];
 
-const Harness = () => {
+const Harness = ({ type = TransactionType.EXPENSE }: { type?: TransactionType }) => {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   return (
@@ -50,6 +50,7 @@ const Harness = () => {
       totalAmount="1000.00"
       sourceCount={4}
       currency="USD"
+      type={type}
       mode="category"
       selectedKey={selectedKey}
       onSelect={setSelectedKey}
@@ -74,6 +75,7 @@ describe('DonutChart', () => {
     expect(screen.getByText('Spent')).toBeTruthy();
     expect(screen.getByText('$1,000.00')).toBeTruthy();
     expect(screen.getByText('4 categories')).toBeTruthy();
+    expect(screen.getByRole('adjustable').props.accessibilityLabel).toBe('Expenses by category');
   });
 
   it('shows a picked segment and clears it on a repeat tap', () => {
@@ -88,13 +90,21 @@ describe('DonutChart', () => {
     expect(screen.getByText('Spent')).toBeTruthy();
   });
 
-  it('shows Other as its total and how many groups it holds', () => {
+  it('shows Other like any group: its total and share', () => {
     render(<Harness />);
 
     tapAt(315);
     expect(screen.getByText('Other')).toBeTruthy();
     expect(screen.getByText('$250.00')).toBeTruthy();
-    expect(screen.getByText('2 categories')).toBeTruthy();
+    expect(screen.getByText('25.0%')).toBeTruthy();
+  });
+
+  it('names the total and the chart by the income type', () => {
+    render(<Harness type={TransactionType.INCOME} />);
+
+    expect(screen.getByText('Income')).toBeTruthy();
+    expect(screen.queryByText('Spent')).toBeNull();
+    expect(screen.getByRole('adjustable').props.accessibilityLabel).toBe('Income by category');
   });
 
   it('clears the pick on a tap in the hole', () => {
@@ -120,6 +130,6 @@ describe('DonutChart', () => {
     expect(screen.getByRole('adjustable').props.accessibilityValue.text).toBe('Spent, $1,000.00, 4 categories');
 
     step('decrement');
-    expect(screen.getByRole('adjustable').props.accessibilityValue.text).toBe('Other, $250.00, 2 categories');
+    expect(screen.getByRole('adjustable').props.accessibilityValue.text).toBe('Other, $250.00, 25.0%');
   });
 });

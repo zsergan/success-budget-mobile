@@ -12,7 +12,7 @@ import { activateSpace } from '@redux/state/space/thunks';
 import { transactionDto } from '@redux/state/transaction/fixtures';
 import { deleteTransaction } from '@redux/state/transactionFlow/thunks';
 import { mapTransaction } from '@api/models';
-import { ScreenNames, TransactionType } from '@shared/enums';
+import { ScreenNames, TransactionKind, TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
 import type { MainTabParamList } from '@shared/types';
 import { hexToRgba } from '@shared/utils';
@@ -112,6 +112,7 @@ describe('TransactionsScreen', () => {
         from: new Date(2026, 8, 1).toISOString(),
         to: new Date(2026, 8, 28).toISOString(),
         transactionType: TransactionType.EXPENSE,
+        kind: TransactionKind.REGULAR,
         name: 'Food',
         categoryId: 2,
       },
@@ -157,6 +158,52 @@ describe('TransactionsScreen', () => {
     await act(async () => jest.advanceTimersByTimeAsync(2500));
     expect(isLit()).toBe(false);
     scrollToLocation.mockRestore();
+  });
+
+  it('lists only regular income of a wallet under an Income filter, and the usual history once it is cleared', async () => {
+    const salary = (id: string, amount: string) =>
+      transactionDto({
+        id,
+        amount,
+        transaction_type: TransactionType.INCOME,
+        timestamp: new Date(2026, 8, 10).toISOString(),
+      });
+    mockedRequest.mockImplementation(({ url, params }: RequestConfig) =>
+      Promise.resolve({
+        data:
+          url === '/spaces/1/transactions' && params?.kind ? [salary('tx-1', '3200.00'), salary('tx-2', '850.00')] : [],
+      }),
+    );
+    const filter = {
+      spaceId: 1,
+      from: '2026-08-31T21:00:00.000Z',
+      to: '2026-09-28T09:15:42.123Z',
+      transactionType: TransactionType.INCOME,
+      kind: TransactionKind.REGULAR,
+      name: 'Everyday',
+      walletId: 1,
+    };
+    renderTransactions({ filter });
+    await settle();
+
+    expect(listRequests().at(-1)?.params).toEqual({
+      from: filter.from,
+      to: filter.to,
+      transaction_type: TransactionType.INCOME,
+      kind: TransactionKind.REGULAR,
+      wallet_id: 1,
+    });
+    expect(screen.getByText(/^Income · /)).toBeTruthy();
+    expect(screen.getByText('4 050.00')).toBeTruthy();
+
+    fireEvent.press(screen.getByLabelText('Clear filter'));
+    await settle();
+
+    expect(screen.queryByTestId('applied-filter')).toBeNull();
+    expect(listRequests().at(-1)?.params).toEqual({
+      from: new Date(2026, 8, 1).toISOString(),
+      to: new Date(2026, 8, 30, 23, 59, 59, 999).toISOString(),
+    });
   });
 
   it('ignores a reveal meant for another space', async () => {

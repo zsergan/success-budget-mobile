@@ -115,6 +115,33 @@ describe('transactionApi', () => {
     );
   });
 
+  it('sends the kind to the list and the count alike', async () => {
+    const store = createAppStore();
+    const arg = {
+      spaceId: 3,
+      from: '2026-08-31T21:00:00.000Z',
+      to: '2026-09-30T09:15:42.123Z',
+      transactionType: TransactionType.INCOME,
+      kind: TransactionKind.REGULAR,
+      categoryId: 5,
+    };
+    const params = {
+      from: arg.from,
+      to: arg.to,
+      transaction_type: TransactionType.INCOME,
+      kind: TransactionKind.REGULAR,
+      category_id: 5,
+    };
+
+    await store.dispatch(getTransactions.initiate(arg));
+    await store.dispatch(transactionApi.endpoints.getTransactionsCount.initiate(arg));
+
+    expect(mockedRequest.mock.calls.map(([config]) => [config.url, config.params])).toEqual([
+      ['/spaces/3/transactions', params],
+      ['/spaces/3/transactions/count', params],
+    ]);
+  });
+
   it('reads one transaction by its id', async () => {
     const store = createAppStore();
 

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef } from 'react';
 import { View } from 'react-native';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useNavigation } from '@react-navigation/native';
@@ -32,7 +32,7 @@ import useComposeWithNewWallet from './hooks/useComposeWithNewWallet';
 import useSpaceStatus from './hooks/useSpaceStatus';
 import useStatsData from './hooks/useStatsData';
 import useStatsSelection from './hooks/useStatsSelection';
-import type { BreakdownGroup, BreakdownMode } from './statsItems';
+import type { BreakdownGroup } from './statsItems';
 import { buildStatsItems } from './statsItems';
 import { getStatsViewState } from './statsViewState';
 import styles from './style';
@@ -44,11 +44,13 @@ const StatsScreen = () => {
   const spacesSheetRef = useRef<BottomSheetModal>(null);
   const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod } = usePeriod();
   const { openCreate } = useTransactionFlow(rangeSelection(range));
+  const spaceId = useAppSelector(selectCurrentSpaceId);
+  const selection = useStatsSelection(JSON.stringify([spaceId, range.from, range.to]));
+  const { breakdownType, mode } = selection;
   const { summary, trend, breakdown, refreshIfStale, updateFailed, retryFailed, loadFailed, loadError, accessDenied } =
-    useStatsData(range);
+    useStatsData(range, breakdownType);
   useRefreshOnReturn(refreshIfStale);
 
-  const spaceId = useAppSelector(selectCurrentSpaceId);
   const dispatch = useAppDispatch();
   const space = useSpaceStatus();
 
@@ -78,9 +80,6 @@ const StatsScreen = () => {
 
   useComposeWithNewWallet(useCallback((walletId) => openCreate(TransactionType.EXPENSE, walletId), [openCreate]));
 
-  const [mode, setMode] = useState<BreakdownMode>('category');
-  const selection = useStatsSelection(JSON.stringify([spaceId, range.from, range.to]), mode);
-
   // Without a space the stats are skipped, so they could never leave their placeholders.
   const failure =
     space.status === 'failed' ? (
@@ -98,20 +97,26 @@ const StatsScreen = () => {
   const showsUpdateFailed = updateFailed && !failure;
 
   const viewState = getStatsViewState(summary.data);
+  // Neither block shows an earlier cycle's answer, so both come from the current one.
+  const isSameCycle = [summary, breakdown].every((block) => !block.isUpdating && !block.updateFailed);
   const showsBlocks = !failure && (viewState === 'data' || viewState === 'pending');
   const items = showsBlocks
-    ? buildStatsItems({ breakdown: breakdown.data, mode, isOtherExpanded: selection.isOtherExpanded })
+    ? buildStatsItems({
+        breakdown: breakdown.data,
+        cycleSummary: isSameCycle ? summary.data : undefined,
+        mode,
+        isOtherExpanded: selection.isOtherExpanded,
+      })
     : [];
 
-  // A pick that a refresh took away from the breakdown is simply not shown.
+  // A pick whose group a refresh took away is dropped, so it does not come back with the group.
   const donut = items.find((item) => item.kind === 'donut');
-  const selectedSegmentKey =
-    donut && donut.groups.some((group) => group.key === selection.selectedSegmentKey)
-      ? selection.selectedSegmentKey
-      : null;
+  const isSegmentShown = !!donut && donut.groups.some((group) => group.key === selection.selectedSegmentKey);
+  if (breakdown.data && selection.selectedSegmentKey !== null && !isSegmentShown) selection.selectSegment(null);
+  const selectedSegmentKey = isSegmentShown ? selection.selectedSegmentKey : null;
 
   const openHistory = (group: BreakdownGroup) => {
-    const filter = breakdown.data && spaceId !== null && toHistoryFilter(group, breakdown.data.period, spaceId);
+    const filter = breakdown.data && spaceId !== null && toHistoryFilter(group, breakdown.data, spaceId);
     if (filter) navigation.navigate(ScreenNames.TRANSACTIONS_TAB, { filter });
   };
 
@@ -168,12 +173,14 @@ const StatsScreen = () => {
             onTrendTouch={selection.markTrendTouch}
             showComparison={hasComparison(period)}
             placeholder={placeholder}
+            breakdownType={breakdownType}
             mode={mode}
             selectedSegmentKey={selectedSegmentKey}
             onSelectSegment={selection.selectSegment}
             onDonutTouch={selection.markDonutTouch}
             isOtherExpanded={selection.isOtherExpanded}
-            onModeChange={setMode}
+            onBreakdownTypeChange={selection.changeBreakdownType}
+            onModeChange={selection.changeMode}
             onToggleOther={selection.toggleOther}
             onOpenHistory={openHistory}
             bottomSpace={showsUpdateFailed ? UPDATE_TOAST_SPACE : undefined}

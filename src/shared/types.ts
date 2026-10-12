@@ -1,7 +1,7 @@
 import type { BottomTabNavigationProp, BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp, CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { ScreenNames, AppColor, TransactionType } from '@shared/enums';
+import type { ScreenNames, AppColor, TransactionKind, TransactionType } from '@shared/enums';
 
 // Plain data, never a callback: where to go once the wallet is saved, and for which space.
 export type AddTransactionIntent = { returnTo: ScreenNames.STATS_TAB; spaceId: number };
@@ -20,6 +20,8 @@ export type HistoryFilter = {
   from: string;
   to: string;
   transactionType: TransactionType;
+  // Starting balances are left out of the list itself, so it adds up to the row.
+  kind: TransactionKind;
   // The row's name, shown on the applied filter.
   name: string;
 } & ({ categoryId: number; walletId?: never } | { walletId: number; categoryId?: never });

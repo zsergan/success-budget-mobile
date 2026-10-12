@@ -33,7 +33,7 @@ export const areStatisticsConsistent = (
 ) =>
   sameMoneyCount(trend.totals.income, summary.income) &&
   sameMoneyCount(trend.totals.expense, summary.expense) &&
-  sameMoneyCount(breakdown.total, summary.expense);
+  sameMoneyCount(breakdown.total, summary[breakdown.transaction_type]);
 
 // A device clock far enough ahead of the server's gets as_of rejected as being in the future.
 export const isAsOfRejected = (error: unknown) => {

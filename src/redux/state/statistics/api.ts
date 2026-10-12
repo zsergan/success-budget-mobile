@@ -1,11 +1,22 @@
-import type { StatisticsBreakdown, StatisticsQuery, StatisticsSummary, StatisticsTrend } from '@api/dto';
+import type {
+  StatisticsBreakdown,
+  StatisticsBreakdownQuery,
+  StatisticsQuery,
+  StatisticsSummary,
+  StatisticsTrend,
+} from '@api/dto';
 import type { SpaceArg } from '@redux/api/baseApi';
 import { baseApi, spaceTags } from '@redux/api/baseApi';
+import type { TransactionType } from '@shared/enums';
 
 export interface StatisticsArg extends SpaceArg {
   query: StatisticsQuery;
   // Keys the cache only, never sent: without as_of a new load cycle would otherwise reuse the last answer.
   cycleId: number;
+}
+
+export interface StatisticsBreakdownArg extends StatisticsArg {
+  transactionType: TransactionType;
 }
 
 let revision = 0;
@@ -20,8 +31,12 @@ export const statisticsApi = baseApi.injectEndpoints({
     getStatisticsTrend: build.query<StatisticsTrend, StatisticsArg>({
       query: ({ spaceId, query }) => ({ url: `/spaces/${spaceId}/statistics/trend`, params: { ...query } }),
     }),
-    getStatisticsBreakdown: build.query<StatisticsBreakdown, StatisticsArg>({
-      query: ({ spaceId, query }) => ({ url: `/spaces/${spaceId}/statistics/breakdown`, params: { ...query } }),
+    getStatisticsBreakdown: build.query<StatisticsBreakdown, StatisticsBreakdownArg>({
+      query: ({ spaceId, query, transactionType }) => {
+        const params: StatisticsBreakdownQuery = { ...query, transaction_type: transactionType };
+
+        return { url: `/spaces/${spaceId}/statistics/breakdown`, params: { ...params } };
+      },
     }),
     getStatisticsRevision: build.query<number, SpaceArg>({
       queryFn: () => ({ data: ++revision }),

@@ -20,8 +20,16 @@ const styles = StyleSheet.create({
     gap: 2,
     paddingHorizontal: 30,
   },
-  centerLabel: {
+  centerHead: {
     maxWidth: 96,
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: 4,
+  },
+  centerLabel: {
+    flexShrink: 1,
+    // Plus Jakarta Sans under-measures its own width and clips the last glyph (see cde3346).
+    paddingRight: 2,
     fontFamily: theme.fonts.semiBold,
     fontSize: 10,
     lineHeight: 13,

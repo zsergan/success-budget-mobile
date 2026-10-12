@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { skipToken } from '@reduxjs/toolkit/query';
 
-import type { ErrorResponse, StatisticsQuery } from '@api/dto';
+import type { ErrorResponse, StatisticsBreakdown, StatisticsQuery } from '@api/dto';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
-import type { StatisticsArg } from '@redux/state/statistics/api';
+import type { StatisticsArg, StatisticsBreakdownArg } from '@redux/state/statistics/api';
 import {
   useGetStatisticsBreakdownQuery,
   useGetStatisticsRevisionQuery,
@@ -17,6 +17,7 @@ import {
   isAsOfRejected,
   toStatisticsQuery,
 } from '@redux/state/statistics/selectors';
+import type { TransactionType } from '@shared/enums';
 import type { DateRange } from '@shared/utils';
 
 // A return to the screen or the app refreshes only data older than this.
@@ -26,7 +27,23 @@ const BLOCKS = ['summary', 'trend', 'breakdown'] as const;
 
 type BlockName = (typeof BLOCKS)[number];
 
-// One load cycle: all three blocks share its space, period, zone and as_of.
+interface BlockArgs {
+  summary: StatisticsArg;
+  trend: StatisticsArg;
+  breakdown: StatisticsBreakdownArg;
+}
+
+type CurrentArgs = { [Block in BlockName]: BlockArgs[Block] | typeof skipToken };
+
+// The breakdown keeps a last good answer per type, so a fallback never shows the other type.
+interface LastGood {
+  summary?: StatisticsArg;
+  trend?: StatisticsArg;
+  [TransactionType.EXPENSE]?: StatisticsBreakdownArg;
+  [TransactionType.INCOME]?: StatisticsBreakdownArg;
+}
+
+// One load cycle: all three blocks share its space, period, zone and as_of; the breakdown type is not part of it.
 interface Cycle {
   id: number;
   scopeKey: string;
@@ -42,7 +59,7 @@ interface Cycle {
 interface CycleState {
   cycle: Cycle | null;
   // Per block, the latest cycle of this scope whose request succeeded, kept on screen while a newer one runs.
-  lastGood: Partial<Record<BlockName, StatisticsArg>>;
+  lastGood: LastGood;
   useServerClock: boolean;
   seenRevision: { spaceId: number | null; revision: number } | null;
 }
@@ -150,7 +167,13 @@ const toBlock = <T>(
   };
 };
 
-const useStatsData = (range: DateRange) => {
+// Drops an answer built for another type than the one asked, e.g. a late one from before a switch.
+const ofType = <Query extends QueryLike<StatisticsBreakdown>>(query: Query, type: TransactionType): Query =>
+  query.currentData === undefined || query.currentData.transaction_type === type
+    ? query
+    : { ...query, currentData: undefined };
+
+const useStatsData = (range: DateRange, transactionType: TransactionType) => {
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const [timeZone, setTimeZone] = useState(getDeviceTimeZone);
 
@@ -187,38 +210,37 @@ const useStatsData = (range: DateRange) => {
   const blockArg = cycle && !isWaitingForAsOf ? cycleArg(cycle, sharedAsOf) : skipToken;
 
   const trend = useGetStatisticsTrendQuery(blockArg);
-  const breakdown = useGetStatisticsBreakdownQuery(blockArg);
+  // A switch of type reuses the cycle's as_of and leaves summary and trend as they are.
+  const breakdownArg = blockArg === skipToken ? skipToken : { ...blockArg, transactionType };
+  const breakdown = ofType(useGetStatisticsBreakdownQuery(breakdownArg), transactionType);
 
   const current = { summary, trend, breakdown };
-  const currentArgs: Record<BlockName, StatisticsArg | typeof skipToken> = {
-    summary: summaryArg,
-    trend: blockArg,
-    breakdown: blockArg,
-  };
+  const currentArgs: CurrentArgs = { summary: summaryArg, trend: blockArg, breakdown: breakdownArg };
+  const slotOf = { summary: 'summary', trend: 'trend', breakdown: transactionType } as const;
 
   const succeeded = BLOCKS.filter(
     (block) =>
       current[block].currentData !== undefined &&
-      argKey(state.lastGood[block] ?? skipToken) !== argKey(currentArgs[block]),
+      argKey(state.lastGood[slotOf[block]] ?? skipToken) !== argKey(currentArgs[block]),
   );
   if (succeeded.length > 0) {
-    const lastGood = { ...state.lastGood };
-    succeeded.forEach((block) => {
-      lastGood[block] = currentArgs[block] as StatisticsArg;
-    });
+    const lastGood = succeeded.reduce<LastGood>(
+      (args, block) => ({ ...args, [slotOf[block]]: currentArgs[block] }),
+      state.lastGood,
+    );
     state = { ...state, lastGood };
     setStored(state);
   }
 
-  const fallbackArg = (block: BlockName) => {
-    const arg = state.lastGood[block];
+  const fallbackArg = <Block extends BlockName>(block: Block): BlockArgs[Block] | typeof skipToken => {
+    const arg = state.lastGood[slotOf[block]];
 
-    return arg && argKey(arg) !== argKey(currentArgs[block]) ? arg : skipToken;
+    return arg && argKey(arg) !== argKey(currentArgs[block]) ? (arg as BlockArgs[Block]) : skipToken;
   };
 
   const summaryFallback = useGetStatisticsSummaryQuery(fallbackArg('summary'));
   const trendFallback = useGetStatisticsTrendQuery(fallbackArg('trend'));
-  const breakdownFallback = useGetStatisticsBreakdownQuery(fallbackArg('breakdown'));
+  const breakdownFallback = ofType(useGetStatisticsBreakdownQuery(fallbackArg('breakdown')), transactionType);
 
   // Adjusting state during render (not in an effect) keeps each render's blocks on one cycle.
   const restartInRender = (options: RestartOptions) => {

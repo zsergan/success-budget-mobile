@@ -4,8 +4,10 @@ import type {
   DeletedWalletsBreakdownItem,
   OtherBreakdownItem,
   StatisticsBreakdown,
+  StatisticsSummary,
   WalletBreakdownItem,
 } from '@api/dto';
+import { TransactionType } from '@shared/enums';
 
 export type BreakdownMode = 'category' | 'wallet';
 
@@ -28,12 +30,21 @@ export type BreakdownRowItem = {
 export type StatsItem =
   | { kind: 'summary'; key: 'summary' }
   | { kind: 'trend'; key: 'trend' }
-  | { kind: 'breakdownHeader'; key: 'breakdownHeader'; hasSpending: boolean }
+  | { kind: 'breakdownHeader'; key: 'breakdownHeader' }
   | { kind: 'breakdownStatus'; key: 'breakdownStatus' }
-  | { kind: 'breakdownEmpty'; key: 'breakdownEmpty' }
+  | {
+      kind: 'breakdownEmpty';
+      key: 'breakdownEmpty';
+      type: TransactionType;
+      // There are transactions of this type, all of zero amount.
+      isZeroTotal: boolean;
+      // The other type has a positive total in the same space and period.
+      canSwitch: boolean;
+    }
   | {
       kind: 'donut';
       key: 'donut';
+      type: TransactionType;
       groups: BreakdownGroup[];
       totalAmount: Money;
       sourceCount: number;
@@ -57,41 +68,57 @@ const toGroups = (breakdown: StatisticsBreakdown, mode: BreakdownMode): Breakdow
 // so expanding Other only inserts items instead of growing a nested list.
 export const buildStatsItems = ({
   breakdown,
+  cycleSummary,
   mode,
   isOtherExpanded,
 }: {
   breakdown: StatisticsBreakdown | undefined;
+  // The summary of the breakdown's own cycle; an earlier cycle's one may no longer hold.
+  cycleSummary: StatisticsSummary | undefined;
   mode: BreakdownMode;
   isOtherExpanded: boolean;
 }): StatsItem[] => {
-  const hasSpending = !!breakdown && breakdown.by_category.source_count > 0;
+  const hasSources = !!breakdown && breakdown.by_category.source_count > 0;
   const items: StatsItem[] = [
     { kind: 'summary', key: 'summary' },
     { kind: 'trend', key: 'trend' },
-    { kind: 'breakdownHeader', key: 'breakdownHeader', hasSpending },
+    { kind: 'breakdownHeader', key: 'breakdownHeader' },
   ];
 
   if (!breakdown) return [...items, { kind: 'breakdownStatus', key: 'breakdownStatus' }];
-  if (!hasSpending) return [...items, { kind: 'breakdownEmpty', key: 'breakdownEmpty' }];
 
-  const { currency } = breakdown;
+  const { currency, transaction_type: type } = breakdown;
+
+  if (!hasSources) {
+    const otherType = type === TransactionType.EXPENSE ? TransactionType.INCOME : TransactionType.EXPENSE;
+    const empty: StatsItem = {
+      kind: 'breakdownEmpty',
+      key: 'breakdownEmpty',
+      type,
+      isZeroTotal: breakdown.total.count > 0,
+      canSwitch: Number(cycleSummary?.[otherType].amount ?? 0) > 0,
+    };
+
+    return [...items, empty];
+  }
+
   const groups = toGroups(breakdown, mode);
   const { total_amount, source_count } = mode === 'category' ? breakdown.by_category : breakdown.by_wallet;
 
   const rows: Omit<BreakdownRowItem, 'isFirst' | 'isLast'>[] = [];
   groups.forEach((group) => {
-    rows.push({ kind: 'row', key: `${mode}:${group.key}`, group, currency, isChild: false });
+    rows.push({ kind: 'row', key: `${type}:${mode}:${group.key}`, group, currency, isChild: false });
 
     if (group.kind === 'other' && isOtherExpanded) {
       group.children.forEach((child) =>
-        rows.push({ kind: 'row', key: `${mode}:other:${child.key}`, group: child, currency, isChild: true }),
+        rows.push({ kind: 'row', key: `${type}:${mode}:other:${child.key}`, group: child, currency, isChild: true }),
       );
     }
   });
 
   return [
     ...items,
-    { kind: 'donut', key: 'donut', groups, totalAmount: total_amount, sourceCount: source_count, currency },
+    { kind: 'donut', key: 'donut', type, groups, totalAmount: total_amount, sourceCount: source_count, currency },
     ...rows.map((row, index) => ({ ...row, isFirst: index === 0, isLast: index === rows.length - 1 })),
   ];
 };
