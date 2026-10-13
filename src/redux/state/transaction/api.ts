@@ -3,16 +3,28 @@ import type {
   CreateTransactionResponse,
   ErrorResponse,
   Transaction,
+  TransactionFeedResponse,
   TransactionOperationResponse,
   TransactionsCountResponse,
   UpdateTransactionRequest,
   UpdateTransactionResponse,
 } from '@api/dto';
 import { ApiErrorCode } from '@api/dto';
-import type { CreateTransactionResult, TransactionModel, UpdateTransactionResult } from '@api/models';
-import { mapCreateTransactionResponse, mapTransaction, mapUpdateTransactionResponse } from '@api/models';
+import type {
+  CreateTransactionResult,
+  TransactionFeedPageModel,
+  TransactionModel,
+  UpdateTransactionResult,
+} from '@api/models';
+import {
+  mapCreateTransactionResponse,
+  mapTransaction,
+  mapTransactionFeed,
+  mapUpdateTransactionResponse,
+} from '@api/models';
 import type { SpaceArg } from '@redux/api/baseApi';
 import { baseApi, spaceTags } from '@redux/api/baseApi';
+import { getDeviceTimeZone } from '@redux/state/statistics/selectors';
 import type { TransactionKind, TransactionType } from '@shared/enums';
 
 export interface TransactionsArg extends SpaceArg {
@@ -23,6 +35,30 @@ export interface TransactionsArg extends SpaceArg {
   kind?: TransactionKind;
   categoryId?: number;
   walletId?: number;
+}
+
+// What the feed lists: one cursor belongs to exactly one selection.
+export interface FeedSelection extends TransactionsArg {
+  timeZone: string;
+  q?: string;
+}
+
+// One cache entry per selection, page size and load generation; a new generation starts from a first page.
+export interface TransactionsFeedArg {
+  selection: FeedSelection;
+  pageSize?: number;
+  generation: string;
+}
+
+// Where a page starts: an earlier response's cursor, the page holding a record, or (empty) the newest record.
+export interface FeedPageParam {
+  cursor?: string;
+  aroundId?: string;
+}
+
+export interface TransactionFeedPage extends TransactionFeedPageModel {
+  // The order pages arrived in, so the newest copy of a record or a day total wins.
+  sequence: number;
 }
 
 export interface TransactionArg extends SpaceArg {
@@ -69,6 +105,34 @@ const listParams = ({ from, to, transactionType, kind, categoryId, walletId }: T
   ...(walletId !== undefined && { wallet_id: walletId }),
 });
 
+// Search text is trimmed and a blank one dropped, so equal searches are one selection.
+export const feedSelection = (
+  arg: TransactionsArg,
+  { q, timeZone = getDeviceTimeZone() }: { q?: string; timeZone?: string } = {},
+): FeedSelection => {
+  const text = q?.trim();
+
+  return { ...arg, timeZone, ...(text && { q: text }) };
+};
+
+export const feedSelectionKey = (selection: FeedSelection) =>
+  JSON.stringify(
+    Object.entries(selection)
+      .filter(([, value]) => value !== undefined)
+      .sort(([a], [b]) => a.localeCompare(b)),
+  );
+
+const feedParams = ({ selection, pageSize }: TransactionsFeedArg, { cursor, aroundId }: FeedPageParam) => ({
+  ...listParams(selection),
+  time_zone: selection.timeZone,
+  ...(selection.q && { q: selection.q }),
+  ...(pageSize !== undefined && { limit: pageSize }),
+  ...(cursor && { cursor }),
+  ...(aroundId && { around_id: aroundId }),
+});
+
+let receivedPages = 0;
+
 const writeHeaders = ({ idempotencyKey, version }: IdempotentArg & { version?: number }) => ({
   'Idempotency-Key': idempotencyKey,
   ...(version !== undefined && { 'If-Match': `"${version}"` }),
@@ -99,6 +163,24 @@ export const transactionApi = baseApi.injectEndpoints({
       query: (arg) => ({ url: `/spaces/${arg.spaceId}/transactions`, params: listParams(arg) }),
       transformResponse: (response: Transaction[]) => response.map(mapTransaction),
       providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions'),
+    }),
+    getTransactionsFeed: build.infiniteQuery<TransactionFeedPage, TransactionsFeedArg, FeedPageParam>({
+      infiniteQueryOptions: {
+        initialPageParam: {},
+        getNextPageParam: ({ nextCursor }) => (nextCursor ? { cursor: nextCursor } : undefined),
+        getPreviousPageParam: ({ previousCursor }) => (previousCursor ? { cursor: previousCursor } : undefined),
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: `/spaces/${queryArg.selection.spaceId}/transactions/feed`,
+        params: feedParams(queryArg, pageParam),
+      }),
+      transformResponse: (response: TransactionFeedResponse) => ({
+        ...mapTransactionFeed(response),
+        sequence: ++receivedPages,
+      }),
+      providesTags: (_result, _error, { selection }) => spaceTags(selection.spaceId, 'Transactions'),
+      // A generation belongs to one hook mount, so an entry nobody reads is never read again.
+      keepUnusedDataFor: 0,
     }),
     getTransactionsCount: build.query<number, TransactionsArg>({
       query: (arg) => ({ url: `/spaces/${arg.spaceId}/transactions/count`, params: listParams(arg) }),
@@ -156,6 +238,7 @@ export const transactionApi = baseApi.injectEndpoints({
 
 export const {
   useGetTransactionsQuery,
+  useGetTransactionsFeedInfiniteQuery,
   useGetTransactionsCountQuery,
   useGetLatestTransactionQuery,
   useGetTransactionQuery,

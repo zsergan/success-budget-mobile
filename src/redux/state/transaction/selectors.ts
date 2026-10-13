@@ -1,8 +1,10 @@
-import type { TransactionModel } from '@api/models';
+import type { Money } from '@api/dto';
+import type { TransactionFeedSummary, TransactionModel } from '@api/models';
 import { isInitialBalance } from '@api/models';
 import { getLoadState } from '@redux/api/loadState';
 import { TransactionType } from '@shared/enums';
 import { toCents } from '@shared/utils';
+import type { TransactionFeedPage } from './api';
 
 export const EMPTY_TRANSACTIONS: TransactionModel[] = [];
 
@@ -44,4 +46,37 @@ export const getEmptyPeriodState = (
   if (time >= from.getTime() && time <= to.getTime()) return latestQuery.isFetching ? 'loading' : 'latestError';
 
   return 'filteredEmpty';
+};
+
+export interface FeedView {
+  items: TransactionModel[];
+  // Null until a page arrives.
+  summary: TransactionFeedSummary | null;
+  // Income minus expense of each whole day, by local date key.
+  dayNets: Record<string, Money>;
+}
+
+// Pages in list order; a record or day the server returned more than once is read from the newest response.
+export const getFeedView = (pages: readonly TransactionFeedPage[]): FeedView => {
+  const newest = new Map<string, { sequence: number; page: number; index: number }>();
+
+  pages.forEach(({ items, sequence }, page) =>
+    items.forEach(({ id }, index) => {
+      if ((newest.get(id)?.sequence ?? -1) < sequence) newest.set(id, { sequence, page, index });
+    }),
+  );
+
+  const items = pages.flatMap((pageData, page) =>
+    pageData.items.filter(({ id }, index) => {
+      const copy = newest.get(id);
+
+      return copy?.page === page && copy.index === index;
+    }),
+  );
+  const byArrival = [...pages].sort((a, b) => a.sequence - b.sequence);
+  const dayNets: Record<string, Money> = {};
+
+  byArrival.forEach(({ dayTotals }) => dayTotals.forEach(({ date, net }) => (dayNets[date] = net)));
+
+  return { items, summary: byArrival.at(-1)?.summary ?? null, dayNets };
 };

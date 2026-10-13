@@ -7,8 +7,9 @@ import type { Transaction } from '@api/dto';
 import { baseApi } from '@redux/api/baseApi';
 import { createAppStore } from '@redux/Store';
 import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
-import { transactionApi } from './api';
-import { createTransactionResponseDto } from './fixtures';
+import type { TransactionsFeedArg } from './api';
+import { feedSelection, transactionApi } from './api';
+import { createTransactionResponseDto, feedDto, transactionDto } from './fixtures';
 
 const mockedRequest = jest.fn();
 
@@ -266,5 +267,197 @@ describe('transactionApi', () => {
     expect(result.current.isUninitialized).toBe(true);
     expect(result.current.isError).toBe(false);
     expect(mockedRequest).not.toHaveBeenCalled();
+  });
+});
+
+describe('getTransactionsFeed', () => {
+  const { getTransactionsFeed } = transactionApi.endpoints;
+  const period = { spaceId: 3, from: '2026-09-30T21:00:00.000Z', to: '2026-10-31T20:59:59.999Z' };
+  const arg: TransactionsFeedArg = {
+    selection: feedSelection(period, { timeZone: 'Europe/Moscow' }),
+    pageSize: 2,
+    generation: 'g1',
+  };
+  const row = (id: string) => transactionDto({ id });
+
+  const deferred = () => {
+    let resolve: (value: unknown) => void = () => undefined;
+    const promise = new Promise((done) => (resolve = done));
+
+    return { promise, resolve };
+  };
+
+  const paramsSent = () => mockedRequest.mock.calls.map(([config]) => config.params);
+  const settle = (store: ReturnType<typeof createAppStore>) =>
+    Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
+  const selectFeed = (store: ReturnType<typeof createAppStore>, feedArg = arg) =>
+    getTransactionsFeed.select(feedArg)(store.getState());
+
+  it('asks for the first page of the selection without a cursor', async () => {
+    const store = createAppStore();
+    const selection = feedSelection(
+      { ...period, transactionType: TransactionType.EXPENSE, kind: TransactionKind.REGULAR, categoryId: 5 },
+      { q: '  coffee ', timeZone: 'Europe/Moscow' },
+    );
+
+    mockedRequest.mockResolvedValue({ data: feedDto([row('a')]) });
+    await store.dispatch(getTransactionsFeed.initiate({ ...arg, selection }));
+
+    expect(mockedRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: '/spaces/3/transactions/feed',
+        params: {
+          from: period.from,
+          to: period.to,
+          time_zone: 'Europe/Moscow',
+          q: 'coffee',
+          transaction_type: TransactionType.EXPENSE,
+          kind: TransactionKind.REGULAR,
+          category_id: 5,
+          limit: 2,
+        },
+      }),
+    );
+  });
+
+  it('drops a blank search, so it is the same selection as no search', () => {
+    expect(feedSelection(period, { q: '   ', timeZone: 'UTC' })).toEqual(feedSelection(period, { timeZone: 'UTC' }));
+  });
+
+  it('appends older pages by next_cursor and stops when there is none', async () => {
+    const store = createAppStore();
+
+    mockedRequest
+      .mockResolvedValueOnce({
+        data: feedDto([row('a'), row('b')], { page_info: { next_cursor: 'c1', previous_cursor: null } }),
+      })
+      .mockResolvedValueOnce({
+        data: feedDto([row('c')], { page_info: { next_cursor: null, previous_cursor: 'p1' } }),
+      });
+
+    await store.dispatch(getTransactionsFeed.initiate(arg));
+    await store.dispatch(getTransactionsFeed.initiate(arg, { direction: 'forward' }));
+    await store.dispatch(getTransactionsFeed.initiate(arg, { direction: 'forward' }));
+
+    expect(paramsSent().map((params) => params.cursor)).toEqual([undefined, 'c1']);
+    expect(selectFeed(store).data?.pages.map(({ items }) => items.map(({ id }) => id))).toEqual([['a', 'b'], ['c']]);
+    expect(selectFeed(store).hasNextPage).toBe(false);
+  });
+
+  it('opens around a record and prepends newer pages by previous_cursor', async () => {
+    const store = createAppStore();
+
+    mockedRequest
+      .mockResolvedValueOnce({
+        data: feedDto([row('b'), row('c')], { page_info: { next_cursor: 'n1', previous_cursor: 'p1' } }),
+      })
+      .mockResolvedValueOnce({
+        data: feedDto([row('a')], { page_info: { next_cursor: 'n0', previous_cursor: null } }),
+      });
+
+    await store.dispatch(getTransactionsFeed.initiate(arg, { initialPageParam: { aroundId: 'c' } }));
+    await store.dispatch(getTransactionsFeed.initiate(arg, { direction: 'backward' }));
+
+    expect(paramsSent()[0]).toMatchObject({ around_id: 'c' });
+    expect(paramsSent()[0]).not.toHaveProperty('cursor');
+    expect(paramsSent()[1]).toMatchObject({ cursor: 'p1' });
+    expect(selectFeed(store).data?.pages.map(({ items }) => items.map(({ id }) => id))).toEqual([['a'], ['b', 'c']]);
+    expect(selectFeed(store).hasPreviousPage).toBe(false);
+  });
+
+  it('sends one request for a next page asked for twice before the first one answers', async () => {
+    const store = createAppStore();
+    const next = deferred();
+
+    mockedRequest.mockResolvedValueOnce({
+      data: feedDto([row('a')], { page_info: { next_cursor: 'c1', previous_cursor: null } }),
+    });
+    await store.dispatch(getTransactionsFeed.initiate(arg));
+
+    mockedRequest.mockReturnValueOnce(next.promise);
+    store.dispatch(getTransactionsFeed.initiate(arg, { direction: 'forward' }));
+    store.dispatch(getTransactionsFeed.initiate(arg, { direction: 'forward' }));
+    store.dispatch(getTransactionsFeed.initiate(arg, { direction: 'backward' }));
+    next.resolve({ data: feedDto([row('b')]) });
+    await settle(store);
+
+    expect(mockedRequest).toHaveBeenCalledTimes(2);
+    expect(selectFeed(store).data?.pages).toHaveLength(2);
+  });
+
+  it('keeps generations of one selection in separate entries', async () => {
+    const store = createAppStore();
+    const other = { ...arg, generation: 'g2' };
+
+    mockedRequest
+      .mockResolvedValueOnce({ data: feedDto([row('a')]) })
+      .mockResolvedValueOnce({ data: feedDto([row('b')]) });
+    await store.dispatch(getTransactionsFeed.initiate(arg));
+    await store.dispatch(getTransactionsFeed.initiate(other));
+
+    expect(selectFeed(store).data?.pages[0].items[0].id).toBe('a');
+    expect(selectFeed(store, other).data?.pages[0].items[0].id).toBe('b');
+  });
+
+  it("refreshes every loaded page of a generation from its first one when the space's history changes", async () => {
+    const store = createAppStore();
+
+    mockedRequest
+      .mockResolvedValueOnce({ data: feedDto([row('a')], { page_info: { next_cursor: 'c1', previous_cursor: null } }) })
+      .mockResolvedValueOnce({ data: feedDto([row('b')]) });
+    store.dispatch(getTransactionsFeed.initiate(arg));
+    await settle(store);
+    await store.dispatch(getTransactionsFeed.initiate(arg, { direction: 'forward' }));
+    mockedRequest.mockClear();
+
+    mockedRequest
+      .mockResolvedValueOnce({
+        data: feedDto([row('a2')], { page_info: { next_cursor: 'c2', previous_cursor: null } }),
+      })
+      .mockResolvedValueOnce({ data: feedDto([row('b2')]) });
+    store.dispatch(baseApi.util.invalidateTags([{ type: 'Transactions', id: 3 }]));
+    await settle(store);
+
+    expect(paramsSent().map((params) => params.cursor)).toEqual([undefined, 'c2']);
+    expect(selectFeed(store).data?.pages.map(({ items }) => items[0].id)).toEqual(['a2', 'b2']);
+  });
+
+  it('does not bring back an entry that was removed while its next page was loading', async () => {
+    const store = createAppStore();
+    const next = deferred();
+
+    mockedRequest.mockResolvedValueOnce({
+      data: feedDto([row('a')], { page_info: { next_cursor: 'c1', previous_cursor: null } }),
+    });
+    const subscription = store.dispatch(getTransactionsFeed.initiate(arg));
+    await subscription;
+
+    mockedRequest.mockReturnValueOnce(next.promise);
+    store.dispatch(getTransactionsFeed.initiate(arg, { direction: 'forward', subscribe: false }));
+    subscription.unsubscribe();
+    jest.runOnlyPendingTimers();
+    next.resolve({ data: feedDto([row('b')]) });
+    await settle(store);
+
+    expect(selectFeed(store).data).toBeUndefined();
+  });
+
+  it('maps the summary and day totals as the strings the server sent', async () => {
+    const store = createAppStore();
+
+    mockedRequest.mockResolvedValue({
+      data: feedDto([row('a')], {
+        summary: { count: 73, income: '98765432109876543.21', expense: '1184.45' },
+        day_totals: [{ date: '2026-10-03', net: '-31.50' }],
+      }),
+    });
+    await store.dispatch(getTransactionsFeed.initiate(arg));
+
+    expect(selectFeed(store).data?.pages[0]).toMatchObject({
+      summary: { count: 73, income: '98765432109876543.21', expense: '1184.45' },
+      dayTotals: [{ date: '2026-10-03', net: '-31.50' }],
+      nextCursor: null,
+      previousCursor: null,
+    });
   });
 });
