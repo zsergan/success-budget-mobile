@@ -11,7 +11,8 @@ import styles from './style';
 
 interface Props {
   filter: HistoryFilter;
-  total: Money;
+  // Null until the filter has an answer.
+  total: Money | null;
   currencyCode?: string;
   onClear: () => void;
 }
@@ -41,7 +42,7 @@ const AppliedFilter = ({ filter, total, currencyCode, onClear }: Props) => {
         </Text>
       </View>
 
-      <Text style={styles.total}>{formatMoneyAmount(total, currencyCode)}</Text>
+      <Text style={styles.total}>{total === null ? '—' : formatMoneyAmount(total, currencyCode)}</Text>
 
       <TouchableOpacity
         style={styles.clearButton}

@@ -23,8 +23,6 @@ export interface HistorySection extends DayGroup {
   total: Money | null;
 }
 
-const ZERO: Money = '0.00';
-
 interface UseTransactionsDataProps {
   range: DateRange;
   // Replaces the period: its bounds go to the API exactly as Stats got them.
@@ -96,8 +94,10 @@ const useTransactionsData = ({ range, filter, q, aroundId, getVisibleIds }: UseT
     sections,
     viewState,
     latest: latestQuery.currentData,
-    income: summary?.income ?? ZERO,
-    expense: summary?.expense ?? ZERO,
+    // Null until the selection has an answer, never a zero it has not confirmed.
+    income: summary?.income ?? null,
+    expense: summary?.expense ?? null,
+    count: summary?.count ?? null,
     currencyCode,
     hasNextPage: feed.hasNextPage,
     isLoadingNextPage: feed.isLoadingNextPage,

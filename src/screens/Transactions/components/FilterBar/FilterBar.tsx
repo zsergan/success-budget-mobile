@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 
 import type { Money } from '@api/dto';
 import { Icon, PeriodBar } from '@components';
@@ -8,19 +8,68 @@ import { formatMoneyAmount } from '@shared/utils';
 
 import styles from './style';
 
+// What a search has found so far: still asking, its count, or a failed request (count unknown).
+export type SearchStatus = { state: 'searching' } | { state: 'found'; count: number } | { state: 'failed' };
+
 interface Props {
   period: Period;
-  income: Money;
-  expense: Money;
+  // Null while the selection has no answer yet: shown as a placeholder while loading, as "—" once it failed.
+  income: Money | null;
+  expense: Money | null;
+  isLoading: boolean;
+  search?: SearchStatus;
   currencyCode?: string;
   onPresetPress: (unit: PeriodUnit) => void;
   onOpenPicker: () => void;
   onReset: () => void;
 }
 
-const FilterBar = ({ period, income, expense, currencyCode, onPresetPress, onOpenPicker, onReset }: Props) => (
+const UNKNOWN = '—';
+
+const matchCount = (count: number) => `${count} ${count === 1 ? 'match' : 'matches'}`;
+
+const TotalValue = ({
+  value,
+  isLoading,
+  currencyCode,
+}: {
+  value: Money | null;
+  isLoading: boolean;
+  currencyCode?: string;
+}) => {
+  if (value !== null) return <Text style={styles.totalValue}>{formatMoneyAmount(value, currencyCode)}</Text>;
+
+  return isLoading ? (
+    <View style={styles.totalPlaceholder} testID="total-placeholder" />
+  ) : (
+    <Text style={[styles.totalValue, styles.totalUnknown]}>{UNKNOWN}</Text>
+  );
+};
+
+const FilterBar = ({
+  period,
+  income,
+  expense,
+  isLoading,
+  search,
+  currencyCode,
+  onPresetPress,
+  onOpenPicker,
+  onReset,
+}: Props) => (
   <View style={styles.root}>
     <PeriodBar period={period} onPresetPress={onPresetPress} onOpenPicker={onOpenPicker} onReset={onReset} />
+
+    {search && (
+      <View style={styles.searchRow}>
+        <View style={styles.searchLabelRow}>
+          {search.state === 'searching' && <ActivityIndicator size="small" color={colors.muted} />}
+          <Text style={styles.searchLabel}>{search.state === 'searching' ? 'Searching…' : 'Search results'}</Text>
+        </View>
+
+        <Text style={styles.searchCount}>{search.state === 'found' ? matchCount(search.count) : UNKNOWN}</Text>
+      </View>
+    )}
 
     <View style={styles.totalsRow}>
       <View style={styles.totalCard}>
@@ -29,7 +78,7 @@ const FilterBar = ({ period, income, expense, currencyCode, onPresetPress, onOpe
           <Text style={styles.totalLabel}>Income</Text>
         </View>
 
-        <Text style={styles.totalValue}>{formatMoneyAmount(income, currencyCode)}</Text>
+        <TotalValue value={income} isLoading={isLoading} currencyCode={currencyCode} />
       </View>
 
       <View style={styles.totalCard}>
@@ -38,7 +87,7 @@ const FilterBar = ({ period, income, expense, currencyCode, onPresetPress, onOpe
           <Text style={styles.totalLabel}>Expense</Text>
         </View>
 
-        <Text style={styles.totalValue}>{formatMoneyAmount(expense, currencyCode)}</Text>
+        <TotalValue value={expense} isLoading={isLoading} currencyCode={currencyCode} />
       </View>
     </View>
   </View>

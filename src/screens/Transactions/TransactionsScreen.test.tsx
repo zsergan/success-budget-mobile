@@ -590,6 +590,156 @@ describe('TransactionsScreen', () => {
       expect(screen.UNSAFE_queryByType(Fab)).toBeTruthy();
     });
 
+    it('shows Searching while a search is out, then its full count and server totals, never the old ones', async () => {
+      let answer: (value: unknown) => void = () => {};
+      mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
+        if (url !== FEED) return Promise.resolve({ data: null });
+        if (!params?.q) return Promise.resolve({ data: feedDto([coffee, taxi]) });
+        return new Promise((resolve) => (answer = resolve));
+      });
+      renderTransactions(undefined);
+      await settle();
+      const field = await openSearch();
+
+      fireEvent.changeText(field, 'coffee');
+      fireEvent(field, 'submitEditing');
+      await settle();
+
+      expect(screen.getByText('Searching…')).toBeTruthy();
+      expect(screen.getAllByTestId('total-placeholder')).toHaveLength(2);
+      expect(screen.queryByText('Taxi')).toBeNull();
+
+      await act(async () =>
+        answer({ data: feedDto([coffee], { summary: { count: 61, income: '0.00', expense: '1234.50' } }) }),
+      );
+      await settle();
+
+      expect(screen.getByText('Search results')).toBeTruthy();
+      expect(screen.getByText('61 matches')).toBeTruthy();
+      expect(screen.getByText('1 234.50')).toBeTruthy();
+      expect(screen.getByText('Coffee')).toBeTruthy();
+    });
+
+    it('keeps the text and says the totals are unknown when a search fails, and Try again asks again', async () => {
+      let fail = true;
+      mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
+        if (url !== FEED) return Promise.resolve({ data: null });
+        if (params?.q && fail) return Promise.reject({ response: { data: { statusCode: 500, message: 'boom' } } });
+        return Promise.resolve({ data: feedDto(params?.q ? [coffee] : [coffee, taxi]) });
+      });
+      renderTransactions(undefined);
+      await settle();
+      const field = await openSearch();
+      fireEvent.changeText(field, 'coffee');
+      fireEvent(field, 'submitEditing');
+      await settle();
+
+      expect(screen.getByText('Couldn’t search. Check your connection and try again.')).toBeTruthy();
+      expect(screen.getByText('Search results')).toBeTruthy();
+      expect(screen.getAllByText('—')).toHaveLength(3);
+      expect(screen.getByPlaceholderText('Description, category, wallet').props.value).toBe('coffee');
+
+      fail = false;
+      fireEvent.press(screen.getByText('Try again'));
+      await settle();
+
+      expect(listRequests().filter(({ params }) => params?.q === 'coffee')).toHaveLength(2);
+      expect(screen.getByText('1 match')).toBeTruthy();
+    });
+
+    it('treats a search of only spaces as none', async () => {
+      renderTransactions(undefined);
+      await settle();
+      const field = await openSearch();
+
+      fireEvent.changeText(field, '   ');
+      fireEvent(field, 'submitEditing');
+      await act(async () => jest.advanceTimersByTimeAsync(400));
+
+      expect(listRequests().some(({ params }) => params?.q !== undefined)).toBe(false);
+      expect(screen.queryByText('Search results')).toBeNull();
+      expect(screen.getByText('Taxi')).toBeTruthy();
+    });
+
+    it('keeps the text across a period change and searches the new period', async () => {
+      renderTransactions(undefined);
+      await settle();
+      const field = await openSearch();
+      fireEvent.changeText(field, 'coffee');
+      fireEvent(field, 'submitEditing');
+      await settle();
+
+      fireEvent.press(screen.getByText('Year'));
+      await settle();
+
+      expect(listRequests().at(-1)?.params).toMatchObject({ q: 'coffee', from: new Date(2026, 0, 1).toISOString() });
+      expect(screen.getByPlaceholderText('Description, category, wallet').props.value).toBe('coffee');
+    });
+
+    it('brings the plain history back to where it was on Cancel, if the period is the same', async () => {
+      const scrollToLocation = jest.spyOn(SectionList.prototype, 'scrollToLocation').mockImplementation(() => {});
+      renderTransactions(undefined);
+      await settle();
+      act(() =>
+        screen.UNSAFE_getByType(SectionList).props.onViewableItemsChanged({
+          viewableItems: [{ item: mapTransaction(taxi), isViewable: true }],
+        }),
+      );
+
+      const field = await openSearch();
+      fireEvent.changeText(field, 'coffee');
+      fireEvent(field, 'submitEditing');
+      await settle();
+      fireEvent.press(screen.getByText('Cancel'));
+      await settle();
+
+      expect(listRequests().at(-1)?.params).toMatchObject({ around_id: 'tx-aug' });
+      expect(listRequests().at(-1)?.params).not.toHaveProperty('q');
+      expect(scrollToLocation).toHaveBeenLastCalledWith(expect.objectContaining({ viewPosition: 0 }));
+      expect(screen.queryByText('This transaction is no longer here. Showing the whole period instead.')).toBeNull();
+      scrollToLocation.mockRestore();
+    });
+
+    it('opens a changed period at its newest record on Cancel', async () => {
+      renderTransactions(undefined);
+      await settle();
+      act(() =>
+        screen.UNSAFE_getByType(SectionList).props.onViewableItemsChanged({
+          viewableItems: [{ item: mapTransaction(taxi), isViewable: true }],
+        }),
+      );
+      const field = await openSearch();
+      fireEvent.changeText(field, 'coffee');
+      fireEvent(field, 'submitEditing');
+      await settle();
+      fireEvent.press(screen.getByText('Year'));
+      await settle();
+
+      fireEvent.press(screen.getByText('Cancel'));
+      await settle();
+
+      expect(listRequests().at(-1)?.params).not.toHaveProperty('around_id');
+      expect(listRequests().at(-1)?.params).toMatchObject({ from: new Date(2026, 0, 1).toISOString() });
+    });
+
+    it('closes search when another space is selected', async () => {
+      const store = renderTransactions(undefined);
+      await settle();
+      const field = await openSearch();
+      fireEvent.changeText(field, 'coffee');
+      fireEvent(field, 'submitEditing');
+      await settle();
+
+      act(() => {
+        store.dispatch(activateSpace(2));
+      });
+      await settle();
+
+      expect(screen.queryByText('Cancel', { includeHiddenElements: false })).toBeNull();
+      expect(screen.UNSAFE_queryByType(Fab)).toBeTruthy();
+      expect(mockedRequest.mock.calls.at(-1)?.[0].params).not.toHaveProperty('q');
+    });
+
     it('offers no search under a Stats filter', async () => {
       renderTransactions({
         filter: {

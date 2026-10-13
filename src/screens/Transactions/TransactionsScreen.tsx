@@ -22,6 +22,7 @@ import { TransactionType } from '@shared/enums';
 import type { ScreenNames } from '@shared/enums';
 import type { MainTabNavigationProp, MainTabScreenProps, RevealTransaction } from '@shared/types';
 import AppliedFilter from './components/AppliedFilter/AppliedFilter';
+import type { SearchStatus } from './components/FilterBar/FilterBar';
 import FilterBar from './components/FilterBar/FilterBar';
 import RangeCount from './components/RangeCount/RangeCount';
 import TransactionsSkeleton from './components/Skeleton/TransactionsSkeleton';
@@ -34,6 +35,22 @@ import useTransactionsData from './hooks/useTransactionsData';
 import styles from './style';
 
 const HIGHLIGHT_MS = 2500;
+
+interface Anchor {
+  spaceId: number;
+  transactionId: string;
+  // The period it holds for, as the range's bounds in ms.
+  from: number;
+  to: number;
+  // Shown from elsewhere, as opposed to a place the list returns to.
+  isReveal: boolean;
+}
+
+const monthBounds = (timestamp: string) => {
+  const month = toDateRange(monthPeriodOf(timestamp));
+
+  return { from: month.from.getTime(), to: month.to.getTime() };
+};
 
 const TransactionsScreen = () => {
   useSpaceRefresh();
@@ -65,14 +82,28 @@ const TransactionsScreen = () => {
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<RevealTransaction | undefined>(undefined);
 
-  // The revealed record is where its month opens, and stays so until another period is picked.
-  const [anchor, setAnchor] = useState<RevealTransaction | null>(null);
-  const isShownMonth = (timestamp: string) => {
-    const month = toDateRange(monthPeriodOf(timestamp));
+  // Where the history opens instead of its newest record, for as long as the period it was set for is shown: a
+  // record shown from elsewhere (in its month), or the row the plain history was at when a search opened.
+  const [anchor, setAnchor] = useState<Anchor | null>(null);
+  const isShownRange = (bounds: { from: number; to: number }) =>
+    bounds.from === range.from.getTime() && bounds.to === range.to.getTime();
+  const isShownMonth = (timestamp: string) => isShownRange(monthBounds(timestamp));
+  if (anchor && !isShownRange(anchor)) setAnchor(null);
 
-    return month.from.getTime() === range.from.getTime() && month.to.getTime() === range.to.getTime();
-  };
-  if (anchor && !isShownMonth(anchor.timestamp)) setAnchor(null);
+  // Where the plain history was when a search opened; Cancel brings it back while the period is the same.
+  const [returnPoint, setReturnPoint] = useState<Anchor | null>(null);
+  const [restoreId, setRestoreId] = useState<string | null>(null);
+  // The plain history was replaced by results at least once, so Cancel has a place to return to.
+  const [hasLeftHistory, setHasLeftHistory] = useState(false);
+  if (q && returnPoint && !hasLeftHistory) setHasLeftHistory(true);
+
+  // A search belongs to its space: another space starts from its plain history.
+  const [searchSpaceId, setSearchSpaceId] = useState(spaceId);
+  if (searchSpaceId !== spaceId) {
+    setSearchSpaceId(spaceId);
+    if (search.isSearching) search.cancel();
+    setReturnPoint(null);
+  }
 
   // Read when the history is refreshed after a change, to keep these rows in the new window.
   const visibleIdsRef = useRef<string[]>([]);
@@ -104,6 +135,7 @@ const TransactionsScreen = () => {
     latest,
     income,
     expense,
+    count,
     currencyCode,
     hasNextPage,
     isLoadingNextPage,
@@ -121,7 +153,7 @@ const TransactionsScreen = () => {
     range,
     filter,
     q,
-    aroundId: anchor && !filter && anchor.spaceId === spaceId ? anchor.transactionId : undefined,
+    aroundId: anchor && !filter && !q && anchor.spaceId === spaceId ? anchor.transactionId : undefined,
     getVisibleIds,
   });
 
@@ -134,8 +166,9 @@ const TransactionsScreen = () => {
 
       if (!isListed) {
         openMonthOf(reveal.timestamp);
-        setAnchor(reveal);
+        setAnchor({ ...monthBounds(reveal.timestamp), spaceId, transactionId: reveal.transactionId, isReveal: true });
         if (search.isSearching) search.cancel();
+        setReturnPoint(null);
       }
       setHighlightId(reveal.transactionId);
     }
@@ -144,10 +177,46 @@ const TransactionsScreen = () => {
   // The record is gone or no longer in its month: the period opens at its newest record and says so.
   const [dismissedMissId, setDismissedMissId] = useState<string | null>(null);
   const missedReveal =
-    missedAroundId !== undefined && missedAroundId === anchor?.transactionId && missedAroundId !== dismissedMissId
+    missedAroundId !== undefined &&
+    anchor?.isReveal &&
+    missedAroundId === anchor.transactionId &&
+    missedAroundId !== dismissedMissId
       ? missedAroundId
       : null;
   if (missedReveal && highlightId === missedReveal) setHighlightId(null);
+
+  const openSearch = () => {
+    const [topId] = visibleIdsRef.current;
+    const isAtTop = !hasPreviousPage && topId === transactions[0]?.id;
+
+    setReturnPoint(
+      topId && !isAtTop && spaceId !== null
+        ? { from: range.from.getTime(), to: range.to.getTime(), spaceId, transactionId: topId, isReveal: false }
+        : null,
+    );
+    setHasLeftHistory(false);
+    setRestoreId(null);
+    search.open();
+  };
+
+  // Back to where the plain history was, if the period is unchanged; a new period starts at its newest record.
+  const cancelSearch = () => {
+    if (returnPoint && hasLeftHistory && isShownRange(returnPoint)) {
+      setAnchor(returnPoint);
+      setRestoreId(returnPoint.transactionId);
+    }
+    setReturnPoint(null);
+    search.cancel();
+  };
+
+  const searchStatus: SearchStatus | undefined = !q
+    ? undefined
+    : viewState === 'loading'
+      ? { state: 'searching' }
+      : viewState === 'rangeError'
+        ? { state: 'failed' }
+        : { state: 'found', count: count ?? 0 };
+
   const [seenId, setSeenId] = useState<string | null>(null);
   const isHighlightSeen = highlightId !== null && seenId === highlightId;
 
@@ -176,6 +245,7 @@ const TransactionsScreen = () => {
           onPressTransaction={openDetails}
           onDeleteTransaction={requestDelete}
           highlightId={highlightId}
+          restoreId={restoreId}
           onHighlightSeen={() => setSeenId(highlightId)}
           onVisibleRowsChange={(ids) => {
             visibleIdsRef.current = ids;
@@ -199,8 +269,8 @@ const TransactionsScreen = () => {
                 canSearch={!filter}
                 isSearching={search.isSearching && !filter}
                 query={search.query}
-                onOpen={search.open}
-                onCancel={search.cancel}
+                onOpen={openSearch}
+                onCancel={cancelSearch}
                 onChangeQuery={search.change}
                 onSubmit={search.submit}
                 onClear={search.clear}
@@ -218,6 +288,8 @@ const TransactionsScreen = () => {
                   period={period}
                   income={income}
                   expense={expense}
+                  isLoading={viewState === 'loading'}
+                  search={searchStatus}
                   currencyCode={currencyCode}
                   onPresetPress={selectCurrent}
                   onOpenPicker={handleOpenPicker}
@@ -282,7 +354,19 @@ const TransactionsScreen = () => {
                 />
               )}
 
-              {viewState === 'rangeError' && <TransactionsEmptyState variant="rangeError" onRetry={retry} />}
+              {viewState === 'rangeError' &&
+                (q ? (
+                  <View style={styles.banner}>
+                    <Banner
+                      tone="danger"
+                      text="Couldn’t search. Check your connection and try again."
+                      actionLabel="Try again"
+                      onAction={retry}
+                    />
+                  </View>
+                ) : (
+                  <TransactionsEmptyState variant="rangeError" onRetry={retry} />
+                ))}
 
               {viewState === 'latestError' && <TransactionsEmptyState variant="latestError" onRetry={retryLatest} />}
             </>
