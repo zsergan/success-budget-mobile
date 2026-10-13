@@ -9,7 +9,7 @@ import { useAppSelector, useRecentArg, useSpaceArg } from '@redux/hooks';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { useGetCategoriesQuery, categoryApi } from '@redux/state/category/api';
 import { useGetLimitsQuery, limitApi } from '@redux/state/limit/api';
-import { activateSpace } from '@redux/state/space/thunks';
+import { activateSpace, refreshSpaceData } from '@redux/state/space/thunks';
 import { transactionApi, useGetRecentTransactionsQuery } from '@redux/state/transaction/api';
 import { useGetWalletsQuery, walletApi } from '@redux/state/wallet/api';
 import { createAppStore } from '@redux/Store';
@@ -421,6 +421,116 @@ describe('server data scenarios', () => {
     await settle(store);
 
     expect(result.current.wallets.currentData?.wallets[0].wallet.wallet_name).toBe('New session');
+
+    unmount();
+  });
+
+  it('never lets a history page asked for before logout reach the next session', async () => {
+    const { store, result, unmount } = await renderApp();
+    let releaseOld: (() => void) | null = null;
+
+    backend.db(1).transactions.push({
+      ...{
+        id: 'tx-1',
+        kind: TransactionKind.REGULAR,
+        version: 1,
+        wallet_id: 1,
+        category_id: 5,
+        transaction_type: TransactionType.EXPENSE,
+        amount: '12.00',
+        timestamp: '2026-01-10T10:00:00.000Z',
+        description: null,
+      },
+      description: 'Old session',
+    });
+    intercept = (config) =>
+      config.url === '/spaces/1/transactions/feed' && !config.params?.from.startsWith('1970')
+        ? new Promise((resolve) => (releaseOld = () => respond(config).then(resolve)))
+        : undefined;
+    act(() => {
+      store.dispatch(transactionApi.util.invalidateTags([{ type: 'Transactions', id: 1 }]));
+    });
+    // The held page is still out, so this waits on timers only, not on running queries.
+    await act(async () => jest.advanceTimersByTimeAsync(50));
+    expect(releaseOld).not.toBeNull();
+
+    await act(async () => {
+      await store.dispatch(logoutMe());
+    });
+
+    intercept = () => undefined;
+    backend.db(1).transactions[0].description = 'New session';
+    act(() => {
+      signIn(store);
+    });
+    await waitFor(() => expect(result.current.history.transactions).toHaveLength(1));
+
+    await act(async () => releaseOld?.());
+    await settle(store);
+
+    expect(result.current.history.transactions[0].description).toBe('New session');
+
+    unmount();
+  });
+
+  it('reads the history again after a return to the app, one page and no more', async () => {
+    backend.db(1).transactions.push({
+      id: 'tx-1',
+      kind: TransactionKind.REGULAR,
+      version: 1,
+      wallet_id: 1,
+      category_id: 5,
+      transaction_type: TransactionType.EXPENSE,
+      amount: '12.00',
+      timestamp: '2026-01-10T10:00:00.000Z',
+      description: null,
+    });
+    const { store, result, unmount } = await renderApp();
+    expect(result.current.history.transactions.map(({ id }) => id)).toEqual(['tx-1']);
+
+    backend.db(1).transactions[0].amount = '30.00';
+    mockedRequest.mockClear();
+    act(() => {
+      store.dispatch(refreshSpaceData({ force: true }));
+    });
+    await settle(store);
+
+    const historyRequests = getRequests().filter((request) => request.startsWith('/spaces/1/transactions/feed?2026'));
+    expect(historyRequests).toHaveLength(1);
+    expect(result.current.history.transactions[0].amount).toBe('30.00');
+
+    unmount();
+  });
+
+  it('never asks for a whole period through the old transactions list', async () => {
+    const { store, unmount } = await renderApp();
+
+    await act(async () => {
+      await store.dispatch(
+        transactionApi.endpoints.createTransaction.initiate({
+          spaceId: 1,
+          idempotencyKey: 'key-1',
+          data: {
+            wallet_id: 1,
+            category_id: 5,
+            transaction_type: TransactionType.EXPENSE,
+            amount: '12',
+            timestamp: '2026-01-15T10:00:00.000Z',
+          },
+        }),
+      );
+    });
+    act(() => {
+      store.dispatch(refreshSpaceData({ force: true }));
+      store.dispatch(activateSpace(2));
+    });
+    await settle(store);
+
+    const gets = mockedRequest.mock.calls
+      .map(([config]: [RequestConfig]) => config)
+      .filter(({ method = 'GET' }) => method === 'GET');
+    expect(gets.some(({ url }) => /^\/spaces\/\d+\/transactions$/.test(url))).toBe(false);
+    expect(gets.some(({ url }) => url.endsWith('/transactions/feed'))).toBe(true);
 
     unmount();
   });
