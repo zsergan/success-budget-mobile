@@ -4,6 +4,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import type { ErrorResponse, TransactionFeedResponse } from '@api/dto';
 import { ApiErrorCode } from '@api/dto';
+import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { createAppStore } from '@redux/Store';
 import type { FeedSelection } from '@redux/state/transaction/api';
 import { feedSelection } from '@redux/state/transaction/api';
@@ -55,11 +56,13 @@ const renderFeed = (initial: { selection: FeedSelection; aroundId?: string }) =>
   const store = createAppStore();
   const wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
 
-  return renderHook(
+  const rendered = renderHook(
     ({ selection, aroundId }: { selection: FeedSelection; aroundId?: string }) =>
       useTransactionsFeed(selection, { pageSize: 2, aroundId }),
     { wrapper, initialProps: initial },
   );
+
+  return { ...rendered, store };
 };
 
 beforeEach(() => {
@@ -212,4 +215,54 @@ it('retries a failed first page around the same record', async () => {
   act(() => result.current.retry());
   expect(sent[1].params).toMatchObject({ around_id: 'x' });
   expect(result.current.isLoading).toBe(true);
+});
+
+it('loads the next page asked for while the loaded pages were refreshed, once that refresh ends', async () => {
+  const { result, store } = renderFeed({ selection: october });
+  await answer(0, page(['a'], 'c1'));
+
+  act(() => {
+    store.dispatch(baseApi.util.invalidateTags(spaceTags(3, 'Transactions')));
+  });
+  await flush();
+  act(() => result.current.loadNextPage());
+  expect(sent).toHaveLength(2);
+
+  await answer(1, page(['a'], 'c2'));
+
+  expect(sent).toHaveLength(3);
+  expect(sent[2].params).toMatchObject({ cursor: 'c2' });
+});
+
+it('forgets an asked-for page once the selection changes', async () => {
+  const { result, rerender, store } = renderFeed({ selection: october });
+  await answer(0, page(['a'], 'c1'));
+
+  act(() => {
+    store.dispatch(baseApi.util.invalidateTags(spaceTags(3, 'Transactions')));
+  });
+  await flush();
+  act(() => result.current.loadNextPage());
+  rerender({ selection: feedSelection(period, { q: 'tea', timeZone: 'Europe/Moscow' }) });
+  await answer(2, page(['tea'], 'c9'));
+  await answer(1, page(['a'], 'c1'));
+
+  expect(sent.map(({ params }) => params.cursor)).toEqual([undefined, undefined, undefined]);
+});
+
+it('retries a failed page with the same cursor and does not chain retries on its own', async () => {
+  const { result } = renderFeed({ selection: october });
+  await answer(0, page(['a'], 'c1'));
+
+  act(() => result.current.loadNextPage());
+  await flush();
+  await refuse(1, { statusCode: 500, message: 'Internal error' });
+  act(() => result.current.retry());
+  await flush();
+  await refuse(2, { statusCode: 500, message: 'Internal error' });
+  act(() => result.current.loadNextPage());
+  await flush();
+
+  expect(sent.map(({ params }) => params.cursor)).toEqual([undefined, 'c1', 'c1']);
+  expect(ids(result)).toEqual(['a']);
 });

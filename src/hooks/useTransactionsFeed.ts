@@ -1,4 +1,4 @@
-import { useCallback, useId, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { InfiniteData, SkipToken } from '@reduxjs/toolkit/query';
 import { skipToken } from '@reduxjs/toolkit/query';
 
@@ -87,14 +87,42 @@ const useTransactionsFeed = (selection: FeedSelection | SkipToken, { pageSize, a
   const canLoadNext = isIdle && hasNextPage && !isFetchNextPageError;
   const canLoadPrevious = isIdle && hasPreviousPage && !isFetchPreviousPageError;
 
-  // Safe to call from every scroll callback: a page already loading, or one that failed, is not asked for again.
+  // An edge reached while another page loads is remembered and loaded right after it; the list may not call again.
+  // A failed page is never asked for again on its own, only through retry().
+  // A new generation has no pages yet, so it starts with nothing asked for.
+  const wantsRef = useRef({ next: false, previous: false });
+
+  useEffect(() => {
+    if (isFetchNextPageError || !hasNextPage) wantsRef.current.next = false;
+    if (isFetchPreviousPageError || !hasPreviousPage) wantsRef.current.previous = false;
+
+    if (canLoadNext && wantsRef.current.next) {
+      wantsRef.current.next = false;
+      void fetchNextPage();
+    } else if (canLoadPrevious && wantsRef.current.previous) {
+      wantsRef.current.previous = false;
+      void fetchPreviousPage();
+    }
+  }, [
+    canLoadNext,
+    canLoadPrevious,
+    hasNextPage,
+    hasPreviousPage,
+    isFetchNextPageError,
+    isFetchPreviousPageError,
+    fetchNextPage,
+    fetchPreviousPage,
+  ]);
+
   const loadNextPage = useCallback(() => {
     if (canLoadNext) void fetchNextPage();
-  }, [canLoadNext, fetchNextPage]);
+    else if (hasNextPage && !isFetchNextPageError) wantsRef.current.next = true;
+  }, [canLoadNext, hasNextPage, isFetchNextPageError, fetchNextPage]);
 
   const loadPreviousPage = useCallback(() => {
     if (canLoadPrevious) void fetchPreviousPage();
-  }, [canLoadPrevious, fetchPreviousPage]);
+    else if (hasPreviousPage && !isFetchPreviousPageError) wantsRef.current.previous = true;
+  }, [canLoadPrevious, hasPreviousPage, isFetchPreviousPageError, fetchPreviousPage]);
 
   const refresh = useCallback(
     () => setLoad((prev) => ({ ...prev, generation: prev.generation + 1, start: {}, isReload: true })),
