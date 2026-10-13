@@ -16,10 +16,14 @@ import { ScreenNames, TransactionKind, TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
 import type { MainTabParamList } from '@shared/types';
 import { hexToRgba } from '@shared/utils';
+import { Fab } from '@components';
 import TransactionsScreen from './TransactionsScreen';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
-jest.mock('react-native-reanimated', () => jest.requireActual('react-native-reanimated/mock'));
+jest.mock('react-native-reanimated', () => ({
+  ...jest.requireActual('react-native-reanimated/mock'),
+  useReducedMotion: () => true,
+}));
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = jest.requireActual('react');
   const { ScrollView, View } = jest.requireActual('react-native');
@@ -499,6 +503,123 @@ describe('TransactionsScreen', () => {
 
       expect(listRequests()).toHaveLength(before);
       expect(screen.getByText('s1')).toBeTruthy();
+    });
+  });
+
+  describe('search', () => {
+    const coffee = transactionDto({
+      id: 'tx-coffee',
+      timestamp: new Date(2026, 8, 20, 9).toISOString(),
+      description: 'Coffee',
+    });
+
+    beforeEach(() => {
+      mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
+        if (url !== FEED) return Promise.resolve({ data: null });
+        if (!params?.q) return Promise.resolve({ data: feedDto([coffee, taxi]) });
+        return Promise.resolve({ data: feedDto(params.q === 'coffee' ? [coffee] : []) });
+      });
+    });
+
+    const openSearch = async () => {
+      fireEvent.press(screen.getByRole('button', { name: 'Search transactions' }));
+      await settle();
+      return screen.getByPlaceholderText('Description, category, wallet');
+    };
+
+    it('searches the period once typing pauses, hides +, and keeps the period controls', async () => {
+      renderTransactions(undefined);
+      await settle();
+      expect(screen.UNSAFE_queryByType(Fab)).toBeTruthy();
+
+      const field = await openSearch();
+      expect(screen.UNSAFE_queryByType(Fab)).toBeNull();
+      expect(screen.getByText('Month')).toBeTruthy();
+
+      fireEvent.changeText(field, '  coffee ');
+      await act(async () => jest.advanceTimersByTimeAsync(299));
+      expect(listRequests().some(({ params }) => params?.q)).toBe(false);
+
+      await act(async () => jest.advanceTimersByTimeAsync(1));
+      await settle();
+      expect(listRequests().at(-1)?.params).toMatchObject({
+        q: 'coffee',
+        from: new Date(2026, 8, 1).toISOString(),
+      });
+      expect(screen.queryByText('Taxi')).toBeNull();
+      expect(screen.getByText('Coffee')).toBeTruthy();
+    });
+
+    it("sends at once on the keyboard's Search key, and says when nothing matches", async () => {
+      renderTransactions(undefined);
+      await settle();
+      const field = await openSearch();
+
+      fireEvent.changeText(field, 'tea');
+      fireEvent(field, 'submitEditing');
+      await settle();
+
+      expect(listRequests().at(-1)?.params).toMatchObject({ q: 'tea' });
+      expect(screen.getByText('No matches for “tea”')).toBeTruthy();
+
+      fireEvent.press(screen.getByText('Clear search'));
+      await settle();
+      expect(screen.getByText('Taxi')).toBeTruthy();
+      expect(screen.UNSAFE_queryByType(Fab)).toBeNull();
+    });
+
+    it('leaves search with Cancel: the plain history of the same period and + again', async () => {
+      renderTransactions(undefined);
+      await settle();
+      const field = await openSearch();
+      fireEvent.changeText(field, 'coffee');
+      fireEvent(field, 'submitEditing');
+      await settle();
+
+      fireEvent.press(screen.getByText('Cancel'));
+      await settle();
+
+      expect(listRequests().at(-1)?.params).not.toHaveProperty('q');
+      expect(listRequests().at(-1)?.params).toMatchObject({ from: new Date(2026, 8, 1).toISOString() });
+      expect(screen.getByText('Taxi')).toBeTruthy();
+      expect(screen.UNSAFE_queryByType(Fab)).toBeTruthy();
+    });
+
+    it('offers no search under a Stats filter', async () => {
+      renderTransactions({
+        filter: {
+          spaceId: 1,
+          from: new Date(2026, 8, 1).toISOString(),
+          to: new Date(2026, 8, 28).toISOString(),
+          transactionType: TransactionType.EXPENSE,
+          kind: TransactionKind.REGULAR,
+          name: 'Food',
+          categoryId: 2,
+        },
+      });
+      await settle();
+
+      expect(screen.queryByRole('button', { name: 'Search transactions' })).toBeNull();
+    });
+
+    it('leaves search when a record is shown from elsewhere', async () => {
+      renderTransactions(undefined);
+      await settle();
+      const field = await openSearch();
+      fireEvent.changeText(field, 'coffee');
+      fireEvent(field, 'submitEditing');
+      await settle();
+
+      act(() =>
+        navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB, {
+          reveal: { spaceId: 1, transactionId: 'tx-aug', timestamp: august },
+        }),
+      );
+      await settle();
+
+      expect(listRequests().at(-1)?.params).not.toHaveProperty('q');
+      expect(listRequests().at(-1)?.params).toMatchObject({ around_id: 'tx-aug' });
+      expect(screen.UNSAFE_queryByType(Fab)).toBeTruthy();
     });
   });
 });

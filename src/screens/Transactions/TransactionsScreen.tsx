@@ -28,6 +28,7 @@ import TransactionsSkeleton from './components/Skeleton/TransactionsSkeleton';
 import TransactionsEmptyState from './components/TransactionsEmptyState/TransactionsEmptyState';
 import TransactionsHeader from './components/TransactionsHeader/TransactionsHeader';
 import TransactionsList from './components/TransactionsList/TransactionsList';
+import useSearch from './hooks/useSearch';
 import useTransactionsData from './hooks/useTransactionsData';
 
 import styles from './style';
@@ -54,6 +55,9 @@ const TransactionsScreen = () => {
   }, [navigation, requestedFilter, spaceId]);
 
   const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod, openMonthOf } = usePeriod();
+  // Offered on the plain history only; a Stats filter stays as it is until it is cleared.
+  const search = useSearch();
+  const q = filter ? '' : search.submitted;
 
   // Show from a confirmation: the record's month with no filter, its row scrolled to and lit for a moment.
   // The user's period changes only on this explicit request.
@@ -116,6 +120,7 @@ const TransactionsScreen = () => {
   } = useTransactionsData({
     range,
     filter,
+    q,
     aroundId: anchor && !filter && anchor.spaceId === spaceId ? anchor.transactionId : undefined,
     getVisibleIds,
   });
@@ -125,11 +130,12 @@ const TransactionsScreen = () => {
     setRevealed(reveal);
     if (reveal.spaceId === spaceId) {
       const isListed =
-        !filter && isShownMonth(reveal.timestamp) && transactions.some(({ id }) => id === reveal.transactionId);
+        !filter && !q && isShownMonth(reveal.timestamp) && transactions.some(({ id }) => id === reveal.transactionId);
 
       if (!isListed) {
         openMonthOf(reveal.timestamp);
         setAnchor(reveal);
+        if (search.isSearching) search.cancel();
       }
       setHighlightId(reveal.transactionId);
     }
@@ -159,7 +165,7 @@ const TransactionsScreen = () => {
         <RangePickerSheet
           period={period}
           onApply={applyPeriod}
-          renderRangeNote={(draft) => <RangeCount range={draft} />}
+          renderRangeNote={(draft) => <RangeCount range={draft} q={q} />}
         />
       </BottomModal>
 
@@ -189,7 +195,16 @@ const TransactionsScreen = () => {
           onRetryPage={retry}
           header={
             <>
-              <TransactionsHeader />
+              <TransactionsHeader
+                canSearch={!filter}
+                isSearching={search.isSearching && !filter}
+                query={search.query}
+                onOpen={search.open}
+                onCancel={search.cancel}
+                onChangeQuery={search.change}
+                onSubmit={search.submit}
+                onClear={search.clear}
+              />
 
               {filter ? (
                 <AppliedFilter
@@ -258,6 +273,15 @@ const TransactionsScreen = () => {
 
               {viewState === 'noMatches' && <TransactionsEmptyState variant="noMatches" onClearFilter={clearFilter} />}
 
+              {viewState === 'noSearchMatches' && (
+                <TransactionsEmptyState
+                  variant="noSearchMatches"
+                  query={q}
+                  activeRange={range}
+                  onClearSearch={search.clear}
+                />
+              )}
+
               {viewState === 'rangeError' && <TransactionsEmptyState variant="rangeError" onRetry={retry} />}
 
               {viewState === 'latestError' && <TransactionsEmptyState variant="latestError" onRetry={retryLatest} />}
@@ -266,7 +290,7 @@ const TransactionsScreen = () => {
         />
       </ScreenFrame>
 
-      {viewState !== 'loading' && (
+      {viewState !== 'loading' && !search.isSearching && (
         <Fab
           onExpense={() => openCreate(TransactionType.EXPENSE)}
           onIncome={() => openCreate(TransactionType.INCOME)}
