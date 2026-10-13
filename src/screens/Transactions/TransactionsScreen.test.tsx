@@ -644,6 +644,53 @@ describe('TransactionsScreen', () => {
       expect(screen.getByText('Coffee')).toBeTruthy();
     });
 
+    it('keeps one field and its status row through a whole search, until Cancel', async () => {
+      let answer: (value: unknown) => void = () => {};
+      mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
+        if (url !== FEED) return Promise.resolve({ data: null });
+        if (params?.q === 'coffee') return new Promise((resolve) => (answer = resolve));
+        return Promise.resolve({ data: feedDto(params?.q ? [] : [coffee, taxi]) });
+      });
+      renderTransactions(undefined);
+      await settle();
+      expect(screen.queryByTestId('search-status')).toBeNull();
+
+      const field = await openSearch();
+      const isSameField = () => screen.getByPlaceholderText('Description, category, wallet') === field;
+      expect(screen.getByTestId('search-status')).toBeTruthy();
+
+      fireEvent.changeText(field, 'coffee');
+      fireEvent(field, 'submitEditing');
+      await settle();
+      expect(screen.getByText('Searching…')).toBeTruthy();
+      expect(isSameField()).toBe(true);
+
+      await act(async () => answer({ data: feedDto([coffee]) }));
+      await settle();
+      expect(screen.getByText('1 match')).toBeTruthy();
+      expect(isSameField()).toBe(true);
+
+      fireEvent.changeText(field, 'tea');
+      fireEvent(field, 'submitEditing');
+      await settle();
+      expect(screen.getByText('No matches for “tea”')).toBeTruthy();
+      expect(isSameField()).toBe(true);
+
+      fireEvent.changeText(field, 'a'.repeat(256));
+      await settle();
+      expect(screen.getByText('Search is limited to 255 characters')).toBeTruthy();
+      expect(isSameField()).toBe(true);
+
+      fireEvent.press(screen.getByRole('button', { name: 'Clear search' }));
+      await settle();
+      expect(screen.getByTestId('search-status')).toBeTruthy();
+      expect(isSameField()).toBe(true);
+
+      fireEvent.press(screen.getByText('Cancel'));
+      await settle();
+      expect(screen.queryByTestId('search-status')).toBeNull();
+    });
+
     it('keeps the text and says the totals are unknown when a search fails, and Try again asks again', async () => {
       let fail = true;
       mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {

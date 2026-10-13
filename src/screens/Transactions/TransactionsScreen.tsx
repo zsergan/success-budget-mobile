@@ -221,7 +221,9 @@ const TransactionsScreen = () => {
   };
 
   const searchStatus: SearchStatus | undefined = !q
-    ? undefined
+    ? search.isSearching
+      ? { state: 'idle' }
+      : undefined
     : viewState === 'loading'
       ? { state: 'searching' }
       : viewState === 'rangeError'

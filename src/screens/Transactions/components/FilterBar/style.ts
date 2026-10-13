@@ -2,6 +2,11 @@ import { StyleSheet } from 'react-native';
 
 import theme, { colors } from '@shared/theme';
 
+const TOTAL_LINE_HEIGHT = 22;
+const TOTAL_PLACEHOLDER_HEIGHT = 17;
+// The small spinner's size: the row keeps it once the spinner is gone.
+const SEARCH_ROW_HEIGHT = 20;
+
 const styles = StyleSheet.create({
   root: {
     rowGap: theme.spacing.sm,
@@ -33,6 +38,7 @@ const styles = StyleSheet.create({
   totalValue: {
     fontFamily: theme.fonts.semiBold,
     fontSize: 17,
+    lineHeight: TOTAL_LINE_HEIGHT,
     letterSpacing: -0.4,
     color: colors.text,
   },
@@ -40,8 +46,8 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
   totalPlaceholder: {
-    height: 17,
-    marginVertical: 2,
+    height: TOTAL_PLACEHOLDER_HEIGHT,
+    marginVertical: (TOTAL_LINE_HEIGHT - TOTAL_PLACEHOLDER_HEIGHT) / 2,
     width: '70%',
     borderRadius: 6,
     backgroundColor: colors.track,
@@ -49,6 +55,7 @@ const styles = StyleSheet.create({
   searchRow: {
     // 14 below the presets, as in the design, with the root's row gap.
     marginTop: 6,
+    height: SEARCH_ROW_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
