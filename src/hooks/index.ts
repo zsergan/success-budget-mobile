@@ -14,4 +14,5 @@ export { default as useSwipe } from './useSwipe';
 export { default as useThemePreference } from './useThemePreference';
 export { default as useTransactionOperation } from './useTransactionOperation';
 export type { TransactionSubmitOutcome } from './useTransactionOperation';
+export { default as useTransactionsFeed } from './useTransactionsFeed';
 export type { ThemePreference } from './useThemePreference';
