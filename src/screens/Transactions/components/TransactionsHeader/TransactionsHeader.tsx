@@ -14,7 +14,7 @@ import Animated, {
 import { Icon } from '@components';
 import { colors } from '@shared/theme';
 
-import styles, { BUTTON_SIZE, CANCEL_GAP, FIELD_ICON_LEFT, ICON_SIZE } from './style';
+import styles, { BUTTON_SIZE, CANCEL_GAP, FIELD_BORDER, FIELD_ICON_LEFT, ICON_SIZE } from './style';
 
 export const SEARCH_MOTION_MS = 220;
 
@@ -84,7 +84,7 @@ const TransactionsHeader = ({
     borderColor: interpolateColor(progress.value, [0, 1], [colors.track, fieldBorder]),
   }));
   const iconStyle = useAnimatedStyle(() => ({
-    left: interpolate(progress.value, [0, 1], [(BUTTON_SIZE - ICON_SIZE) / 2, FIELD_ICON_LEFT]),
+    left: interpolate(progress.value, [0, 1], [(BUTTON_SIZE - ICON_SIZE) / 2 - FIELD_BORDER, FIELD_ICON_LEFT]),
   }));
   const fadeOutStyle = useAnimatedStyle(() => ({ opacity: 1 - progress.value }));
   const fadeInStyle = useAnimatedStyle(() => ({ opacity: progress.value }));

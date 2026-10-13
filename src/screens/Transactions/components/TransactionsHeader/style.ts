@@ -7,6 +7,8 @@ export const BUTTON_SIZE = 40;
 export const ICON_SIZE = 17;
 export const FIELD_ICON_LEFT = 12;
 export const CANCEL_GAP = 12;
+// The field's children are placed inside its border, so the button's icon is centred against it.
+export const FIELD_BORDER = 1.5;
 const CLEAR_SIZE = 22;
 
 const styles = StyleSheet.create({
@@ -29,7 +31,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     borderRadius: 13,
-    borderWidth: 1.5,
+    borderWidth: FIELD_BORDER,
     overflow: 'hidden',
   },
   unmeasured: {
