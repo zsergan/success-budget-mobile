@@ -101,4 +101,16 @@ describe('getFeedView', () => {
   it('has no summary before a page arrives', () => {
     expect(getFeedView([])).toEqual({ items: [], summary: null, dayNets: {} });
   });
+
+  it('keeps the totals and the nets of the days still listed after older pages are dropped', () => {
+    const view = getFeedView([
+      page(12, [row('k', TransactionType.EXPENSE, '1.00')], {
+        summary: { count: 900, income: '2500.00', expense: '1184.45' },
+        dayTotals: [{ date: '2026-10-03', net: '-31.50' }],
+      }),
+    ]);
+
+    expect(view.summary).toEqual({ count: 900, income: '2500.00', expense: '1184.45' });
+    expect(view.dayNets).toEqual({ '2026-10-03': '-31.50' });
+  });
 });

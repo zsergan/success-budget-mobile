@@ -131,6 +131,9 @@ const feedParams = ({ selection, pageSize }: TransactionsFeedArg, { cursor, arou
   ...(aroundId && { around_id: aroundId }),
 });
 
+// Pages kept per feed entry; scrolling further drops the farthest page and reads it again by cursor on the way back.
+export const FEED_MAX_PAGES = 10;
+
 let receivedPages = 0;
 
 const writeHeaders = ({ idempotencyKey, version }: IdempotentArg & { version?: number }) => ({
@@ -167,6 +170,7 @@ export const transactionApi = baseApi.injectEndpoints({
     getTransactionsFeed: build.infiniteQuery<TransactionFeedPage, TransactionsFeedArg, FeedPageParam>({
       infiniteQueryOptions: {
         initialPageParam: {},
+        maxPages: FEED_MAX_PAGES,
         getNextPageParam: ({ nextCursor }) => (nextCursor ? { cursor: nextCursor } : undefined),
         getPreviousPageParam: ({ previousCursor }) => (previousCursor ? { cursor: previousCursor } : undefined),
       },

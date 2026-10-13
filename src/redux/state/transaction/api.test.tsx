@@ -460,4 +460,30 @@ describe('getTransactionsFeed', () => {
       previousCursor: null,
     });
   });
+
+  it('keeps at most ten pages, dropping the far end and reading it back by cursor', async () => {
+    const store = createAppStore();
+    const pageAt = (n: number) => ({
+      data: feedDto([row(`r${n}`)], {
+        page_info: { next_cursor: `n${n + 1}`, previous_cursor: n > 0 ? `n${n - 1}` : null },
+      }),
+    });
+    mockedRequest.mockImplementation(({ params }: { params: { cursor?: string } }) =>
+      Promise.resolve(pageAt(params.cursor ? Number(params.cursor.slice(1)) : 0)),
+    );
+
+    await store.dispatch(getTransactionsFeed.initiate(arg));
+    for (let page = 1; page <= 10; page += 1) {
+      await store.dispatch(getTransactionsFeed.initiate(arg, { direction: 'forward' }));
+    }
+    const firstIds = () => selectFeed(store).data?.pages.map(({ items }) => items[0].id);
+
+    expect(firstIds()).toEqual(['r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8', 'r9', 'r10']);
+    expect(selectFeed(store).hasPreviousPage).toBe(true);
+
+    await store.dispatch(getTransactionsFeed.initiate(arg, { direction: 'backward' }));
+
+    expect(paramsSent().at(-1)).toMatchObject({ cursor: 'n0' });
+    expect(firstIds()).toEqual(['r0', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8', 'r9']);
+  });
 });

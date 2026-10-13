@@ -60,6 +60,10 @@ Every resource except Profile and Currencies is scoped to the active space.
 the entry from its first one; a pull-to-refresh, a rejected cursor or an
 `around_id` outside the selection starts a new generation, a separate
 entry, so a page still loading for the old one cannot land on screen.
+An entry keeps at most `FEED_MAX_PAGES` (10) pages: loading past them
+drops the page at the far end, which is read again by its cursor when
+the list scrolls back; `summary` and the nets of the days still listed
+come from the pages that remain.
 
 ## Invalidation rules
 
