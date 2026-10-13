@@ -9,6 +9,7 @@ import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { createAppStore } from '@redux/Store';
 import { withProfile } from '@redux/state/profile/fixtures';
 import { activateSpace } from '@redux/state/space/thunks';
+import { transactionApi } from '@redux/state/transaction/api';
 import { feedDto, transactionDto } from '@redux/state/transaction/fixtures';
 import { deleteTransaction } from '@redux/state/transactionFlow/thunks';
 import { mapTransaction } from '@api/models';
@@ -647,6 +648,53 @@ describe('TransactionsScreen', () => {
       expect(screen.getByText('1 match')).toBeTruthy();
     });
 
+    it('sends only what was typed last when typing fast', async () => {
+      renderTransactions(undefined);
+      await settle();
+      const field = await openSearch();
+
+      for (const text of ['c', 'co', 'cof', 'coff', 'coffee']) {
+        fireEvent.changeText(field, text);
+        await act(async () => jest.advanceTimersByTimeAsync(100));
+      }
+      await act(async () => jest.advanceTimersByTimeAsync(300));
+
+      expect(
+        listRequests()
+          .filter(({ params }) => params?.q)
+          .map(({ params }) => params?.q),
+      ).toEqual(['coffee']);
+    });
+
+    it.each([
+      ['Cancel', 'Cancel'],
+      ['clearing', 'Clear'],
+    ])('drops a search still out after %s and shows the plain history', async (_name, control) => {
+      let answer: (value: unknown) => void = () => {};
+      mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
+        if (url !== FEED) return Promise.resolve({ data: null });
+        if (params?.q) return new Promise((resolve) => (answer = resolve));
+        return Promise.resolve({ data: feedDto([coffee, taxi]) });
+      });
+      renderTransactions(undefined);
+      await settle();
+      const field = await openSearch();
+      fireEvent.changeText(field, 'coffee');
+      fireEvent(field, 'submitEditing');
+      await settle();
+
+      fireEvent.press(control === 'Cancel' ? screen.getByText('Cancel') : screen.getByLabelText('Clear search'));
+      await settle();
+      await act(async () =>
+        answer({ data: feedDto([coffee], { summary: { count: 1, income: '0.00', expense: '9.99' } }) }),
+      );
+      await settle();
+
+      expect(screen.getByText('Taxi')).toBeTruthy();
+      expect(screen.queryByText('Search results')).toBeNull();
+      expect(screen.queryByText('9.99')).toBeNull();
+    });
+
     it('treats a search of only spaces as none', async () => {
       renderTransactions(undefined);
       await settle();
@@ -776,5 +824,71 @@ describe('TransactionsScreen', () => {
       expect(listRequests().at(-1)?.params).toMatchObject({ around_id: 'tx-aug' });
       expect(screen.UNSAFE_queryByType(Fab)).toBeTruthy();
     });
+  });
+
+  it('keeps the server totals while older pages load, never adding up the rows', async () => {
+    const day = (id: string, date: number) =>
+      transactionDto({ id, amount: '1.00', timestamp: new Date(2026, 8, date, 9).toISOString(), description: id });
+    const summary = { count: 900, income: '98765432109876543.21', expense: '50000.00' };
+    mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
+      if (url !== FEED) return Promise.resolve({ data: null });
+      return Promise.resolve({
+        data: params?.cursor
+          ? feedDto([day('b', 10)], { summary })
+          : feedDto([day('a', 20)], { summary, page_info: { next_cursor: 'c1', previous_cursor: null } }),
+      });
+    });
+    renderTransactions(undefined);
+    await settle();
+    expect(screen.getByText('98 765 432 109 876 543.21')).toBeTruthy();
+
+    act(() => screen.UNSAFE_getByType(SectionList).props.onEndReached());
+    await settle();
+
+    expect(screen.getByText('b')).toBeTruthy();
+    expect(screen.getByText('98 765 432 109 876 543.21')).toBeTruthy();
+    expect(screen.getByText('50 000.00')).toBeTruthy();
+  });
+
+  it('keeps the window around the rows on screen after an edit deep in the history', async () => {
+    const deep = (n: number) =>
+      transactionDto({ id: `d${n}`, timestamp: new Date(2026, 8, 28 - n, 9).toISOString(), description: `d${n}` });
+    mockedRequest.mockImplementation(({ url, params, method }: RequestConfig & { method?: string }) => {
+      if (method === 'PATCH')
+        return Promise.resolve({ data: { transaction: deep(5), wallets: [{ id: 1, balance: 1, is_deleted: false }] } });
+      if (url !== FEED) return Promise.resolve({ data: null });
+      if (params?.around_id) return Promise.resolve({ data: feedDto([deep(4), deep(5), deep(6)]) });
+      const n = params?.cursor ? Number(String(params.cursor).slice(1)) : 0;
+      return Promise.resolve({
+        data: feedDto([deep(n)], { page_info: { next_cursor: `c${n + 1}`, previous_cursor: n ? `c${n - 1}` : null } }),
+      });
+    });
+    const store = renderTransactions(undefined);
+    await settle();
+    for (let page = 1; page <= 5; page += 1) {
+      act(() => screen.UNSAFE_getByType(SectionList).props.onEndReached());
+      await settle();
+    }
+    act(() =>
+      screen.UNSAFE_getByType(SectionList).props.onViewableItemsChanged({
+        viewableItems: [{ item: mapTransaction(deep(5)), isViewable: true }],
+      }),
+    );
+    mockedRequest.mockClear();
+
+    await act(async () => {
+      await store.dispatch(
+        transactionApi.endpoints.updateTransaction.initiate({
+          spaceId: 1,
+          transactionId: 'd5',
+          version: 1,
+          idempotencyKey: 'key-1',
+          data: { description: 'edited' },
+        }),
+      );
+    });
+    await settle();
+
+    expect(listRequests().map(({ params }) => params?.around_id ?? params?.cursor ?? 'first')).toEqual(['d5']);
   });
 });
