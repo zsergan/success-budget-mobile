@@ -28,17 +28,19 @@ const heightOf = (style: unknown) => {
 };
 
 describe('FilterBar', () => {
-  it.each<SearchStatus>([{ state: 'idle' }, { state: 'searching' }, { state: 'found', count: 3 }, { state: 'failed' }])(
-    'keeps the search row at one height while it is $state',
-    (search) => {
-      renderBar({ search });
+  it.each<[string, SearchStatus | undefined]>([
+    ['no search', undefined],
+    ['searching', { state: 'searching' }],
+    ['found', { state: 'found', count: 3 }],
+    ['failed', { state: 'failed' }],
+  ])('keeps the search row at one height: %s', (_name, search) => {
+    renderBar({ search });
 
-      expect(heightOf(screen.getByTestId('search-status').props.style)).toBe(20);
-    },
-  );
+    expect(heightOf(screen.getByTestId('search-status').props.style)).toBe(20);
+  });
 
-  it('holds the row empty while nothing is sent yet', () => {
-    renderBar({ search: { state: 'idle' } });
+  it('holds the row empty while no search is sent', () => {
+    renderBar({});
 
     expect(screen.getByTestId('search-status').children).toHaveLength(0);
   });

@@ -655,7 +655,7 @@ describe('TransactionsScreen', () => {
       expect(screen.getByText('Coffee')).toBeTruthy();
     });
 
-    it('keeps one field and its status row through a whole search, until Cancel', async () => {
+    it('keeps one field and one status row before, through and after a whole search', async () => {
       let answer: (value: unknown) => void = () => {};
       mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
         if (url !== FEED) return Promise.resolve({ data: null });
@@ -664,11 +664,11 @@ describe('TransactionsScreen', () => {
       });
       renderTransactions(undefined);
       await settle();
-      expect(screen.queryByTestId('search-status')).toBeNull();
+      const statusRow = screen.getByTestId('search-status');
 
       const field = await openSearch();
       const isSameField = () => screen.getByPlaceholderText('Description, category, wallet') === field;
-      expect(screen.getByTestId('search-status')).toBeTruthy();
+      expect(screen.getByTestId('search-status')).toBe(statusRow);
 
       fireEvent.changeText(field, 'coffee');
       fireEvent(field, 'submitEditing');
@@ -694,12 +694,12 @@ describe('TransactionsScreen', () => {
 
       fireEvent.press(screen.getByRole('button', { name: 'Clear search' }));
       await settle();
-      expect(screen.getByTestId('search-status')).toBeTruthy();
+      expect(screen.getByTestId('search-status')).toBe(statusRow);
       expect(isSameField()).toBe(true);
 
       fireEvent.press(screen.getByText('Cancel'));
       await settle();
-      expect(screen.queryByTestId('search-status')).toBeNull();
+      expect(screen.getByTestId('search-status')).toBe(statusRow);
     });
 
     it('keeps the text and says the totals are unknown when a search fails, and Try again asks again', async () => {

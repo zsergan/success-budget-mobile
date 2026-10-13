@@ -8,9 +8,8 @@ import { formatMoneyAmount } from '@shared/utils';
 
 import styles from './style';
 
-// What a search has found so far: nothing sent yet, still asking, its count, or a failed request (count unknown).
-export type SearchStatus =
-  { state: 'idle' } | { state: 'searching' } | { state: 'found'; count: number } | { state: 'failed' };
+// What a search has found so far: still asking, its count, or a failed request (count unknown).
+export type SearchStatus = { state: 'searching' } | { state: 'found'; count: number } | { state: 'failed' };
 
 interface Props {
   period: Period;
@@ -61,21 +60,19 @@ const FilterBar = ({
   <View style={styles.root}>
     <PeriodBar period={period} onPresetPress={onPresetPress} onOpenPicker={onOpenPicker} onReset={onReset} />
 
-    {/* Kept, at one height, for as long as search is open, so the list under it never shifts. */}
-    {search && (
-      <View style={styles.searchRow} testID="search-status">
-        {search.state !== 'idle' && (
-          <>
-            <View style={styles.searchLabelRow}>
-              {search.state === 'searching' && <ActivityIndicator size="small" color={colors.muted} />}
-              <Text style={styles.searchLabel}>{search.state === 'searching' ? 'Searching…' : 'Search results'}</Text>
-            </View>
+    {/* Always kept, at one height, so neither opening search nor its status shifts what is under it. */}
+    <View style={styles.searchRow} testID="search-status">
+      {search && (
+        <>
+          <View style={styles.searchLabelRow}>
+            {search.state === 'searching' && <ActivityIndicator size="small" color={colors.muted} />}
+            <Text style={styles.searchLabel}>{search.state === 'searching' ? 'Searching…' : 'Search results'}</Text>
+          </View>
 
-            <Text style={styles.searchCount}>{search.state === 'found' ? matchCount(search.count) : UNKNOWN}</Text>
-          </>
-        )}
-      </View>
-    )}
+          <Text style={styles.searchCount}>{search.state === 'found' ? matchCount(search.count) : UNKNOWN}</Text>
+        </>
+      )}
+    </View>
 
     <View style={styles.totalsRow}>
       <View style={styles.totalCard}>
