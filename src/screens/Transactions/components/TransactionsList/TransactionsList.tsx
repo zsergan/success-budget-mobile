@@ -39,6 +39,8 @@ interface Props {
   onHighlightSeen?: () => void;
   // A row to bring back to the top of the list, unlit, once it is listed.
   restoreId?: string | null;
+  // Called once that row is in place, so the caller can drop it and it is never scrolled to again.
+  onRestored?: () => void;
   // The rows on screen, top first, whenever they change.
   onVisibleRowsChange?: (ids: string[]) => void;
   older?: PageEdge;
@@ -102,6 +104,7 @@ const TransactionsList = ({
   highlightId = null,
   onHighlightSeen,
   restoreId = null,
+  onRestored,
   onVisibleRowsChange,
   older,
   newer,
@@ -144,14 +147,19 @@ const TransactionsList = ({
     }
     if (scrolledToRef.current === target.id) return;
 
-    if (scrollToRow(listRef.current, groups, target)) scrolledToRef.current = target.id;
-  }, [groups, target]);
+    if (scrollToRow(listRef.current, groups, target)) {
+      scrolledToRef.current = target.id;
+      // A row not measured yet is landed on in onRowLayout; only then is the restore done.
+      if (!awaitsExactRef.current && target.id === restoreId) onRestored?.();
+    }
+  }, [groups, target, restoreId, onRestored]);
 
   const onRowLayout = () => {
     if (!awaitsExactRef.current) return;
 
     awaitsExactRef.current = false;
     if (target) scrollToRow(listRef.current, groups, target);
+    if (target?.id === restoreId) onRestored?.();
   };
 
   // A row already on screen when it is picked counts as seen at once.

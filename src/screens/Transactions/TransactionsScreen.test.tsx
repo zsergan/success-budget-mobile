@@ -748,6 +748,90 @@ describe('TransactionsScreen', () => {
       scrollToLocation.mockRestore();
     });
 
+    it('brings the history back once, never again after another record is shown and fades', async () => {
+      const scrollToLocation = jest.spyOn(SectionList.prototype, 'scrollToLocation').mockImplementation(() => {});
+      renderTransactions(undefined);
+      await settle();
+      act(() =>
+        screen.UNSAFE_getByType(SectionList).props.onViewableItemsChanged({
+          viewableItems: [{ item: mapTransaction(taxi), isViewable: true }],
+        }),
+      );
+      const field = await openSearch();
+      fireEvent.changeText(field, 'coffee');
+      fireEvent(field, 'submitEditing');
+      await settle();
+      fireEvent.press(screen.getByText('Cancel'));
+      await settle();
+      expect(scrollToLocation).toHaveBeenLastCalledWith(expect.objectContaining({ viewPosition: 0 }));
+
+      act(() =>
+        navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB, {
+          reveal: { spaceId: 1, transactionId: 'tx-coffee', timestamp: coffee.timestamp },
+        }),
+      );
+      await settle();
+      expect(scrollToLocation).toHaveBeenLastCalledWith(expect.objectContaining({ viewPosition: 0.4 }));
+      const callsWhileLit = scrollToLocation.mock.calls.length;
+
+      act(() =>
+        screen.UNSAFE_getByType(SectionList).props.onViewableItemsChanged({
+          viewableItems: [{ item: mapTransaction(coffee), isViewable: true }],
+        }),
+      );
+      await act(async () => jest.advanceTimersByTimeAsync(3000));
+
+      expect(scrollToLocation).toHaveBeenCalledTimes(callsWhileLit);
+      scrollToLocation.mockRestore();
+    });
+
+    it.each(['period', 'space', 'filter'])('forgets a return still on its way once the %s changes', async (change) => {
+      const scrollToLocation = jest.spyOn(SectionList.prototype, 'scrollToLocation').mockImplementation(() => {});
+      let releaseAround: () => void = () => {};
+      mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
+        if (url !== FEED) return Promise.resolve({ data: null });
+        const data = feedDto(params?.q === 'coffee' ? [coffee] : [coffee, taxi]);
+        if (params?.around_id) return new Promise((resolve) => (releaseAround = () => resolve({ data })));
+        return Promise.resolve({ data });
+      });
+      const store = renderTransactions(undefined);
+      await settle();
+      act(() =>
+        screen.UNSAFE_getByType(SectionList).props.onViewableItemsChanged({
+          viewableItems: [{ item: mapTransaction(taxi), isViewable: true }],
+        }),
+      );
+      const field = await openSearch();
+      fireEvent.changeText(field, 'coffee');
+      fireEvent(field, 'submitEditing');
+      await settle();
+      fireEvent.press(screen.getByText('Cancel'));
+      await settle();
+
+      if (change === 'period') fireEvent.press(screen.getByText('Year'));
+      if (change === 'space') act(() => void store.dispatch(activateSpace(2)));
+      if (change === 'filter')
+        act(() =>
+          navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB, {
+            filter: {
+              spaceId: 1,
+              from: new Date(2026, 8, 1).toISOString(),
+              to: new Date(2026, 8, 28).toISOString(),
+              transactionType: TransactionType.EXPENSE,
+              kind: TransactionKind.REGULAR,
+              name: 'Food',
+              categoryId: 2,
+            },
+          }),
+        );
+      await settle();
+      await act(async () => releaseAround());
+      await settle();
+
+      expect(scrollToLocation).not.toHaveBeenCalledWith(expect.objectContaining({ viewPosition: 0 }));
+      scrollToLocation.mockRestore();
+    });
+
     it('opens a changed period at its newest record on Cancel', async () => {
       renderTransactions(undefined);
       await settle();

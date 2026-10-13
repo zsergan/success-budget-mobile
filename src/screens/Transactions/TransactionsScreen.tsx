@@ -93,6 +93,8 @@ const TransactionsScreen = () => {
   // Where the plain history was when a search opened; Cancel brings it back while the period is the same.
   const [returnPoint, setReturnPoint] = useState<Anchor | null>(null);
   const [restoreId, setRestoreId] = useState<string | null>(null);
+  // A restore holds only while its row still anchors the plain history: another period or a filter drops it.
+  if (restoreId && (filter || anchor?.transactionId !== restoreId)) setRestoreId(null);
   // The plain history was replaced by results at least once, so Cancel has a place to return to.
   const [hasLeftHistory, setHasLeftHistory] = useState(false);
   if (q && returnPoint && !hasLeftHistory) setHasLeftHistory(true);
@@ -101,6 +103,7 @@ const TransactionsScreen = () => {
   const [searchSpaceId, setSearchSpaceId] = useState(spaceId);
   if (searchSpaceId !== spaceId) {
     setSearchSpaceId(spaceId);
+    setRestoreId(null);
     if (search.isSearching) search.cancel();
     setReturnPoint(null);
   }
@@ -171,6 +174,7 @@ const TransactionsScreen = () => {
         setReturnPoint(null);
       }
       setHighlightId(reveal.transactionId);
+      setRestoreId(null);
     }
   }
 
@@ -246,6 +250,7 @@ const TransactionsScreen = () => {
           onDeleteTransaction={requestDelete}
           highlightId={highlightId}
           restoreId={restoreId}
+          onRestored={() => setRestoreId(null)}
           onHighlightSeen={() => setSeenId(highlightId)}
           onVisibleRowsChange={(ids) => {
             visibleIdsRef.current = ids;
