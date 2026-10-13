@@ -2,8 +2,7 @@ import { isRejectedWithValue } from '@reduxjs/toolkit';
 
 import type { ErrorResponse } from '@api/dto';
 import { ApiErrorCode } from '@api/dto';
-import type { SpaceArg } from '@redux/api/baseApi';
-import { baseApi } from '@redux/api/baseApi';
+import { baseApi, spaceIdOfArg } from '@redux/api/baseApi';
 import type { AppListener } from '@redux/Store';
 import { spaceApi } from './api';
 import { pickFallbackSpaceId, selectSpacesResult } from './selectors';
@@ -56,8 +55,9 @@ export const startSpaceSelectionListener = (listener: AppListener) => {
     },
     effect: (action, { dispatch, getState }) => {
       const { code } = action.payload as Partial<ErrorResponse>;
-      const spaceId = (action as unknown as { meta: { arg: { originalArgs?: Partial<SpaceArg> } } }).meta.arg
-        .originalArgs?.spaceId;
+      const spaceId = spaceIdOfArg(
+        (action as unknown as { meta: { arg: { originalArgs?: unknown } } }).meta.arg.originalArgs,
+      );
 
       if (spaceId === undefined) return;
       if (code === ApiErrorCode.FORBIDDEN_SPACE) dispatch(loseSpaceAccess(spaceId));

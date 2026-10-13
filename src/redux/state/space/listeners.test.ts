@@ -4,6 +4,7 @@ import { SpaceType } from '@shared/enums';
 import { spaceApi } from './api';
 import { categoryApi } from '@redux/state/category/api';
 import { walletApi } from '@redux/state/wallet/api';
+import { feedSelection, transactionApi } from '@redux/state/transaction/api';
 import { activateSpace } from './thunks';
 
 const mockedRequest = jest.fn();
@@ -151,6 +152,22 @@ describe('a read or a write refused for a space', () => {
 
     await refuseWrite('FORBIDDEN_SPACE');
     expect(store.getState().space.currentSpaceId).toBe(2);
+  });
+
+  it('ends the space when a page of its history is refused with FORBIDDEN_SPACE, and drops the pages', async () => {
+    const store = await setUp();
+    const feedArg = {
+      selection: feedSelection({ spaceId: 1, from: '2026-01-01T00:00:00.000Z', to: '2026-01-31T23:59:59.999Z' }),
+      generation: 'g1',
+    };
+
+    mockedRequest.mockImplementationOnce(() =>
+      Promise.reject({ response: { data: { statusCode: 403, code: 'FORBIDDEN_SPACE', message: 'FORBIDDEN_SPACE' } } }),
+    );
+    await store.dispatch(transactionApi.endpoints.getTransactionsFeed.initiate(feedArg));
+
+    expect(store.getState().space.currentSpaceId).toBe(2);
+    expect(transactionApi.endpoints.getTransactionsFeed.select(feedArg)(store.getState()).status).toBe('uninitialized');
   });
 
   it('only asks for the spaces list again on any other 403', async () => {
