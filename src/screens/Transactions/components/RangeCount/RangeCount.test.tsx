@@ -23,13 +23,13 @@ const september: DateRange = {
   preset: 'month',
 };
 
-const renderCount = (range: DateRange) => {
+const renderCount = (range: DateRange, q?: string) => {
   const store = createAppStore();
   store.dispatch(activateSpace(1));
 
   const view = render(
     <Provider store={store}>
-      <RangeCount range={range} />
+      <RangeCount range={range} q={q} />
     </Provider>,
   );
 
@@ -94,5 +94,18 @@ describe('RangeCount', () => {
     await settle();
 
     expect(screen.getByText('1 transaction')).toBeTruthy();
+  });
+
+  it('counts with the trimmed search, and without one for a blank search', async () => {
+    mockedRequest.mockResolvedValue({ data: { count: 3 } });
+
+    renderCount(august, '  coffee ');
+    renderCount(september, '   ');
+    await settle();
+
+    expect(mockedRequest.mock.calls.map(([config]) => config.params)).toEqual([
+      { from: august.from.toISOString(), to: august.to.toISOString(), q: 'coffee' },
+      { from: september.from.toISOString(), to: september.to.toISOString() },
+    ]);
   });
 });

@@ -12,15 +12,20 @@ import styles from './style';
 
 interface Props {
   range: DateRange;
+  // The search shown in the history, so the count matches the rows it would list.
+  q?: string;
 }
 
 const countLabel = (count: number) =>
   count === 0 ? 'No transactions' : `${count} transaction${count === 1 ? '' : 's'}`;
 
 // The records in a drafted range, counted by the server; currentData never shows the count of a previous range.
-const RangeCount = ({ range }: Props) => {
+const RangeCount = ({ range, q }: Props) => {
   const spaceId = useAppSelector(selectCurrentSpaceId);
-  const query = useGetTransactionsCountQuery(spaceId === null ? skipToken : periodArg(spaceId, range));
+  const text = q?.trim();
+  const query = useGetTransactionsCountQuery(
+    spaceId === null ? skipToken : { ...periodArg(spaceId, range), ...(text && { q: text }) },
+  );
   const { isLoading, hasError } = getLoadState(query);
 
   if (hasError) {

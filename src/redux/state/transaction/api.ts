@@ -61,6 +61,10 @@ export interface TransactionFeedPage extends TransactionFeedPageModel {
   sequence: number;
 }
 
+export interface TransactionsCountArg extends TransactionsArg {
+  q?: string;
+}
+
 export interface TransactionArg extends SpaceArg {
   transactionId: string;
 }
@@ -186,8 +190,11 @@ export const transactionApi = baseApi.injectEndpoints({
       // A generation belongs to one hook mount, so an entry nobody reads is never read again.
       keepUnusedDataFor: 0,
     }),
-    getTransactionsCount: build.query<number, TransactionsArg>({
-      query: (arg) => ({ url: `/spaces/${arg.spaceId}/transactions/count`, params: listParams(arg) }),
+    getTransactionsCount: build.query<number, TransactionsCountArg>({
+      query: (arg) => ({
+        url: `/spaces/${arg.spaceId}/transactions/count`,
+        params: { ...listParams(arg), ...(arg.q && { q: arg.q }) },
+      }),
       transformResponse: (response: TransactionsCountResponse) => response.count,
       providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions'),
     }),
