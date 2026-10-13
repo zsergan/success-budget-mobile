@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { View } from 'react-native';
-import { skipToken } from '@reduxjs/toolkit/query';
 
 import {
   Banner,
@@ -12,16 +11,17 @@ import {
   useTransactionFlow,
 } from '@components';
 import { getLoadState } from '@redux/api/loadState';
-import { useAppSelector, useCurrentMonthArg, useSpaceArg } from '@redux/hooks';
-import { selectCurrentSpaceId } from '@redux/state/space/selectors';
+import { useRecentArg, useSpaceArg } from '@redux/hooks';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { EMPTY_WALLETS, getTotalBalance } from '@redux/state/wallet/selectors';
-import { useGetLatestTransactionQuery, useGetTransactionsQuery } from '@redux/state/transaction/api';
-import { EMPTY_TRANSACTIONS, getEmptyPeriodState } from '@redux/state/transaction/selectors';
+import { useGetRecentTransactionsQuery } from '@redux/state/transaction/api';
+import { rangeSelection } from '@redux/state/transactionFlow/selection';
 import { useBalanceVisibility, useSpaceRefresh } from '@hooks';
-import { ScreenNames, TransactionType } from '@shared/enums';
+import type { ScreenNames } from '@shared/enums';
+import { TransactionType } from '@shared/enums';
 import type { MainTabScreenProps } from '@shared/types';
 import { FAB_SCROLL_CLEARANCE } from '@shared/constants';
+import { getCurrentMonthRange } from '@shared/utils';
 import BalanceOverview from './components/BalanceOverview/BalanceOverview';
 import RecentActivity from './components/RecentActivity/RecentActivity';
 import WalletsSection from './components/WalletsSection/WalletsSection';
@@ -40,11 +40,9 @@ const HomeScreen = ({ navigation }: Props) => {
   const walletsOverview = walletsQuery.currentData;
   const { total, currencyCode, walletsCount, deltaPercent } = getTotalBalance(walletsOverview);
   const wallets = walletsOverview?.wallets ?? EMPTY_WALLETS;
-  const recentArg = useCurrentMonthArg();
-  const recentQuery = useGetTransactionsQuery(recentArg);
-  const { openCreate, openDetails } = useTransactionFlow(
-    recentArg === skipToken ? null : { from: recentArg.from, to: recentArg.to },
-  );
+  const recentQuery = useGetRecentTransactionsQuery(useRecentArg());
+  // A record saved outside this month is unlikely to be among the latest few, so the confirmation offers to show it.
+  const { openCreate, openDetails } = useTransactionFlow(rangeSelection(getCurrentMonthRange()));
   const {
     isLoading: isLoadingTransactions,
     hasError: hasTransactionsError,
@@ -52,15 +50,6 @@ const HomeScreen = ({ navigation }: Props) => {
   } = getLoadState(recentQuery);
   // Balances and activity stay, but a refresh, e.g. after a saved change, could not bring them up to date.
   const refreshFailed = hasRecentRefreshError || getLoadState(walletsQuery).hasRefreshError;
-  // An empty month tells a first run from a quiet month only by the latest record of the whole history.
-  const spaceId = useAppSelector(selectCurrentSpaceId);
-  const latestQuery = useGetLatestTransactionQuery(recentQuery.currentData?.length === 0 ? spaceArg : skipToken);
-  // Only a month that loaded empty asks the history; a month still loading or failed has its own state.
-  const emptyState =
-    recentArg === skipToken || recentQuery.currentData?.length !== 0
-      ? 'trueEmpty'
-      : getEmptyPeriodState(latestQuery, { from: new Date(recentArg.from), to: new Date(recentArg.to) });
-  const latest = latestQuery.currentData;
   const { isHidden, toggle } = useBalanceVisibility();
 
   // A wallet the user swiped to opens the form on it; otherwise the form picks the last used one.
@@ -106,21 +95,12 @@ const HomeScreen = ({ navigation }: Props) => {
 
         <RecentActivity
           navigation={navigation}
-          transactions={recentQuery.currentData ?? EMPTY_TRANSACTIONS}
+          recent={recentQuery.currentData}
           currencyCode={currencyCode}
           hasWallets={wallets.length > 0}
           isLoading={isLoadingTransactions}
           hasError={hasTransactionsError}
           onRetry={recentQuery.refetch}
-          emptyState={emptyState}
-          latest={latest ?? null}
-          onRetryLatest={latestQuery.refetch}
-          onJumpToLatest={(transaction) =>
-            spaceId !== null &&
-            navigation.navigate(ScreenNames.TRANSACTIONS_TAB, {
-              reveal: { spaceId, transactionId: transaction.id, timestamp: transaction.timestamp },
-            })
-          }
           onPressTransaction={openDetails}
           onDeleteTransaction={requestDelete}
         />

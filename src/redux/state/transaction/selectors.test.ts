@@ -1,7 +1,7 @@
 import type { TransactionModel } from '@api/models';
 import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
 import type { TransactionFeedPage } from './api';
-import { getFeedView, getPeriodTotals } from './selectors';
+import { getFeedView } from './selectors';
 
 const row = (
   id: string,
@@ -25,24 +25,6 @@ const row = (
     color: AppColor.SLATE,
     isArchived: false,
   },
-});
-
-const rows = [
-  row('salary', TransactionType.INCOME, '100.00'),
-  row('start', TransactionType.INCOME, '500.00', TransactionKind.INITIAL_BALANCE),
-  row('lunch', TransactionType.EXPENSE, '12.50'),
-];
-
-describe('initial balances in totals', () => {
-  it('leaves them out of the period income', () => {
-    expect(getPeriodTotals(rows)).toEqual({ income: 100, expense: 12.5 });
-  });
-
-  it('adds amounts in exact cents', () => {
-    const cents = [row('a', TransactionType.EXPENSE, '0.10'), row('b', TransactionType.EXPENSE, '0.20')];
-
-    expect(getPeriodTotals(cents).expense).toBe(0.3);
-  });
 });
 
 describe('getFeedView', () => {

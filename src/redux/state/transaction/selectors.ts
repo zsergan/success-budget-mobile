@@ -1,24 +1,7 @@
 import type { Money } from '@api/dto';
 import type { TransactionFeedSummary, TransactionModel } from '@api/models';
-import { isInitialBalance } from '@api/models';
 import { getLoadState } from '@redux/api/loadState';
-import { TransactionType } from '@shared/enums';
-import { toCents } from '@shared/utils';
 import type { TransactionFeedPage } from './api';
-
-export const EMPTY_TRANSACTIONS: TransactionModel[] = [];
-
-const sumOf = (transactions: TransactionModel[], type: TransactionType) =>
-  transactions
-    .filter((transaction) => transaction.transactionType === type && !isInitialBalance(transaction))
-    .reduce((sum, transaction) => sum + toCents(transaction.amount), 0) / 100;
-
-// A space has exactly one currency, so every transaction in it is already in
-// that currency — no cross-currency filtering needed.
-export const getPeriodTotals = (transactions: TransactionModel[]) => ({
-  income: sumOf(transactions, TransactionType.INCOME),
-  expense: sumOf(transactions, TransactionType.EXPENSE),
-});
 
 // What an empty period says about the whole history: none at all, none in it, or not yet known.
 export type EmptyPeriodState = 'loading' | 'latestError' | 'trueEmpty' | 'filteredEmpty';

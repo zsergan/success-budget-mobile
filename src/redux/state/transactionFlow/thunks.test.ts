@@ -2,7 +2,8 @@ import { mapTransaction } from '@api/models';
 import { createAppStore } from '@redux/Store';
 import { withProfile } from '@redux/state/profile/fixtures';
 import { activateSpace } from '@redux/state/space/thunks';
-import { periodArg, transactionApi } from '@redux/state/transaction/api';
+import type { TransactionFeedPage, TransactionsFeedArg } from '@redux/state/transaction/api';
+import { feedSelection, periodArg, recentArg, transactionApi } from '@redux/state/transaction/api';
 import { transactionDto } from '@redux/state/transaction/fixtures';
 import { selectIsDeleting } from './selectors';
 import { deleteTransaction } from './thunks';
@@ -18,9 +19,21 @@ jest.mock('expo-secure-store');
 
 jest.useFakeTimers();
 
-const period = periodArg(1, { from: new Date(2026, 0, 1), to: new Date(2026, 1, 1) });
+const feedArg: TransactionsFeedArg = {
+  selection: feedSelection(periodArg(1, { from: new Date(2026, 0, 1), to: new Date(2026, 1, 1) })),
+  generation: 'g1',
+};
+const recent = recentArg(1);
 const lunch = mapTransaction(transactionDto({ id: 'tx-1' }));
 const taxi = mapTransaction(transactionDto({ id: 'tx-2' }));
+const page = (items = [lunch, taxi]): TransactionFeedPage => ({
+  items,
+  nextCursor: null,
+  previousCursor: null,
+  summary: { count: items.length, income: '0.00', expense: '0.00' },
+  dayTotals: [],
+  sequence: 1,
+});
 
 const setUp = () => {
   const store = createAppStore();
@@ -28,12 +41,22 @@ const setUp = () => {
 
   store.dispatch(activateSpace(1));
   store.dispatch(
-    transactionApi.util.upsertQueryEntries([{ endpointName: 'getTransactions', arg: period, value: [lunch, taxi] }]),
+    transactionApi.util.upsertQueryEntries([
+      { endpointName: 'getRecentTransactions', arg: recent, value: page() },
+      { endpointName: 'getTransactionsFeed', arg: feedArg, value: { pages: [page()], pageParams: [{}] } },
+    ]),
   );
-  // A screen still shows the list; its refetch after the delete never answers here.
-  store.dispatch(transactionApi.endpoints.getTransactions.initiate(period));
+  // Both screens still show their lists; their refetches after the delete never answer here.
+  store.dispatch(transactionApi.endpoints.getRecentTransactions.initiate(recent));
+  store.dispatch(transactionApi.endpoints.getTransactionsFeed.initiate(feedArg));
 
-  const rows = () => transactionApi.endpoints.getTransactions.select(period)(store.getState()).data;
+  const rows = () => {
+    const home = transactionApi.endpoints.getRecentTransactions.select(recent)(store.getState()).data?.items;
+    const history = transactionApi.endpoints.getTransactionsFeed.select(feedArg)(store.getState()).data?.pages[0].items;
+
+    expect(history).toEqual(home);
+    return home;
+  };
 
   return { store, rows };
 };

@@ -65,6 +65,10 @@ export interface TransactionsCountArg extends TransactionsArg {
   q?: string;
 }
 
+export interface RecentTransactionsArg extends SpaceArg {
+  timeZone: string;
+}
+
 export interface TransactionArg extends SpaceArg {
   transactionId: string;
 }
@@ -135,6 +139,12 @@ const feedParams = ({ selection, pageSize }: TransactionsFeedArg, { cursor, arou
   ...(aroundId && { around_id: aroundId }),
 });
 
+// Home's latest records: the whole range the server stores timestamps in, one short page and no more.
+export const WHOLE_HISTORY = { from: '1970-01-01T00:00:01Z', to: '2038-01-19T03:14:07Z' };
+export const RECENT_TRANSACTIONS_LIMIT = 5;
+
+export const recentArg = (spaceId: number): RecentTransactionsArg => ({ spaceId, timeZone: getDeviceTimeZone() });
+
 // Pages kept per feed entry; scrolling further drops the farthest page and reads it again by cursor on the way back.
 export const FEED_MAX_PAGES = 10;
 
@@ -166,9 +176,12 @@ const invalidatesTransactionWrite = (_result: unknown, error: unknown, { spaceId
 
 export const transactionApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-    getTransactions: build.query<TransactionModel[], TransactionsArg>({
-      query: (arg) => ({ url: `/spaces/${arg.spaceId}/transactions`, params: listParams(arg) }),
-      transformResponse: (response: Transaction[]) => response.map(mapTransaction),
+    getRecentTransactions: build.query<TransactionFeedPageModel, RecentTransactionsArg>({
+      query: ({ spaceId, timeZone }) => ({
+        url: `/spaces/${spaceId}/transactions/feed`,
+        params: { ...WHOLE_HISTORY, time_zone: timeZone, limit: RECENT_TRANSACTIONS_LIMIT },
+      }),
+      transformResponse: (response: TransactionFeedResponse) => mapTransactionFeed(response),
       providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions'),
     }),
     getTransactionsFeed: build.infiniteQuery<TransactionFeedPage, TransactionsFeedArg, FeedPageParam>({
@@ -248,7 +261,7 @@ export const transactionApi = baseApi.injectEndpoints({
 });
 
 export const {
-  useGetTransactionsQuery,
+  useGetRecentTransactionsQuery,
   useGetTransactionsFeedInfiniteQuery,
   useGetTransactionsCountQuery,
   useGetLatestTransactionQuery,

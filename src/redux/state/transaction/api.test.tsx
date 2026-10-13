@@ -45,7 +45,7 @@ const dto: Transaction = {
 };
 
 const {
-  getTransactions,
+  getRecentTransactions,
   getLatestTransaction,
   getTransaction,
   getTransactionOperation,
@@ -60,29 +60,36 @@ beforeEach(() => {
 });
 
 describe('transactionApi', () => {
-  it('sends the period as the ISO strings it was given and maps rows into models', async () => {
+  it("asks for Home's latest records over the whole stored history, five of them, in the device zone", async () => {
     const store = createAppStore();
-    const from = '2026-01-01T00:00:00.000Z';
-    const to = '2026-01-31T23:59:59.999Z';
 
-    const result = await store.dispatch(getTransactions.initiate({ spaceId: 3, from, to }));
+    mockedRequest.mockResolvedValue({ data: feedDto([dto]) });
+    const result = await store.dispatch(getRecentTransactions.initiate({ spaceId: 3, timeZone: 'Europe/Moscow' }));
 
     expect(mockedRequest).toHaveBeenCalledWith(
-      expect.objectContaining({ url: '/spaces/3/transactions', params: { from, to } }),
+      expect.objectContaining({
+        url: '/spaces/3/transactions/feed',
+        params: {
+          from: '1970-01-01T00:00:01Z',
+          to: '2038-01-19T03:14:07Z',
+          time_zone: 'Europe/Moscow',
+          limit: 5,
+        },
+      }),
     );
-    expect(result.data?.[0]).toMatchObject({ id: 'tx-1', wallet: { id: 1 }, category: { icon: 'grocery' } });
+    expect(result.data?.items[0]).toMatchObject({ id: 'tx-1', wallet: { id: 1 }, category: { icon: 'grocery' } });
   });
 
   it('maps the kind, the version and the compact category, and keeps a deleted wallet as null', async () => {
     const store = createAppStore();
 
     mockedRequest.mockResolvedValue({
-      data: [{ ...dto, kind: TransactionKind.INITIAL_BALANCE, version: 3, wallet: null }],
+      data: feedDto([{ ...dto, kind: TransactionKind.INITIAL_BALANCE, version: 3, wallet: null }]),
     });
 
-    const result = await store.dispatch(getTransactions.initiate({ spaceId: 3, from: 'a', to: 'b' }));
+    const result = await store.dispatch(getRecentTransactions.initiate({ spaceId: 3, timeZone: 'UTC' }));
 
-    expect(result.data?.[0]).toEqual({
+    expect(result.data?.items[0]).toEqual({
       id: 'tx-1',
       kind: TransactionKind.INITIAL_BALANCE,
       transactionType: TransactionType.EXPENSE,
@@ -102,43 +109,36 @@ describe('transactionApi', () => {
     });
   });
 
-  it('adds only the history filters it was given, under their API names', async () => {
+  it('sends the filters and the search to the feed and the count alike, under their API names', async () => {
     const store = createAppStore();
-    const from = '2026-08-31T21:00:00.000Z';
-    const to = '2026-09-30T09:15:42.123Z';
-
-    await store.dispatch(
-      getTransactions.initiate({ spaceId: 3, from, to, transactionType: TransactionType.EXPENSE, walletId: 4 }),
-    );
-
-    expect(mockedRequest).toHaveBeenCalledWith(
-      expect.objectContaining({ params: { from, to, transaction_type: TransactionType.EXPENSE, wallet_id: 4 } }),
-    );
-  });
-
-  it('sends the kind to the list and the count alike', async () => {
-    const store = createAppStore();
-    const arg = {
+    const filters = {
       spaceId: 3,
       from: '2026-08-31T21:00:00.000Z',
       to: '2026-09-30T09:15:42.123Z',
       transactionType: TransactionType.INCOME,
       kind: TransactionKind.REGULAR,
-      categoryId: 5,
+      walletId: 4,
     };
     const params = {
-      from: arg.from,
-      to: arg.to,
+      from: filters.from,
+      to: filters.to,
       transaction_type: TransactionType.INCOME,
       kind: TransactionKind.REGULAR,
-      category_id: 5,
+      wallet_id: 4,
+      q: 'salary',
     };
 
-    await store.dispatch(getTransactions.initiate(arg));
-    await store.dispatch(transactionApi.endpoints.getTransactionsCount.initiate(arg));
+    mockedRequest.mockResolvedValueOnce({ data: feedDto([]) }).mockResolvedValueOnce({ data: { count: 0 } });
+    await store.dispatch(
+      transactionApi.endpoints.getTransactionsFeed.initiate({
+        selection: feedSelection(filters, { q: 'salary', timeZone: 'UTC' }),
+        generation: 'g1',
+      }),
+    );
+    await store.dispatch(transactionApi.endpoints.getTransactionsCount.initiate({ ...filters, q: 'salary' }));
 
     expect(mockedRequest.mock.calls.map(([config]) => [config.url, config.params])).toEqual([
-      ['/spaces/3/transactions', params],
+      ['/spaces/3/transactions/feed', { ...params, time_zone: 'UTC' }],
       ['/spaces/3/transactions/count', params],
     ]);
   });
@@ -244,10 +244,9 @@ describe('transactionApi', () => {
   it('refetches only the space whose tag was invalidated', async () => {
     const store = createAppStore();
 
-    const period = { from: '2026-01-01T00:00:00.000Z', to: '2026-01-31T23:59:59.999Z' };
-
-    store.dispatch(getTransactions.initiate({ spaceId: 1, ...period }));
-    store.dispatch(getTransactions.initiate({ spaceId: 2, ...period }));
+    mockedRequest.mockResolvedValue({ data: feedDto([]) });
+    store.dispatch(getRecentTransactions.initiate({ spaceId: 1, timeZone: 'UTC' }));
+    store.dispatch(getRecentTransactions.initiate({ spaceId: 2, timeZone: 'UTC' }));
     await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
     mockedRequest.mockClear();
 
@@ -255,14 +254,14 @@ describe('transactionApi', () => {
     await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
 
     expect(mockedRequest).toHaveBeenCalledTimes(1);
-    expect(mockedRequest).toHaveBeenCalledWith(expect.objectContaining({ url: '/spaces/1/transactions' }));
+    expect(mockedRequest).toHaveBeenCalledWith(expect.objectContaining({ url: '/spaces/1/transactions/feed' }));
   });
 
   it('sends nothing while there is no space to ask about', () => {
     const store = createAppStore();
     const wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
 
-    const { result } = renderHook(() => transactionApi.useGetTransactionsQuery(skipToken), { wrapper });
+    const { result } = renderHook(() => transactionApi.useGetRecentTransactionsQuery(skipToken), { wrapper });
 
     expect(result.current.isUninitialized).toBe(true);
     expect(result.current.isError).toBe(false);

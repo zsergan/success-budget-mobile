@@ -5,12 +5,12 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import type { Category, LimitView, Space, Transaction, WalletWithBalance } from '@api/dto';
 import useLoadInitData from '@hooks/useLoadInitData';
 import { getLoadState } from '@redux/api/loadState';
-import { useAppSelector, useCurrentMonthArg, useSpaceArg } from '@redux/hooks';
+import { useAppSelector, useRecentArg, useSpaceArg } from '@redux/hooks';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { useGetCategoriesQuery, categoryApi } from '@redux/state/category/api';
 import { useGetLimitsQuery, limitApi } from '@redux/state/limit/api';
 import { activateSpace } from '@redux/state/space/thunks';
-import { transactionApi, useGetTransactionsQuery } from '@redux/state/transaction/api';
+import { transactionApi, useGetRecentTransactionsQuery } from '@redux/state/transaction/api';
 import { useGetWalletsQuery, walletApi } from '@redux/state/wallet/api';
 import { createAppStore } from '@redux/Store';
 import useTransactionsData from '@screens/Transactions/hooks/useTransactionsData';
@@ -32,7 +32,7 @@ interface RequestConfig {
   url: string;
   method?: string;
   data?: Record<string, unknown>;
-  params?: { from: string; to: string };
+  params?: { from: string; to: string; limit?: number };
 }
 
 interface SpaceDb {
@@ -95,7 +95,7 @@ const createBackend = () => {
     };
   };
 
-  const handle = ({ url, method = 'GET', data }: RequestConfig): unknown => {
+  const handle = ({ url, method = 'GET', data, params }: RequestConfig): unknown => {
     if (url === '/spaces') return [space(1), space(2)];
     if (url === '/users/profile') return { id: 1, email: 'me@example.com', name: 'Me' };
 
@@ -156,7 +156,10 @@ const createBackend = () => {
       return last ? toRow(spaceDb, last) : null;
     }
     if (resource === 'transactions' && rawId === 'feed') {
-      const items = spaceDb.transactions.map((row) => toRow(spaceDb, row)).reverse();
+      const items = spaceDb.transactions
+        .map((row) => toRow(spaceDb, row))
+        .reverse()
+        .slice(0, Number(params?.limit ?? 50));
 
       return {
         items,
@@ -214,7 +217,7 @@ const useMountedScreens = () => {
 
   return {
     gate: useLoadInitData({ isSignedIn }),
-    home: useGetTransactionsQuery(useCurrentMonthArg()),
+    home: useGetRecentTransactionsQuery(useRecentArg()),
     history: useTransactionsData({ range: getCurrentMonthRange(), filter: null }),
     wallets: useGetWalletsQuery(spaceArg),
     categories: useGetCategoriesQuery(spaceArg),
@@ -293,7 +296,7 @@ describe('server data scenarios', () => {
     unmount();
   });
 
-  it('shows a saved transaction on Home and History with one request each', async () => {
+  it('shows a saved transaction on Home and History, with one request for the records Home and the gate share', async () => {
     const { store, result, unmount } = await renderApp();
 
     mockedRequest.mockClear();
@@ -314,13 +317,13 @@ describe('server data scenarios', () => {
     });
     await settle(store);
 
-    const listRequests = getRequests().filter((request) => /^\/spaces\/1\/transactions(\/feed)?\?/.test(request));
+    const feedRequests = getRequests()
+      .filter((request) => request.startsWith('/spaces/1/transactions/feed?'))
+      .map((request) => request.split('?')[1].slice(0, 7))
+      .sort();
 
-    expect(listRequests).toEqual([
-      expect.stringMatching(/^\/spaces\/1\/transactions\?/),
-      expect.stringMatching(/^\/spaces\/1\/transactions\/feed\?/),
-    ]);
-    expect(result.current.home.currentData?.map(({ id }) => id)).toEqual(['tx-1']);
+    expect(feedRequests).toEqual(['1970-01', '2026-01']);
+    expect(result.current.home.currentData?.items.map(({ id }) => id)).toEqual(['tx-1']);
     expect(result.current.history.transactions.map(({ id }) => id)).toEqual(['tx-1']);
 
     unmount();

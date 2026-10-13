@@ -6,6 +6,7 @@ import type { Space } from '@api/dto';
 import { useAppSelector } from '@redux/hooks';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { activateSpace } from '@redux/state/space/thunks';
+import { feedDto } from '@redux/state/transaction/fixtures';
 import { createAppStore } from '@redux/Store';
 import { SpaceType } from '@shared/enums';
 import useLoadInitData from './useLoadInitData';
@@ -38,6 +39,7 @@ const respond = (url: string) => {
     return { data: { wallets: [], total_balance: 0, total_balance_currency: 'USD', delta_percent: 0 } };
   if (url.endsWith('/categories')) return { data: { incomes: [], expenses: [], archived: [] } };
   if (url.endsWith('/limits')) return { data: { total: null, categories: [], over_allocation: null } };
+  if (url.endsWith('/transactions/feed')) return { data: feedDto([]) };
 
   return { data: [] };
 };
