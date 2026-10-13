@@ -21,7 +21,7 @@ export interface TransactionCategory {
   updated_at: string;
 }
 
-// One shape for the list, latest, details and every write result; `wallet_id`/`category_id` are not in it.
+// One shape for the feed, latest, details and every write result; `wallet_id`/`category_id` are not in it.
 export interface Transaction {
   id: string;
   kind: TransactionKind;
@@ -34,7 +34,7 @@ export interface Transaction {
   category: TransactionCategory;
 }
 
-// The number of rows the list returns for the same query, initial balances included.
+// The feed's `summary.count` for the same period, query and filters, initial balances included.
 export interface TransactionsCountResponse {
   count: number;
 }

@@ -26,13 +26,13 @@ describe('httpBaseQuery', () => {
     mockedRequest.mockResolvedValue({ data: { ok: true } });
 
     const result = await httpBaseQuery(
-      { url: '/spaces/1/transactions', params: { from: '2026-01-01T00:00:00.000Z' } },
+      { url: '/spaces/1/transactions/feed', params: { from: '2026-01-01T00:00:00.000Z' } },
       api,
       {},
     );
 
     expect(mockedRequest).toHaveBeenCalledWith({
-      url: '/spaces/1/transactions',
+      url: '/spaces/1/transactions/feed',
       method: 'GET',
       data: undefined,
       params: { from: '2026-01-01T00:00:00.000Z' },
