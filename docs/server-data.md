@@ -47,11 +47,18 @@ Every resource except Profile and Currencies is scoped to the active space.
 | `History.Range`  | `GET /spaces/:id/transactions?from&to`                     | `transaction.rangeTransactions` | Same row shape, for the period picked on the Transactions tab; period totals are derived from it client-side                                                                |
 | `History.Latest` | `GET /spaces/:id/transactions/latest`                      | `transaction.latest`            | Single most recent row (or `null`); tells "no transactions at all" apart from "none in this period"                                                                         |
 | `History.Count`  | `GET /spaces/:id/transactions/count?from&to`               | — (RTK Query only)              | Number of rows `History.Range` would return, initial balances included; the period picker's counter                                                                         |
+| `History.Feed`   | `GET /spaces/:id/transactions/feed?from&to&time_zone[&q]`  | — (RTK Query only)              | Cursor pages of rows (same row shape) with the selection's `summary` and each listed day's `net`; one entry per selection and load generation                               |
 | `Members`        | `GET /spaces/:id/members`                                  | `member.members`                | Member rows and pending invite rows                                                                                                                                         |
 | `Statistics`     | `GET /spaces/:id/statistics/{summary,trend,breakdown}`     | — (RTK Query only)              | Every transaction sum and count; category and wallet names, colors, archived and deleted state                                                                              |
 
 "History" below means all of `History.Recent`, `History.Range`,
-`History.Latest` and `History.Count`.
+`History.Latest`, `History.Count` and `History.Feed`.
+
+`History.Feed` is an infinite query (`getTransactionsFeed`), read through
+`useTransactionsFeed`. A tag invalidation refetches every loaded page of
+the entry from its first one; a pull-to-refresh, a rejected cursor or an
+`around_id` outside the selection starts a new generation, a separate
+entry, so a page still loading for the old one cannot land on screen.
 
 ## Invalidation rules
 
