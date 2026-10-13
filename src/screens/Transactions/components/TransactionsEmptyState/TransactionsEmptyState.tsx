@@ -18,8 +18,13 @@ type Props =
       onJumpToLatest: () => void;
     }
   | { variant: 'noMatches'; onClearFilter: () => void }
+  | { variant: 'noSearchMatches'; query: string; activeRange: DateRange; onClearSearch: () => void }
   | { variant: 'rangeError'; onRetry: () => void }
   | { variant: 'latestError'; onRetry: () => void };
+
+// The full text stays in the field; the message only quotes the start of a long one.
+const QUOTE_LENGTH = 40;
+const quote = (text: string) => (text.length > QUOTE_LENGTH ? `${text.slice(0, QUOTE_LENGTH - 1)}…` : text);
 
 const jumpLabel = (latest: TransactionModel) => `Jump to ${formatDateDDMMYYYY(latest.timestamp)}`;
 
@@ -62,6 +67,17 @@ const TransactionsEmptyState = (props: Props) => (
         description="These transactions may have been deleted or changed since."
         actionLabel="Clear filter"
         onActionPress={props.onClearFilter}
+      />
+    )}
+
+    {props.variant === 'noSearchMatches' && (
+      <EmptyState
+        variant="solid"
+        icon="search"
+        title={`No matches for “${quote(props.query)}”`}
+        description={`Nothing in descriptions, categories or wallet names between ${formatRangeLabel(props.activeRange)}. You can change the period above.`}
+        actionLabel="Clear search"
+        onActionPress={props.onClearSearch}
       />
     )}
 

@@ -3,8 +3,10 @@ import { TransactionKind } from '@shared/enums';
 import type { IconType } from '@shared/types';
 import type {
   CreateTransactionResponse,
+  Money,
   Transaction,
   TransactionCategory,
+  TransactionFeedResponse,
   UpdateTransactionResponse,
   Wallet,
   WalletWithBalance,
@@ -45,6 +47,20 @@ export interface UpdateTransactionResult {
   wallets: { id: number; balance: number; isDeleted: boolean }[];
 }
 
+export interface TransactionFeedSummary {
+  count: number;
+  income: Money;
+  expense: Money;
+}
+
+export interface TransactionFeedPageModel {
+  items: TransactionModel[];
+  nextCursor: string | null;
+  previousCursor: string | null;
+  summary: TransactionFeedSummary;
+  dayTotals: { date: string; net: Money }[];
+}
+
 export const mapTransactionCategory = (dto: TransactionCategory): TransactionCategoryModel => ({
   id: dto.id,
   name: dto.name,
@@ -64,6 +80,14 @@ export const mapTransaction = (dto: Transaction): TransactionModel => ({
   version: dto.version,
   wallet: dto.wallet && { id: dto.wallet.id, wallet_name: dto.wallet.wallet_name, design: dto.wallet.design },
   category: mapTransactionCategory(dto.category),
+});
+
+export const mapTransactionFeed = (dto: TransactionFeedResponse): TransactionFeedPageModel => ({
+  items: dto.items.map(mapTransaction),
+  nextCursor: dto.page_info.next_cursor,
+  previousCursor: dto.page_info.previous_cursor,
+  summary: dto.summary,
+  dayTotals: dto.day_totals,
 });
 
 export const mapCreateTransactionResponse = (dto: CreateTransactionResponse): CreateTransactionResult => ({

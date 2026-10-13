@@ -5,20 +5,39 @@ export const formatNumber = (num: number | string) => Number(num).toLocaleString
 export const formatCurrencyAmount = (amount: number | string, currencyCode?: string) =>
   currencyCode ? `${formatNumber(amount)} ${currencyCode}` : formatNumber(amount);
 
+const MONEY_TEXT = /^(-?)(\d+)(?:\.(\d{1,2}))?$/;
+
+// Grouped as text rather than through Number, so a server total past Number's precision keeps its cents.
+const splitMoney = (amount: number | string) => {
+  const match = MONEY_TEXT.exec(typeof amount === 'number' ? amount.toFixed(2) : amount.trim());
+  if (!match) return null;
+
+  const [, minus, whole, fraction = ''] = match;
+  const cents = fraction.padEnd(2, '0');
+  const units = whole.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const sign = /[1-9]/.test(whole + cents) ? (minus ? -1 : 1) : 0;
+
+  return { sign, digits: `${units}.${cents}` };
+};
+
+const withCurrency = (text: string, currencyCode?: string) => (currencyCode ? `${text} ${currencyCode}` : text);
+
 // History money: always two decimal places.
 export const formatMoneyAmount = (amount: number | string, currencyCode?: string) => {
-  const text = Number(amount)
-    .toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    .replace(/,/g, ' ');
+  const money = splitMoney(amount);
+  if (!money) return withCurrency(String(amount), currencyCode);
 
-  return currencyCode ? `${text} ${currencyCode}` : text;
+  return withCurrency(`${money.sign < 0 ? '-' : ''}${money.digits}`, currencyCode);
 };
 
 // A total that nets out either way; zero takes no sign.
-export const formatSignedAmount = (amount: number, currencyCode?: string) => {
-  const sign = amount > 0 ? '+' : amount < 0 ? '-' : '';
+export const formatSignedAmount = (amount: number | string, currencyCode?: string) => {
+  const money = splitMoney(amount);
+  if (!money) return withCurrency(String(amount), currencyCode);
 
-  return `${sign}${formatMoneyAmount(Math.abs(amount), currencyCode)}`;
+  const sign = money.sign > 0 ? '+' : money.sign < 0 ? '-' : '';
+
+  return withCurrency(`${sign}${money.digits}`, currencyCode);
 };
 
 export const hexToRgba = (hex: string, alpha: number) => {

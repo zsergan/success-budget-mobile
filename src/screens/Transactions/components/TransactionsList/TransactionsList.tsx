@@ -1,19 +1,21 @@
 import type { ReactElement } from 'react';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { ViewToken } from 'react-native';
-import { SectionList, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, SectionList, Text, TouchableOpacity, View } from 'react-native';
 
+import type { Money } from '@api/dto';
 import { TransactionCard, useScreenTopInset } from '@components';
 import type { TransactionModel } from '@api/models';
-import type { TransactionGroup } from '@shared/utils';
-import { formatSignedAmount } from '@shared/utils';
+import { colors } from '@shared/theme';
+import type { DayGroup } from '@shared/utils';
+import { formatSignedAmount, toCents } from '@shared/utils';
 
 import styles from './style';
 
 interface Section {
   key: string;
   title: string;
-  total: number;
+  total: Money | null;
   /** The first header sits right under the filter bar and takes a smaller gap above it. */
   isFirst: boolean;
   data: TransactionModel[];
@@ -21,8 +23,12 @@ interface Section {
 
 const ItemSeparator = () => <View style={styles.itemSeparator} />;
 
+type Group = DayGroup & { total: Money | null };
+
 interface Props {
-  groups: TransactionGroup[];
+  groups: Group[];
+  // Which history is listed; a new one starts at the top.
+  selectionKey: string;
   currencyCode?: string;
   header: ReactElement;
   // Shown in place of the groups while there are none (loading, empty or error states).
@@ -33,26 +39,66 @@ interface Props {
   highlightId?: string | null;
   // Called once the highlighted row is actually on screen.
   onHighlightSeen?: () => void;
+  // A row to bring back to the top of the list, unlit, once it is listed.
+  restoreId?: string | null;
+  // Called once that row is in place, so the caller can drop it and it is never scrolled to again.
+  onRestored?: () => void;
+  // The rows on screen, top first, whenever they change.
+  onVisibleRowsChange?: (ids: string[]) => void;
+  older?: PageEdge;
+  newer?: PageEdge;
+  onRetryPage?: () => void;
 }
+
+interface PageEdge {
+  hasMore: boolean;
+  isLoading: boolean;
+  hasError: boolean;
+  // Called whenever this edge comes near; the caller decides whether a page is due.
+  onReached: () => void;
+}
+
+// About half to one screen before an edge, so the next page is usually there before the user is.
+const EDGE_THRESHOLD = 0.75;
+
+const PageStatus = ({ edge, onRetry }: { edge?: PageEdge; onRetry?: () => void }) => {
+  if (edge?.hasError)
+    return (
+      <View style={styles.pageStatus}>
+        <Text style={styles.pageError}>Couldn’t load more</Text>
+        <TouchableOpacity onPress={onRetry} hitSlop={12} accessibilityRole="button">
+          <Text style={styles.pageRetry}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+
+  return edge?.isLoading ? (
+    <ActivityIndicator style={styles.pageStatus} color={colors.accent} testID="history-loading-page" />
+  ) : null;
+};
 
 const VIEWABILITY = { itemVisiblePercentThreshold: 60 };
 
+interface ScrollTarget {
+  id: string;
+  viewPosition: number;
+  viewOffset: number;
+}
+
 // Whether the row is in the list to scroll to.
-const scrollToRow = (
-  list: SectionList<TransactionModel, Section> | null,
-  groups: TransactionGroup[],
-  rowId: string,
-) => {
-  const sectionIndex = groups.findIndex((group) => group.items.some(({ id }) => id === rowId));
+const scrollToRow = (list: SectionList<TransactionModel, Section> | null, groups: Group[], target: ScrollTarget) => {
+  const sectionIndex = groups.findIndex((group) => group.items.some(({ id }) => id === target.id));
   if (sectionIndex < 0) return false;
 
-  const itemIndex = groups[sectionIndex].items.findIndex(({ id }) => id === rowId);
-  list?.scrollToLocation({ sectionIndex, itemIndex, viewPosition: 0.4 });
+  // SectionList counts the section's header as its item 0.
+  const itemIndex = groups[sectionIndex].items.findIndex(({ id }) => id === target.id) + 1;
+  list?.scrollToLocation({ sectionIndex, itemIndex, viewPosition: target.viewPosition, viewOffset: target.viewOffset });
   return true;
 };
 
 const TransactionsList = ({
   groups,
+  selectionKey,
   currencyCode,
   header,
   placeholder,
@@ -60,6 +106,12 @@ const TransactionsList = ({
   onDeleteTransaction,
   highlightId = null,
   onHighlightSeen,
+  restoreId = null,
+  onRestored,
+  onVisibleRowsChange,
+  older,
+  newer,
+  onRetryPage,
 }: Props) => {
   const topInset = useScreenTopInset();
   const listRef = useRef<SectionList<TransactionModel, Section>>(null);
@@ -67,7 +119,9 @@ const TransactionsList = ({
   // A scroll that had to land near the row, not on it, is repeated once the row is rendered and measured.
   const awaitsExactRef = useRef(false);
   const visibleIdsRef = useRef<string[]>([]);
-  const seenRef = useRef<{ id: string | null; onSeen?: () => void }>({ id: null });
+  const seenRef = useRef<{ id: string | null; onSeen?: () => void; onVisibleRows?: (ids: string[]) => void }>({
+    id: null,
+  });
   const sections: Section[] = groups.map((group, index) => ({
     key: group.key,
     title: group.label,
@@ -76,35 +130,61 @@ const TransactionsList = ({
     data: group.items,
   }));
 
+  // A lit row is brought to the middle; a restored one to the top, just below the status bar.
+  const targetId = highlightId ?? restoreId;
+  const target = useMemo<ScrollTarget | null>(
+    () =>
+      highlightId
+        ? { id: highlightId, viewPosition: 0.4, viewOffset: 0 }
+        : restoreId
+          ? { id: restoreId, viewPosition: 0, viewOffset: topInset }
+          : null,
+    [highlightId, restoreId, topInset],
+  );
+
+  const shownKeyRef = useRef(selectionKey);
   useEffect(() => {
-    if (!highlightId) {
+    if (shownKeyRef.current === selectionKey) return;
+
+    shownKeyRef.current = selectionKey;
+    listRef.current?.getScrollResponder()?.scrollTo({ y: 0, animated: false });
+  }, [selectionKey]);
+
+  useEffect(() => {
+    if (!target) {
       scrolledToRef.current = null;
       awaitsExactRef.current = false;
       return;
     }
-    if (scrolledToRef.current === highlightId) return;
+    if (scrolledToRef.current === target.id) return;
 
-    if (scrollToRow(listRef.current, groups, highlightId)) scrolledToRef.current = highlightId;
-  }, [groups, highlightId]);
+    if (scrollToRow(listRef.current, groups, target)) {
+      scrolledToRef.current = target.id;
+      // A row not measured yet is landed on in onRowLayout; only then is the restore done.
+      if (!awaitsExactRef.current && target.id === restoreId) onRestored?.();
+    }
+  }, [groups, target, restoreId, onRestored]);
 
   const onRowLayout = () => {
     if (!awaitsExactRef.current) return;
 
     awaitsExactRef.current = false;
-    if (highlightId) scrollToRow(listRef.current, groups, highlightId);
+    if (target) scrollToRow(listRef.current, groups, target);
+    if (target?.id === restoreId) onRestored?.();
   };
 
   // A row already on screen when it is picked counts as seen at once.
   useEffect(() => {
-    seenRef.current = { id: highlightId, onSeen: onHighlightSeen };
+    seenRef.current = { id: highlightId, onSeen: onHighlightSeen, onVisibleRows: onVisibleRowsChange };
     if (highlightId && visibleIdsRef.current.includes(highlightId)) onHighlightSeen?.();
-  }, [highlightId, onHighlightSeen]);
+  }, [highlightId, onHighlightSeen, onVisibleRowsChange]);
 
   // The list refuses a new handler once mounted, so it reads the current row from a ref.
   const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: ViewToken<TransactionModel>[] }) => {
-    const { id, onSeen } = seenRef.current;
+    const { id, onSeen, onVisibleRows } = seenRef.current;
 
     visibleIdsRef.current = viewableItems.flatMap(({ item, isViewable }) => (isViewable && item ? [item.id] : []));
+    onVisibleRows?.(visibleIdsRef.current);
     if (id && visibleIdsRef.current.includes(id)) onSeen?.();
   }, []);
 
@@ -117,9 +197,35 @@ const TransactionsList = ({
       keyExtractor={(item) => item.id}
       stickySectionHeadersEnabled={false}
       showsVerticalScrollIndicator={false}
+      // Scrolling the results puts the keyboard away; a tap on a row still opens it at once.
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled"
       ItemSeparatorComponent={ItemSeparator}
-      ListHeaderComponent={header}
+      ListHeaderComponent={
+        <>
+          {header}
+          <PageStatus edge={newer} onRetry={onRetryPage} />
+        </>
+      }
       ListEmptyComponent={placeholder}
+      ListFooterComponent={<PageStatus edge={older} onRetry={onRetryPage} />}
+      onEndReached={sections.length > 0 ? older?.onReached : undefined}
+      onEndReachedThreshold={EDGE_THRESHOLD}
+      onStartReached={sections.length > 0 ? newer?.onReached : undefined}
+      onStartReachedThreshold={EDGE_THRESHOLD}
+      // While newer pages remain, rows added or dropped above keep the visible row in place; a dropped page lies
+      // within the default 21-screen render window, so that row stays mounted.
+      maintainVisibleContentPosition={newer?.hasMore ? { minIndexForVisible: 1 } : undefined}
+      // Natively it stays on, as switching it on reuses a stale anchor. At the newest record it holds the header
+      // (child 0), so what loads or changes height under it never moves the screen, and a new row shows up at the top.
+      renderScrollComponent={(props) => (
+        <ScrollView
+          {...props}
+          maintainVisibleContentPosition={{
+            minIndexForVisible: props.maintainVisibleContentPosition?.minIndexForVisible ?? 0,
+          }}
+        />
+      )}
       // Rows far below are not measured yet: scroll near the row, then onto it once it renders.
       onScrollToIndexFailed={({ averageItemLength, index }) => {
         awaitsExactRef.current = true;
@@ -131,9 +237,11 @@ const TransactionsList = ({
         <View style={[styles.groupHeader, section.isFirst ? styles.groupHeaderFirst : styles.groupHeaderSpaced]}>
           <Text style={styles.groupLabel}>{section.title}</Text>
 
-          <Text style={[styles.groupTotal, section.total > 0 && styles.groupTotalPositive]}>
-            {formatSignedAmount(section.total, currencyCode)}
-          </Text>
+          {section.total !== null && (
+            <Text style={[styles.groupTotal, toCents(section.total) > 0 && styles.groupTotalPositive]}>
+              {formatSignedAmount(section.total, currencyCode)}
+            </Text>
+          )}
         </View>
       )}
       renderItem={({ item }) => {
@@ -147,7 +255,7 @@ const TransactionsList = ({
           />
         );
 
-        return item.id === highlightId ? <View onLayout={onRowLayout}>{card}</View> : card;
+        return item.id === targetId ? <View onLayout={onRowLayout}>{card}</View> : card;
       }}
     />
   );

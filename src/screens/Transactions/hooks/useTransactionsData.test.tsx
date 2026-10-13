@@ -2,9 +2,10 @@ import type { ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
-import type { Transaction } from '@api/dto';
+import type { Transaction, TransactionFeedResponse } from '@api/dto';
 import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { activateSpace } from '@redux/state/space/thunks';
+import { feedDto } from '@redux/state/transaction/fixtures';
 import { createAppStore } from '@redux/Store';
 import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
 import type { HistoryFilter } from '@shared/types';
@@ -23,7 +24,7 @@ jest.useFakeTimers();
 
 interface RequestConfig {
   url: string;
-  params?: { from?: string; to?: string; transaction_type?: string; category_id?: number };
+  params?: { from?: string; to?: string; transaction_type?: string; category_id?: number; cursor?: string };
 }
 
 type Responder = (config: RequestConfig) => Promise<unknown>;
@@ -32,7 +33,8 @@ let respondRange: Responder;
 let respondLatest: Responder;
 
 const serverError = () => Promise.reject({ response: { data: { statusCode: 500, message: 'boom' } } });
-const rows = (...ids: string[]) => Promise.resolve({ data: ids.map((id) => ({ ...dto, id })) });
+const rows = (...ids: string[]) => Promise.resolve({ data: feedDto(ids.map((id) => ({ ...dto, id }))) });
+const feed = (data: TransactionFeedResponse) => Promise.resolve({ data });
 
 const STAMPS = { created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-01T00:00:00.000Z' };
 
@@ -75,8 +77,9 @@ const renderForSpace = (spaceId: number, range = january) => {
   return { store, ...rendered };
 };
 
-const latestCalls = () =>
-  mockedRequest.mock.calls.filter(([config]: [RequestConfig]) => config.url.endsWith('/latest')).length;
+const callsTo = (suffix: string) =>
+  mockedRequest.mock.calls.filter(([config]: [RequestConfig]) => config.url.endsWith(suffix)).length;
+const latestCalls = () => callsTo('/latest');
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -166,6 +169,7 @@ describe('a Stats filter', () => {
       transaction_type: TransactionType.EXPENSE,
       kind: TransactionKind.REGULAR,
       category_id: 1,
+      time_zone: expect.any(String),
     });
 
     unmount();
@@ -220,20 +224,20 @@ describe('switching arguments', () => {
 });
 
 describe('invalidation', () => {
-  it('refetches the period and latest when history is invalidated for this space, keeping rows meanwhile', async () => {
+  it('refetches the period when history is invalidated for this space, keeping rows meanwhile', async () => {
     respondRange = () => rows('tx-1');
 
     const { store, result, unmount } = renderForSpace(1);
 
     await waitFor(() => expect(result.current.viewState).toBe('ready'));
-    const latestBefore = latestCalls();
+    const feedBefore = callsTo('/feed');
 
     act(() => {
       store.dispatch(baseApi.util.invalidateTags(spaceTags(1, 'Transactions')));
     });
 
     expect(result.current.viewState).toBe('ready');
-    await waitFor(() => expect(latestCalls()).toBe(latestBefore + 1));
+    await waitFor(() => expect(callsTo('/feed')).toBe(feedBefore + 1));
 
     unmount();
   });
@@ -262,6 +266,78 @@ describe('deleting the last record of a period', () => {
 
     await act(async () => resolveLatest({ data: null }));
     await waitFor(() => expect(result.current.viewState).toBe('trueEmpty'));
+
+    unmount();
+  });
+});
+
+describe('a period larger than one page', () => {
+  const at = (id: string, day: number, hour: number) =>
+    ({ ...dto, id, timestamp: new Date(2026, 0, day, hour).toISOString() }) as Transaction;
+  const key = (day: number) => `2026-01-${String(day).padStart(2, '0')}`;
+  const summary = { count: 4, income: '98765432109876543.21', expense: '1184.45' };
+
+  it('shows the server totals and asks for latest only when the period is empty', async () => {
+    respondRange = () =>
+      feed(
+        feedDto([at('a', 6, 12)], {
+          summary,
+          day_totals: [{ date: key(6), net: '-31.50' }],
+          page_info: { next_cursor: 'c1', previous_cursor: null },
+        }),
+      );
+
+    const { result, unmount } = renderForSpace(1);
+    await waitFor(() => expect(result.current.viewState).toBe('ready'));
+
+    expect(result.current.income).toBe('98765432109876543.21');
+    expect(result.current.expense).toBe('1184.45');
+    expect(result.current.sections.map(({ key: day, total }) => [day, total])).toEqual([[key(6), '-31.50']]);
+    expect(result.current.hasNextPage).toBe(true);
+    expect(latestCalls()).toBe(0);
+
+    unmount();
+  });
+
+  it('keeps a day split between two pages in one section with the total both pages agree on', async () => {
+    respondRange = (config) =>
+      config.params?.cursor
+        ? feed(
+            feedDto([at('c', 6, 9), at('d', 5, 9)], {
+              summary,
+              day_totals: [
+                { date: key(6), net: '-40.00' },
+                { date: key(5), net: '0.00' },
+              ],
+            }),
+          )
+        : feed(
+            feedDto([at('a', 7, 9), at('b', 6, 18)], {
+              summary,
+              day_totals: [
+                { date: key(7), net: '12.00' },
+                { date: key(6), net: '-40.00' },
+              ],
+              page_info: { next_cursor: 'c1', previous_cursor: null },
+            }),
+          );
+
+    const { result, unmount } = renderForSpace(1);
+    await waitFor(() => expect(result.current.viewState).toBe('ready'));
+    const firstSixth = result.current.sections[1].total;
+
+    act(() => result.current.loadNextPage());
+    await waitFor(() => expect(result.current.transactions).toHaveLength(4));
+
+    expect(firstSixth).toBe('-40.00');
+    expect(
+      result.current.sections.map(({ key: day, total, items }) => [day, total, items.map(({ id }) => id)]),
+    ).toEqual([
+      [key(7), '12.00', ['a']],
+      [key(6), '-40.00', ['b', 'c']],
+      [key(5), '0.00', ['d']],
+    ]);
+    expect(result.current.hasNextPage).toBe(false);
 
     unmount();
   });

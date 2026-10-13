@@ -5,12 +5,12 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import type { Category, LimitView, Space, Transaction, WalletWithBalance } from '@api/dto';
 import useLoadInitData from '@hooks/useLoadInitData';
 import { getLoadState } from '@redux/api/loadState';
-import { useAppSelector, useCurrentMonthArg, useSpaceArg } from '@redux/hooks';
+import { useAppSelector, useRecentArg, useSpaceArg } from '@redux/hooks';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { useGetCategoriesQuery, categoryApi } from '@redux/state/category/api';
 import { useGetLimitsQuery, limitApi } from '@redux/state/limit/api';
-import { activateSpace } from '@redux/state/space/thunks';
-import { transactionApi, useGetTransactionsQuery } from '@redux/state/transaction/api';
+import { activateSpace, refreshSpaceData } from '@redux/state/space/thunks';
+import { transactionApi, useGetRecentTransactionsQuery } from '@redux/state/transaction/api';
 import { useGetWalletsQuery, walletApi } from '@redux/state/wallet/api';
 import { createAppStore } from '@redux/Store';
 import useTransactionsData from '@screens/Transactions/hooks/useTransactionsData';
@@ -32,7 +32,7 @@ interface RequestConfig {
   url: string;
   method?: string;
   data?: Record<string, unknown>;
-  params?: { from: string; to: string };
+  params?: { from: string; to: string; limit?: number };
 }
 
 interface SpaceDb {
@@ -95,7 +95,7 @@ const createBackend = () => {
     };
   };
 
-  const handle = ({ url, method = 'GET', data }: RequestConfig): unknown => {
+  const handle = ({ url, method = 'GET', data, params }: RequestConfig): unknown => {
     if (url === '/spaces') return [space(1), space(2)];
     if (url === '/users/profile') return { id: 1, email: 'me@example.com', name: 'Me' };
 
@@ -155,6 +155,19 @@ const createBackend = () => {
 
       return last ? toRow(spaceDb, last) : null;
     }
+    if (resource === 'transactions' && rawId === 'feed') {
+      const items = spaceDb.transactions
+        .map((row) => toRow(spaceDb, row))
+        .reverse()
+        .slice(0, Number(params?.limit ?? 50));
+
+      return {
+        items,
+        page_info: { next_cursor: null, previous_cursor: null },
+        summary: { count: items.length, income: '0.00', expense: '0.00' },
+        day_totals: [],
+      };
+    }
     if (resource === 'transactions' && method === 'GET') return spaceDb.transactions.map((row) => toRow(spaceDb, row));
     if (resource === 'transactions' && method === 'POST') {
       const row = {
@@ -204,7 +217,7 @@ const useMountedScreens = () => {
 
   return {
     gate: useLoadInitData({ isSignedIn }),
-    home: useGetTransactionsQuery(useCurrentMonthArg()),
+    home: useGetRecentTransactionsQuery(useRecentArg()),
     history: useTransactionsData({ range: getCurrentMonthRange(), filter: null }),
     wallets: useGetWalletsQuery(spaceArg),
     categories: useGetCategoriesQuery(spaceArg),
@@ -283,7 +296,7 @@ describe('server data scenarios', () => {
     unmount();
   });
 
-  it('shows a saved transaction on Home and History with one request for the shared period', async () => {
+  it('shows a saved transaction on Home and History, with one request for the records Home and the gate share', async () => {
     const { store, result, unmount } = await renderApp();
 
     mockedRequest.mockClear();
@@ -304,10 +317,13 @@ describe('server data scenarios', () => {
     });
     await settle(store);
 
-    const historyRequests = getRequests().filter((request) => request.startsWith('/spaces/1/transactions?'));
+    const feedRequests = getRequests()
+      .filter((request) => request.startsWith('/spaces/1/transactions/feed?'))
+      .map((request) => request.split('?')[1].slice(0, 7))
+      .sort();
 
-    expect(historyRequests).toHaveLength(1);
-    expect(result.current.home.currentData?.map(({ id }) => id)).toEqual(['tx-1']);
+    expect(feedRequests).toEqual(['1970-01', '2026-01']);
+    expect(result.current.home.currentData?.items.map(({ id }) => id)).toEqual(['tx-1']);
     expect(result.current.history.transactions.map(({ id }) => id)).toEqual(['tx-1']);
 
     unmount();
@@ -405,6 +421,116 @@ describe('server data scenarios', () => {
     await settle(store);
 
     expect(result.current.wallets.currentData?.wallets[0].wallet.wallet_name).toBe('New session');
+
+    unmount();
+  });
+
+  it('never lets a history page asked for before logout reach the next session', async () => {
+    const { store, result, unmount } = await renderApp();
+    let releaseOld: (() => void) | null = null;
+
+    backend.db(1).transactions.push({
+      ...{
+        id: 'tx-1',
+        kind: TransactionKind.REGULAR,
+        version: 1,
+        wallet_id: 1,
+        category_id: 5,
+        transaction_type: TransactionType.EXPENSE,
+        amount: '12.00',
+        timestamp: '2026-01-10T10:00:00.000Z',
+        description: null,
+      },
+      description: 'Old session',
+    });
+    intercept = (config) =>
+      config.url === '/spaces/1/transactions/feed' && !config.params?.from.startsWith('1970')
+        ? new Promise((resolve) => (releaseOld = () => respond(config).then(resolve)))
+        : undefined;
+    act(() => {
+      store.dispatch(transactionApi.util.invalidateTags([{ type: 'Transactions', id: 1 }]));
+    });
+    // The held page is still out, so this waits on timers only, not on running queries.
+    await act(async () => jest.advanceTimersByTimeAsync(50));
+    expect(releaseOld).not.toBeNull();
+
+    await act(async () => {
+      await store.dispatch(logoutMe());
+    });
+
+    intercept = () => undefined;
+    backend.db(1).transactions[0].description = 'New session';
+    act(() => {
+      signIn(store);
+    });
+    await waitFor(() => expect(result.current.history.transactions).toHaveLength(1));
+
+    await act(async () => releaseOld?.());
+    await settle(store);
+
+    expect(result.current.history.transactions[0].description).toBe('New session');
+
+    unmount();
+  });
+
+  it('reads the history again after a return to the app, one page and no more', async () => {
+    backend.db(1).transactions.push({
+      id: 'tx-1',
+      kind: TransactionKind.REGULAR,
+      version: 1,
+      wallet_id: 1,
+      category_id: 5,
+      transaction_type: TransactionType.EXPENSE,
+      amount: '12.00',
+      timestamp: '2026-01-10T10:00:00.000Z',
+      description: null,
+    });
+    const { store, result, unmount } = await renderApp();
+    expect(result.current.history.transactions.map(({ id }) => id)).toEqual(['tx-1']);
+
+    backend.db(1).transactions[0].amount = '30.00';
+    mockedRequest.mockClear();
+    act(() => {
+      store.dispatch(refreshSpaceData({ force: true }));
+    });
+    await settle(store);
+
+    const historyRequests = getRequests().filter((request) => request.startsWith('/spaces/1/transactions/feed?2026'));
+    expect(historyRequests).toHaveLength(1);
+    expect(result.current.history.transactions[0].amount).toBe('30.00');
+
+    unmount();
+  });
+
+  it('never asks for a whole period through the old transactions list', async () => {
+    const { store, unmount } = await renderApp();
+
+    await act(async () => {
+      await store.dispatch(
+        transactionApi.endpoints.createTransaction.initiate({
+          spaceId: 1,
+          idempotencyKey: 'key-1',
+          data: {
+            wallet_id: 1,
+            category_id: 5,
+            transaction_type: TransactionType.EXPENSE,
+            amount: '12',
+            timestamp: '2026-01-15T10:00:00.000Z',
+          },
+        }),
+      );
+    });
+    act(() => {
+      store.dispatch(refreshSpaceData({ force: true }));
+      store.dispatch(activateSpace(2));
+    });
+    await settle(store);
+
+    const gets = mockedRequest.mock.calls
+      .map(([config]: [RequestConfig]) => config)
+      .filter(({ method = 'GET' }) => method === 'GET');
+    expect(gets.some(({ url }) => /^\/spaces\/\d+\/transactions$/.test(url))).toBe(false);
+    expect(gets.some(({ url }) => url.endsWith('/transactions/feed'))).toBe(true);
 
     unmount();
   });

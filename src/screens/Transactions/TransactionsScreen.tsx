@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -17,22 +17,41 @@ import { usePeriod, useSpaceRefresh } from '@hooks';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { rangeSelection } from '@redux/state/transactionFlow/selection';
+import { monthPeriodOf, toDateRange } from '@shared/utils';
 import { TransactionType } from '@shared/enums';
 import type { ScreenNames } from '@shared/enums';
 import type { MainTabNavigationProp, MainTabScreenProps, RevealTransaction } from '@shared/types';
-import { groupTransactionsByDay } from '@shared/utils';
 import AppliedFilter from './components/AppliedFilter/AppliedFilter';
+import type { SearchStatus } from './components/FilterBar/FilterBar';
 import FilterBar from './components/FilterBar/FilterBar';
 import RangeCount from './components/RangeCount/RangeCount';
 import TransactionsSkeleton from './components/Skeleton/TransactionsSkeleton';
 import TransactionsEmptyState from './components/TransactionsEmptyState/TransactionsEmptyState';
 import TransactionsHeader from './components/TransactionsHeader/TransactionsHeader';
 import TransactionsList from './components/TransactionsList/TransactionsList';
+import useSearch from './hooks/useSearch';
 import useTransactionsData from './hooks/useTransactionsData';
+import { MAX_SEARCH_LENGTH } from './search';
 
 import styles from './style';
 
 const HIGHLIGHT_MS = 2500;
+
+interface Anchor {
+  spaceId: number;
+  transactionId: string;
+  // The period it holds for, as the range's bounds in ms.
+  from: number;
+  to: number;
+  // Shown from elsewhere, as opposed to a place the list returns to.
+  isReveal: boolean;
+}
+
+const monthBounds = (timestamp: string) => {
+  const month = toDateRange(monthPeriodOf(timestamp));
+
+  return { from: month.from.getTime(), to: month.to.getTime() };
+};
 
 const TransactionsScreen = () => {
   useSpaceRefresh();
@@ -54,6 +73,9 @@ const TransactionsScreen = () => {
   }, [navigation, requestedFilter, spaceId]);
 
   const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod, openMonthOf } = usePeriod();
+  // Offered on the plain history only; a Stats filter stays as it is until it is cleared.
+  const search = useSearch();
+  const q = filter ? '' : search.submitted;
 
   // Show from a confirmation: the record's month with no filter, its row scrolled to and lit for a moment.
   // The user's period changes only on this explicit request.
@@ -61,13 +83,40 @@ const TransactionsScreen = () => {
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<RevealTransaction | undefined>(undefined);
 
-  if (reveal && reveal !== revealed) {
-    setRevealed(reveal);
-    if (reveal.spaceId === spaceId) {
-      openMonthOf(reveal.timestamp);
-      setHighlightId(reveal.transactionId);
-    }
+  // Where the history opens instead of its newest record, for as long as the period it was set for is shown: a
+  // record shown from elsewhere (in its month), or the row the plain history was at when a search opened.
+  const [anchor, setAnchor] = useState<Anchor | null>(null);
+  const isShownRange = (bounds: { from: number; to: number }) =>
+    bounds.from === range.from.getTime() && bounds.to === range.to.getTime();
+  const isShownMonth = (timestamp: string) => isShownRange(monthBounds(timestamp));
+  if (anchor && !isShownRange(anchor)) setAnchor(null);
+
+  // Where the plain history was when a search opened; Cancel brings it back while the period is the same.
+  const [returnPoint, setReturnPoint] = useState<Anchor | null>(null);
+  const [restoreId, setRestoreId] = useState<string | null>(null);
+  // A Stats filter ends a search, so + works under it and clearing it shows the plain history.
+  if (filter && (search.isSearching || search.query || search.submitted || returnPoint)) {
+    search.cancel();
+    setReturnPoint(null);
   }
+  // A restore holds only while its row still anchors the plain history: another period or a filter drops it.
+  if (restoreId && (filter || anchor?.transactionId !== restoreId)) setRestoreId(null);
+  // The plain history was replaced by results at least once, so Cancel has a place to return to.
+  const [hasLeftHistory, setHasLeftHistory] = useState(false);
+  if (q && returnPoint && !hasLeftHistory) setHasLeftHistory(true);
+
+  // A search belongs to its space: another space starts from its plain history.
+  const [searchSpaceId, setSearchSpaceId] = useState(spaceId);
+  if (searchSpaceId !== spaceId) {
+    setSearchSpaceId(spaceId);
+    setRestoreId(null);
+    if (search.isSearching) search.cancel();
+    setReturnPoint(null);
+  }
+
+  // Read when the history is refreshed after a change, to keep these rows in the new window.
+  const visibleIdsRef = useRef<string[]>([]);
+  const getVisibleIds = useCallback(() => visibleIdsRef.current, []);
 
   useEffect(() => {
     if (reveal) navigation.setParams({ reveal: undefined, filter: undefined });
@@ -90,19 +139,95 @@ const TransactionsScreen = () => {
   );
   const {
     transactions,
+    sections,
+    selectionKey,
     viewState,
     latest,
     income,
     expense,
+    count,
     currencyCode,
+    hasNextPage,
+    isLoadingNextPage,
+    hasNextPageError,
+    loadNextPage,
+    hasPreviousPage,
+    isLoadingPreviousPage,
+    hasPreviousPageError,
+    loadPreviousPage,
     refreshFailed,
-    retryRefresh,
-    refetch,
+    retry,
     retryLatest,
+    missedAroundId,
   } = useTransactionsData({
     range,
     filter,
+    q,
+    aroundId: anchor && !filter && !q && anchor.spaceId === spaceId ? anchor.transactionId : undefined,
+    getVisibleIds,
   });
+
+  // A record already listed is only scrolled to; any other opens its month, without a filter, around it.
+  if (reveal && reveal !== revealed) {
+    setRevealed(reveal);
+    if (reveal.spaceId === spaceId) {
+      const isListed =
+        !filter && !q && isShownMonth(reveal.timestamp) && transactions.some(({ id }) => id === reveal.transactionId);
+
+      if (!isListed) {
+        openMonthOf(reveal.timestamp);
+        setAnchor({ ...monthBounds(reveal.timestamp), spaceId, transactionId: reveal.transactionId, isReveal: true });
+        if (search.isSearching) search.cancel();
+        setReturnPoint(null);
+      }
+      setHighlightId(reveal.transactionId);
+      setRestoreId(null);
+    }
+  }
+
+  // The record is gone or no longer in its month: the period opens at its newest record and says so.
+  const [dismissedMissId, setDismissedMissId] = useState<string | null>(null);
+  const missedReveal =
+    missedAroundId !== undefined &&
+    anchor?.isReveal &&
+    missedAroundId === anchor.transactionId &&
+    missedAroundId !== dismissedMissId
+      ? missedAroundId
+      : null;
+  if (missedReveal && highlightId === missedReveal) setHighlightId(null);
+
+  const openSearch = () => {
+    const [topId] = visibleIdsRef.current;
+    const isAtTop = !hasPreviousPage && topId === transactions[0]?.id;
+
+    setReturnPoint(
+      topId && !isAtTop && spaceId !== null
+        ? { from: range.from.getTime(), to: range.to.getTime(), spaceId, transactionId: topId, isReveal: false }
+        : null,
+    );
+    setHasLeftHistory(false);
+    setRestoreId(null);
+    search.open();
+  };
+
+  // Back to where the plain history was, if the period is unchanged; a new period starts at its newest record.
+  const cancelSearch = () => {
+    if (returnPoint && hasLeftHistory && isShownRange(returnPoint)) {
+      setAnchor(returnPoint);
+      setRestoreId(returnPoint.transactionId);
+    }
+    setReturnPoint(null);
+    search.cancel();
+  };
+
+  const searchStatus: SearchStatus | undefined = !q
+    ? undefined
+    : viewState === 'loading'
+      ? { state: 'searching' }
+      : viewState === 'rangeError'
+        ? { state: 'failed' }
+        : { state: 'found', count: count ?? 0 };
+
   const [seenId, setSeenId] = useState<string | null>(null);
   const isHighlightSeen = highlightId !== null && seenId === highlightId;
 
@@ -120,21 +245,50 @@ const TransactionsScreen = () => {
         <RangePickerSheet
           period={period}
           onApply={applyPeriod}
-          renderRangeNote={(draft) => <RangeCount range={draft} />}
+          renderRangeNote={(draft) => <RangeCount range={draft} q={q} />}
         />
       </BottomModal>
 
       <ScreenFrame edges={['top', 'left', 'right']} blurredStatusBar>
         <TransactionsList
-          groups={viewState === 'ready' ? groupTransactionsByDay(transactions) : []}
+          groups={viewState === 'ready' ? sections : []}
+          selectionKey={selectionKey}
           currencyCode={currencyCode}
           onPressTransaction={openDetails}
           onDeleteTransaction={requestDelete}
           highlightId={highlightId}
+          restoreId={restoreId}
+          onRestored={() => setRestoreId(null)}
           onHighlightSeen={() => setSeenId(highlightId)}
+          onVisibleRowsChange={(ids) => {
+            visibleIdsRef.current = ids;
+          }}
+          older={{
+            hasMore: hasNextPage,
+            isLoading: isLoadingNextPage,
+            hasError: hasNextPageError,
+            onReached: loadNextPage,
+          }}
+          newer={{
+            hasMore: hasPreviousPage,
+            isLoading: isLoadingPreviousPage,
+            hasError: hasPreviousPageError,
+            onReached: loadPreviousPage,
+          }}
+          onRetryPage={retry}
           header={
             <>
-              <TransactionsHeader />
+              <TransactionsHeader
+                canSearch={!filter}
+                isSearching={search.isSearching}
+                query={search.query}
+                error={search.isTooLong ? `Search is limited to ${MAX_SEARCH_LENGTH} characters` : null}
+                onOpen={openSearch}
+                onCancel={cancelSearch}
+                onChangeQuery={search.change}
+                onSubmit={search.submit}
+                onClear={search.clear}
+              />
 
               {filter ? (
                 <AppliedFilter
@@ -148,6 +302,8 @@ const TransactionsScreen = () => {
                   period={period}
                   income={income}
                   expense={expense}
+                  isLoading={viewState === 'loading'}
+                  search={searchStatus}
                   currencyCode={currencyCode}
                   onPresetPress={selectCurrent}
                   onOpenPicker={handleOpenPicker}
@@ -157,13 +313,24 @@ const TransactionsScreen = () => {
 
               <PendingWritesBanner style={styles.banner} />
 
+              {missedReveal && (
+                <View style={styles.banner}>
+                  <Banner
+                    tone="warn"
+                    text="This transaction is no longer here. Showing the whole period instead."
+                    actionLabel="OK"
+                    onAction={() => setDismissedMissId(missedReveal)}
+                  />
+                </View>
+              )}
+
               {refreshFailed && (
                 <View style={styles.banner}>
                   <Banner
                     tone="danger"
                     text="Couldn’t update the list. It shows what was loaded before."
                     actionLabel="Retry"
-                    onAction={retryRefresh}
+                    onAction={retry}
                   />
                 </View>
               )}
@@ -192,7 +359,28 @@ const TransactionsScreen = () => {
 
               {viewState === 'noMatches' && <TransactionsEmptyState variant="noMatches" onClearFilter={clearFilter} />}
 
-              {viewState === 'rangeError' && <TransactionsEmptyState variant="rangeError" onRetry={refetch} />}
+              {viewState === 'noSearchMatches' && (
+                <TransactionsEmptyState
+                  variant="noSearchMatches"
+                  query={q}
+                  activeRange={range}
+                  onClearSearch={search.clear}
+                />
+              )}
+
+              {viewState === 'rangeError' &&
+                (q ? (
+                  <View style={styles.banner}>
+                    <Banner
+                      tone="danger"
+                      text="Couldn’t search. Check your connection and try again."
+                      actionLabel="Try again"
+                      onAction={retry}
+                    />
+                  </View>
+                ) : (
+                  <TransactionsEmptyState variant="rangeError" onRetry={retry} />
+                ))}
 
               {viewState === 'latestError' && <TransactionsEmptyState variant="latestError" onRetry={retryLatest} />}
             </>
@@ -200,7 +388,7 @@ const TransactionsScreen = () => {
         />
       </ScreenFrame>
 
-      {viewState !== 'loading' && (
+      {viewState !== 'loading' && !search.isSearching && (
         <Fab
           onExpense={() => openCreate(TransactionType.EXPENSE)}
           onIncome={() => openCreate(TransactionType.INCOME)}

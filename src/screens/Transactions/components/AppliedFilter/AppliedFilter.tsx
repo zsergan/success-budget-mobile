@@ -1,5 +1,6 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
+import type { Money } from '@api/dto';
 import { Icon } from '@components';
 import { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
@@ -10,7 +11,8 @@ import styles from './style';
 
 interface Props {
   filter: HistoryFilter;
-  total: number;
+  // Null until the filter has an answer.
+  total: Money | null;
   currencyCode?: string;
   onClear: () => void;
 }
@@ -40,7 +42,7 @@ const AppliedFilter = ({ filter, total, currencyCode, onClear }: Props) => {
         </Text>
       </View>
 
-      <Text style={styles.total}>{formatMoneyAmount(total, currencyCode)}</Text>
+      <Text style={styles.total}>{total === null ? '—' : formatMoneyAmount(total, currencyCode)}</Text>
 
       <TouchableOpacity
         style={styles.clearButton}

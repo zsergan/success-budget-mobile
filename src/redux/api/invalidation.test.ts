@@ -4,11 +4,11 @@ import { categoryApi } from '@redux/state/category/api';
 import { limitApi } from '@redux/state/limit/api';
 import { memberApi } from '@redux/state/member/api';
 import { spaceApi } from '@redux/state/space/api';
-import { transactionApi } from '@redux/state/transaction/api';
+import { feedSelection, transactionApi } from '@redux/state/transaction/api';
 import { walletApi } from '@redux/state/wallet/api';
 import { AppColor, SpaceType, TransactionType } from '@shared/enums';
 import { baseApi } from './baseApi';
-import { createTransactionResponseDto, transactionDto } from '@redux/state/transaction/fixtures';
+import { createTransactionResponseDto, feedDto, transactionDto } from '@redux/state/transaction/fixtures';
 
 const mockedRequest = jest.fn();
 
@@ -38,6 +38,7 @@ const respond = ({ url, method }: RequestConfig) => {
   if (url.endsWith('/categories')) return { data: { incomes: [], expenses: [], archived: [] } };
   if (url.endsWith('/limits')) return { data: { total: null, categories: [], over_allocation: null } };
   if (url.endsWith('/latest')) return { data: null };
+  if (url.endsWith('/feed')) return { data: feedDto([]) };
   if (url === '/spaces' || url.endsWith('/members')) return { data: [] };
 
   return { data: [] };
@@ -45,29 +46,27 @@ const respond = ({ url, method }: RequestConfig) => {
 
 const resourceOf = ({ url, params }: RequestConfig) => {
   const [, spaceId, resource, extra] = url.match(/^\/spaces\/(\d+)\/(\w+)(?:\/(\w+))?$/) ?? [];
-  const name = extra ?? (resource === 'transactions' ? params!.from.slice(0, 7) : resource);
+  const name = extra === 'feed' ? `feed:${params!.from.slice(0, 7)}` : (extra ?? resource);
 
   return `${spaceId}:${name}`;
 };
 
-const ALL_HISTORY = ['1:2026-01', '1:2026-02', '1:latest'];
+// Home's latest records and the latest record. A history page is subscribed too but never asked for again: its
+// screen starts a new generation from the history revision instead.
+const ALL_HISTORY = ['1:feed:1970-01', '1:latest'];
 
 const subscribeToSpace = (store: ReturnType<typeof createAppStore>, spaceId: number) => {
   store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId }));
   store.dispatch(categoryApi.endpoints.getCategories.initiate({ spaceId }));
   store.dispatch(limitApi.endpoints.getLimits.initiate({ spaceId }));
+  store.dispatch(transactionApi.endpoints.getRecentTransactions.initiate({ spaceId, timeZone: 'UTC' }));
   store.dispatch(
-    transactionApi.endpoints.getTransactions.initiate({
-      spaceId,
-      from: '2026-01-01T00:00:00.000Z',
-      to: '2026-01-31T23:59:59.999Z',
-    }),
-  );
-  store.dispatch(
-    transactionApi.endpoints.getTransactions.initiate({
-      spaceId,
-      from: '2026-02-01T00:00:00.000Z',
-      to: '2026-02-28T23:59:59.999Z',
+    transactionApi.endpoints.getTransactionsFeed.initiate({
+      selection: feedSelection(
+        { spaceId, from: '2026-01-01T00:00:00.000Z', to: '2026-01-31T23:59:59.999Z' },
+        { timeZone: 'UTC' },
+      ),
+      generation: 'g1',
     }),
   );
   store.dispatch(transactionApi.endpoints.getLatestTransaction.initiate({ spaceId }));

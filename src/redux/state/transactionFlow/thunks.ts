@@ -93,13 +93,25 @@ const dropFromLists =
   (spaceId: number, transactionId: string): AppThunk =>
   (dispatch, getState) => {
     transactionApi.util
-      .selectCachedArgsForQuery(getState(), 'getTransactions')
+      .selectCachedArgsForQuery(getState(), 'getRecentTransactions')
       .filter((arg) => arg.spaceId === spaceId)
       .forEach((arg) =>
         dispatch(
-          transactionApi.util.updateQueryData('getTransactions', arg, (rows) =>
-            rows.filter(({ id }) => id !== transactionId),
-          ),
+          transactionApi.util.updateQueryData('getRecentTransactions', arg, (page) => {
+            page.items = page.items.filter(({ id }) => id !== transactionId);
+          }),
+        ),
+      );
+    transactionApi.util
+      .selectCachedArgsForQuery(getState(), 'getTransactionsFeed')
+      .filter(({ selection }) => selection.spaceId === spaceId)
+      .forEach((arg) =>
+        dispatch(
+          transactionApi.util.updateQueryData('getTransactionsFeed', arg, ({ pages }) => {
+            pages.forEach((page) => {
+              page.items = page.items.filter(({ id }) => id !== transactionId);
+            });
+          }),
         ),
       );
   };

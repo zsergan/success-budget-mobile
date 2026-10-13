@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { skipToken } from '@reduxjs/toolkit/query';
 
-import { useAppSelector, useCurrentMonthArg, useSpaceArg } from '@redux/hooks';
+import { useAppSelector, useRecentArg, useSpaceArg } from '@redux/hooks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
 import { useGetLimitsQuery } from '@redux/state/limit/api';
 import { useGetProfileQuery } from '@redux/state/profile/api';
 import { useGetSpacesQuery } from '@redux/state/space/api';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
-import { useGetTransactionsQuery } from '@redux/state/transaction/api';
+import { useGetRecentTransactionsQuery } from '@redux/state/transaction/api';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 
 interface UseLoadInitDataProps {
@@ -30,7 +30,7 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
   const sessionArg = isSignedIn ? undefined : skipToken;
   const spaceArg = useSpaceArg();
   const sessionSpaceArg = isSignedIn ? spaceArg : skipToken;
-  const currentMonthArg = useCurrentMonthArg();
+  const recentArg = useRecentArg();
 
   const spacesQuery = useGetSpacesQuery(sessionArg);
   const profileQuery = useGetProfileQuery(sessionArg);
@@ -38,7 +38,7 @@ const useLoadInitData = ({ isSignedIn }: UseLoadInitDataProps) => {
     useGetWalletsQuery(sessionSpaceArg),
     useGetCategoriesQuery(sessionSpaceArg),
     useGetLimitsQuery(sessionSpaceArg),
-    useGetTransactionsQuery(isSignedIn ? currentMonthArg : skipToken),
+    useGetRecentTransactionsQuery(isSignedIn ? recentArg : skipToken),
   ];
 
   // A space is selected as soon as the spaces list arrives, so with none

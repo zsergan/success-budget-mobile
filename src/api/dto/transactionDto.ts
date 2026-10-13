@@ -1,5 +1,6 @@
 import type { AppColor, TransactionKind, TransactionType } from '@shared/enums';
 import type { CategoryIconApi } from './categoryDto';
+import type { Money } from './statisticsDto';
 import type { Wallet } from './walletDto';
 
 export interface TransactionWallet extends Wallet {
@@ -36,6 +37,18 @@ export interface Transaction {
 // The number of rows the list returns for the same query, initial balances included.
 export interface TransactionsCountResponse {
   count: number;
+}
+
+// One page of `/transactions/feed`; `summary` covers the whole selection, `day_totals` each whole day on the page.
+export interface TransactionFeedResponse {
+  items: Transaction[];
+  page_info: {
+    // Opaque; `next_cursor` leads to older records, `previous_cursor` to newer ones.
+    next_cursor: string | null;
+    previous_cursor: string | null;
+  };
+  summary: { count: number; income: Money; expense: Money };
+  day_totals: { date: string; net: Money }[];
 }
 
 export interface CreateTransactionRequest {

@@ -1,22 +1,7 @@
-import type { TransactionModel } from '@api/models';
-import { isInitialBalance } from '@api/models';
+import type { Money } from '@api/dto';
+import type { TransactionFeedSummary, TransactionModel } from '@api/models';
 import { getLoadState } from '@redux/api/loadState';
-import { TransactionType } from '@shared/enums';
-import { toCents } from '@shared/utils';
-
-export const EMPTY_TRANSACTIONS: TransactionModel[] = [];
-
-const sumOf = (transactions: TransactionModel[], type: TransactionType) =>
-  transactions
-    .filter((transaction) => transaction.transactionType === type && !isInitialBalance(transaction))
-    .reduce((sum, transaction) => sum + toCents(transaction.amount), 0) / 100;
-
-// A space has exactly one currency, so every transaction in it is already in
-// that currency — no cross-currency filtering needed.
-export const getPeriodTotals = (transactions: TransactionModel[]) => ({
-  income: sumOf(transactions, TransactionType.INCOME),
-  expense: sumOf(transactions, TransactionType.EXPENSE),
-});
+import type { TransactionFeedPage } from './api';
 
 // What an empty period says about the whole history: none at all, none in it, or not yet known.
 export type EmptyPeriodState = 'loading' | 'latestError' | 'trueEmpty' | 'filteredEmpty';
@@ -44,4 +29,37 @@ export const getEmptyPeriodState = (
   if (time >= from.getTime() && time <= to.getTime()) return latestQuery.isFetching ? 'loading' : 'latestError';
 
   return 'filteredEmpty';
+};
+
+export interface FeedView {
+  items: TransactionModel[];
+  // Null until a page arrives.
+  summary: TransactionFeedSummary | null;
+  // Income minus expense of each whole day, by local date key.
+  dayNets: Record<string, Money>;
+}
+
+// Pages in list order; a record or day the server returned more than once is read from the newest response.
+export const getFeedView = (pages: readonly TransactionFeedPage[]): FeedView => {
+  const newest = new Map<string, { sequence: number; page: number; index: number }>();
+
+  pages.forEach(({ items, sequence }, page) =>
+    items.forEach(({ id }, index) => {
+      if ((newest.get(id)?.sequence ?? -1) < sequence) newest.set(id, { sequence, page, index });
+    }),
+  );
+
+  const items = pages.flatMap((pageData, page) =>
+    pageData.items.filter(({ id }, index) => {
+      const copy = newest.get(id);
+
+      return copy?.page === page && copy.index === index;
+    }),
+  );
+  const byArrival = [...pages].sort((a, b) => a.sequence - b.sequence);
+  const dayNets: Record<string, Money> = {};
+
+  byArrival.forEach(({ dayTotals }) => dayTotals.forEach(({ date, net }) => (dayNets[date] = net)));
+
+  return { items, summary: byArrival.at(-1)?.summary ?? null, dayNets };
 };

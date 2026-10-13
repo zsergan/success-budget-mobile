@@ -1,24 +1,38 @@
 import { useMemo } from 'react';
 import { skipToken } from '@reduxjs/toolkit/query';
 
-import { getLoadState } from '@redux/api/loadState';
+import type { Money } from '@api/dto';
+import { useTransactionsFeed } from '@hooks';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/state/space/selectors';
-import { periodArg, useGetLatestTransactionQuery, useGetTransactionsQuery } from '@redux/state/transaction/api';
-import { EMPTY_TRANSACTIONS, getEmptyPeriodState, getPeriodTotals } from '@redux/state/transaction/selectors';
+import { feedSelection, feedSelectionKey, periodArg, useGetLatestTransactionQuery } from '@redux/state/transaction/api';
 import type { TransactionsArg } from '@redux/state/transaction/api';
+import { getEmptyPeriodState } from '@redux/state/transaction/selectors';
 import type { HistoryFilter } from '@shared/types';
-import type { DateRange } from '@shared/utils';
+import type { DateRange, DayGroup } from '@shared/utils';
+import { groupRowsByDay } from '@shared/utils';
 
-// trueEmpty: no transactions at all; filteredEmpty: none in this period; noMatches: none under a Stats filter.
+// trueEmpty: no transactions at all; filteredEmpty: none in this period; noMatches: none under a Stats filter;
+// noSearchMatches: none for the search in this period.
 // latestError: the period is empty but whether any transactions exist couldn't be checked.
 export type TransactionsViewState =
-  'loading' | 'trueEmpty' | 'filteredEmpty' | 'noMatches' | 'ready' | 'rangeError' | 'latestError';
+  'loading' | 'trueEmpty' | 'filteredEmpty' | 'noMatches' | 'noSearchMatches' | 'ready' | 'rangeError' | 'latestError';
+
+export interface HistorySection extends DayGroup {
+  // The server's net of the whole day; null if it did not send one for this day.
+  total: Money | null;
+}
 
 interface UseTransactionsDataProps {
   range: DateRange;
   // Replaces the period: its bounds go to the API exactly as Stats got them.
   filter: HistoryFilter | null;
+  // Open the period at this record's page instead of its newest one.
+  aroundId?: string;
+  // Search text, trimmed; empty for the plain history.
+  q?: string;
+  // The rows on screen, top first, kept in view when the history is refreshed after a change.
+  getVisibleIds?: () => string[];
 }
 
 const toFilterArg = ({
@@ -38,55 +52,70 @@ const toFilterArg = ({
   ...(categoryId !== undefined ? { categoryId } : { walletId }),
 });
 
-const useTransactionsData = ({ range, filter }: UseTransactionsDataProps) => {
+const useTransactionsData = ({ range, filter, q, aroundId, getVisibleIds }: UseTransactionsDataProps) => {
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
-  // currentData only ever belongs to this exact space and period, so a new
-  // period or space shows loading instead of the previous one's rows.
-  const rangeQuery = useGetTransactionsQuery(
-    spaceId === null ? skipToken : filter ? toFilterArg(filter) : periodArg(spaceId, range),
-  );
+  const selection =
+    spaceId === null ? skipToken : feedSelection(filter ? toFilterArg(filter) : periodArg(spaceId, range), { q });
+  const feed = useTransactionsFeed(selection, { aroundId, getVisibleIds });
+  const { items, summary, dayNets } = feed;
+  const isEmpty = !feed.isLoading && !feed.hasError && items.length === 0;
+
   // Whether the account has any history at all only matters for an empty period.
   const spaceArg = useSpaceArg();
-  const latestQuery = useGetLatestTransactionQuery(filter ? skipToken : spaceArg);
+  const needsLatest = !filter && !q && isEmpty;
+  const latestQuery = useGetLatestTransactionQuery(needsLatest ? spaceArg : skipToken);
 
-  const transactions = rangeQuery.currentData ?? EMPTY_TRANSACTIONS;
-  const latest = latestQuery.currentData;
-  const { income, expense } = useMemo(() => getPeriodTotals(transactions), [transactions]);
-
-  const { isLoading: isLoadingRange, hasError: rangeError, hasRefreshError } = getLoadState(rangeQuery);
+  const sections = useMemo<HistorySection[]>(
+    () => groupRowsByDay(items).map((group) => ({ ...group, total: dayNets[group.key] ?? null })),
+    [items, dayNets],
+  );
 
   let viewState: TransactionsViewState;
 
-  if (isLoadingRange) {
+  if (feed.isLoading) {
     viewState = 'loading';
-  } else if (rangeError) {
+  } else if (feed.hasError) {
     viewState = 'rangeError';
-  } else if (transactions.length > 0) {
-    // latest only matters for telling an empty period from an empty account.
+  } else if (!isEmpty) {
     viewState = 'ready';
   } else if (filter) {
     viewState = 'noMatches';
+  } else if (q) {
+    viewState = 'noSearchMatches';
   } else {
     viewState = getEmptyPeriodState(latestQuery, range);
   }
 
   return {
-    transactions,
+    transactions: items,
+    sections,
+    // Which history is listed: the space, period or Stats filter, and the search.
+    selectionKey: selection === skipToken ? '' : feedSelectionKey(selection),
     viewState,
-    latest,
-    income,
-    expense,
+    latest: latestQuery.currentData,
+    // Null until the selection has an answer, never a zero it has not confirmed.
+    income: summary?.income ?? null,
+    expense: summary?.expense ?? null,
+    count: summary?.count ?? null,
     currencyCode,
+    hasNextPage: feed.hasNextPage,
+    isLoadingNextPage: feed.isLoadingNextPage,
+    hasNextPageError: feed.hasNextPageError,
+    loadNextPage: feed.loadNextPage,
+    hasPreviousPage: feed.hasPreviousPage,
+    isLoadingPreviousPage: feed.isLoadingPreviousPage,
+    hasPreviousPageError: feed.hasPreviousPageError,
+    loadPreviousPage: feed.loadPreviousPage,
+    missedAroundId: feed.missedAroundId,
     // What is listed stays, but a refresh, e.g. after a saved change, could not bring it up to date.
-    refreshFailed: hasRefreshError,
-    retryRefresh: () => {
-      rangeQuery.refetch();
-      if (!filter) latestQuery.refetch();
+    refreshFailed: feed.hasRefreshError,
+    retryRefresh: feed.retry,
+    retry: feed.retry,
+    retryLatest: () => {
+      if (!latestQuery.isUninitialized) latestQuery.refetch();
     },
-    refetch: rangeQuery.refetch,
-    retryLatest: latestQuery.refetch,
   };
 };
 

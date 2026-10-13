@@ -42,6 +42,27 @@ const styles = StyleSheet.create({
   groupTotalPositive: {
     color: colors.ok,
   },
+  pageStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.lg,
+  },
+  pageError: {
+    fontFamily: theme.fonts.medium,
+    fontSize: theme.fontSizes.micro,
+    lineHeight: theme.lineHeights.micro,
+    color: colors.muted,
+  },
+  pageRetry: {
+    // Plus Jakarta SemiBold under-measures a hugging label and clips its last glyph (see cde3346).
+    paddingRight: 2,
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.micro,
+    lineHeight: theme.lineHeights.micro,
+    color: colors.accent,
+  },
   itemSeparator: {
     height: theme.spacing.md,
   },

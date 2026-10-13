@@ -2,8 +2,7 @@ import { createAction } from '@reduxjs/toolkit';
 import type { QueryCacheKey } from '@reduxjs/toolkit/query';
 
 import type { CreateSpaceRequest, SpaceSummary } from '@api/dto';
-import type { SpaceArg } from '@redux/api/baseApi';
-import { baseApi, spaceTags } from '@redux/api/baseApi';
+import { baseApi, spaceIdOfArg, spaceTags } from '@redux/api/baseApi';
 import type { AppThunk } from '@redux/Store';
 import { memberApi } from '../member/api';
 import { selectProfileId } from '../profile/selectors';
@@ -51,7 +50,7 @@ export const dropSpaceData =
     dispatch(spaceAccessLost({ spaceId }));
 
     Object.entries(getState()[baseApi.reducerPath].queries).forEach(([queryCacheKey, entry]) => {
-      if ((entry?.originalArgs as Partial<SpaceArg> | undefined)?.spaceId === spaceId) {
+      if (spaceIdOfArg(entry?.originalArgs) === spaceId) {
         dispatch(baseApi.internalActions.removeQueryResult({ queryCacheKey: queryCacheKey as QueryCacheKey }));
       }
     });

@@ -31,6 +31,13 @@ export interface SpaceArg {
   spaceId: number;
 }
 
+// The space a cached entry belongs to: the feed keeps it inside its selection, every other endpoint at the top.
+export const spaceIdOfArg = (arg: unknown): number | undefined => {
+  const value = arg as { spaceId?: number; selection?: { spaceId?: number } } | undefined;
+
+  return value?.spaceId ?? value?.selection?.spaceId;
+};
+
 export const spaceTags = (spaceId: number, ...types: TagType[]) => types.map((type) => ({ type, id: spaceId }));
 
 // A failed mutation (including one that outlived its session) leaves the cache

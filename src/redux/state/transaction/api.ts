@@ -3,16 +3,28 @@ import type {
   CreateTransactionResponse,
   ErrorResponse,
   Transaction,
+  TransactionFeedResponse,
   TransactionOperationResponse,
   TransactionsCountResponse,
   UpdateTransactionRequest,
   UpdateTransactionResponse,
 } from '@api/dto';
 import { ApiErrorCode } from '@api/dto';
-import type { CreateTransactionResult, TransactionModel, UpdateTransactionResult } from '@api/models';
-import { mapCreateTransactionResponse, mapTransaction, mapUpdateTransactionResponse } from '@api/models';
+import type {
+  CreateTransactionResult,
+  TransactionFeedPageModel,
+  TransactionModel,
+  UpdateTransactionResult,
+} from '@api/models';
+import {
+  mapCreateTransactionResponse,
+  mapTransaction,
+  mapTransactionFeed,
+  mapUpdateTransactionResponse,
+} from '@api/models';
 import type { SpaceArg } from '@redux/api/baseApi';
 import { baseApi, spaceTags } from '@redux/api/baseApi';
+import { getDeviceTimeZone } from '@redux/state/statistics/selectors';
 import type { TransactionKind, TransactionType } from '@shared/enums';
 
 export interface TransactionsArg extends SpaceArg {
@@ -23,6 +35,38 @@ export interface TransactionsArg extends SpaceArg {
   kind?: TransactionKind;
   categoryId?: number;
   walletId?: number;
+}
+
+// What the feed lists: one cursor belongs to exactly one selection.
+export interface FeedSelection extends TransactionsArg {
+  timeZone: string;
+  q?: string;
+}
+
+// One cache entry per selection, page size and load generation; a new generation starts from a first page.
+export interface TransactionsFeedArg {
+  selection: FeedSelection;
+  pageSize?: number;
+  generation: string;
+}
+
+// Where a page starts: an earlier response's cursor, the page holding a record, or (empty) the newest record.
+export interface FeedPageParam {
+  cursor?: string;
+  aroundId?: string;
+}
+
+export interface TransactionFeedPage extends TransactionFeedPageModel {
+  // The order pages arrived in, so the newest copy of a record or a day total wins.
+  sequence: number;
+}
+
+export interface TransactionsCountArg extends TransactionsArg {
+  q?: string;
+}
+
+export interface RecentTransactionsArg extends SpaceArg {
+  timeZone: string;
 }
 
 export interface TransactionArg extends SpaceArg {
@@ -69,6 +113,44 @@ const listParams = ({ from, to, transactionType, kind, categoryId, walletId }: T
   ...(walletId !== undefined && { wallet_id: walletId }),
 });
 
+// Search text is trimmed and a blank one dropped, so equal searches are one selection.
+export const feedSelection = (
+  arg: TransactionsArg,
+  { q, timeZone = getDeviceTimeZone() }: { q?: string; timeZone?: string } = {},
+): FeedSelection => {
+  const text = q?.trim();
+
+  return { ...arg, timeZone, ...(text && { q: text }) };
+};
+
+export const feedSelectionKey = (selection: FeedSelection) =>
+  JSON.stringify(
+    Object.entries(selection)
+      .filter(([, value]) => value !== undefined)
+      .sort(([a], [b]) => a.localeCompare(b)),
+  );
+
+const feedParams = ({ selection, pageSize }: TransactionsFeedArg, { cursor, aroundId }: FeedPageParam) => ({
+  ...listParams(selection),
+  time_zone: selection.timeZone,
+  ...(selection.q && { q: selection.q }),
+  ...(pageSize !== undefined && { limit: pageSize }),
+  ...(cursor && { cursor }),
+  ...(aroundId && { around_id: aroundId }),
+});
+
+// Home's latest records: the whole range the server stores timestamps in, one short page and no more.
+export const WHOLE_HISTORY = { from: '1970-01-01T00:00:01Z', to: '2038-01-19T03:14:07Z' };
+export const RECENT_TRANSACTIONS_LIMIT = 5;
+
+export const recentArg = (spaceId: number): RecentTransactionsArg => ({ spaceId, timeZone: getDeviceTimeZone() });
+
+// Pages kept per feed entry; scrolling further drops the farthest page and reads it again by cursor on the way back.
+export const FEED_MAX_PAGES = 10;
+
+let receivedPages = 0;
+let revision = 0;
+
 const writeHeaders = ({ idempotencyKey, version }: IdempotentArg & { version?: number }) => ({
   'Idempotency-Key': idempotencyKey,
   ...(version !== undefined && { 'If-Match': `"${version}"` }),
@@ -95,13 +177,44 @@ const invalidatesTransactionWrite = (_result: unknown, error: unknown, { spaceId
 
 export const transactionApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-    getTransactions: build.query<TransactionModel[], TransactionsArg>({
-      query: (arg) => ({ url: `/spaces/${arg.spaceId}/transactions`, params: listParams(arg) }),
-      transformResponse: (response: Transaction[]) => response.map(mapTransaction),
+    getRecentTransactions: build.query<TransactionFeedPageModel, RecentTransactionsArg>({
+      query: ({ spaceId, timeZone }) => ({
+        url: `/spaces/${spaceId}/transactions/feed`,
+        params: { ...WHOLE_HISTORY, time_zone: timeZone, limit: RECENT_TRANSACTIONS_LIMIT },
+      }),
+      transformResponse: (response: TransactionFeedResponse) => mapTransactionFeed(response),
       providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions'),
     }),
-    getTransactionsCount: build.query<number, TransactionsArg>({
-      query: (arg) => ({ url: `/spaces/${arg.spaceId}/transactions/count`, params: listParams(arg) }),
+    getTransactionsFeed: build.infiniteQuery<TransactionFeedPage, TransactionsFeedArg, FeedPageParam>({
+      infiniteQueryOptions: {
+        initialPageParam: {},
+        maxPages: FEED_MAX_PAGES,
+        getNextPageParam: ({ nextCursor }) => (nextCursor ? { cursor: nextCursor } : undefined),
+        getPreviousPageParam: ({ previousCursor }) => (previousCursor ? { cursor: previousCursor } : undefined),
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: `/spaces/${queryArg.selection.spaceId}/transactions/feed`,
+        params: feedParams(queryArg, pageParam),
+      }),
+      transformResponse: (response: TransactionFeedResponse) => ({
+        ...mapTransactionFeed(response),
+        sequence: ++receivedPages,
+      }),
+      // No tags: a change starts a new generation through getTransactionsRevision rather than every page again.
+      // A generation belongs to one hook mount, so an entry nobody reads is never read again; removing it also
+      // aborts a page it still loads.
+      keepUnusedDataFor: 0,
+    }),
+    // A local counter with no request: each invalidation of the space's history gives a new value.
+    getTransactionsRevision: build.query<number, SpaceArg>({
+      queryFn: () => ({ data: ++revision }),
+      providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions'),
+    }),
+    getTransactionsCount: build.query<number, TransactionsCountArg>({
+      query: (arg) => ({
+        url: `/spaces/${arg.spaceId}/transactions/count`,
+        params: { ...listParams(arg), ...(arg.q && { q: arg.q }) },
+      }),
       transformResponse: (response: TransactionsCountResponse) => response.count,
       providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions'),
     }),
@@ -155,7 +268,9 @@ export const transactionApi = baseApi.injectEndpoints({
 });
 
 export const {
-  useGetTransactionsQuery,
+  useGetRecentTransactionsQuery,
+  useGetTransactionsFeedInfiniteQuery,
+  useGetTransactionsRevisionQuery,
   useGetTransactionsCountQuery,
   useGetLatestTransactionQuery,
   useGetTransactionQuery,

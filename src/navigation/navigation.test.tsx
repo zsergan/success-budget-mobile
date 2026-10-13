@@ -126,17 +126,12 @@ describe('auth stack', () => {
 const HomeTab = ({ navigation }: MainTabScreenProps<ScreenNames.HOME_TAB>) => (
   <RecentActivity
     navigation={navigation}
-    transactions={[]}
     hasWallets
     isLoading={false}
     hasError={false}
     onPressTransaction={jest.fn()}
     onDeleteTransaction={jest.fn()}
     onRetry={jest.fn()}
-    emptyState="trueEmpty"
-    latest={null}
-    onRetryLatest={jest.fn()}
-    onJumpToLatest={jest.fn()}
   />
 );
 

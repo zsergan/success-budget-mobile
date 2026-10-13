@@ -1,51 +1,41 @@
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import { EmptyState, SectionTitle, TinyButton, TransactionCard } from '@components';
-import type { TransactionModel } from '@api/models';
-import type { EmptyPeriodState } from '@redux/state/transaction/selectors';
+import type { TransactionFeedPageModel, TransactionModel } from '@api/models';
 import type { MainTabNavigationProp } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { colors } from '@shared/theme';
-import { formatDateDDMMYYYY, formatSignedAmount, groupTransactionsByDay, limitGroupRows } from '@shared/utils';
+import { formatSignedAmount, groupRowsByDay, toCents } from '@shared/utils';
 
 import styles from './style';
 
-const RECENT_TRANSACTIONS_LIMIT = 5;
-
 interface Props {
   navigation: MainTabNavigationProp<ScreenNames.HOME_TAB>;
-  transactions: TransactionModel[];
+  // The latest records of the whole history with their days' server totals; undefined until loaded.
+  recent?: TransactionFeedPageModel;
   currencyCode?: string;
   hasWallets: boolean;
   isLoading: boolean;
   hasError: boolean;
   onRetry: () => void;
-  // What an empty month means for the whole history.
-  emptyState: EmptyPeriodState;
-  latest: TransactionModel | null;
-  onRetryLatest: () => void;
-  onJumpToLatest: (transaction: TransactionModel) => void;
   onPressTransaction: (transaction: TransactionModel) => void;
   onDeleteTransaction: (transaction: TransactionModel, onSettled: () => void) => void;
 }
 
 const RecentActivity = ({
   navigation,
-  transactions,
+  recent,
   currencyCode,
   hasWallets,
   isLoading,
   hasError,
   onRetry,
-  emptyState,
-  latest,
-  onRetryLatest,
-  onJumpToLatest,
   onPressTransaction,
   onDeleteTransaction,
 }: Props) => {
-  // `transactions` is the whole current month, so every day's total covers all of it, not only the rows shown.
-  const groups = limitGroupRows(groupTransactionsByDay(transactions), RECENT_TRANSACTIONS_LIMIT);
+  const transactions = recent?.items ?? [];
+  const groups = groupRowsByDay(transactions);
+  const dayNets = Object.fromEntries((recent?.dayTotals ?? []).map(({ date, net }) => [date, net]));
 
   return (
     <>
@@ -62,7 +52,7 @@ const RecentActivity = ({
       />
 
       <View style={styles.section}>
-        {(isLoading || (!hasError && emptyState === 'loading')) && transactions.length === 0 ? (
+        {isLoading && transactions.length === 0 ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator color={colors.accent} />
           </View>
@@ -73,23 +63,6 @@ const RecentActivity = ({
             description="Check your connection and try again."
             actionLabel="Retry"
             onActionPress={onRetry}
-          />
-        ) : transactions.length === 0 && emptyState === 'latestError' ? (
-          <EmptyState
-            icon="list"
-            title="Couldn't confirm this is empty"
-            description="This month has no transactions, but we couldn't check the rest of your history. Try again."
-            actionLabel="Retry"
-            onActionPress={onRetryLatest}
-          />
-        ) : transactions.length === 0 && emptyState === 'filteredEmpty' && latest ? (
-          <EmptyState
-            variant="solid"
-            icon="calendar"
-            title="Nothing this month"
-            description={`Your last transaction was on ${formatDateDDMMYYYY(latest.timestamp)}.`}
-            actionLabel={`Jump to ${formatDateDDMMYYYY(latest.timestamp)}`}
-            onActionPress={() => onJumpToLatest(latest)}
           />
         ) : transactions.length === 0 ? (
           <EmptyState
@@ -108,9 +81,11 @@ const RecentActivity = ({
                 <View style={styles.groupHeader}>
                   <Text style={styles.groupLabel}>{group.label}</Text>
 
-                  <Text style={[styles.groupTotal, group.total > 0 && styles.groupTotalPositive]}>
-                    {formatSignedAmount(group.total, currencyCode)}
-                  </Text>
+                  {dayNets[group.key] !== undefined && (
+                    <Text style={[styles.groupTotal, toCents(dayNets[group.key]) > 0 && styles.groupTotalPositive]}>
+                      {formatSignedAmount(dayNets[group.key], currencyCode)}
+                    </Text>
+                  )}
                 </View>
 
                 <View style={styles.groupItems}>
