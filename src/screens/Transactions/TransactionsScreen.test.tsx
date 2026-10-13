@@ -311,7 +311,8 @@ describe('TransactionsScreen', () => {
 
     act(() => screen.UNSAFE_getByType(SectionList).props.onEndReached());
     await settle();
-    expect(screen.getByText('Couldn’t load older transactions.')).toBeTruthy();
+    expect(screen.getByText('Couldn’t load more')).toBeTruthy();
+    expect(screen.getAllByText('Sun, Sep 20')).toHaveLength(1);
 
     failNext = false;
     fireEvent.press(screen.getByText('Retry'));
@@ -320,7 +321,7 @@ describe('TransactionsScreen', () => {
     expect(screen.getAllByText('Sun, Sep 20')).toHaveLength(1);
     expect(screen.getByText('second')).toBeTruthy();
     expect(screen.getByText('Thu, Sep 3')).toBeTruthy();
-    expect(screen.queryByText('Couldn’t load older transactions.')).toBeNull();
+    expect(screen.queryByText('Couldn’t load more')).toBeNull();
   });
 
   it('reads further pages of the month until a revealed row is listed', async () => {
@@ -341,5 +342,49 @@ describe('TransactionsScreen', () => {
 
     expect(listRequests().map(({ params }) => params?.cursor)).toEqual([undefined, 'c1']);
     expect(screen.getByText('Taxi')).toBeTruthy();
+  });
+
+  it('keeps ten pages while scrolling on, and reads the dropped newer ones again on the way back', async () => {
+    const pageRow = (n: number) =>
+      transactionDto({ id: `p${n}`, timestamp: new Date(2026, 8, 25 - n, 9).toISOString(), description: `row ${n}` });
+    mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
+      if (url !== FEED) return Promise.resolve({ data: null });
+      const n = params?.cursor ? Number(String(params.cursor).slice(1)) : 0;
+
+      return Promise.resolve({
+        data: feedDto([pageRow(n)], {
+          page_info: { next_cursor: `n${n + 1}`, previous_cursor: n > 0 ? `n${n - 1}` : null },
+        }),
+      });
+    });
+
+    renderTransactions(undefined);
+    await settle();
+    const list = () => screen.UNSAFE_getByType(SectionList);
+    const listed = () =>
+      list().props.sections.flatMap(({ data }: { data: { id: string }[] }) => data.map(({ id }) => id));
+    expect(list().props.maintainVisibleContentPosition).toEqual({
+      minIndexForVisible: 1,
+      autoscrollToTopThreshold: 10,
+    });
+
+    for (let page = 1; page <= 10; page += 1) {
+      act(() => list().props.onEndReached());
+      await settle();
+    }
+
+    expect(listed()).toEqual(['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9', 'p10']);
+    expect(list().props.maintainVisibleContentPosition).toEqual({ minIndexForVisible: 1 });
+    expect(screen.queryByTestId('history-loading-page')).toBeNull();
+
+    act(() => list().props.onStartReached());
+    await settle();
+
+    expect(listRequests().at(-1)?.params?.cursor).toBe('n0');
+    expect(listed()).toEqual(['p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9']);
+    expect(list().props.maintainVisibleContentPosition).toEqual({
+      minIndexForVisible: 1,
+      autoscrollToTopThreshold: 10,
+    });
   });
 });

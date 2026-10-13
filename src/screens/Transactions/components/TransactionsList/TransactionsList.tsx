@@ -1,10 +1,10 @@
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useRef } from 'react';
 import type { ViewToken } from 'react-native';
-import { ActivityIndicator, SectionList, Text, View } from 'react-native';
+import { ActivityIndicator, SectionList, Text, TouchableOpacity, View } from 'react-native';
 
 import type { Money } from '@api/dto';
-import { Banner, TransactionCard, useScreenTopInset } from '@components';
+import { TransactionCard, useScreenTopInset } from '@components';
 import type { TransactionModel } from '@api/models';
 import { colors } from '@shared/theme';
 import type { DayGroup } from '@shared/utils';
@@ -37,12 +37,38 @@ interface Props {
   highlightId?: string | null;
   // Called once the highlighted row is actually on screen.
   onHighlightSeen?: () => void;
-  isLoadingMore?: boolean;
-  loadMoreFailed?: boolean;
-  // Called whenever the end comes near; the caller ignores a call while a page is loading.
-  onEndReached?: () => void;
-  onRetryLoadMore?: () => void;
+  older?: PageEdge;
+  newer?: PageEdge;
+  onRetryPage?: () => void;
 }
+
+interface PageEdge {
+  hasMore: boolean;
+  isLoading: boolean;
+  hasError: boolean;
+  // Called whenever this edge comes near; the caller decides whether a page is due.
+  onReached: () => void;
+}
+
+// About half to one screen before an edge, so the next page is usually there before the user is.
+const EDGE_THRESHOLD = 0.75;
+const TOP_THRESHOLD = 10;
+
+const PageStatus = ({ edge, onRetry }: { edge?: PageEdge; onRetry?: () => void }) => {
+  if (edge?.hasError)
+    return (
+      <View style={styles.pageStatus}>
+        <Text style={styles.pageError}>Couldn’t load more</Text>
+        <TouchableOpacity onPress={onRetry} hitSlop={12} accessibilityRole="button">
+          <Text style={styles.pageRetry}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+
+  return edge?.isLoading ? (
+    <ActivityIndicator style={styles.pageStatus} color={colors.accent} testID="history-loading-page" />
+  ) : null;
+};
 
 const VIEWABILITY = { itemVisiblePercentThreshold: 60 };
 
@@ -65,10 +91,9 @@ const TransactionsList = ({
   onDeleteTransaction,
   highlightId = null,
   onHighlightSeen,
-  isLoadingMore = false,
-  loadMoreFailed = false,
-  onEndReached,
-  onRetryLoadMore,
+  older,
+  newer,
+  onRetryPage,
 }: Props) => {
   const topInset = useScreenTopInset();
   const listRef = useRef<SectionList<TransactionModel, Section>>(null);
@@ -127,24 +152,25 @@ const TransactionsList = ({
       stickySectionHeadersEnabled={false}
       showsVerticalScrollIndicator={false}
       ItemSeparatorComponent={ItemSeparator}
-      ListHeaderComponent={header}
-      ListEmptyComponent={placeholder}
-      ListFooterComponent={
-        loadMoreFailed ? (
-          <View style={styles.footer}>
-            <Banner
-              tone="danger"
-              text="Couldn’t load older transactions."
-              actionLabel="Retry"
-              onAction={onRetryLoadMore}
-            />
-          </View>
-        ) : isLoadingMore ? (
-          <ActivityIndicator style={styles.footer} color={colors.accent} testID="history-loading-more" />
-        ) : null
+      ListHeaderComponent={
+        <>
+          {header}
+          <PageStatus edge={newer} onRetry={onRetryPage} />
+        </>
       }
-      onEndReached={sections.length > 0 ? onEndReached : undefined}
-      onEndReachedThreshold={0.5}
+      ListEmptyComponent={placeholder}
+      ListFooterComponent={<PageStatus edge={older} onRetry={onRetryPage} />}
+      onEndReached={sections.length > 0 ? older?.onReached : undefined}
+      onEndReachedThreshold={EDGE_THRESHOLD}
+      onStartReached={sections.length > 0 ? newer?.onReached : undefined}
+      onStartReachedThreshold={EDGE_THRESHOLD}
+      // Rows added or dropped above keep the visible row in place; the header (child 0) never anchors. A dropped page
+      // lies within the default 21-screen render window, so that row stays mounted. Kept on at all times: switching it
+      // on later shifts the render window. At the newest record, a row saved while at the top is scrolled into view.
+      maintainVisibleContentPosition={{
+        minIndexForVisible: 1,
+        ...(!newer?.hasMore && { autoscrollToTopThreshold: TOP_THRESHOLD }),
+      }}
       // Rows far below are not measured yet: scroll near the row, then onto it once it renders.
       onScrollToIndexFailed={({ averageItemLength, index }) => {
         awaitsExactRef.current = true;

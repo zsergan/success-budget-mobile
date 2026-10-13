@@ -93,6 +93,10 @@ const useTransactionsData = ({ range, filter }: UseTransactionsDataProps) => {
     isLoadingNextPage: feed.isLoadingNextPage,
     hasNextPageError: feed.hasNextPageError,
     loadNextPage: feed.loadNextPage,
+    hasPreviousPage: feed.hasPreviousPage,
+    isLoadingPreviousPage: feed.isLoadingPreviousPage,
+    hasPreviousPageError: feed.hasPreviousPageError,
+    loadPreviousPage: feed.loadPreviousPage,
     // What is listed stays, but a refresh, e.g. after a saved change, could not bring it up to date.
     refreshFailed: feed.hasRefreshError,
     retryRefresh: feed.retry,

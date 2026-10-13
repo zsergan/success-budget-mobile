@@ -99,6 +99,10 @@ const TransactionsScreen = () => {
     isLoadingNextPage,
     hasNextPageError,
     loadNextPage,
+    hasPreviousPage,
+    isLoadingPreviousPage,
+    hasPreviousPageError,
+    loadPreviousPage,
     refreshFailed,
     retry,
     retryLatest,
@@ -141,10 +145,19 @@ const TransactionsScreen = () => {
           onDeleteTransaction={requestDelete}
           highlightId={highlightId}
           onHighlightSeen={() => setSeenId(highlightId)}
-          isLoadingMore={isLoadingNextPage}
-          loadMoreFailed={hasNextPageError}
-          onEndReached={loadNextPage}
-          onRetryLoadMore={retry}
+          older={{
+            hasMore: hasNextPage,
+            isLoading: isLoadingNextPage,
+            hasError: hasNextPageError,
+            onReached: loadNextPage,
+          }}
+          newer={{
+            hasMore: hasPreviousPage,
+            isLoading: isLoadingPreviousPage,
+            hasError: hasPreviousPageError,
+            onReached: loadPreviousPage,
+          }}
+          onRetryPage={retry}
           header={
             <>
               <TransactionsHeader />
