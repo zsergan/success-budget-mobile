@@ -90,7 +90,8 @@ const scrollToRow = (list: SectionList<TransactionModel, Section> | null, groups
   const sectionIndex = groups.findIndex((group) => group.items.some(({ id }) => id === target.id));
   if (sectionIndex < 0) return false;
 
-  const itemIndex = groups[sectionIndex].items.findIndex(({ id }) => id === target.id);
+  // SectionList counts the section's header as its item 0.
+  const itemIndex = groups[sectionIndex].items.findIndex(({ id }) => id === target.id) + 1;
   list?.scrollToLocation({ sectionIndex, itemIndex, viewPosition: target.viewPosition, viewOffset: target.viewOffset });
   return true;
 };

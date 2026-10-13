@@ -2,7 +2,7 @@ import type { ReactNode, Ref } from 'react';
 import { Provider } from 'react-redux';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { ScrollView, SectionList, StyleSheet } from 'react-native';
+import { ScrollView, SectionList, StyleSheet, VirtualizedList } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { baseApi, spaceTags } from '@redux/api/baseApi';
@@ -101,6 +101,20 @@ const listRequests = () =>
 
 const settle = () => act(async () => jest.advanceTimersByTimeAsync(10));
 
+// Where each scroll lands, read through SectionList's own index arithmetic: a row's id, or a day's header.
+const spyLandings = () => {
+  const landings: { id: string; viewPosition?: number }[] = [];
+  const spy = jest.spyOn(VirtualizedList.prototype, 'scrollToIndex').mockImplementation(function (
+    this: VirtualizedList<unknown>,
+    { index, viewPosition },
+  ) {
+    const item = this.props.getItem?.(this.props.data, index) as { id?: string } | undefined;
+    landings.push({ id: item?.id ?? 'header', viewPosition });
+  });
+
+  return { landings, restore: () => spy.mockRestore() };
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
@@ -137,7 +151,7 @@ describe('TransactionsScreen', () => {
   });
 
   it('lands on a revealed row once it is measured, and fades it only after it has been on screen', async () => {
-    const scrollToLocation = jest.spyOn(SectionList.prototype, 'scrollToLocation').mockImplementation(() => {});
+    const { landings, restore } = spyLandings();
     renderTransactions({ reveal: { spaceId: 1, transactionId: 'tx-aug', timestamp: august } });
     await settle();
 
@@ -153,16 +167,13 @@ describe('TransactionsScreen', () => {
       );
     const row = ancestors().find(({ props }) => Object.keys(props).join() === 'onLayout,children')!;
 
-    expect(scrollToLocation).toHaveBeenCalledTimes(1);
+    expect(landings).toEqual([{ id: 'tx-aug', viewPosition: 0.4 }]);
     act(() => list.props.onScrollToIndexFailed({ index: 1, highestMeasuredFrameIndex: 0, averageItemLength: 70 }));
     fireEvent(row, 'layout', { nativeEvent: { layout: { x: 0, y: 900, width: 300, height: 70 } } });
-    expect(scrollToLocation).toHaveBeenCalledTimes(2);
-    expect(scrollToLocation).toHaveBeenLastCalledWith({
-      sectionIndex: 0,
-      itemIndex: 0,
-      viewPosition: 0.4,
-      viewOffset: 0,
-    });
+    expect(landings).toEqual([
+      { id: 'tx-aug', viewPosition: 0.4 },
+      { id: 'tx-aug', viewPosition: 0.4 },
+    ]);
 
     await act(async () => jest.advanceTimersByTimeAsync(5000));
     expect(isLit()).toBe(true);
@@ -170,7 +181,7 @@ describe('TransactionsScreen', () => {
     act(() => list.props.onViewableItemsChanged({ viewableItems: [{ item: mapTransaction(taxi), isViewable: true }] }));
     await act(async () => jest.advanceTimersByTimeAsync(2500));
     expect(isLit()).toBe(false);
-    scrollToLocation.mockRestore();
+    restore();
   });
 
   it('lists only regular income of a wallet under an Income filter, and the usual history once it is cleared', async () => {
@@ -419,7 +430,7 @@ describe('TransactionsScreen', () => {
       );
 
     it('scrolls to a record already listed without asking for it again', async () => {
-      const scrollToLocation = jest.spyOn(SectionList.prototype, 'scrollToLocation').mockImplementation(() => {});
+      const { landings, restore } = spyLandings();
       mockedRequest.mockImplementation(({ url }: RequestConfig) =>
         Promise.resolve({ data: url === FEED ? feedDto(rows) : null }),
       );
@@ -431,8 +442,8 @@ describe('TransactionsScreen', () => {
       await settle();
 
       expect(listRequests()).toHaveLength(before);
-      expect(scrollToLocation).toHaveBeenCalledWith(expect.objectContaining({ sectionIndex: 1, itemIndex: 0 }));
-      scrollToLocation.mockRestore();
+      expect(landings).toEqual([{ id: 's2', viewPosition: 0.4 }]);
+      restore();
     });
 
     it('says a record is no longer there and shows its whole period', async () => {
@@ -868,6 +879,44 @@ describe('TransactionsScreen', () => {
       expect(scrollToLocation).toHaveBeenLastCalledWith(expect.objectContaining({ viewPosition: 0 }));
       expect(screen.queryByText('This transaction is no longer here. Showing the whole period instead.')).toBeNull();
       scrollToLocation.mockRestore();
+    });
+
+    it('lands on the very row, never the one above it, on Cancel and when a record is shown', async () => {
+      const sameDay = (id: string, hour: number) =>
+        transactionDto({ id, timestamp: new Date(2026, 8, 20, hour).toISOString(), description: id });
+      const [latte, tea] = [sameDay('tx-latte', 8), sameDay('tx-tea', 7)];
+      mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
+        if (url !== FEED) return Promise.resolve({ data: null });
+        return Promise.resolve({ data: feedDto(params?.q ? [coffee] : [coffee, latte, tea]) });
+      });
+      const { landings, restore } = spyLandings();
+      renderTransactions(undefined);
+      await settle();
+      act(() =>
+        screen.UNSAFE_getByType(SectionList).props.onViewableItemsChanged({
+          viewableItems: [latte, tea].map((row) => ({ item: mapTransaction(row), isViewable: true })),
+        }),
+      );
+
+      const field = await openSearch();
+      fireEvent.changeText(field, 'coffee');
+      fireEvent(field, 'submitEditing');
+      await settle();
+      fireEvent.press(screen.getByText('Cancel'));
+      await settle();
+
+      expect(listRequests().at(-1)?.params).toMatchObject({ around_id: 'tx-latte' });
+      expect(landings.at(-1)).toEqual({ id: 'tx-latte', viewPosition: 0 });
+
+      act(() =>
+        navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB, {
+          reveal: { spaceId: 1, transactionId: 'tx-tea', timestamp: tea.timestamp },
+        }),
+      );
+      await settle();
+
+      expect(landings.at(-1)).toEqual({ id: 'tx-tea', viewPosition: 0.4 });
+      restore();
     });
 
     it('brings the history back once, never again after another record is shown and fades', async () => {
