@@ -12,10 +12,11 @@ import type { HistoryFilter } from '@shared/types';
 import type { DateRange, DayGroup } from '@shared/utils';
 import { groupRowsByDay } from '@shared/utils';
 
-// trueEmpty: no transactions at all; filteredEmpty: none in this period; noMatches: none under a Stats filter.
+// trueEmpty: no transactions at all; filteredEmpty: none in this period; noMatches: none under a Stats filter;
+// noSearchMatches: none for the search in this period.
 // latestError: the period is empty but whether any transactions exist couldn't be checked.
 export type TransactionsViewState =
-  'loading' | 'trueEmpty' | 'filteredEmpty' | 'noMatches' | 'ready' | 'rangeError' | 'latestError';
+  'loading' | 'trueEmpty' | 'filteredEmpty' | 'noMatches' | 'noSearchMatches' | 'ready' | 'rangeError' | 'latestError';
 
 export interface HistorySection extends DayGroup {
   // The server's net of the whole day; null if it did not send one for this day.
@@ -30,6 +31,8 @@ interface UseTransactionsDataProps {
   filter: HistoryFilter | null;
   // Open the period at this record's page instead of its newest one.
   aroundId?: string;
+  // Search text, trimmed; empty for the plain history.
+  q?: string;
   // The rows on screen, top first, kept in view when the history is refreshed after a change.
   getVisibleIds?: () => string[];
 }
@@ -51,12 +54,12 @@ const toFilterArg = ({
   ...(categoryId !== undefined ? { categoryId } : { walletId }),
 });
 
-const useTransactionsData = ({ range, filter, aroundId, getVisibleIds }: UseTransactionsDataProps) => {
+const useTransactionsData = ({ range, filter, q, aroundId, getVisibleIds }: UseTransactionsDataProps) => {
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
   const feed = useTransactionsFeed(
-    spaceId === null ? skipToken : feedSelection(filter ? toFilterArg(filter) : periodArg(spaceId, range)),
+    spaceId === null ? skipToken : feedSelection(filter ? toFilterArg(filter) : periodArg(spaceId, range), { q }),
     { aroundId, getVisibleIds },
   );
   const { items, summary, dayNets } = feed;
@@ -64,7 +67,7 @@ const useTransactionsData = ({ range, filter, aroundId, getVisibleIds }: UseTran
 
   // Whether the account has any history at all only matters for an empty period.
   const spaceArg = useSpaceArg();
-  const needsLatest = !filter && isEmpty;
+  const needsLatest = !filter && !q && isEmpty;
   const latestQuery = useGetLatestTransactionQuery(needsLatest ? spaceArg : skipToken);
 
   const sections = useMemo<HistorySection[]>(
@@ -82,6 +85,8 @@ const useTransactionsData = ({ range, filter, aroundId, getVisibleIds }: UseTran
     viewState = 'ready';
   } else if (filter) {
     viewState = 'noMatches';
+  } else if (q) {
+    viewState = 'noSearchMatches';
   } else {
     viewState = getEmptyPeriodState(latestQuery, range);
   }
