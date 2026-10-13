@@ -17,6 +17,7 @@ import { usePeriod, useSpaceRefresh } from '@hooks';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { rangeSelection } from '@redux/state/transactionFlow/selection';
+import { monthPeriodOf, toDateRange } from '@shared/utils';
 import { TransactionType } from '@shared/enums';
 import type { ScreenNames } from '@shared/enums';
 import type { MainTabNavigationProp, MainTabScreenProps, RevealTransaction } from '@shared/types';
@@ -60,13 +61,24 @@ const TransactionsScreen = () => {
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<RevealTransaction | undefined>(undefined);
 
+  // The revealed record is where its month opens, and stays so until another period is picked.
+  const [anchor, setAnchor] = useState<RevealTransaction | null>(null);
+
   if (reveal && reveal !== revealed) {
     setRevealed(reveal);
     if (reveal.spaceId === spaceId) {
       openMonthOf(reveal.timestamp);
       setHighlightId(reveal.transactionId);
+      setAnchor(reveal);
     }
   }
+
+  const anchorMonth = anchor && toDateRange(monthPeriodOf(anchor.timestamp));
+  if (
+    anchorMonth &&
+    (anchorMonth.from.getTime() !== range.from.getTime() || anchorMonth.to.getTime() !== range.to.getTime())
+  )
+    setAnchor(null);
 
   useEffect(() => {
     if (reveal) navigation.setParams({ reveal: undefined, filter: undefined });
@@ -88,7 +100,6 @@ const TransactionsScreen = () => {
       : rangeSelection(range),
   );
   const {
-    transactions,
     sections,
     viewState,
     latest,
@@ -109,13 +120,8 @@ const TransactionsScreen = () => {
   } = useTransactionsData({
     range,
     filter,
+    aroundId: anchor && !filter && anchor.spaceId === spaceId ? anchor.transactionId : undefined,
   });
-
-  // A revealed row may sit on a later page of its month: keep reading until it is listed or the month ends.
-  const isHighlightListed = highlightId === null || transactions.some(({ id }) => id === highlightId);
-  useEffect(() => {
-    if (!isHighlightListed && hasNextPage) loadNextPage();
-  }, [isHighlightListed, hasNextPage, loadNextPage]);
   const [seenId, setSeenId] = useState<string | null>(null);
   const isHighlightSeen = highlightId !== null && seenId === highlightId;
 

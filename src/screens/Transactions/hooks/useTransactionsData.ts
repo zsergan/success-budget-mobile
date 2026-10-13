@@ -28,6 +28,8 @@ interface UseTransactionsDataProps {
   range: DateRange;
   // Replaces the period: its bounds go to the API exactly as Stats got them.
   filter: HistoryFilter | null;
+  // Open the period at this record's page instead of its newest one.
+  aroundId?: string;
 }
 
 const toFilterArg = ({
@@ -47,12 +49,13 @@ const toFilterArg = ({
   ...(categoryId !== undefined ? { categoryId } : { walletId }),
 });
 
-const useTransactionsData = ({ range, filter }: UseTransactionsDataProps) => {
+const useTransactionsData = ({ range, filter, aroundId }: UseTransactionsDataProps) => {
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
   const feed = useTransactionsFeed(
     spaceId === null ? skipToken : feedSelection(filter ? toFilterArg(filter) : periodArg(spaceId, range)),
+    { aroundId },
   );
   const { items, summary, dayNets } = feed;
   const isEmpty = !feed.isLoading && !feed.hasError && items.length === 0;

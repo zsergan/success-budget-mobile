@@ -266,3 +266,22 @@ it('retries a failed page with the same cursor and does not chain retries on its
   expect(sent.map(({ params }) => params.cursor)).toEqual([undefined, 'c1', 'c1']);
   expect(ids(result)).toEqual(['a']);
 });
+
+it('starts from the newest record, keeping the rows shown, once the record it opened at is gone', async () => {
+  const { result, store } = renderFeed({ selection: october, aroundId: 'x' });
+  await answer(0, page(['w', 'x']));
+
+  act(() => {
+    store.dispatch(baseApi.util.invalidateTags(spaceTags(3, 'Transactions')));
+  });
+  await flush();
+  expect(sent[1].params).toMatchObject({ around_id: 'x' });
+  await refuse(1, { statusCode: 404, code: ApiErrorCode.TRANSACTION_NOT_FOUND, message: 'Transaction not found' });
+
+  expect(sent[2].params).not.toHaveProperty('around_id');
+  expect(ids(result)).toEqual(['w', 'x']);
+  expect(result.current.hasRefreshError).toBe(false);
+
+  await answer(2, page(['w']));
+  expect(ids(result)).toEqual(['w']);
+});

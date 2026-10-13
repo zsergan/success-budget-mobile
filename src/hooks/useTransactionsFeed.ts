@@ -68,12 +68,14 @@ const useTransactionsFeed = (selection: FeedSelection | SkipToken, { pageSize, a
   const isFetchNextPageError = isError && query.direction === 'forward';
   const isFetchPreviousPageError = isError && query.direction === 'backward';
 
-  // Both answers are final for this generation's start, so the next one starts from the newest record.
-  if (
-    isCursorRejected(error) ||
-    (current.start.aroundId && isApiError(error, 404, ApiErrorCode.TRANSACTION_NOT_IN_FEED))
-  ) {
-    current = { ...current, generation: current.generation + 1, start: {}, isReload: isCursorRejected(error) };
+  // Each answer is final for this generation's start (a record gone or outside the selection, a cursor refused),
+  // so the next generation starts from the newest record, keeping what is shown until it arrives.
+  const isStartRefused =
+    current.start.aroundId !== undefined &&
+    (isApiError(error, 404, ApiErrorCode.TRANSACTION_NOT_IN_FEED) ||
+      isApiError(error, 404, ApiErrorCode.TRANSACTION_NOT_FOUND));
+  if (isCursorRejected(error) || isStartRefused) {
+    current = { ...current, generation: current.generation + 1, start: {}, isReload: currentData !== undefined };
     setLoad(current);
   }
 

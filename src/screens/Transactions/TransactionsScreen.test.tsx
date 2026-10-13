@@ -125,6 +125,7 @@ describe('TransactionsScreen', () => {
       from: new Date(2026, 7, 1).toISOString(),
       to: new Date(2026, 7, 31, 23, 59, 59, 999).toISOString(),
       time_zone: ZONE,
+      around_id: 'tx-aug',
     });
     expect(screen.getByText('Taxi')).toBeTruthy();
     expect(navigationRef.getCurrentRoute()?.params).toEqual({ filter: undefined, reveal: undefined });
@@ -324,24 +325,35 @@ describe('TransactionsScreen', () => {
     expect(screen.queryByText('Couldn’t load more')).toBeNull();
   });
 
-  it('reads further pages of the month until a revealed row is listed', async () => {
+  it('opens the month at the revealed row and reads newer rows above it on the way up', async () => {
     const newer = transactionDto({ id: 'tx-newer', timestamp: new Date(2026, 7, 20).toISOString() });
     mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
       if (url !== FEED) return Promise.resolve({ data: null });
 
       return Promise.resolve({
         data: params?.cursor
-          ? feedDto([taxi])
-          : feedDto([newer], { page_info: { next_cursor: 'c1', previous_cursor: null } }),
+          ? feedDto([newer], { page_info: { next_cursor: 'n1', previous_cursor: null } })
+          : feedDto([taxi], { page_info: { next_cursor: null, previous_cursor: 'p1' } }),
       });
     });
 
     renderTransactions({ reveal: { spaceId: 1, transactionId: 'tx-aug', timestamp: august } });
     await settle();
+
+    expect(listRequests().map(({ params }) => params?.around_id)).toEqual(['tx-aug']);
+    expect(screen.getByText('Taxi')).toBeTruthy();
+
+    act(() => screen.UNSAFE_getByType(SectionList).props.onStartReached());
     await settle();
 
-    expect(listRequests().map(({ params }) => params?.cursor)).toEqual([undefined, 'c1']);
-    expect(screen.getByText('Taxi')).toBeTruthy();
+    expect(listRequests().at(-1)?.params).toMatchObject({ cursor: 'p1' });
+    expect(listRequests().at(-1)?.params).not.toHaveProperty('around_id');
+    expect(screen.getByText('Thu, Aug 20')).toBeTruthy();
+
+    fireEvent.press(screen.getByText('Year'));
+    await settle();
+
+    expect(listRequests().at(-1)?.params).not.toHaveProperty('around_id');
   });
 
   it('keeps ten pages while scrolling on, and reads the dropped newer ones again on the way back', async () => {
