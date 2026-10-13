@@ -380,3 +380,17 @@ it('cancels the page still loading for a window a reload replaces, and never sho
   await answer(2, page(['a', 'b'], 'c1'));
   expect(ids(result)).toEqual(['a', 'b']);
 });
+
+it('never applies a late answer of an earlier search, even when the same search is sent again', async () => {
+  const search = (q: string) => feedSelection(period, { q, timeZone: 'Europe/Moscow' });
+  const { result, rerender } = renderFeed({ selection: search('a') });
+
+  rerender({ selection: search('ab') });
+  rerender({ selection: search('a') });
+  await answer(2, page(['a-fresh']));
+  await answer(0, page(['a-stale']));
+  await answer(1, page(['ab']));
+
+  expect(sent.map(({ params }) => params.q)).toEqual(['a', 'ab', 'a']);
+  expect(ids(result)).toEqual(['a-fresh']);
+});
