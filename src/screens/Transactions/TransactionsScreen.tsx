@@ -93,6 +93,11 @@ const TransactionsScreen = () => {
   // Where the plain history was when a search opened; Cancel brings it back while the period is the same.
   const [returnPoint, setReturnPoint] = useState<Anchor | null>(null);
   const [restoreId, setRestoreId] = useState<string | null>(null);
+  // A Stats filter ends a search, so + works under it and clearing it shows the plain history.
+  if (filter && (search.isSearching || search.query || search.submitted || returnPoint)) {
+    search.cancel();
+    setReturnPoint(null);
+  }
   // A restore holds only while its row still anchors the plain history: another period or a filter drops it.
   if (restoreId && (filter || anchor?.transactionId !== restoreId)) setRestoreId(null);
   // The plain history was replaced by results at least once, so Cancel has a place to return to.
@@ -272,7 +277,7 @@ const TransactionsScreen = () => {
             <>
               <TransactionsHeader
                 canSearch={!filter}
-                isSearching={search.isSearching && !filter}
+                isSearching={search.isSearching}
                 query={search.query}
                 onOpen={openSearch}
                 onCancel={cancelSearch}

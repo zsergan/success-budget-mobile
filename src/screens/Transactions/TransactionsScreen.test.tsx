@@ -889,6 +889,68 @@ describe('TransactionsScreen', () => {
       expect(screen.queryByRole('button', { name: 'Search transactions' })).toBeNull();
     });
 
+    it.each(['still out', 'not yet sent'])(
+      'ends a search %s once a Stats filter opens, with + under it and the plain history after it',
+      async (stage) => {
+        let answer: (value: unknown) => void = () => {};
+        mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
+          if (url !== FEED) return Promise.resolve({ data: null });
+          if (params?.q) return new Promise((resolve) => (answer = resolve));
+          return Promise.resolve({ data: feedDto([coffee, taxi]) });
+        });
+        renderTransactions(undefined);
+        await settle();
+        act(() =>
+          screen.UNSAFE_getByType(SectionList).props.onViewableItemsChanged({
+            viewableItems: [{ item: mapTransaction(taxi), isViewable: true }],
+          }),
+        );
+        const field = await openSearch();
+        fireEvent.changeText(field, 'coffee');
+        if (stage === 'still out') fireEvent(field, 'submitEditing');
+        await settle();
+        const sent = listRequests().length;
+
+        act(() =>
+          navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB, {
+            filter: {
+              spaceId: 1,
+              from: new Date(2026, 8, 1).toISOString(),
+              to: new Date(2026, 8, 28).toISOString(),
+              transactionType: TransactionType.EXPENSE,
+              kind: TransactionKind.REGULAR,
+              name: 'Food',
+              categoryId: 2,
+            },
+          }),
+        );
+        await settle();
+        await act(async () =>
+          answer({ data: feedDto([coffee], { summary: { count: 1, income: '0.00', expense: '9.99' } }) }),
+        );
+        await act(async () => jest.advanceTimersByTimeAsync(300));
+
+        expect(listRequests().slice(sent)).toEqual([
+          expect.objectContaining({ params: expect.not.objectContaining({ q: expect.anything() }) }),
+        ]);
+        expect(listRequests().at(-1)?.params).toMatchObject({ category_id: 2 });
+        expect(screen.queryByText('9.99')).toBeNull();
+        expect(screen.UNSAFE_queryByType(Fab)).toBeTruthy();
+
+        fireEvent.press(screen.getByLabelText('Clear filter'));
+        await settle();
+
+        expect(listRequests().at(-1)?.params).toEqual({
+          from: new Date(2026, 8, 1).toISOString(),
+          to: new Date(2026, 8, 30, 23, 59, 59, 999).toISOString(),
+          time_zone: ZONE,
+        });
+        expect(screen.queryByText('Cancel', { includeHiddenElements: false })).toBeNull();
+        expect(screen.UNSAFE_queryByType(Fab)).toBeTruthy();
+        expect((await openSearch()).props.value).toBe('');
+      },
+    );
+
     it('leaves search when a record is shown from elsewhere', async () => {
       renderTransactions(undefined);
       await settle();
