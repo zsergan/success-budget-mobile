@@ -5,13 +5,16 @@ import { compareDays } from './compare';
 import { toLocalDateKey } from './dateRange';
 import { toCents } from './money';
 
-export interface TransactionGroup {
+export interface DayGroup {
   // The calendar day on the device, so two days never merge over an equal label.
   key: string;
   label: string;
+  items: TransactionModel[];
+}
+
+export interface TransactionGroup extends DayGroup {
   // Income minus expense of the whole day, initial balances left out.
   total: number;
-  items: TransactionModel[];
 }
 
 export const formatGroupLabel = (value: Date | string, now = new Date()) => {
@@ -30,28 +33,33 @@ export const formatGroupLabel = (value: Date | string, now = new Date()) => {
   });
 };
 
-export const groupTransactionsByDay = (transactions: TransactionModel[], now = new Date()): TransactionGroup[] => {
-  const groups = new Map<string, { group: TransactionGroup; cents: number }>();
+// Rows of one day stay together in list order, wherever a page boundary fell.
+export const groupRowsByDay = (transactions: TransactionModel[], now = new Date()): DayGroup[] => {
+  const groups = new Map<string, DayGroup>();
 
   transactions.forEach((transaction) => {
     const date = new Date(transaction.timestamp);
     const key = toLocalDateKey(date);
-    let entry = groups.get(key);
+    const group = groups.get(key);
 
-    if (!entry) {
-      entry = { group: { key, label: formatGroupLabel(date, now), total: 0, items: [] }, cents: 0 };
-      groups.set(key, entry);
-    }
-
-    entry.group.items.push(transaction);
-    if (!isInitialBalance(transaction)) {
-      const sign = transaction.transactionType === TransactionType.EXPENSE ? -1 : 1;
-      entry.cents += sign * toCents(transaction.amount);
-    }
+    if (group) group.items.push(transaction);
+    else groups.set(key, { key, label: formatGroupLabel(date, now), items: [transaction] });
   });
 
-  return [...groups.values()].map(({ group, cents }) => ({ ...group, total: cents / 100 }));
+  return [...groups.values()];
 };
+
+const dayCents = (items: TransactionModel[]) =>
+  items
+    .filter((transaction) => !isInitialBalance(transaction))
+    .reduce(
+      (cents, { transactionType, amount }) =>
+        cents + (transactionType === TransactionType.EXPENSE ? -1 : 1) * toCents(amount),
+      0,
+    );
+
+export const groupTransactionsByDay = (transactions: TransactionModel[], now = new Date()): TransactionGroup[] =>
+  groupRowsByDay(transactions, now).map((group) => ({ ...group, total: dayCents(group.items) / 100 }));
 
 // The first `limit` rows of whole-day groups; a day cut short keeps the total of all its rows.
 export const limitGroupRows = (groups: TransactionGroup[], limit: number): TransactionGroup[] => {
