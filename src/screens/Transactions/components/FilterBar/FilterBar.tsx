@@ -1,5 +1,6 @@
 import { Text, View } from 'react-native';
 
+import type { Money } from '@api/dto';
 import { Icon, PeriodBar } from '@components';
 import { colors } from '@shared/theme';
 import type { Period, PeriodUnit } from '@shared/utils';
@@ -9,8 +10,8 @@ import styles from './style';
 
 interface Props {
   period: Period;
-  income: number;
-  expense: number;
+  income: Money;
+  expense: Money;
   currencyCode?: string;
   onPresetPress: (unit: PeriodUnit) => void;
   onOpenPicker: () => void;

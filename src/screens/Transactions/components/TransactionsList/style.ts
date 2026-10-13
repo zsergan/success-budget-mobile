@@ -42,6 +42,9 @@ const styles = StyleSheet.create({
   groupTotalPositive: {
     color: colors.ok,
   },
+  footer: {
+    marginTop: theme.spacing.lg,
+  },
   itemSeparator: {
     height: theme.spacing.md,
   },

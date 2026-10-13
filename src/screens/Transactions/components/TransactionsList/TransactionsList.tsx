@@ -1,19 +1,21 @@
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useRef } from 'react';
 import type { ViewToken } from 'react-native';
-import { SectionList, Text, View } from 'react-native';
+import { ActivityIndicator, SectionList, Text, View } from 'react-native';
 
-import { TransactionCard, useScreenTopInset } from '@components';
+import type { Money } from '@api/dto';
+import { Banner, TransactionCard, useScreenTopInset } from '@components';
 import type { TransactionModel } from '@api/models';
-import type { TransactionGroup } from '@shared/utils';
-import { formatSignedAmount } from '@shared/utils';
+import { colors } from '@shared/theme';
+import type { DayGroup } from '@shared/utils';
+import { formatSignedAmount, toCents } from '@shared/utils';
 
 import styles from './style';
 
 interface Section {
   key: string;
   title: string;
-  total: number;
+  total: Money | null;
   /** The first header sits right under the filter bar and takes a smaller gap above it. */
   isFirst: boolean;
   data: TransactionModel[];
@@ -21,8 +23,10 @@ interface Section {
 
 const ItemSeparator = () => <View style={styles.itemSeparator} />;
 
+type Group = DayGroup & { total: Money | null };
+
 interface Props {
-  groups: TransactionGroup[];
+  groups: Group[];
   currencyCode?: string;
   header: ReactElement;
   // Shown in place of the groups while there are none (loading, empty or error states).
@@ -33,16 +37,17 @@ interface Props {
   highlightId?: string | null;
   // Called once the highlighted row is actually on screen.
   onHighlightSeen?: () => void;
+  isLoadingMore?: boolean;
+  loadMoreFailed?: boolean;
+  // Called whenever the end comes near; the caller ignores a call while a page is loading.
+  onEndReached?: () => void;
+  onRetryLoadMore?: () => void;
 }
 
 const VIEWABILITY = { itemVisiblePercentThreshold: 60 };
 
 // Whether the row is in the list to scroll to.
-const scrollToRow = (
-  list: SectionList<TransactionModel, Section> | null,
-  groups: TransactionGroup[],
-  rowId: string,
-) => {
+const scrollToRow = (list: SectionList<TransactionModel, Section> | null, groups: Group[], rowId: string) => {
   const sectionIndex = groups.findIndex((group) => group.items.some(({ id }) => id === rowId));
   if (sectionIndex < 0) return false;
 
@@ -60,6 +65,10 @@ const TransactionsList = ({
   onDeleteTransaction,
   highlightId = null,
   onHighlightSeen,
+  isLoadingMore = false,
+  loadMoreFailed = false,
+  onEndReached,
+  onRetryLoadMore,
 }: Props) => {
   const topInset = useScreenTopInset();
   const listRef = useRef<SectionList<TransactionModel, Section>>(null);
@@ -120,6 +129,22 @@ const TransactionsList = ({
       ItemSeparatorComponent={ItemSeparator}
       ListHeaderComponent={header}
       ListEmptyComponent={placeholder}
+      ListFooterComponent={
+        loadMoreFailed ? (
+          <View style={styles.footer}>
+            <Banner
+              tone="danger"
+              text="Couldn’t load older transactions."
+              actionLabel="Retry"
+              onAction={onRetryLoadMore}
+            />
+          </View>
+        ) : isLoadingMore ? (
+          <ActivityIndicator style={styles.footer} color={colors.accent} testID="history-loading-more" />
+        ) : null
+      }
+      onEndReached={sections.length > 0 ? onEndReached : undefined}
+      onEndReachedThreshold={0.5}
       // Rows far below are not measured yet: scroll near the row, then onto it once it renders.
       onScrollToIndexFailed={({ averageItemLength, index }) => {
         awaitsExactRef.current = true;
@@ -131,9 +156,11 @@ const TransactionsList = ({
         <View style={[styles.groupHeader, section.isFirst ? styles.groupHeaderFirst : styles.groupHeaderSpaced]}>
           <Text style={styles.groupLabel}>{section.title}</Text>
 
-          <Text style={[styles.groupTotal, section.total > 0 && styles.groupTotalPositive]}>
-            {formatSignedAmount(section.total, currencyCode)}
-          </Text>
+          {section.total !== null && (
+            <Text style={[styles.groupTotal, toCents(section.total) > 0 && styles.groupTotalPositive]}>
+              {formatSignedAmount(section.total, currencyCode)}
+            </Text>
+          )}
         </View>
       )}
       renderItem={({ item }) => {

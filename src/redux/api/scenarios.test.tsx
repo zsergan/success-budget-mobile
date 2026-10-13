@@ -155,6 +155,16 @@ const createBackend = () => {
 
       return last ? toRow(spaceDb, last) : null;
     }
+    if (resource === 'transactions' && rawId === 'feed') {
+      const items = spaceDb.transactions.map((row) => toRow(spaceDb, row)).reverse();
+
+      return {
+        items,
+        page_info: { next_cursor: null, previous_cursor: null },
+        summary: { count: items.length, income: '0.00', expense: '0.00' },
+        day_totals: [],
+      };
+    }
     if (resource === 'transactions' && method === 'GET') return spaceDb.transactions.map((row) => toRow(spaceDb, row));
     if (resource === 'transactions' && method === 'POST') {
       const row = {
@@ -283,7 +293,7 @@ describe('server data scenarios', () => {
     unmount();
   });
 
-  it('shows a saved transaction on Home and History with one request for the shared period', async () => {
+  it('shows a saved transaction on Home and History with one request each', async () => {
     const { store, result, unmount } = await renderApp();
 
     mockedRequest.mockClear();
@@ -304,9 +314,12 @@ describe('server data scenarios', () => {
     });
     await settle(store);
 
-    const historyRequests = getRequests().filter((request) => request.startsWith('/spaces/1/transactions?'));
+    const listRequests = getRequests().filter((request) => /^\/spaces\/1\/transactions(\/feed)?\?/.test(request));
 
-    expect(historyRequests).toHaveLength(1);
+    expect(listRequests).toEqual([
+      expect.stringMatching(/^\/spaces\/1\/transactions\?/),
+      expect.stringMatching(/^\/spaces\/1\/transactions\/feed\?/),
+    ]);
     expect(result.current.home.currentData?.map(({ id }) => id)).toEqual(['tx-1']);
     expect(result.current.history.transactions.map(({ id }) => id)).toEqual(['tx-1']);
 

@@ -20,7 +20,6 @@ import { rangeSelection } from '@redux/state/transactionFlow/selection';
 import { TransactionType } from '@shared/enums';
 import type { ScreenNames } from '@shared/enums';
 import type { MainTabNavigationProp, MainTabScreenProps, RevealTransaction } from '@shared/types';
-import { groupTransactionsByDay } from '@shared/utils';
 import AppliedFilter from './components/AppliedFilter/AppliedFilter';
 import FilterBar from './components/FilterBar/FilterBar';
 import RangeCount from './components/RangeCount/RangeCount';
@@ -90,19 +89,29 @@ const TransactionsScreen = () => {
   );
   const {
     transactions,
+    sections,
     viewState,
     latest,
     income,
     expense,
     currencyCode,
+    hasNextPage,
+    isLoadingNextPage,
+    hasNextPageError,
+    loadNextPage,
     refreshFailed,
-    retryRefresh,
-    refetch,
+    retry,
     retryLatest,
   } = useTransactionsData({
     range,
     filter,
   });
+
+  // A revealed row may sit on a later page of its month: keep reading until it is listed or the month ends.
+  const isHighlightListed = highlightId === null || transactions.some(({ id }) => id === highlightId);
+  useEffect(() => {
+    if (!isHighlightListed && hasNextPage) loadNextPage();
+  }, [isHighlightListed, hasNextPage, loadNextPage]);
   const [seenId, setSeenId] = useState<string | null>(null);
   const isHighlightSeen = highlightId !== null && seenId === highlightId;
 
@@ -126,12 +135,16 @@ const TransactionsScreen = () => {
 
       <ScreenFrame edges={['top', 'left', 'right']} blurredStatusBar>
         <TransactionsList
-          groups={viewState === 'ready' ? groupTransactionsByDay(transactions) : []}
+          groups={viewState === 'ready' ? sections : []}
           currencyCode={currencyCode}
           onPressTransaction={openDetails}
           onDeleteTransaction={requestDelete}
           highlightId={highlightId}
           onHighlightSeen={() => setSeenId(highlightId)}
+          isLoadingMore={isLoadingNextPage}
+          loadMoreFailed={hasNextPageError}
+          onEndReached={loadNextPage}
+          onRetryLoadMore={retry}
           header={
             <>
               <TransactionsHeader />
@@ -163,7 +176,7 @@ const TransactionsScreen = () => {
                     tone="danger"
                     text="Couldn’t update the list. It shows what was loaded before."
                     actionLabel="Retry"
-                    onAction={retryRefresh}
+                    onAction={retry}
                   />
                 </View>
               )}
@@ -192,7 +205,7 @@ const TransactionsScreen = () => {
 
               {viewState === 'noMatches' && <TransactionsEmptyState variant="noMatches" onClearFilter={clearFilter} />}
 
-              {viewState === 'rangeError' && <TransactionsEmptyState variant="rangeError" onRetry={refetch} />}
+              {viewState === 'rangeError' && <TransactionsEmptyState variant="rangeError" onRetry={retry} />}
 
               {viewState === 'latestError' && <TransactionsEmptyState variant="latestError" onRetry={retryLatest} />}
             </>

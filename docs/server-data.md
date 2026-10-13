@@ -26,8 +26,9 @@ Any read refused with `403` for the current space refreshes Spaces too;
 once the list no longer has the space, the selection moves off it and its
 cached entries are removed.
 `History.Recent` is no longer a separate request: Home asks for the
-current month by the same client-local bounds as the Transactions tab's
-default period (`periodArg`), so both read one `History.Range` entry.
+current month by `periodArg` and reads one `History.Range` entry. The
+Transactions tab reads `History.Feed` page by page, with its totals from
+the server, and asks for `History.Latest` only while its period is empty.
 `src/redux/api/scenarios.test.tsx` covers the user-visible scenarios
 end to end.
 

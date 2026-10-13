@@ -1,5 +1,6 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
+import type { Money } from '@api/dto';
 import { Icon } from '@components';
 import { TransactionType } from '@shared/enums';
 import { colors } from '@shared/theme';
@@ -10,7 +11,7 @@ import styles from './style';
 
 interface Props {
   filter: HistoryFilter;
-  total: number;
+  total: Money;
   currencyCode?: string;
   onClear: () => void;
 }

@@ -9,7 +9,7 @@ import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { createAppStore } from '@redux/Store';
 import { withProfile } from '@redux/state/profile/fixtures';
 import { activateSpace } from '@redux/state/space/thunks';
-import { transactionDto } from '@redux/state/transaction/fixtures';
+import { feedDto, transactionDto } from '@redux/state/transaction/fixtures';
 import { deleteTransaction } from '@redux/state/transactionFlow/thunks';
 import { mapTransaction } from '@api/models';
 import { ScreenNames, TransactionKind, TransactionType } from '@shared/enums';
@@ -59,6 +59,9 @@ interface RequestConfig {
   params?: Record<string, string | number | undefined>;
 }
 
+const FEED = '/spaces/1/transactions/feed';
+const ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const navigationRef = createNavigationContainerRef<MainTabParamList>();
 
@@ -89,18 +92,16 @@ const renderTransactions = (params: MainTabParamList[ScreenNames.TRANSACTIONS_TA
 };
 
 const listRequests = () =>
-  mockedRequest.mock.calls
-    .map(([config]: [RequestConfig]) => config)
-    .filter(({ url }) => url === '/spaces/1/transactions');
+  mockedRequest.mock.calls.map(([config]: [RequestConfig]) => config).filter(({ url }) => url === FEED);
 
 const settle = () => act(async () => jest.advanceTimersByTimeAsync(10));
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
-    if (url !== '/spaces/1/transactions') return Promise.resolve({ data: null });
+    if (url !== FEED) return Promise.resolve({ data: null });
 
-    return Promise.resolve({ data: params?.from === new Date(2026, 7, 1).toISOString() ? [taxi] : [] });
+    return Promise.resolve({ data: feedDto(params?.from === new Date(2026, 7, 1).toISOString() ? [taxi] : []) });
   });
 });
 
@@ -123,6 +124,7 @@ describe('TransactionsScreen', () => {
     expect(listRequests().at(-1)?.params).toEqual({
       from: new Date(2026, 7, 1).toISOString(),
       to: new Date(2026, 7, 31, 23, 59, 59, 999).toISOString(),
+      time_zone: ZONE,
     });
     expect(screen.getByText('Taxi')).toBeTruthy();
     expect(navigationRef.getCurrentRoute()?.params).toEqual({ filter: undefined, reveal: undefined });
@@ -171,7 +173,11 @@ describe('TransactionsScreen', () => {
     mockedRequest.mockImplementation(({ url, params }: RequestConfig) =>
       Promise.resolve({
         data:
-          url === '/spaces/1/transactions' && params?.kind ? [salary('tx-1', '3200.00'), salary('tx-2', '850.00')] : [],
+          url === FEED && params?.kind
+            ? feedDto([salary('tx-1', '3200.00'), salary('tx-2', '850.00')], {
+                summary: { count: 2, income: '4050.00', expense: '0.00' },
+              })
+            : feedDto([]),
       }),
     );
     const filter = {
@@ -192,6 +198,7 @@ describe('TransactionsScreen', () => {
       transaction_type: TransactionType.INCOME,
       kind: TransactionKind.REGULAR,
       wallet_id: 1,
+      time_zone: ZONE,
     });
     expect(screen.getByText(/^Income · /)).toBeTruthy();
     expect(screen.getByText('4 050.00')).toBeTruthy();
@@ -203,6 +210,7 @@ describe('TransactionsScreen', () => {
     expect(listRequests().at(-1)?.params).toEqual({
       from: new Date(2026, 8, 1).toISOString(),
       to: new Date(2026, 8, 30, 23, 59, 59, 999).toISOString(),
+      time_zone: ZONE,
     });
   });
 
@@ -218,7 +226,7 @@ describe('TransactionsScreen', () => {
     const earlier = transactionDto({ id: 'tx-earlier', timestamp: new Date(2026, 8, 20, 9).toISOString() });
     let rows = [today, earlier];
     mockedRequest.mockImplementation(({ url }: RequestConfig & { method?: string }) => {
-      if (url === '/spaces/1/transactions') return Promise.resolve({ data: rows });
+      if (url === FEED) return Promise.resolve({ data: feedDto(rows) });
       if (url === '/spaces/1/transactions/latest') return Promise.resolve({ data: rows[0] ?? null });
       return Promise.resolve({ data: true });
     });
@@ -247,10 +255,10 @@ describe('TransactionsScreen', () => {
   it('says a refresh failed while it keeps the rows it had, and retries it', async () => {
     let failList = false;
     mockedRequest.mockImplementation(({ url }: RequestConfig) => {
-      if (url !== '/spaces/1/transactions') return Promise.resolve({ data: null });
+      if (url !== FEED) return Promise.resolve({ data: null });
       return failList
         ? Promise.reject({ response: { data: { statusCode: 500, message: 'boom' } } })
-        : Promise.resolve({ data: [taxi] });
+        : Promise.resolve({ data: feedDto([taxi]) });
     });
 
     const store = renderTransactions(undefined);
@@ -269,5 +277,69 @@ describe('TransactionsScreen', () => {
     fireEvent.press(screen.getByText('Retry'));
     await settle();
     expect(screen.queryByText('Couldn’t update the list. It shows what was loaded before.')).toBeNull();
+  });
+
+  it('shows each day with the server total and loads older rows at the end of the list', async () => {
+    const september = (id: string, day: number) =>
+      transactionDto({ id, timestamp: new Date(2026, 8, day, 9).toISOString(), description: id });
+    let failNext = true;
+    mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
+      if (url !== FEED) return Promise.resolve({ data: null });
+      if (!params?.cursor)
+        return Promise.resolve({
+          data: feedDto([september('first', 20)], {
+            day_totals: [{ date: '2026-09-20', net: '-31.50' }],
+            page_info: { next_cursor: 'c1', previous_cursor: null },
+          }),
+        });
+      return failNext
+        ? Promise.reject({ response: { data: { statusCode: 500, message: 'boom' } } })
+        : Promise.resolve({
+            data: feedDto([september('second', 20), september('third', 3)], {
+              day_totals: [
+                { date: '2026-09-20', net: '-31.50' },
+                { date: '2026-09-03', net: '0.00' },
+              ],
+            }),
+          });
+    });
+
+    renderTransactions(undefined);
+    await settle();
+    expect(screen.getByText('Sun, Sep 20')).toBeTruthy();
+    expect(screen.getByText(/^-31\.50/)).toBeTruthy();
+
+    act(() => screen.UNSAFE_getByType(SectionList).props.onEndReached());
+    await settle();
+    expect(screen.getByText('Couldn’t load older transactions.')).toBeTruthy();
+
+    failNext = false;
+    fireEvent.press(screen.getByText('Retry'));
+    await settle();
+    expect(listRequests().filter(({ params }) => params?.cursor === 'c1')).toHaveLength(2);
+    expect(screen.getAllByText('Sun, Sep 20')).toHaveLength(1);
+    expect(screen.getByText('second')).toBeTruthy();
+    expect(screen.getByText('Thu, Sep 3')).toBeTruthy();
+    expect(screen.queryByText('Couldn’t load older transactions.')).toBeNull();
+  });
+
+  it('reads further pages of the month until a revealed row is listed', async () => {
+    const newer = transactionDto({ id: 'tx-newer', timestamp: new Date(2026, 7, 20).toISOString() });
+    mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
+      if (url !== FEED) return Promise.resolve({ data: null });
+
+      return Promise.resolve({
+        data: params?.cursor
+          ? feedDto([taxi])
+          : feedDto([newer], { page_info: { next_cursor: 'c1', previous_cursor: null } }),
+      });
+    });
+
+    renderTransactions({ reveal: { spaceId: 1, transactionId: 'tx-aug', timestamp: august } });
+    await settle();
+    await settle();
+
+    expect(listRequests().map(({ params }) => params?.cursor)).toEqual([undefined, 'c1']);
+    expect(screen.getByText('Taxi')).toBeTruthy();
   });
 });
