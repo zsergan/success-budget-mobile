@@ -140,7 +140,7 @@ const feedParams = ({ selection, pageSize }: TransactionsFeedArg, { cursor, arou
 });
 
 // Home's latest records: the whole range the server stores timestamps in, one short page and no more.
-export const WHOLE_HISTORY = { from: '1970-01-01T00:00:01Z', to: '2038-01-19T03:14:07Z' };
+export const WHOLE_HISTORY = { from: '1970-01-01T00:00:01Z', to: '2038-01-19T03:14:07.999Z' };
 export const RECENT_TRANSACTIONS_LIMIT = 5;
 
 export const recentArg = (spaceId: number): RecentTransactionsArg => ({ spaceId, timeZone: getDeviceTimeZone() });

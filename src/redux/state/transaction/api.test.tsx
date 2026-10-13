@@ -71,7 +71,7 @@ describe('transactionApi', () => {
         url: '/spaces/3/transactions/feed',
         params: {
           from: '1970-01-01T00:00:01Z',
-          to: '2038-01-19T03:14:07Z',
+          to: '2038-01-19T03:14:07.999Z',
           time_zone: 'Europe/Moscow',
           limit: 5,
         },

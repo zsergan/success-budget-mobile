@@ -31,7 +31,8 @@ tab reads `History.Feed` page by page, and every total (`summary`, a
 day's `net`, the picker's count) comes from the server. The tab asks for
 `History.Latest` only while its period is empty; Home, which lists the
 whole history, never needs it. `GET /transactions` (the whole period as
-one array, once `History.Range`) is no longer requested.
+one array, once `History.Range`) is removed from the backend and answers
+`404`.
 `src/redux/api/scenarios.test.tsx` covers the user-visible scenarios
 end to end.
 

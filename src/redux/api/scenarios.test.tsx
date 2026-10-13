@@ -168,7 +168,6 @@ const createBackend = () => {
         day_totals: [],
       };
     }
-    if (resource === 'transactions' && method === 'GET') return spaceDb.transactions.map((row) => toRow(spaceDb, row));
     if (resource === 'transactions' && method === 'POST') {
       const row = {
         id: `tx-${spaceDb.transactions.length + 1}`,
