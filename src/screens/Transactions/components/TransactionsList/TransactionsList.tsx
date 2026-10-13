@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { ViewToken } from 'react-native';
-import { ActivityIndicator, SectionList, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, SectionList, Text, TouchableOpacity, View } from 'react-native';
 
 import type { Money } from '@api/dto';
 import { TransactionCard, useScreenTopInset } from '@components';
@@ -27,6 +27,8 @@ type Group = DayGroup & { total: Money | null };
 
 interface Props {
   groups: Group[];
+  // Which history is listed; a new one starts at the top.
+  selectionKey: string;
   currencyCode?: string;
   header: ReactElement;
   // Shown in place of the groups while there are none (loading, empty or error states).
@@ -58,7 +60,6 @@ interface PageEdge {
 
 // About half to one screen before an edge, so the next page is usually there before the user is.
 const EDGE_THRESHOLD = 0.75;
-const TOP_THRESHOLD = 10;
 
 const PageStatus = ({ edge, onRetry }: { edge?: PageEdge; onRetry?: () => void }) => {
   if (edge?.hasError)
@@ -96,6 +97,7 @@ const scrollToRow = (list: SectionList<TransactionModel, Section> | null, groups
 
 const TransactionsList = ({
   groups,
+  selectionKey,
   currencyCode,
   header,
   placeholder,
@@ -138,6 +140,14 @@ const TransactionsList = ({
           : null,
     [highlightId, restoreId, topInset],
   );
+
+  const shownKeyRef = useRef(selectionKey);
+  useEffect(() => {
+    if (shownKeyRef.current === selectionKey) return;
+
+    shownKeyRef.current = selectionKey;
+    listRef.current?.getScrollResponder()?.scrollTo({ y: 0, animated: false });
+  }, [selectionKey]);
 
   useEffect(() => {
     if (!target) {
@@ -202,13 +212,19 @@ const TransactionsList = ({
       onEndReachedThreshold={EDGE_THRESHOLD}
       onStartReached={sections.length > 0 ? newer?.onReached : undefined}
       onStartReachedThreshold={EDGE_THRESHOLD}
-      // Rows added or dropped above keep the visible row in place; the header (child 0) never anchors. A dropped page
-      // lies within the default 21-screen render window, so that row stays mounted. Kept on at all times: switching it
-      // on later shifts the render window. At the newest record, a row saved while at the top is scrolled into view.
-      maintainVisibleContentPosition={{
-        minIndexForVisible: 1,
-        ...(!newer?.hasMore && { autoscrollToTopThreshold: TOP_THRESHOLD }),
-      }}
+      // While newer pages remain, rows added or dropped above keep the visible row in place; a dropped page lies
+      // within the default 21-screen render window, so that row stays mounted.
+      maintainVisibleContentPosition={newer?.hasMore ? { minIndexForVisible: 1 } : undefined}
+      // Natively it stays on, as switching it on reuses a stale anchor. At the newest record it holds the header
+      // (child 0), so what loads or changes height under it never moves the screen, and a new row shows up at the top.
+      renderScrollComponent={(props) => (
+        <ScrollView
+          {...props}
+          maintainVisibleContentPosition={{
+            minIndexForVisible: props.maintainVisibleContentPosition?.minIndexForVisible ?? 0,
+          }}
+        />
+      )}
       // Rows far below are not measured yet: scroll near the row, then onto it once it renders.
       onScrollToIndexFailed={({ averageItemLength, index }) => {
         awaitsExactRef.current = true;

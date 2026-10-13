@@ -140,6 +140,7 @@ const TransactionsScreen = () => {
   const {
     transactions,
     sections,
+    selectionKey,
     viewState,
     latest,
     income,
@@ -251,6 +252,7 @@ const TransactionsScreen = () => {
       <ScreenFrame edges={['top', 'left', 'right']} blurredStatusBar>
         <TransactionsList
           groups={viewState === 'ready' ? sections : []}
+          selectionKey={selectionKey}
           currencyCode={currencyCode}
           onPressTransaction={openDetails}
           onDeleteTransaction={requestDelete}

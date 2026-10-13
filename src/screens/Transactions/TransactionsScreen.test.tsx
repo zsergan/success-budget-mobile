@@ -2,7 +2,7 @@ import type { ReactNode, Ref } from 'react';
 import { Provider } from 'react-redux';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { SectionList, StyleSheet } from 'react-native';
+import { ScrollView, SectionList, StyleSheet } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { baseApi, spaceTags } from '@redux/api/baseApi';
@@ -385,10 +385,12 @@ describe('TransactionsScreen', () => {
     const list = () => screen.UNSAFE_getByType(SectionList);
     const listed = () =>
       list().props.sections.flatMap(({ data }: { data: { id: string }[] }) => data.map(({ id }) => id));
-    expect(list().props.maintainVisibleContentPosition).toEqual({
-      minIndexForVisible: 1,
-      autoscrollToTopThreshold: 10,
-    });
+    // Natively the header (child 0) holds the top; the list's first rows (children 1 and 2) only once newer pages remain.
+    const anchors = () => [
+      list().props.maintainVisibleContentPosition,
+      list().findByType(ScrollView).props.maintainVisibleContentPosition,
+    ];
+    expect(anchors()).toEqual([undefined, { minIndexForVisible: 0 }]);
 
     for (let page = 1; page <= 10; page += 1) {
       act(() => list().props.onEndReached());
@@ -396,7 +398,7 @@ describe('TransactionsScreen', () => {
     }
 
     expect(listed()).toEqual(['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9', 'p10']);
-    expect(list().props.maintainVisibleContentPosition).toEqual({ minIndexForVisible: 1 });
+    expect(anchors()).toEqual([{ minIndexForVisible: 1 }, { minIndexForVisible: 2 }]);
     expect(screen.queryByTestId('history-loading-page')).toBeNull();
 
     act(() => list().props.onStartReached());
@@ -404,10 +406,7 @@ describe('TransactionsScreen', () => {
 
     expect(listRequests().at(-1)?.params?.cursor).toBe('n0');
     expect(listed()).toEqual(['p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9']);
-    expect(list().props.maintainVisibleContentPosition).toEqual({
-      minIndexForVisible: 1,
-      autoscrollToTopThreshold: 10,
-    });
+    expect(anchors()).toEqual([undefined, { minIndexForVisible: 0 }]);
   });
 
   describe('a record shown from elsewhere, and the list after a change', () => {
@@ -572,6 +571,30 @@ describe('TransactionsScreen', () => {
       await settle();
       expect(screen.getByText('Taxi')).toBeTruthy();
       expect(screen.UNSAFE_queryByType(Fab)).toBeNull();
+    });
+
+    it('starts each search sent at the top at once, never moving the list as search opens or text is typed', async () => {
+      const scrollTo = jest.fn();
+      const getScrollResponder = jest
+        .spyOn(SectionList.prototype, 'getScrollResponder')
+        .mockImplementation(() => ({ scrollTo }) as unknown as ReturnType<SectionList['getScrollResponder']>);
+      renderTransactions(undefined);
+      await settle();
+
+      const field = await openSearch();
+      fireEvent.changeText(field, 'coff');
+      await act(async () => jest.advanceTimersByTimeAsync(299));
+      expect(scrollTo).not.toHaveBeenCalled();
+
+      fireEvent.changeText(field, 'coffee');
+      fireEvent(field, 'submitEditing');
+      await settle();
+      expect(scrollTo.mock.calls).toEqual([[{ y: 0, animated: false }]]);
+
+      fireEvent.press(screen.getByRole('button', { name: 'Clear search' }));
+      await settle();
+      expect(scrollTo).toHaveBeenCalledTimes(2);
+      getScrollResponder.mockRestore();
     });
 
     it('leaves search with Cancel: the plain history of the same period and + again', async () => {

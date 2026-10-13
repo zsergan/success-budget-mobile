@@ -14,11 +14,17 @@ jest.mock('expo-secure-store');
 const rows = ['a', 'b', 'c'].map((id) => mapTransaction(transactionDto({ id, description: id })));
 const groups = [{ key: '2026-01-05', label: 'Mon, Jan 5', total: '-30.00', items: rows }];
 
-const renderList = (props: { restoreId?: string | null; onRestored?: () => void; highlightId?: string | null }) => {
+const renderList = (props: {
+  selectionKey?: string;
+  restoreId?: string | null;
+  onRestored?: () => void;
+  highlightId?: string | null;
+}) => {
   const element = (next: typeof props) => (
     <Provider store={createAppStore()}>
       <TransactionsList
         groups={groups}
+        selectionKey="month"
         header={<View />}
         placeholder={<View />}
         onPressTransaction={jest.fn()}
@@ -75,5 +81,30 @@ describe('TransactionsList restore', () => {
     rerender({ restoreId: null, highlightId: null, onRestored });
 
     expect(scrollToLocation.mock.calls.map(([{ itemIndex }]) => itemIndex)).toEqual([1, 2]);
+  });
+});
+
+describe('TransactionsList selection', () => {
+  const scrollTo = jest.fn();
+  let getScrollResponder: jest.SpyInstance;
+
+  beforeEach(() => {
+    scrollTo.mockClear();
+    getScrollResponder = jest
+      .spyOn(SectionList.prototype, 'getScrollResponder')
+      .mockImplementation(() => ({ scrollTo }) as unknown as ReturnType<SectionList['getScrollResponder']>);
+  });
+  afterEach(() => getScrollResponder.mockRestore());
+
+  it('starts a new selection at the top at once, and leaves the same one where it is', () => {
+    const { rerender } = renderList({ selectionKey: 'month' });
+    rerender({ selectionKey: 'month' });
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    rerender({ selectionKey: 'month|coffee' });
+    expect(scrollTo).toHaveBeenCalledWith({ y: 0, animated: false });
+
+    rerender({ selectionKey: 'month|coffee' });
+    expect(scrollTo).toHaveBeenCalledTimes(1);
   });
 });

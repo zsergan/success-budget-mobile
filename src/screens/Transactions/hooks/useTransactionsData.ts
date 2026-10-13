@@ -5,7 +5,7 @@ import type { Money } from '@api/dto';
 import { useTransactionsFeed } from '@hooks';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/state/space/selectors';
-import { feedSelection, periodArg, useGetLatestTransactionQuery } from '@redux/state/transaction/api';
+import { feedSelection, feedSelectionKey, periodArg, useGetLatestTransactionQuery } from '@redux/state/transaction/api';
 import type { TransactionsArg } from '@redux/state/transaction/api';
 import { getEmptyPeriodState } from '@redux/state/transaction/selectors';
 import type { HistoryFilter } from '@shared/types';
@@ -56,10 +56,9 @@ const useTransactionsData = ({ range, filter, q, aroundId, getVisibleIds }: UseT
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
-  const feed = useTransactionsFeed(
-    spaceId === null ? skipToken : feedSelection(filter ? toFilterArg(filter) : periodArg(spaceId, range), { q }),
-    { aroundId, getVisibleIds },
-  );
+  const selection =
+    spaceId === null ? skipToken : feedSelection(filter ? toFilterArg(filter) : periodArg(spaceId, range), { q });
+  const feed = useTransactionsFeed(selection, { aroundId, getVisibleIds });
   const { items, summary, dayNets } = feed;
   const isEmpty = !feed.isLoading && !feed.hasError && items.length === 0;
 
@@ -92,6 +91,8 @@ const useTransactionsData = ({ range, filter, q, aroundId, getVisibleIds }: UseT
   return {
     transactions: items,
     sections,
+    // Which history is listed: the space, period or Stats filter, and the search.
+    selectionKey: selection === skipToken ? '' : feedSelectionKey(selection),
     viewState,
     latest: latestQuery.currentData,
     // Null until the selection has an answer, never a zero it has not confirmed.
