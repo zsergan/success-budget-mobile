@@ -399,4 +399,106 @@ describe('TransactionsScreen', () => {
       autoscrollToTopThreshold: 10,
     });
   });
+
+  describe('a record shown from elsewhere, and the list after a change', () => {
+    const september = (id: string, day: number) =>
+      transactionDto({ id, timestamp: new Date(2026, 8, day, 9).toISOString(), description: id });
+    const rows = [september('s1', 27), september('s2', 26), september('s3', 25)];
+    const reveal = (transactionId: string, timestamp: string) =>
+      act(() =>
+        navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB, { reveal: { spaceId: 1, transactionId, timestamp } }),
+      );
+
+    it('scrolls to a record already listed without asking for it again', async () => {
+      const scrollToLocation = jest.spyOn(SectionList.prototype, 'scrollToLocation').mockImplementation(() => {});
+      mockedRequest.mockImplementation(({ url }: RequestConfig) =>
+        Promise.resolve({ data: url === FEED ? feedDto(rows) : null }),
+      );
+      renderTransactions(undefined);
+      await settle();
+      const before = listRequests().length;
+
+      reveal('s2', rows[1].timestamp);
+      await settle();
+
+      expect(listRequests()).toHaveLength(before);
+      expect(scrollToLocation).toHaveBeenCalledWith(expect.objectContaining({ sectionIndex: 1, itemIndex: 0 }));
+      scrollToLocation.mockRestore();
+    });
+
+    it('says a record is no longer there and shows its whole period', async () => {
+      mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
+        if (url !== FEED) return Promise.resolve({ data: null });
+        if (params?.around_id)
+          return Promise.reject({
+            response: { data: { statusCode: 404, code: 'TRANSACTION_NOT_FOUND', message: 'Transaction not found' } },
+          });
+        return Promise.resolve({ data: feedDto(params?.from === new Date(2026, 7, 1).toISOString() ? [taxi] : []) });
+      });
+
+      renderTransactions({ reveal: { spaceId: 1, transactionId: 'tx-gone', timestamp: august } });
+      await settle();
+      await settle();
+
+      expect(screen.getByText('This transaction is no longer here. Showing the whole period instead.')).toBeTruthy();
+      expect(screen.getByText('Taxi')).toBeTruthy();
+
+      fireEvent.press(screen.getByText('OK'));
+      expect(screen.queryByText('This transaction is no longer here. Showing the whole period instead.')).toBeNull();
+    });
+
+    it('keeps the window around the rows on screen after one of them is deleted', async () => {
+      let shown = rows;
+      mockedRequest.mockImplementation(({ url, params, method }: RequestConfig & { method?: string }) => {
+        if (method === 'DELETE') return Promise.resolve({ data: true });
+        if (url !== FEED) return Promise.resolve({ data: null });
+        if (params?.around_id === 's2')
+          return Promise.reject({
+            response: { data: { statusCode: 404, code: 'TRANSACTION_NOT_FOUND', message: 'Transaction not found' } },
+          });
+        // A window below the newest record, as after scrolling down past dropped pages.
+        return Promise.resolve({ data: feedDto(shown, { page_info: { next_cursor: null, previous_cursor: 'p0' } }) });
+      });
+      const store = renderTransactions(undefined);
+      await settle();
+      const list = screen.UNSAFE_getByType(SectionList);
+      act(() =>
+        list.props.onViewableItemsChanged({
+          viewableItems: [
+            { item: mapTransaction(rows[1]), isViewable: true },
+            { item: mapTransaction(rows[2]), isViewable: true },
+          ],
+        }),
+      );
+      mockedRequest.mockClear();
+
+      shown = [rows[0], rows[2]];
+      await act(async () => {
+        await store.dispatch(deleteTransaction({ spaceId: 1, transaction: mapTransaction(rows[1]) }));
+      });
+      await settle();
+      await settle();
+
+      expect(listRequests().length).toBeGreaterThan(0);
+      expect(listRequests().every(({ params }) => params?.around_id !== undefined)).toBe(true);
+      expect(listRequests().at(-1)?.params?.around_id).toBe('s3');
+      expect(screen.queryByText('s2')).toBeNull();
+      expect(screen.getByText('s3')).toBeTruthy();
+    });
+
+    it('leaves the list as it is when a record is opened and closed', async () => {
+      mockedRequest.mockImplementation(({ url }: RequestConfig) =>
+        Promise.resolve({ data: url === FEED ? feedDto(rows) : rows[1] }),
+      );
+      renderTransactions(undefined);
+      await settle();
+      const before = listRequests().length;
+
+      fireEvent.press(screen.getByText('s2'));
+      await settle();
+
+      expect(listRequests()).toHaveLength(before);
+      expect(screen.getByText('s1')).toBeTruthy();
+    });
+  });
 });

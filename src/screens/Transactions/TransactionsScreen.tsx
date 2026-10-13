@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -63,22 +63,16 @@ const TransactionsScreen = () => {
 
   // The revealed record is where its month opens, and stays so until another period is picked.
   const [anchor, setAnchor] = useState<RevealTransaction | null>(null);
+  const isShownMonth = (timestamp: string) => {
+    const month = toDateRange(monthPeriodOf(timestamp));
 
-  if (reveal && reveal !== revealed) {
-    setRevealed(reveal);
-    if (reveal.spaceId === spaceId) {
-      openMonthOf(reveal.timestamp);
-      setHighlightId(reveal.transactionId);
-      setAnchor(reveal);
-    }
-  }
+    return month.from.getTime() === range.from.getTime() && month.to.getTime() === range.to.getTime();
+  };
+  if (anchor && !isShownMonth(anchor.timestamp)) setAnchor(null);
 
-  const anchorMonth = anchor && toDateRange(monthPeriodOf(anchor.timestamp));
-  if (
-    anchorMonth &&
-    (anchorMonth.from.getTime() !== range.from.getTime() || anchorMonth.to.getTime() !== range.to.getTime())
-  )
-    setAnchor(null);
+  // Read when the history is refreshed after a change, to keep these rows in the new window.
+  const visibleIdsRef = useRef<string[]>([]);
+  const getVisibleIds = useCallback(() => visibleIdsRef.current, []);
 
   useEffect(() => {
     if (reveal) navigation.setParams({ reveal: undefined, filter: undefined });
@@ -100,6 +94,7 @@ const TransactionsScreen = () => {
       : rangeSelection(range),
   );
   const {
+    transactions,
     sections,
     viewState,
     latest,
@@ -117,11 +112,36 @@ const TransactionsScreen = () => {
     refreshFailed,
     retry,
     retryLatest,
+    missedAroundId,
   } = useTransactionsData({
     range,
     filter,
     aroundId: anchor && !filter && anchor.spaceId === spaceId ? anchor.transactionId : undefined,
+    getVisibleIds,
   });
+
+  // A record already listed is only scrolled to; any other opens its month, without a filter, around it.
+  if (reveal && reveal !== revealed) {
+    setRevealed(reveal);
+    if (reveal.spaceId === spaceId) {
+      const isListed =
+        !filter && isShownMonth(reveal.timestamp) && transactions.some(({ id }) => id === reveal.transactionId);
+
+      if (!isListed) {
+        openMonthOf(reveal.timestamp);
+        setAnchor(reveal);
+      }
+      setHighlightId(reveal.transactionId);
+    }
+  }
+
+  // The record is gone or no longer in its month: the period opens at its newest record and says so.
+  const [dismissedMissId, setDismissedMissId] = useState<string | null>(null);
+  const missedReveal =
+    missedAroundId !== undefined && missedAroundId === anchor?.transactionId && missedAroundId !== dismissedMissId
+      ? missedAroundId
+      : null;
+  if (missedReveal && highlightId === missedReveal) setHighlightId(null);
   const [seenId, setSeenId] = useState<string | null>(null);
   const isHighlightSeen = highlightId !== null && seenId === highlightId;
 
@@ -151,6 +171,9 @@ const TransactionsScreen = () => {
           onDeleteTransaction={requestDelete}
           highlightId={highlightId}
           onHighlightSeen={() => setSeenId(highlightId)}
+          onVisibleRowsChange={(ids) => {
+            visibleIdsRef.current = ids;
+          }}
           older={{
             hasMore: hasNextPage,
             isLoading: isLoadingNextPage,
@@ -188,6 +211,17 @@ const TransactionsScreen = () => {
               )}
 
               <PendingWritesBanner style={styles.banner} />
+
+              {missedReveal && (
+                <View style={styles.banner}>
+                  <Banner
+                    tone="warn"
+                    text="This transaction is no longer here. Showing the whole period instead."
+                    actionLabel="OK"
+                    onAction={() => setDismissedMissId(missedReveal)}
+                  />
+                </View>
+              )}
 
               {refreshFailed && (
                 <View style={styles.banner}>

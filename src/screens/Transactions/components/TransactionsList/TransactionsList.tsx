@@ -37,6 +37,8 @@ interface Props {
   highlightId?: string | null;
   // Called once the highlighted row is actually on screen.
   onHighlightSeen?: () => void;
+  // The rows on screen, top first, whenever they change.
+  onVisibleRowsChange?: (ids: string[]) => void;
   older?: PageEdge;
   newer?: PageEdge;
   onRetryPage?: () => void;
@@ -91,6 +93,7 @@ const TransactionsList = ({
   onDeleteTransaction,
   highlightId = null,
   onHighlightSeen,
+  onVisibleRowsChange,
   older,
   newer,
   onRetryPage,
@@ -101,7 +104,9 @@ const TransactionsList = ({
   // A scroll that had to land near the row, not on it, is repeated once the row is rendered and measured.
   const awaitsExactRef = useRef(false);
   const visibleIdsRef = useRef<string[]>([]);
-  const seenRef = useRef<{ id: string | null; onSeen?: () => void }>({ id: null });
+  const seenRef = useRef<{ id: string | null; onSeen?: () => void; onVisibleRows?: (ids: string[]) => void }>({
+    id: null,
+  });
   const sections: Section[] = groups.map((group, index) => ({
     key: group.key,
     title: group.label,
@@ -130,15 +135,16 @@ const TransactionsList = ({
 
   // A row already on screen when it is picked counts as seen at once.
   useEffect(() => {
-    seenRef.current = { id: highlightId, onSeen: onHighlightSeen };
+    seenRef.current = { id: highlightId, onSeen: onHighlightSeen, onVisibleRows: onVisibleRowsChange };
     if (highlightId && visibleIdsRef.current.includes(highlightId)) onHighlightSeen?.();
-  }, [highlightId, onHighlightSeen]);
+  }, [highlightId, onHighlightSeen, onVisibleRowsChange]);
 
   // The list refuses a new handler once mounted, so it reads the current row from a ref.
   const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: ViewToken<TransactionModel>[] }) => {
-    const { id, onSeen } = seenRef.current;
+    const { id, onSeen, onVisibleRows } = seenRef.current;
 
     visibleIdsRef.current = viewableItems.flatMap(({ item, isViewable }) => (isViewable && item ? [item.id] : []));
+    onVisibleRows?.(visibleIdsRef.current);
     if (id && visibleIdsRef.current.includes(id)) onSeen?.();
   }, []);
 
