@@ -23,6 +23,7 @@ jest.useFakeTimers();
 
 interface Sent {
   params: Record<string, unknown>;
+  signal?: AbortSignal;
   resolve: (value: unknown) => void;
   reject: (error: unknown) => void;
 }
@@ -52,13 +53,16 @@ const refuse = async (index: number, data: Partial<ErrorResponse>) => {
 
 const ids = (result: { current: { items: { id: string }[] } }) => result.current.items.map(({ id }) => id);
 
+// The rows the list reports on screen, top first.
+let onScreen: string[];
+
 const renderFeed = (initial: { selection: FeedSelection; aroundId?: string }) => {
   const store = createAppStore();
   const wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
 
   const rendered = renderHook(
     ({ selection, aroundId }: { selection: FeedSelection; aroundId?: string }) =>
-      useTransactionsFeed(selection, { pageSize: 2, aroundId }),
+      useTransactionsFeed(selection, { pageSize: 2, aroundId, getVisibleIds: () => onScreen }),
     { wrapper, initialProps: initial },
   );
 
@@ -68,9 +72,10 @@ const renderFeed = (initial: { selection: FeedSelection; aroundId?: string }) =>
 beforeEach(() => {
   jest.clearAllMocks();
   sent = [];
+  onScreen = [];
   mockedRequest.mockImplementation(
-    ({ params }: { params: Record<string, unknown> }) =>
-      new Promise((resolve, reject) => sent.push({ params, resolve, reject })),
+    ({ params, signal }: { params: Record<string, unknown>; signal?: AbortSignal }) =>
+      new Promise((resolve, reject) => sent.push({ params, signal, resolve, reject })),
   );
 });
 
@@ -217,39 +222,6 @@ it('retries a failed first page around the same record', async () => {
   expect(result.current.isLoading).toBe(true);
 });
 
-it('loads the next page asked for while the loaded pages were refreshed, once that refresh ends', async () => {
-  const { result, store } = renderFeed({ selection: october });
-  await answer(0, page(['a'], 'c1'));
-
-  act(() => {
-    store.dispatch(baseApi.util.invalidateTags(spaceTags(3, 'Transactions')));
-  });
-  await flush();
-  act(() => result.current.loadNextPage());
-  expect(sent).toHaveLength(2);
-
-  await answer(1, page(['a'], 'c2'));
-
-  expect(sent).toHaveLength(3);
-  expect(sent[2].params).toMatchObject({ cursor: 'c2' });
-});
-
-it('forgets an asked-for page once the selection changes', async () => {
-  const { result, rerender, store } = renderFeed({ selection: october });
-  await answer(0, page(['a'], 'c1'));
-
-  act(() => {
-    store.dispatch(baseApi.util.invalidateTags(spaceTags(3, 'Transactions')));
-  });
-  await flush();
-  act(() => result.current.loadNextPage());
-  rerender({ selection: feedSelection(period, { q: 'tea', timeZone: 'Europe/Moscow' }) });
-  await answer(2, page(['tea'], 'c9'));
-  await answer(1, page(['a'], 'c1'));
-
-  expect(sent.map(({ params }) => params.cursor)).toEqual([undefined, undefined, undefined]);
-});
-
 it('retries a failed page with the same cursor and does not chain retries on its own', async () => {
   const { result } = renderFeed({ selection: october });
   await answer(0, page(['a'], 'c1'));
@@ -267,21 +239,144 @@ it('retries a failed page with the same cursor and does not chain retries on its
   expect(ids(result)).toEqual(['a']);
 });
 
-it('starts from the newest record, keeping the rows shown, once the record it opened at is gone', async () => {
-  const { result, store } = renderFeed({ selection: october, aroundId: 'x' });
-  await answer(0, page(['w', 'x']));
+const window = (ids: string[], next: string | null, previous: string | null, overrides = {}) =>
+  page(ids, next, { page_info: { next_cursor: next, previous_cursor: previous }, ...overrides });
 
+const changeHistory = async (store: ReturnType<typeof renderFeed>['store']) => {
   act(() => {
     store.dispatch(baseApi.util.invalidateTags(spaceTags(3, 'Transactions')));
   });
   await flush();
-  expect(sent[1].params).toMatchObject({ around_id: 'x' });
-  await refuse(1, { statusCode: 404, code: ApiErrorCode.TRANSACTION_NOT_FOUND, message: 'Transaction not found' });
+};
 
-  expect(sent[2].params).not.toHaveProperty('around_id');
-  expect(ids(result)).toEqual(['w', 'x']);
-  expect(result.current.hasRefreshError).toBe(false);
+it('loads the next page asked for while a newer one loaded, once that one ends', async () => {
+  const { result } = renderFeed({ selection: october, aroundId: 'b' });
+  await answer(0, window(['b'], 'n1', 'p1'));
 
-  await answer(2, page(['w']));
-  expect(ids(result)).toEqual(['w']);
+  act(() => result.current.loadPreviousPage());
+  await flush();
+  act(() => result.current.loadNextPage());
+  expect(sent).toHaveLength(2);
+
+  await answer(1, window(['a'], 'n0', null));
+
+  expect(sent.map(({ params }) => params.cursor)).toEqual([undefined, 'p1', 'n1']);
+});
+
+it('forgets an asked-for page once the selection changes', async () => {
+  const { result, rerender } = renderFeed({ selection: october, aroundId: 'b' });
+  await answer(0, window(['b'], 'n1', 'p1'));
+
+  act(() => result.current.loadPreviousPage());
+  await flush();
+  act(() => result.current.loadNextPage());
+  rerender({ selection: feedSelection(period, { q: 'tea', timeZone: 'Europe/Moscow' }) });
+  await answer(2, page(['tea'], 'c9'));
+
+  expect(sent.map(({ params }) => params.cursor)).toEqual([undefined, 'p1', undefined]);
+});
+
+describe('after a change to the history', () => {
+  it('replaces the whole window with one page around the topmost row, keeping the rows until it arrives', async () => {
+    const { result, store } = renderFeed({ selection: october });
+    await answer(0, page(['a', 'b'], 'c1', { summary: { count: 4, income: '0.00', expense: '10.00' } }));
+    act(() => result.current.loadNextPage());
+    await answer(1, window(['c', 'd'], 'c2', 'p1'));
+    onScreen = ['c'];
+
+    await changeHistory(store);
+
+    expect(sent).toHaveLength(3);
+    expect(sent[2].params).toMatchObject({ around_id: 'c' });
+    expect(sent[2].params).not.toHaveProperty('cursor');
+    expect(ids(result)).toEqual(['a', 'b', 'c', 'd']);
+
+    await answer(2, window(['b', 'c'], 'c3', 'p2', { summary: { count: 5, income: '0.00', expense: '22.00' } }));
+
+    expect(ids(result)).toEqual(['b', 'c']);
+    expect(result.current.summary).toEqual({ count: 5, income: '0.00', expense: '22.00' });
+    expect(result.current.hasPreviousPage).toBe(true);
+    expect(sent).toHaveLength(3);
+  });
+
+  it('holds the window by the nearest surviving neighbour when the topmost row is gone', async () => {
+    const { result, store } = renderFeed({ selection: october, aroundId: 'b' });
+    await answer(0, window(['a', 'b', 'c'], 'n1', 'p1'));
+    onScreen = ['b'];
+
+    await changeHistory(store);
+    await refuse(1, { statusCode: 404, code: ApiErrorCode.TRANSACTION_NOT_FOUND, message: 'Transaction not found' });
+    await refuse(2, { statusCode: 404, code: ApiErrorCode.TRANSACTION_NOT_IN_FEED, message: 'Not in feed' });
+
+    expect(sent.map(({ params }) => params.around_id)).toEqual(['b', 'b', 'c', 'a']);
+    expect(ids(result)).toEqual(['a', 'b', 'c']);
+
+    await answer(3, window(['a', 'x'], 'n2', 'p2'));
+
+    expect(ids(result)).toEqual(['a', 'x']);
+    expect(result.current.missedAroundId).toBeUndefined();
+  });
+
+  it('anchors on the topmost row still listed when a row on screen was already dropped', async () => {
+    const { store } = renderFeed({ selection: october, aroundId: 'b' });
+    await answer(0, window(['a', 'c', 'd'], 'n1', 'p1'));
+    onScreen = ['b', 'c', 'd'];
+
+    await changeHistory(store);
+
+    expect(sent[1].params).toMatchObject({ around_id: 'c' });
+  });
+
+  it('reads the newest page again while the newest page is on screen', async () => {
+    const { store } = renderFeed({ selection: october });
+    await answer(0, page(['a', 'b'], 'c1'));
+    onScreen = ['b'];
+
+    await changeHistory(store);
+
+    expect(sent[1].params).not.toHaveProperty('around_id');
+    expect(sent[1].params).not.toHaveProperty('cursor');
+  });
+
+  it('waits for a page already loading, then replaces the window with it, not after it', async () => {
+    const { result, store } = renderFeed({ selection: october });
+    await answer(0, page(['a', 'b'], 'c1'));
+    onScreen = ['a'];
+    act(() => result.current.loadNextPage());
+    await flush();
+
+    await changeHistory(store);
+    expect(sent).toHaveLength(2);
+
+    await answer(1, window(['c'], 'c2', 'p1'));
+
+    expect(sent[2].params).not.toHaveProperty('cursor');
+    await answer(2, page(['z', 'a'], 'c9'));
+    expect(ids(result)).toEqual(['z', 'a']);
+  });
+});
+
+it('says when the record it was asked to open is gone, and opens the newest page instead', async () => {
+  const { result } = renderFeed({ selection: october, aroundId: 'x' });
+  await refuse(0, { statusCode: 404, code: ApiErrorCode.TRANSACTION_NOT_FOUND, message: 'Transaction not found' });
+
+  expect(result.current.missedAroundId).toBe('x');
+  expect(sent[1].params).not.toHaveProperty('around_id');
+
+  await answer(1, page(['a']));
+  expect(ids(result)).toEqual(['a']);
+});
+
+it('cancels the page still loading for a window a reload replaces, and never shows it', async () => {
+  const { result } = renderFeed({ selection: october });
+  await answer(0, page(['a', 'b'], 'c1'));
+  act(() => result.current.loadNextPage());
+  await flush();
+
+  act(() => result.current.refresh());
+  await flush();
+
+  expect(sent[1].signal?.aborted).toBe(true);
+  await answer(2, page(['a', 'b'], 'c1'));
+  expect(ids(result)).toEqual(['a', 'b']);
 });

@@ -30,6 +30,8 @@ interface UseTransactionsDataProps {
   filter: HistoryFilter | null;
   // Open the period at this record's page instead of its newest one.
   aroundId?: string;
+  // The rows on screen, top first, kept in view when the history is refreshed after a change.
+  getVisibleIds?: () => string[];
 }
 
 const toFilterArg = ({
@@ -49,13 +51,13 @@ const toFilterArg = ({
   ...(categoryId !== undefined ? { categoryId } : { walletId }),
 });
 
-const useTransactionsData = ({ range, filter, aroundId }: UseTransactionsDataProps) => {
+const useTransactionsData = ({ range, filter, aroundId, getVisibleIds }: UseTransactionsDataProps) => {
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
   const feed = useTransactionsFeed(
     spaceId === null ? skipToken : feedSelection(filter ? toFilterArg(filter) : periodArg(spaceId, range)),
-    { aroundId },
+    { aroundId, getVisibleIds },
   );
   const { items, summary, dayNets } = feed;
   const isEmpty = !feed.isLoading && !feed.hasError && items.length === 0;
@@ -100,6 +102,7 @@ const useTransactionsData = ({ range, filter, aroundId }: UseTransactionsDataPro
     isLoadingPreviousPage: feed.isLoadingPreviousPage,
     hasPreviousPageError: feed.hasPreviousPageError,
     loadPreviousPage: feed.loadPreviousPage,
+    missedAroundId: feed.missedAroundId,
     // What is listed stays, but a refresh, e.g. after a saved change, could not bring it up to date.
     refreshFailed: feed.hasRefreshError,
     retryRefresh: feed.retry,

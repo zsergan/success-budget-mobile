@@ -398,27 +398,27 @@ describe('getTransactionsFeed', () => {
     expect(selectFeed(store, other).data?.pages[0].items[0].id).toBe('b');
   });
 
-  it("refreshes every loaded page of a generation from its first one when the space's history changes", async () => {
+  it("leaves the loaded pages alone when the space's history changes, and moves its revision on instead", async () => {
     const store = createAppStore();
+    const { getTransactionsRevision } = transactionApi.endpoints;
+    const revisionOf = (spaceId: number) => getTransactionsRevision.select({ spaceId })(store.getState()).data;
 
-    mockedRequest
-      .mockResolvedValueOnce({ data: feedDto([row('a')], { page_info: { next_cursor: 'c1', previous_cursor: null } }) })
-      .mockResolvedValueOnce({ data: feedDto([row('b')]) });
+    mockedRequest.mockResolvedValue({
+      data: feedDto([row('a')], { page_info: { next_cursor: 'c1', previous_cursor: null } }),
+    });
     store.dispatch(getTransactionsFeed.initiate(arg));
+    store.dispatch(getTransactionsRevision.initiate({ spaceId: 3 }));
+    store.dispatch(getTransactionsRevision.initiate({ spaceId: 4 }));
     await settle(store);
-    await store.dispatch(getTransactionsFeed.initiate(arg, { direction: 'forward' }));
+    const before = [revisionOf(3), revisionOf(4)];
     mockedRequest.mockClear();
 
-    mockedRequest
-      .mockResolvedValueOnce({
-        data: feedDto([row('a2')], { page_info: { next_cursor: 'c2', previous_cursor: null } }),
-      })
-      .mockResolvedValueOnce({ data: feedDto([row('b2')]) });
     store.dispatch(baseApi.util.invalidateTags([{ type: 'Transactions', id: 3 }]));
     await settle(store);
 
-    expect(paramsSent().map((params) => params.cursor)).toEqual([undefined, 'c2']);
-    expect(selectFeed(store).data?.pages.map(({ items }) => items[0].id)).toEqual(['a2', 'b2']);
+    expect(mockedRequest).not.toHaveBeenCalled();
+    expect(revisionOf(3)).not.toBe(before[0]);
+    expect(revisionOf(4)).toBe(before[1]);
   });
 
   it('does not bring back an entry that was removed while its next page was loading', async () => {

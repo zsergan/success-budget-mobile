@@ -51,8 +51,9 @@ const resourceOf = ({ url, params }: RequestConfig) => {
   return `${spaceId}:${name}`;
 };
 
-// Home's latest records, a history period and the latest record.
-const ALL_HISTORY = ['1:feed:1970-01', '1:feed:2026-01', '1:latest'];
+// Home's latest records and the latest record. A history page is subscribed too but never asked for again: its
+// screen starts a new generation from the history revision instead.
+const ALL_HISTORY = ['1:feed:1970-01', '1:latest'];
 
 const subscribeToSpace = (store: ReturnType<typeof createAppStore>, spaceId: number) => {
   store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId }));

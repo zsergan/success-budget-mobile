@@ -59,19 +59,36 @@ Every resource except Profile and Currencies is scoped to the active space.
 lifecycle section, `History.Range` is the former whole-period list.
 
 `History.Feed` is an infinite query (`getTransactionsFeed`), read through
-`useTransactionsFeed`. A tag invalidation refetches every loaded page of
-the entry from its first one; a pull-to-refresh, a rejected cursor or an
-`around_id` outside the selection starts a new generation, a separate
-entry, so a page still loading for the old one cannot land on screen.
+`useTransactionsFeed`. Its pages provide no tags, so an invalidation never
+asks for them again one by one. `getTransactionsRevision`, a local query
+with no request, provides the space's `Transactions` tag instead; each new
+value starts a new generation (a separate entry) with one page around the
+topmost row on screen that is still listed, or the newest page while the
+newest page is on screen. If that row was deleted or left the selection
+since (`404`), up to three of its nearest neighbours are tried in turn,
+then the newest page. The rows on screen stay until the new page arrives
+and are then replaced as a whole; `maintainVisibleContentPosition` keeps
+the anchor row where it was. Invalidation is `delayed` (RTK Query's
+default), so a page already loading finishes first and is replaced with
+the rest of the window.
+
+A pull-to-refresh, a rejected cursor, a new selection or an `around_id`
+outside the selection also starts a new generation. The replaced entry
+is removed at once (`keepUnusedDataFor: 0`), which aborts a page it still
+loads, so nothing from it can land on screen.
+
 An entry keeps at most `FEED_MAX_PAGES` (10) pages: loading past them
 drops the page at the far end, which is read again by its cursor when
 the list scrolls back; `summary` and the nets of the days still listed
 come from the pages that remain.
+
 A deleted row leaves the cached `History.Recent` and `History.Feed`
-pages at once (`dropFromLists`); the refetch that follows brings the
-server's totals. Opening a record from a confirmation sends `around_id`
-for its month; a record outside the selection or gone opens the first
-page of the same selection instead.
+pages at once (`dropFromLists`); the new generation that follows brings
+the server's totals. Opening a record from a confirmation scrolls to it
+when it is already listed in its month; otherwise the month opens with
+`around_id`, and a record gone or outside its month opens the month's
+newest page with a message saying so. Opening and closing a record's
+details changes nothing in the list.
 
 ## Invalidation rules
 

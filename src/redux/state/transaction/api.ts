@@ -149,6 +149,7 @@ export const recentArg = (spaceId: number): RecentTransactionsArg => ({ spaceId,
 export const FEED_MAX_PAGES = 10;
 
 let receivedPages = 0;
+let revision = 0;
 
 const writeHeaders = ({ idempotencyKey, version }: IdempotentArg & { version?: number }) => ({
   'Idempotency-Key': idempotencyKey,
@@ -199,9 +200,15 @@ export const transactionApi = baseApi.injectEndpoints({
         ...mapTransactionFeed(response),
         sequence: ++receivedPages,
       }),
-      providesTags: (_result, _error, { selection }) => spaceTags(selection.spaceId, 'Transactions'),
-      // A generation belongs to one hook mount, so an entry nobody reads is never read again.
+      // No tags: a change starts a new generation through getTransactionsRevision rather than every page again.
+      // A generation belongs to one hook mount, so an entry nobody reads is never read again; removing it also
+      // aborts a page it still loads.
       keepUnusedDataFor: 0,
+    }),
+    // A local counter with no request: each invalidation of the space's history gives a new value.
+    getTransactionsRevision: build.query<number, SpaceArg>({
+      queryFn: () => ({ data: ++revision }),
+      providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions'),
     }),
     getTransactionsCount: build.query<number, TransactionsCountArg>({
       query: (arg) => ({
@@ -263,6 +270,7 @@ export const transactionApi = baseApi.injectEndpoints({
 export const {
   useGetRecentTransactionsQuery,
   useGetTransactionsFeedInfiniteQuery,
+  useGetTransactionsRevisionQuery,
   useGetTransactionsCountQuery,
   useGetLatestTransactionQuery,
   useGetTransactionQuery,
