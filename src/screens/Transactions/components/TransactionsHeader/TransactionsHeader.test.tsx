@@ -1,12 +1,19 @@
 import type { ComponentProps } from 'react';
+import { TextInput } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import TransactionsHeader from './TransactionsHeader';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
+// Each motion's end is held, so a test says when the field has finished growing or folding.
+const mockMotionEnds: ((finished: boolean) => void)[] = [];
 jest.mock('react-native-reanimated', () => ({
   ...jest.requireActual('react-native-reanimated/mock'),
   useReducedMotion: () => false,
+  withTiming: (value: number, _config: unknown, onEnd?: (finished: boolean) => void) => {
+    if (onEnd) mockMotionEnds.push(onEnd);
+    return value;
+  },
 }));
 
 const renderHeader = (props: Partial<ComponentProps<typeof TransactionsHeader>> = {}) => {
@@ -91,5 +98,55 @@ describe('TransactionsHeader', () => {
       />,
     );
     expect(screen.queryByText(error)).toBeNull();
+  });
+
+  describe('the keyboard', () => {
+    const focus = TextInput.prototype.focus as jest.Mock;
+    const blur = TextInput.prototype.blur as jest.Mock;
+    const header = (isSearching: boolean, query = '') => (
+      <TransactionsHeader
+        canSearch
+        isSearching={isSearching}
+        query={query}
+        onOpen={jest.fn()}
+        onCancel={jest.fn()}
+        onChangeQuery={jest.fn()}
+        onSubmit={jest.fn()}
+        onClear={jest.fn()}
+      />
+    );
+
+    beforeEach(() => {
+      mockMotionEnds.length = 0;
+      focus.mockClear();
+      blur.mockClear();
+    });
+
+    it('comes only once the field has grown, and never if search is left first', () => {
+      render(header(false));
+      blur.mockClear();
+      screen.rerender(header(true));
+      expect(focus).not.toHaveBeenCalled();
+
+      mockMotionEnds.at(-1)?.(true);
+      expect(focus).toHaveBeenCalledTimes(1);
+
+      screen.rerender(header(false));
+      expect(blur).toHaveBeenCalledTimes(1);
+      screen.rerender(header(true));
+      screen.rerender(header(false));
+      mockMotionEnds.at(-2)?.(false);
+      mockMotionEnds.at(-1)?.(true);
+      expect(focus).toHaveBeenCalledTimes(1);
+    });
+
+    it('comes back at once after a clear, but not merely as search opens', () => {
+      render(header(true));
+      expect(focus).not.toHaveBeenCalled();
+
+      screen.rerender(header(true, 'coffee'));
+      screen.rerender(header(true, ''));
+      expect(focus).toHaveBeenCalledTimes(1);
+    });
   });
 });

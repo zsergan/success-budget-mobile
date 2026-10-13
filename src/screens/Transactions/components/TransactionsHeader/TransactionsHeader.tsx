@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
   interpolateColor,
+  runOnJS,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -56,22 +57,28 @@ const TransactionsHeader = ({
   const [isFocused, setIsFocused] = useState(false);
   const progress = useSharedValue(isSearching ? 1 : 0);
 
-  // The keyboard starts with the field, so both arrive together; it leaves as the field folds back.
-  useEffect(() => {
-    if (isSearching) inputRef.current?.focus();
-    else inputRef.current?.blur();
+  const focusField = useCallback(() => inputRef.current?.focus(), []);
 
-    progress.value = withTiming(isSearching ? 1 : 0, {
-      duration: isReduced ? 0 : SEARCH_MOTION_MS,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [isSearching, isReduced, progress]);
-
-  // A cleared search, from the field or from the empty list, is typed again at once.
-  const isCleared = isSearching && query === '';
+  // The keyboard comes once the field has grown, as its arrival re-lays the screen out and would stall the motion;
+  // it leaves as the field folds back.
   useEffect(() => {
-    if (isCleared) inputRef.current?.focus();
-  }, [isCleared]);
+    if (!isSearching) inputRef.current?.blur();
+
+    progress.value = withTiming(
+      isSearching ? 1 : 0,
+      { duration: isReduced ? 0 : SEARCH_MOTION_MS, easing: Easing.out(Easing.cubic) },
+      (finished) => {
+        if (finished && isSearching) runOnJS(focusField)();
+      },
+    );
+  }, [isSearching, isReduced, progress, focusField]);
+
+  // A search cleared, from the field or from the empty list, is typed again at once.
+  const lastQueryRef = useRef(query);
+  useEffect(() => {
+    if (isSearching && query === '' && lastQueryRef.current !== '') focusField();
+    lastQueryRef.current = query;
+  }, [isSearching, query, focusField]);
 
   const fieldBorder = error ? colors.danger : isFocused ? colors.accent : colors.hairline;
 
