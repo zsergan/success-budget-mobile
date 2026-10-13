@@ -93,6 +93,13 @@ const styles = StyleSheet.create({
     lineHeight: theme.lineHeights.label,
     color: colors.text,
   },
+  error: {
+    marginTop: theme.spacing.sm,
+    fontFamily: theme.fonts.medium,
+    fontSize: theme.fontSizes.caption,
+    lineHeight: theme.lineHeights.caption,
+    color: colors.danger,
+  },
 });
 
 export default styles;

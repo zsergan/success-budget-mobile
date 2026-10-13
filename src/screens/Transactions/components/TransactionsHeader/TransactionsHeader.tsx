@@ -29,6 +29,8 @@ interface Props {
   canSearch: boolean;
   isSearching: boolean;
   query: string;
+  // Why the text is not searched for, shown under the field.
+  error?: string | null;
   onOpen: () => void;
   onCancel: () => void;
   onChangeQuery: (text: string) => void;
@@ -40,6 +42,7 @@ const TransactionsHeader = ({
   canSearch,
   isSearching,
   query,
+  error = null,
   onOpen,
   onCancel,
   onChangeQuery,
@@ -70,7 +73,7 @@ const TransactionsHeader = ({
     if (isCleared) inputRef.current?.focus();
   }, [isCleared]);
 
-  const fieldBorder = isFocused ? colors.accent : colors.hairline;
+  const fieldBorder = error ? colors.danger : isFocused ? colors.accent : colors.hairline;
 
   // The search button's background grows into the field: its right edge makes room for Cancel, its left edge
   // reaches the start of the row, and the magnifier rides along at the field's start.
@@ -166,6 +169,12 @@ const TransactionsHeader = ({
           </TouchableOpacity>
         </Animated.View>
       </View>
+
+      {isSearching && error && (
+        <Text style={styles.error} accessibilityRole="alert" accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      )}
     </View>
   );
 };

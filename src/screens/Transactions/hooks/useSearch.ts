@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { isSearchTooLong } from '@screens/Transactions/search';
+
 // Typing sends the search once it pauses; the keyboard's Search key sends it at once.
 export const SEARCH_DELAY_MS = 300;
 
@@ -8,13 +10,16 @@ const useSearch = () => {
   const [query, setQuery] = useState('');
   const [submitted, setSubmitted] = useState('');
 
+  const text = query.trim();
+  // Never sent: the field says so, and the last search sent stays shown.
+  const isTooLong = isSearchTooLong(text);
+
   useEffect(() => {
-    const text = query.trim();
-    if (text === submitted) return;
+    if (text === submitted || isTooLong) return;
 
     const timer = setTimeout(() => setSubmitted(text), SEARCH_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [query, submitted]);
+  }, [text, isTooLong, submitted]);
 
   const reset = () => {
     setQuery('');
@@ -26,13 +31,16 @@ const useSearch = () => {
     query,
     // The trimmed text the history is searched for; empty for the plain history.
     submitted,
+    isTooLong,
     open: () => setIsSearching(true),
     cancel: () => {
       setIsSearching(false);
       reset();
     },
     change: setQuery,
-    submit: () => setSubmitted(query.trim()),
+    submit: () => {
+      if (!isTooLong) setSubmitted(text);
+    },
     clear: reset,
   };
 };

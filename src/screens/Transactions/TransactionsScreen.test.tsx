@@ -695,6 +695,58 @@ describe('TransactionsScreen', () => {
       expect(screen.queryByText('9.99')).toBeNull();
     });
 
+    describe('over 255 characters', () => {
+      const searches = () => listRequests().flatMap(({ params }) => (params?.q ? [String(params.q)] : []));
+      const LIMIT_ERROR = 'Search is limited to 255 characters';
+
+      it.each([
+        ['letters', 'a'],
+        ['emoji', '😀'],
+      ])('sends 255 %s, but never 256, whether typed or sent with Search', async (_name, char) => {
+        renderTransactions(undefined);
+        await settle();
+        const field = await openSearch();
+
+        fireEvent.changeText(field, ` ${char.repeat(256)} `);
+        await act(async () => jest.advanceTimersByTimeAsync(300));
+        fireEvent(field, 'submitEditing');
+        await settle();
+
+        expect(searches()).toEqual([]);
+        expect(screen.getByText(LIMIT_ERROR)).toBeTruthy();
+        expect(screen.queryByText('Search results')).toBeNull();
+
+        fireEvent.changeText(field, ` ${char.repeat(255)} `);
+        await act(async () => jest.advanceTimersByTimeAsync(300));
+        await settle();
+
+        expect(searches()).toEqual([char.repeat(255)]);
+        expect(screen.queryByText(LIMIT_ERROR)).toBeNull();
+      });
+
+      it('keeps the last results when a pasted text is too long, and drops the error on Cancel', async () => {
+        renderTransactions(undefined);
+        await settle();
+        const field = await openSearch();
+        fireEvent.changeText(field, 'coffee');
+        fireEvent(field, 'submitEditing');
+        await settle();
+
+        fireEvent.changeText(field, `coffee ${'x'.repeat(1000)}`);
+        fireEvent(field, 'submitEditing');
+        await act(async () => jest.advanceTimersByTimeAsync(300));
+
+        expect(searches()).toEqual(['coffee']);
+        expect(screen.getByText(LIMIT_ERROR)).toBeTruthy();
+        expect(screen.getByText('Coffee')).toBeTruthy();
+        expect(screen.queryByText('Couldn’t search. Check your connection and try again.')).toBeNull();
+
+        fireEvent.press(screen.getByText('Cancel'));
+        await settle();
+        expect(screen.queryByText(LIMIT_ERROR)).toBeNull();
+      });
+    });
+
     it('treats a search of only spaces as none', async () => {
       renderTransactions(undefined);
       await settle();

@@ -108,4 +108,15 @@ describe('RangeCount', () => {
       { from: september.from.toISOString(), to: september.to.toISOString() },
     ]);
   });
+
+  it('counts with 255 characters of search, emoji counted as one, and asks nothing for 256', async () => {
+    mockedRequest.mockResolvedValue({ data: { count: 3 } });
+
+    renderCount(august, ` ${'😀'.repeat(255)} `);
+    renderCount(september, 'a'.repeat(256));
+    await settle();
+
+    expect(mockedRequest.mock.calls.map(([config]) => config.params.q)).toEqual(['😀'.repeat(255)]);
+    expect(screen.getByText('Search is too long to count')).toBeTruthy();
+  });
 });

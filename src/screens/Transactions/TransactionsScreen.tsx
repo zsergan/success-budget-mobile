@@ -31,6 +31,7 @@ import TransactionsHeader from './components/TransactionsHeader/TransactionsHead
 import TransactionsList from './components/TransactionsList/TransactionsList';
 import useSearch from './hooks/useSearch';
 import useTransactionsData from './hooks/useTransactionsData';
+import { MAX_SEARCH_LENGTH } from './search';
 
 import styles from './style';
 
@@ -279,6 +280,7 @@ const TransactionsScreen = () => {
                 canSearch={!filter}
                 isSearching={search.isSearching}
                 query={search.query}
+                error={search.isTooLong ? `Search is limited to ${MAX_SEARCH_LENGTH} characters` : null}
                 onOpen={openSearch}
                 onCancel={cancelSearch}
                 onChangeQuery={search.change}

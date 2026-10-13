@@ -71,4 +71,25 @@ describe('TransactionsHeader', () => {
     expect(screen.queryByLabelText('Search transactions')).toBeNull();
     expect(screen.getByText('Transactions')).toBeTruthy();
   });
+
+  it('says under the field why its text is not searched, and only while searching', () => {
+    const error = 'Search is limited to 255 characters';
+    renderHeader({ isSearching: true, query: 'a'.repeat(256), error });
+    expect(screen.getByRole('alert')).toHaveTextContent(error);
+
+    screen.rerender(
+      <TransactionsHeader
+        canSearch
+        isSearching={false}
+        query=""
+        error={error}
+        onOpen={jest.fn()}
+        onCancel={jest.fn()}
+        onChangeQuery={jest.fn()}
+        onSubmit={jest.fn()}
+        onClear={jest.fn()}
+      />,
+    );
+    expect(screen.queryByText(error)).toBeNull();
+  });
 });
