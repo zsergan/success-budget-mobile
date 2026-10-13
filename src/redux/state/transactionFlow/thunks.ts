@@ -102,6 +102,18 @@ const dropFromLists =
           ),
         ),
       );
+    transactionApi.util
+      .selectCachedArgsForQuery(getState(), 'getTransactionsFeed')
+      .filter(({ selection }) => selection.spaceId === spaceId)
+      .forEach((arg) =>
+        dispatch(
+          transactionApi.util.updateQueryData('getTransactionsFeed', arg, ({ pages }) => {
+            pages.forEach((page) => {
+              page.items = page.items.filter(({ id }) => id !== transactionId);
+            });
+          }),
+        ),
+      );
   };
 
 // The one delete behind a list row and the sheet. Every attempt may use a new key: a delete that already applied
