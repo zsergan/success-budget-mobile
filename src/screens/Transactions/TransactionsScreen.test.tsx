@@ -156,7 +156,12 @@ describe('TransactionsScreen', () => {
     act(() => list.props.onScrollToIndexFailed({ index: 1, highestMeasuredFrameIndex: 0, averageItemLength: 70 }));
     fireEvent(row, 'layout', { nativeEvent: { layout: { x: 0, y: 900, width: 300, height: 70 } } });
     expect(scrollToLocation).toHaveBeenCalledTimes(2);
-    expect(scrollToLocation).toHaveBeenLastCalledWith({ sectionIndex: 0, itemIndex: 0, viewPosition: 0.4 });
+    expect(scrollToLocation).toHaveBeenLastCalledWith({
+      sectionIndex: 0,
+      itemIndex: 0,
+      viewPosition: 0.4,
+      viewOffset: 0,
+    });
 
     await act(async () => jest.advanceTimersByTimeAsync(5000));
     expect(isLit()).toBe(true);

@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { ViewToken } from 'react-native';
 import { ActivityIndicator, SectionList, Text, TouchableOpacity, View } from 'react-native';
 
@@ -37,6 +37,8 @@ interface Props {
   highlightId?: string | null;
   // Called once the highlighted row is actually on screen.
   onHighlightSeen?: () => void;
+  // A row to bring back to the top of the list, unlit, once it is listed.
+  restoreId?: string | null;
   // The rows on screen, top first, whenever they change.
   onVisibleRowsChange?: (ids: string[]) => void;
   older?: PageEdge;
@@ -74,13 +76,19 @@ const PageStatus = ({ edge, onRetry }: { edge?: PageEdge; onRetry?: () => void }
 
 const VIEWABILITY = { itemVisiblePercentThreshold: 60 };
 
+interface ScrollTarget {
+  id: string;
+  viewPosition: number;
+  viewOffset: number;
+}
+
 // Whether the row is in the list to scroll to.
-const scrollToRow = (list: SectionList<TransactionModel, Section> | null, groups: Group[], rowId: string) => {
-  const sectionIndex = groups.findIndex((group) => group.items.some(({ id }) => id === rowId));
+const scrollToRow = (list: SectionList<TransactionModel, Section> | null, groups: Group[], target: ScrollTarget) => {
+  const sectionIndex = groups.findIndex((group) => group.items.some(({ id }) => id === target.id));
   if (sectionIndex < 0) return false;
 
-  const itemIndex = groups[sectionIndex].items.findIndex(({ id }) => id === rowId);
-  list?.scrollToLocation({ sectionIndex, itemIndex, viewPosition: 0.4 });
+  const itemIndex = groups[sectionIndex].items.findIndex(({ id }) => id === target.id);
+  list?.scrollToLocation({ sectionIndex, itemIndex, viewPosition: target.viewPosition, viewOffset: target.viewOffset });
   return true;
 };
 
@@ -93,6 +101,7 @@ const TransactionsList = ({
   onDeleteTransaction,
   highlightId = null,
   onHighlightSeen,
+  restoreId = null,
   onVisibleRowsChange,
   older,
   newer,
@@ -115,22 +124,34 @@ const TransactionsList = ({
     data: group.items,
   }));
 
+  // A lit row is brought to the middle; a restored one to the top, just below the status bar.
+  const targetId = highlightId ?? restoreId;
+  const target = useMemo<ScrollTarget | null>(
+    () =>
+      highlightId
+        ? { id: highlightId, viewPosition: 0.4, viewOffset: 0 }
+        : restoreId
+          ? { id: restoreId, viewPosition: 0, viewOffset: topInset }
+          : null,
+    [highlightId, restoreId, topInset],
+  );
+
   useEffect(() => {
-    if (!highlightId) {
+    if (!target) {
       scrolledToRef.current = null;
       awaitsExactRef.current = false;
       return;
     }
-    if (scrolledToRef.current === highlightId) return;
+    if (scrolledToRef.current === target.id) return;
 
-    if (scrollToRow(listRef.current, groups, highlightId)) scrolledToRef.current = highlightId;
-  }, [groups, highlightId]);
+    if (scrollToRow(listRef.current, groups, target)) scrolledToRef.current = target.id;
+  }, [groups, target]);
 
   const onRowLayout = () => {
     if (!awaitsExactRef.current) return;
 
     awaitsExactRef.current = false;
-    if (highlightId) scrollToRow(listRef.current, groups, highlightId);
+    if (target) scrollToRow(listRef.current, groups, target);
   };
 
   // A row already on screen when it is picked counts as seen at once.
@@ -157,6 +178,9 @@ const TransactionsList = ({
       keyExtractor={(item) => item.id}
       stickySectionHeadersEnabled={false}
       showsVerticalScrollIndicator={false}
+      // Scrolling the results puts the keyboard away; a tap on a row still opens it at once.
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled"
       ItemSeparatorComponent={ItemSeparator}
       ListHeaderComponent={
         <>
@@ -206,7 +230,7 @@ const TransactionsList = ({
           />
         );
 
-        return item.id === highlightId ? <View onLayout={onRowLayout}>{card}</View> : card;
+        return item.id === targetId ? <View onLayout={onRowLayout}>{card}</View> : card;
       }}
     />
   );
