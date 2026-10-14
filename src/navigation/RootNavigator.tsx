@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -38,6 +38,7 @@ const navigationTheme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, bac
 const RootNavigator = () => {
   const dispatch = useAppDispatch();
   const { phase, stage } = useAppSelector(selectLaunch);
+  const [hasDrawn, setHasDrawn] = useState(false);
   useSessionData();
   usePendingWritesSync();
 
@@ -47,11 +48,17 @@ const RootNavigator = () => {
 
   const isReady = phase === 'ready';
 
-  // The system launch screen stays up while the fonts load, so the first frame never swaps its typeface.
-  if (phase === 'running' && stage === 'resources') return null;
+  // The system launch screen stays up while the fonts load, so the first frame never swaps its typeface; once it is
+  // gone the app keeps drawing, a repeated attempt included.
+  if (!hasDrawn && phase === 'running' && stage === 'resources') return null;
 
   return (
-    <GestureHandlerRootView onLayout={() => SplashScreen.hideAsync()}>
+    <GestureHandlerRootView
+      onLayout={() => {
+        setHasDrawn(true);
+        SplashScreen.hideAsync();
+      }}
+    >
       <BottomSheetModalProvider>
         <NavigationContainer theme={navigationTheme}>
           <Stack.Navigator screenOptions={{ animation: isReady ? 'slide_from_right' : 'slide_from_left' }}>
