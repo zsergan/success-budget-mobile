@@ -4,7 +4,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import type { Category, LimitView, Space, Transaction, WalletWithBalance } from '@api/dto';
 import { getLoadState } from '@redux/api/loadState';
-import { useRecentArg, useSpaceArg } from '@redux/hooks';
+import { useAppSelector, useRecentArg, useSpaceArg } from '@redux/hooks';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { useGetCategoriesQuery, categoryApi } from '@redux/state/category/api';
 import { useGetLimitsQuery, limitApi } from '@redux/state/limit/api';
@@ -12,7 +12,6 @@ import { activateSpace, refreshSpaceData } from '@redux/state/space/thunks';
 import { transactionApi, useGetRecentTransactionsQuery } from '@redux/state/transaction/api';
 import { useGetWalletsQuery, walletApi } from '@redux/state/wallet/api';
 import { createAppStore } from '@redux/Store';
-import useLaunch from '@navigation/useLaunch';
 import useTransactionsData from '@screens/Transactions/hooks/useTransactionsData';
 import { AppColor, SpaceType, TransactionKind, TransactionType } from '@shared/enums';
 import { getCurrentMonthRange } from '@shared/utils';
@@ -23,7 +22,7 @@ jest.mock('@api/instance', () => ({
   ApiClient: () => ({}),
   createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
 }));
-jest.mock('expo-secure-store', () => ({ getItemAsync: jest.fn(() => Promise.resolve('token')) }));
+jest.mock('expo-secure-store');
 
 // RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
 jest.useFakeTimers({ now: new Date('2026-01-15T12:00:00') });
@@ -214,7 +213,7 @@ const useMountedScreens = () => {
   const spaceArg = useSpaceArg();
 
   return {
-    gate: useLaunch({ resourcesReady: true }).state,
+    gate: useAppSelector((state) => state.launch.phase),
     home: useGetRecentTransactionsQuery(useRecentArg()),
     history: useTransactionsData({ range: getCurrentMonthRange(), filter: null }),
     wallets: useGetWalletsQuery(spaceArg),
@@ -245,14 +244,14 @@ const renderApp = async () => {
     () => {
       const screens = useMountedScreens();
 
-      gateLog.push(screens.gate.status !== 'ready');
+      gateLog.push(screens.gate !== 'ready');
 
       return screens;
     },
     { wrapper },
   );
 
-  await waitFor(() => expect(rendered.result.current.gate.status).toBe('ready'));
+  await waitFor(() => expect(rendered.result.current.gate).toBe('ready'));
   await settle(store);
 
   return { store, gateLog, ...rendered };

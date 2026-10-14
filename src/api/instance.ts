@@ -5,7 +5,7 @@ import * as SecureStore from 'expo-secure-store';
 import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
 import { BASE_API_URL, AUTH_TOKEN_KEY } from '@shared/constants';
 
-import { endHttpSession, getHttpSessionKey } from './session';
+import { endHttpSession, getHttpSessionKey, isHttpSessionLaunching } from './session';
 
 declare module 'axios' {
   interface AxiosRequestConfig {
@@ -56,7 +56,12 @@ export const createHttpClient = () => {
         endHttpSession();
       }
 
-      if (status === 429 && isSessionCurrent && !error.config?.isHandledRateLimit?.(error.response?.data)) {
+      if (
+        status === 429 &&
+        isSessionCurrent &&
+        !isHttpSessionLaunching() &&
+        !error.config?.isHandledRateLimit?.(error.response?.data)
+      ) {
         showGlobalAlert('Too many requests. Please wait a moment and try again.');
       }
 

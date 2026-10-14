@@ -5,7 +5,10 @@ import { bindHttpSession } from '@api/session';
 
 import { baseApi } from './api/baseApi';
 import authReducer from './state/auth/slice';
-import { logoutMe } from './state/auth/thunks';
+import { loginMe, logoutMe, verifyEmailMe } from './state/auth/thunks';
+import launchReducer from './state/launch/slice';
+import { selectIsLaunching } from './state/launch/selectors';
+import { runLaunch } from './state/launch/thunks';
 import { startSpaceSelectionListener } from './state/space/listeners';
 import memberReducer from './state/member/slice';
 import pendingWriteReducer from './state/pendingWrite/slice';
@@ -14,6 +17,7 @@ import transactionFlowReducer from './state/transactionFlow/slice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
+  launch: launchReducer,
   member: memberReducer,
   pendingWrite: pendingWriteReducer,
   space: spaceReducer,
@@ -42,6 +46,14 @@ export const createAppStore = (preloadedState?: Partial<RootState>) => {
     },
   });
 
+  // A sign-in loads the required data before the app opens, the same way a cold start does.
+  sessionListener.startListening({
+    predicate: (action) => loginMe.fulfilled.match(action) || verifyEmailMe.fulfilled.match(action),
+    effect: (_, { dispatch }) => {
+      dispatch(runLaunch());
+    },
+  });
+
   startSpaceSelectionListener(sessionListener);
 
   return configureStore({
@@ -59,6 +71,7 @@ const store = createAppStore();
 bindHttpSession({
   getKey: () => store.getState().auth.sessionKey,
   end: () => store.dispatch(logoutMe()),
+  isLaunching: () => selectIsLaunching(store.getState()),
 });
 
 export default store;

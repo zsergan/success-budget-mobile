@@ -1,6 +1,7 @@
 import type { ErrorInfo, ReactNode } from 'react';
 import { Component } from 'react';
 import { Text, View } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 
 import Button from '../Buttons/Button/Button';
 import Icon from '../Icon/Icon';
@@ -28,6 +29,8 @@ class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // No crash-reporting SDK is wired up yet; at least log it.
     console.error('Unhandled render error', error, errorInfo);
+    // A crash before the first screen was ready would otherwise leave the native splash up for good.
+    SplashScreen.hideAsync();
   }
 
   handleReset = () => {

@@ -7,6 +7,8 @@ import { readStoredSession, registerMe, loginMe, logoutMe, verifyEmailMe } from 
 
 const login = (state: typeof initialState, action: string) => {
   state.isSignedIn = true;
+  // Signing in or out settles the stored session: whatever the device held no longer matters.
+  state.storedSession = 'read';
   state.userToken = action;
   state.userEmail = null;
   state.error = undefined;
@@ -14,6 +16,7 @@ const login = (state: typeof initialState, action: string) => {
 
 const logout = (state: typeof initialState) => {
   state.isSignedIn = false;
+  state.storedSession = 'read';
   state.userToken = null;
   state.sessionKey += 1;
 };
@@ -43,8 +46,6 @@ const authSlice = createSlice({
     });
 
     builder.addCase(readStoredSession.fulfilled, (state, action) => {
-      state.storedSession = 'read';
-
       if (action.payload) {
         login(state, action.payload);
       } else {

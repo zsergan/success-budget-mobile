@@ -15,6 +15,7 @@ const mockedGetItemAsync = jest.mocked(SecureStore.getItemAsync);
 const mockedShowGlobalAlert = jest.mocked(showGlobalAlert);
 const endSession = jest.fn();
 let sessionKey = 0;
+let isLaunching = false;
 
 const interceptorsOf = (instance: AxiosInstance) => {
   const requestHandlers = instance.interceptors.request.handlers!;
@@ -49,7 +50,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   sessionKey = 0;
   mockedGetItemAsync.mockResolvedValue('token');
-  bindHttpSession({ getKey: () => sessionKey, end: endSession });
+  isLaunching = false;
+  bindHttpSession({ getKey: () => sessionKey, end: endSession, isLaunching: () => isLaunching });
 });
 
 afterAll(() => bindHttpSession(null));
@@ -106,6 +108,13 @@ describe('429 handling', () => {
     expect(mockedShowGlobalAlert).toHaveBeenCalledTimes(1);
   });
 
+  it('leaves a 429 during the launch to the launch screen', async () => {
+    isLaunching = true;
+    await sendAndFail(429);
+
+    expect(mockedShowGlobalAlert).not.toHaveBeenCalled();
+  });
+
   it('stays silent for a request whose session has ended', async () => {
     await sendAndFail(429, { beforeResponse: () => (sessionKey += 1) });
 
@@ -140,7 +149,7 @@ describe('a late response after a logout and a new login', () => {
     const store = createAppStore();
     const end = jest.fn();
 
-    bindHttpSession({ getKey: () => store.getState().auth.sessionKey, end });
+    bindHttpSession({ getKey: () => store.getState().auth.sessionKey, end, isLaunching: () => false });
     signIn(store, 'token-1');
 
     await sendAndFail(status, {

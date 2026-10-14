@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import * as SplashScreen from 'expo-splash-screen';
 
 import {
   AcceptInviteScreen,
@@ -17,24 +19,31 @@ import {
 } from '@screens';
 import type { RootStackParamList } from '@shared/types';
 import { usePendingWritesSync } from '@hooks';
+import { useAppDispatch, useAppSelector } from '@redux/hooks';
+import { selectLaunch } from '@redux/state/launch/selectors';
+import { runLaunch } from '@redux/state/launch/thunks';
 import { ScreenNames } from '@shared/enums';
 import MainNavigator from './MainNavigator';
-import useLaunch from './useLaunch';
-import useSpaceDataWarmup from './useSpaceDataWarmup';
+import useSessionData from './useSessionData';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const RootNavigator = ({ resourcesReady }: { resourcesReady: boolean }) => {
-  const { state: launch, retry } = useLaunch({ resourcesReady });
-  useSpaceDataWarmup();
+const RootNavigator = () => {
+  const dispatch = useAppDispatch();
+  const { phase } = useAppSelector(selectLaunch);
+  useSessionData();
   usePendingWritesSync();
 
-  const isReady = launch.status === 'ready';
+  useEffect(() => {
+    dispatch(runLaunch());
+  }, [dispatch]);
+
+  const isReady = phase === 'ready';
 
   return (
     <GestureHandlerRootView>
       <BottomSheetModalProvider>
-        <NavigationContainer>
+        <NavigationContainer onReady={() => SplashScreen.hideAsync()}>
           <Stack.Navigator screenOptions={{ animation: isReady ? 'slide_from_right' : 'slide_from_left' }}>
             {isReady ? (
               <>
@@ -69,7 +78,7 @@ const RootNavigator = ({ resourcesReady }: { resourcesReady: boolean }) => {
                   options={{ headerShown: false }}
                 />
               </>
-            ) : launch.status === 'welcome' ? (
+            ) : phase === 'welcome' ? (
               <>
                 <Stack.Screen
                   name={ScreenNames.WELCOME_SCREEN}
@@ -93,9 +102,11 @@ const RootNavigator = ({ resourcesReady }: { resourcesReady: boolean }) => {
                 />
               </>
             ) : (
-              <Stack.Screen name={ScreenNames.LOADING_SCREEN} options={{ headerShown: false }}>
-                {() => <LoadingScreen launch={launch} onRetry={retry} />}
-              </Stack.Screen>
+              <Stack.Screen
+                name={ScreenNames.LOADING_SCREEN}
+                component={LoadingScreen}
+                options={{ headerShown: false }}
+              />
             )}
           </Stack.Navigator>
         </NavigationContainer>

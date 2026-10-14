@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFonts } from 'expo-font';
+
+import { APP_FONTS } from '@shared/fonts';
 
 import DonutChart from './components/DonutChart/DonutChart';
 import TrendChart from './components/TrendChart/TrendChart';
@@ -27,6 +30,7 @@ const Chips = ({ titles, active, onChange }: ChipsProps) => (
 );
 
 const ChartsPrototypeScreen = () => {
+  useFonts(APP_FONTS);
   const [trendScenario, setTrendScenario] = useState(0);
   const [donutScenario, setDonutScenario] = useState(0);
   const [selectedColumn, setSelectedColumn] = useState<number | null>(null);
