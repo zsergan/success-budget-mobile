@@ -1,7 +1,9 @@
+import { AccessibilityInfo } from 'react-native';
 import { Provider } from 'react-redux';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
-import { attemptFailed, attemptStarted } from '@redux/state/launch/actions';
+import { attemptFailed, attemptStarted, stageReached } from '@redux/state/launch/actions';
 import type { LaunchFailure } from '@redux/state/launch/initialState';
 import { createAppStore } from '@redux/Store';
 import LaunchScreen from './LaunchScreen';
@@ -19,14 +21,23 @@ jest.mock('@api/instance', () => ({
 
 jest.useFakeTimers();
 
+const metrics = {
+  frame: { x: 0, y: 0, width: 402, height: 874 },
+  insets: { top: 62, right: 0, bottom: 34, left: 0 },
+};
+
 const renderLaunch = () => {
   const store = createAppStore();
 
   store.dispatch(attemptStarted({ attempt: 1, startedAt: Date.now() }));
+  // The screen is first drawn once the fonts are in, when the session is being checked.
+  store.dispatch(stageReached({ attempt: 1, stage: 'session' }));
   render(
-    <Provider store={store}>
-      <LaunchScreen />
-    </Provider>,
+    <SafeAreaProvider initialMetrics={metrics}>
+      <Provider store={store}>
+        <LaunchScreen />
+      </Provider>
+    </SafeAreaProvider>,
   );
 
   return store;
@@ -51,6 +62,23 @@ it('shows only the lockup at first, the progress after 400 ms and the reason aft
   expect(screen.getByText('This is taking longer than usual. Check your connection.')).toBeTruthy();
 });
 
+it('names the stage the attempt is in, and announces the status once rather than every cycle', async () => {
+  const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockClear();
+  const store = renderLaunch();
+
+  await act(() => jest.advanceTimersByTimeAsync(400));
+
+  expect(screen.getByRole('progressbar', { name: 'Checking your session…' })).toBeTruthy();
+
+  act(() => {
+    store.dispatch(stageReached({ attempt: 1, stage: 'requiredData' }));
+  });
+  await act(() => jest.advanceTimersByTimeAsync(3000));
+
+  expect(screen.getByText('Loading your budgets…')).toBeTruthy();
+  expect(announce.mock.calls).toEqual([['Checking your session…'], ['Loading your budgets…']]);
+});
+
 it('replaces the progress with the failure, telling a lost connection from a server problem', async () => {
   const store = renderLaunch();
 
@@ -58,7 +86,7 @@ it('replaces the progress with the failure, telling a lost connection from a ser
   fail(store, 'offline');
 
   expect(screen.queryByText('Checking your session…')).toBeNull();
-  expect(screen.getByText('No internet connection')).toBeTruthy();
+  expect(screen.getByRole('header', { name: 'No internet connection' })).toBeTruthy();
 });
 
 it('says a server error is not the connection', () => {
@@ -75,6 +103,7 @@ it('counts down a 429 pause before Try again starts a new attempt', async () => 
   fail(store, 'rateLimited', Date.now() + 3000);
 
   expect(screen.getByText('Try again in 3 s')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Try again' }).props.accessibilityHint).toBe('Available in 3 seconds');
   fireEvent.press(screen.getByText('Try again in 3 s'));
   expect(store.getState().launch.attempt).toBe(1);
 

@@ -14,14 +14,21 @@ interface Props {
 
 const APP_NAME = 'Success Budget';
 
+const TAGLINE = 'Personal and shared budgets';
+
 const TEXT_FADE_MS = 240;
+
+// The name is part of the logo: it keeps its size under large system text, as the system launch screen does.
+const LOGO_TEXT = { maxFontSizeMultiplier: 1 } as const;
 
 const BrandLockup = ({ layout, fadeInText = false }: Props) => {
   if (layout === 'inline') {
     return (
-      <View style={styles.inline}>
+      <View style={styles.inline} accessible accessibilityRole="header" accessibilityLabel={APP_NAME}>
         <BrandMark height={30} />
-        <Text style={styles.inlineName}>{APP_NAME}</Text>
+        <Text {...LOGO_TEXT} style={styles.inlineName}>
+          {APP_NAME}
+        </Text>
       </View>
     );
   }
@@ -29,13 +36,13 @@ const BrandLockup = ({ layout, fadeInText = false }: Props) => {
   const entering = fadeInText ? FadeIn.duration(TEXT_FADE_MS) : undefined;
 
   return (
-    <View style={styles.stacked}>
+    <View style={styles.stacked} accessible accessibilityRole="header" accessibilityLabel={`${APP_NAME}. ${TAGLINE}`}>
       <BrandMark height={STACKED_MARK_HEIGHT} />
-      <Animated.Text entering={entering} style={styles.stackedName}>
+      <Animated.Text {...LOGO_TEXT} entering={entering} style={styles.stackedName}>
         {APP_NAME}
       </Animated.Text>
-      <Animated.Text entering={entering} style={styles.tagline}>
-        Personal and shared budgets
+      <Animated.Text {...LOGO_TEXT} entering={entering} style={styles.tagline}>
+        {TAGLINE}
       </Animated.Text>
     </View>
   );

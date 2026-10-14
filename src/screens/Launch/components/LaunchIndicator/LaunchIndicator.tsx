@@ -5,11 +5,12 @@ import Animated, {
   Easing,
   interpolate,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+
+import useReduceMotion from '@screens/Launch/hooks/useReduceMotion';
 
 import styles, { SEGMENT_WIDTH, TRACK_WIDTH } from './style';
 
@@ -19,7 +20,7 @@ const PULSE_MS = 800;
 // Indeterminate: a third of the track crosses it and re-enters from the left; with reduced motion it stays centred
 // and fades between 40% and 100% opacity.
 const LaunchIndicator = () => {
-  const isReduced = useReducedMotion();
+  const isReduced = useReduceMotion();
   const progress = useSharedValue(0);
 
   useEffect(() => {
@@ -41,7 +42,8 @@ const LaunchIndicator = () => {
   );
 
   return (
-    <View style={styles.track}>
+    // The status beside it says what is happening; the motion itself is not announced.
+    <View style={styles.track} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       <Animated.View style={[styles.segment, segmentStyle]} />
     </View>
   );
