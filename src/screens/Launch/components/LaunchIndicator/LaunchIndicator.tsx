@@ -4,6 +4,7 @@ import Animated, {
   cancelAnimation,
   Easing,
   interpolate,
+  ReduceMotion,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -26,7 +27,14 @@ const LaunchIndicator = () => {
   useEffect(() => {
     progress.value = 0;
     progress.value = isReduced
-      ? withRepeat(withTiming(1, { duration: PULSE_MS, easing: Easing.inOut(Easing.ease) }), -1, true)
+      ? // The pulse is the reduced motion itself, so Reanimated must not cut it short under the system setting.
+        withRepeat(
+          withTiming(1, { duration: PULSE_MS, easing: Easing.inOut(Easing.ease), reduceMotion: ReduceMotion.Never }),
+          -1,
+          true,
+          undefined,
+          ReduceMotion.Never,
+        )
       : withRepeat(withTiming(1, { duration: CROSSING_MS, easing: Easing.bezier(0.45, 0, 0.55, 1) }), -1, false);
 
     return () => cancelAnimation(progress);
