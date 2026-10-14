@@ -2,7 +2,8 @@ import { StyleSheet } from 'react-native';
 
 import theme, { colors } from '@shared/theme';
 
-// Below the status bar and above the screen's bottom edge, as in the design's frame.
+// Below the status bar and above the screen's bottom edge, as in the design's frame; the bottom one clears the
+// home indicator's area on its own.
 export const TOP_GAP = 44;
 export const BOTTOM_GAP = 40;
 

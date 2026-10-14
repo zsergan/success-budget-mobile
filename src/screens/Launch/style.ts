@@ -45,8 +45,9 @@ const styles = StyleSheet.create({
   progress: {
     alignItems: 'center',
     rowGap: theme.spacing.md + 2,
-    // 40 in the design, against the failure's 44.
-    marginHorizontal: -4,
+    // Wider than the design's 40 a side: RN measures the long-wait note a touch wider than the browser does, and the
+    // note is designed to fit on one line.
+    marginHorizontal: -theme.spacing.md,
   },
   status: {
     alignSelf: 'stretch',

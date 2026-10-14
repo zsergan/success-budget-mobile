@@ -28,7 +28,7 @@ const WelcomeScreen = ({ navigation }: Props) => {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + TOP_GAP, paddingBottom: Math.max(BOTTOM_GAP, insets.bottom + 12) },
+          { paddingTop: insets.top + TOP_GAP, paddingBottom: Math.max(BOTTOM_GAP, insets.bottom) },
         ]}
         bounces={false}
         showsVerticalScrollIndicator={false}
