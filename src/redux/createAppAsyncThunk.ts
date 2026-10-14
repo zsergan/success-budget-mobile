@@ -1,4 +1,5 @@
 import type { AxiosError } from 'axios';
+import axios from 'axios';
 import { createAsyncThunk } from '@reduxjs/toolkit';
 
 import type { ErrorResponse } from '@api/dto';
@@ -26,18 +27,25 @@ const parseRetryAfterMs = (header: unknown): number | undefined => {
 };
 
 // Must stay truthy: the base query returns it as `error`, and a falsy one reads as success.
-const networkError = (): ErrorResponse => ({
+const networkError = (transport: ErrorResponse['transport']): ErrorResponse => ({
   message: NETWORK_ERROR_MESSAGE,
   path: '',
   statusCode: 0,
   timestamp: new Date().toISOString(),
+  transport,
 });
+
+const transportOf = (error: AxiosError): ErrorResponse['transport'] => {
+  if (axios.isCancel(error)) return 'canceled';
+
+  return error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT' ? 'timeout' : 'network';
+};
 
 export const getRejectValue = (error: unknown): ErrorResponse => {
   const axiosError = error as AxiosError<ErrorResponse>;
   const data = axiosError.response?.data;
 
-  if (!data) return networkError();
+  if (!data) return networkError(transportOf(axiosError));
 
   const retryAfterMs = parseRetryAfterMs(axiosError.response?.headers?.['retry-after']);
 

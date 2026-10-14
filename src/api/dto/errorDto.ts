@@ -29,4 +29,6 @@ export interface ErrorResponse {
   // Set by httpBaseQuery (not getRejectValue) when the session that sent the
   // request ended before it settled; consumers treat it as a no-op.
   isStale?: boolean;
+  // Why a request got no response at all (statusCode 0); only `getRejectValue` sets it.
+  transport?: 'timeout' | 'canceled' | 'network';
 }
