@@ -12,6 +12,11 @@ import {
   MARK_VIEWBOX,
   markAspectRatio,
 } from '../src/components/Brand/markGeometry.ts';
+import {
+  LAUNCH_LOCKUP_RAISE,
+  STACKED_LOCKUP_HEIGHT,
+  STACKED_MARK_HEIGHT,
+} from '../src/components/Brand/launchLayout.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const fontsDir = join(root, 'node_modules/@expo-google-fonts/plus-jakarta-sans');
@@ -102,31 +107,42 @@ write(
   48,
 );
 
-// iOS launch screen: a 260pt square centred on the screen. The splash block (mark 60, name, tagline)
-// sits with its centre 38pt above the screen centre, as on the 852pt design frame.
+// iOS launch screen: a 260pt square centred on the screen, holding the stacked lockup where the app's first frame
+// draws it. Android 12+ shows only an icon clipped to a 192dp circle, so its launch screen carries the mark alone.
+// The dark pair is ready for when the app gets a dark theme; until then the launch stays light like every screen.
 const SPLASH = 260;
-const blockTop = SPLASH / 2 - 38 - 140 / 2;
-const nameTop = blockTop + 60 + 22;
+const blockTop = SPLASH / 2 - LAUNCH_LOCKUP_RAISE - STACKED_LOCKUP_HEIGHT / 2;
+const nameTop = blockTop + STACKED_MARK_HEIGHT + 22;
 const taglineTop = nameTop + 32 + 6;
 
-write(
-  'splash-ios.png',
-  svg(
-    SPLASH,
-    SPLASH,
-    centredMark({ size: SPLASH, height: 60, cy: blockTop + 30, sColor: GRAPHITE, bColor: AMBER }) +
-      // Baselines centre each font's ascent + descent (1.038 + 0.222 em) in its line height.
-      `<text x="${SPLASH / 2}" y="${nameTop + 26.61}" text-anchor="middle" font-family="Plus Jakarta Sans" font-weight="700" font-size="26" letter-spacing="-0.6" fill="${GRAPHITE}">Success Budget</text>` +
-      `<text x="${SPLASH / 2}" y="${taglineTop + 15.71}" text-anchor="middle" font-family="Plus Jakarta Sans" font-weight="500" font-size="14" fill="${MUTED}">Personal and shared budgets</text>`,
-  ),
-  SPLASH * 4,
-);
+const SPLASH_SCHEMES = { '': GRAPHITE, '-dark': LIGHT };
 
-// Android 12+ shows only an icon clipped to a 192dp circle, so its launch screen carries the mark alone.
-write(
-  'splash-android.png',
-  svg(1024, 1024, centredMark({ size: 1024, height: 1024 / markAspectRatio, sColor: GRAPHITE, bColor: AMBER })),
-  1024,
-);
+Object.entries(SPLASH_SCHEMES).forEach(([suffix, ink]) => {
+  write(
+    `splash-ios${suffix}.png`,
+    svg(
+      SPLASH,
+      SPLASH,
+      centredMark({
+        size: SPLASH,
+        height: STACKED_MARK_HEIGHT,
+        cy: blockTop + STACKED_MARK_HEIGHT / 2,
+        sColor: ink,
+        bColor: AMBER,
+      }) +
+        // Baselines centre each font's ascent + descent (1.038 + 0.222 em) in its line height.
+        `<text x="${SPLASH / 2}" y="${nameTop + 26.61}" text-anchor="middle" font-family="Plus Jakarta Sans" font-weight="700" font-size="26" letter-spacing="-0.6" fill="${ink}">Success Budget</text>` +
+        `<text x="${SPLASH / 2}" y="${taglineTop + 15.71}" text-anchor="middle" font-family="Plus Jakarta Sans" font-weight="500" font-size="14" fill="${MUTED}">Personal and shared budgets</text>`,
+    ),
+    // Exactly @3x, the largest scale the storyboard asks for, so the image is never resampled into it.
+    SPLASH * 3,
+  );
+
+  write(
+    `splash-android${suffix}.png`,
+    svg(1024, 1024, centredMark({ size: 1024, height: 1024 / markAspectRatio, sColor: ink, bColor: AMBER })),
+    1024,
+  );
+});
 
 console.log('Brand assets written to assets/.');
