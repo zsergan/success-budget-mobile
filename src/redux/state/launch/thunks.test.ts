@@ -3,7 +3,7 @@ import * as Font from 'expo-font';
 import * as SecureStore from 'expo-secure-store';
 
 import { baseApi } from '@redux/api/baseApi';
-import { loginMe, logoutMe } from '@redux/state/auth/thunks';
+import { logoutMe } from '@redux/state/auth/thunks';
 import { profileApi } from '@redux/state/profile/api';
 import { selectProfileId } from '@redux/state/profile/selectors';
 import { activateSpace } from '@redux/state/space/thunks';
@@ -340,21 +340,6 @@ it('does not treat a cancelled request as a lost connection', async () => {
 
   expect(store.getState().launch.phase).toBe('running');
   expect(mockedNetInfoFetch).not.toHaveBeenCalled();
-});
-
-it('loads the required data again after a sign-in before opening the app', async () => {
-  mockedGetItemAsync.mockResolvedValue(null);
-
-  const store = await launch();
-
-  store.dispatch(loginMe.fulfilled('token', 'req-login', { email: 'me@example.com', password: 'password1' }));
-
-  expect(store.getState().launch.phase).toBe('running');
-
-  await jest.runOnlyPendingTimersAsync();
-
-  expect(store.getState().launch.phase).toBe('ready');
-  expect(requested('/users/profile')).toBe(1);
 });
 
 describe('once the app is open', () => {

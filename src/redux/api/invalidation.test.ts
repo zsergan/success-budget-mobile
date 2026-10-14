@@ -342,8 +342,6 @@ describe('session isolation', () => {
 
     await store.dispatch(logoutMe());
     signIn();
-    // The sign-in loads the session's required data one request after another (launch/thunks.ts).
-    while (store.getState().launch.phase === 'running') await jest.advanceTimersByTimeAsync(10);
     subscribeToSpace(store, 1);
     await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
     mockedRequest.mockClear();

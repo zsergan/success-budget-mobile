@@ -38,6 +38,7 @@ const navigationTheme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, bac
 const RootNavigator = () => {
   const dispatch = useAppDispatch();
   const { phase, stage } = useAppSelector(selectLaunch);
+  const isSignedIn = useAppSelector((state) => state.auth.isSignedIn);
   const [hasDrawn, setHasDrawn] = useState(false);
   useSessionData();
   usePendingWritesSync();
@@ -45,6 +46,11 @@ const RootNavigator = () => {
   useEffect(() => {
     dispatch(runLaunch());
   }, [dispatch]);
+
+  // A sign-in from Welcome loads the session's required data the same way a cold start does.
+  useEffect(() => {
+    if (isSignedIn && phase === 'welcome') dispatch(runLaunch());
+  }, [dispatch, isSignedIn, phase]);
 
   const isReady = phase === 'ready';
 

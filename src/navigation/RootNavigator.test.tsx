@@ -4,6 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
+import { loginMe } from '@redux/state/auth/thunks';
 import { createAppStore } from '@redux/Store';
 import RootNavigator from './RootNavigator';
 
@@ -71,4 +72,19 @@ it('opens Welcome straight away without a stored session, and Sign In leads to t
   fireEvent.press(screen.getByText('Sign In'));
   await act(() => jest.advanceTimersByTimeAsync(1000));
   expect(screen.getByText("Don't have an account?")).toBeTruthy();
+});
+
+it('loads the required data after a sign-in from Welcome before opening the app', async () => {
+  jest.mocked(SecureStore.getItemAsync).mockResolvedValue(null);
+
+  const store = await renderApp();
+  const { attempt } = store.getState().launch;
+
+  await act(async () => {
+    store.dispatch(loginMe.fulfilled('a-token', 'req-login', { email: 'me@example.com', password: 'password1' }));
+  });
+
+  expect(store.getState().launch).toMatchObject({ attempt: attempt + 1, phase: 'running', stage: 'session' });
+  expect(mockedRequest.mock.calls.map(([config]) => config.url)).toEqual(['/users/profile']);
+  expect(screen.queryByText('See where the money goes')).toBeNull();
 });

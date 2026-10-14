@@ -11,6 +11,7 @@ import { useGetLimitsQuery, limitApi } from '@redux/state/limit/api';
 import { activateSpace, refreshSpaceData } from '@redux/state/space/thunks';
 import { transactionApi, useGetRecentTransactionsQuery } from '@redux/state/transaction/api';
 import { useGetWalletsQuery, walletApi } from '@redux/state/wallet/api';
+import { runLaunch } from '@redux/state/launch/thunks';
 import { createAppStore } from '@redux/Store';
 import useTransactionsData from '@screens/Transactions/hooks/useTransactionsData';
 import { AppColor, SpaceType, TransactionKind, TransactionType } from '@shared/enums';
@@ -222,8 +223,11 @@ const useMountedScreens = () => {
   };
 };
 
-const signIn = (store: ReturnType<typeof createAppStore>) =>
+// Like a sign-in in the app, where the navigator then starts the launch that loads the session's required data.
+const signIn = (store: ReturnType<typeof createAppStore>) => {
   store.dispatch(loginMe.fulfilled('token', 'req-login', { email: 'me@example.com', password: 'password1' }));
+  store.dispatch(runLaunch());
+};
 
 // Mutations invalidate and store notifications flush on timers, so let those run before and after the refetches.
 const settle = (store: ReturnType<typeof createAppStore>) =>

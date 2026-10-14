@@ -3,6 +3,9 @@
 From a cold start or a sign-in to Welcome or the app. The state lives in the
 `launch` slice (`src/redux/state/launch/`), one attempt at a time; the screen
 for it is `src/screens/Launch/`.
+`RootNavigator` starts an attempt when it mounts and again when a session
+begins on Welcome; the store itself starts none, so a store built in a test
+sends nothing on a sign-in.
 
 ## Stages
 
