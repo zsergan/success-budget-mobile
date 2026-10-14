@@ -4,7 +4,7 @@ import { createAppStore } from '@redux/Store';
 import { login, register, verifyEmail } from '@api/auth.api';
 import { AUTH_TOKEN_KEY } from '@shared/constants';
 import type authReducer from './slice';
-import { checkAuth, loginMe, logoutMe, registerMe, verifyEmailMe } from './thunks';
+import { loginMe, logoutMe, readStoredSession, registerMe, verifyEmailMe } from './thunks';
 
 jest.mock('@api/auth.api', () => ({
   ...jest.requireActual('@api/auth.api'),
@@ -184,27 +184,42 @@ describe('verifyEmailMe', () => {
   });
 });
 
-describe('checkAuth', () => {
+describe('readStoredSession', () => {
   it('signs the user in when a token is already stored', async () => {
     mockedGetItemAsync.mockResolvedValue('a-token');
 
     const store = createTestStore();
-    const action = await store.dispatch(checkAuth());
+    await store.dispatch(readStoredSession());
 
-    expect(action.type).toBe('auth/checkAuth/fulfilled');
+    expect(store.getState().auth.storedSession).toBe('read');
     expect(store.getState().auth.isSignedIn).toBe(true);
+    expect(store.getState().auth.userToken).toBe('a-token');
   });
 
-  it('does not get stuck loading if SecureStore throws -- resolves as if there were no token', async () => {
-    mockedGetItemAsync.mockRejectedValue(new Error('Keystore is corrupted'));
+  it('reads as signed out when no token is stored', async () => {
+    mockedGetItemAsync.mockResolvedValue(null);
 
     const store = createTestStore();
-    const action = await store.dispatch(checkAuth());
+    await store.dispatch(readStoredSession());
 
-    expect(action.type).toBe('auth/checkAuth/fulfilled');
-    expect(action.payload).toBeNull();
+    expect(store.getState().auth.storedSession).toBe('read');
     expect(store.getState().auth.isSignedIn).toBe(false);
-    expect(store.getState().auth.isLoading).toBe(false);
+  });
+
+  it('fails instead of reading as signed out when SecureStore throws, and reads again on the next attempt', async () => {
+    mockedGetItemAsync.mockRejectedValueOnce(new Error('Keystore is corrupted'));
+
+    const store = createTestStore();
+    const action = await store.dispatch(readStoredSession());
+
+    expect(action.type).toBe('auth/readStoredSession/rejected');
+    expect(store.getState().auth.storedSession).toBe('failed');
+    expect(mockedDeleteItemAsync).not.toHaveBeenCalled();
+
+    mockedGetItemAsync.mockResolvedValueOnce('a-token');
+    await store.dispatch(readStoredSession());
+
+    expect(store.getState().auth.isSignedIn).toBe(true);
   });
 });
 
@@ -213,7 +228,7 @@ describe('logoutMe', () => {
     mockedDeleteItemAsync.mockRejectedValue(new Error('Keystore is corrupted'));
 
     const store = createTestStore({
-      auth: { isLoading: false, isSignedIn: true, userToken: 'a-token', userEmail: null, sessionKey: 0 },
+      auth: { storedSession: 'read', isSignedIn: true, userToken: 'a-token', userEmail: null, sessionKey: 0 },
     });
 
     const action = await store.dispatch(logoutMe());
@@ -225,7 +240,7 @@ describe('logoutMe', () => {
 
   it('bumps sessionKey so a stale request from before logout can be told apart from a new one', async () => {
     const store = createTestStore({
-      auth: { isLoading: false, isSignedIn: true, userToken: 'a-token', userEmail: null, sessionKey: 3 },
+      auth: { storedSession: 'read', isSignedIn: true, userToken: 'a-token', userEmail: null, sessionKey: 3 },
     });
 
     await store.dispatch(logoutMe());

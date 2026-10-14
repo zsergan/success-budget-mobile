@@ -16,33 +16,27 @@ import {
   WelcomeScreen,
 } from '@screens';
 import type { RootStackParamList } from '@shared/types';
-import { useAuth, useLoadInitData, usePendingWritesSync } from '@hooks';
+import { usePendingWritesSync } from '@hooks';
 import { ScreenNames } from '@shared/enums';
 import MainNavigator from './MainNavigator';
+import useLaunch from './useLaunch';
+import useSpaceDataWarmup from './useSpaceDataWarmup';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const RootNavigator = () => {
-  const { isSignedIn, isLoading } = useAuth();
-  const { isLoading: isDataLoading } = useLoadInitData({ isSignedIn });
+const RootNavigator = ({ resourcesReady }: { resourcesReady: boolean }) => {
+  const { state: launch, retry } = useLaunch({ resourcesReady });
+  useSpaceDataWarmup();
   usePendingWritesSync();
 
-  const isAppLoading = isLoading || isDataLoading;
+  const isReady = launch.status === 'ready';
 
   return (
     <GestureHandlerRootView>
       <BottomSheetModalProvider>
         <NavigationContainer>
-          <Stack.Navigator screenOptions={{ animation: isSignedIn ? 'slide_from_right' : 'slide_from_left' }}>
-            {isAppLoading && (
-              <Stack.Screen
-                name={ScreenNames.LOADING_SCREEN}
-                component={LoadingScreen}
-                options={{ headerShown: false }}
-              />
-            )}
-
-            {!isAppLoading && isSignedIn ? (
+          <Stack.Navigator screenOptions={{ animation: isReady ? 'slide_from_right' : 'slide_from_left' }}>
+            {isReady ? (
               <>
                 <Stack.Screen
                   name={ScreenNames.HOME_SCREEN}
@@ -75,7 +69,7 @@ const RootNavigator = () => {
                   options={{ headerShown: false }}
                 />
               </>
-            ) : (
+            ) : launch.status === 'welcome' ? (
               <>
                 <Stack.Screen
                   name={ScreenNames.WELCOME_SCREEN}
@@ -98,6 +92,10 @@ const RootNavigator = () => {
                   options={{ headerShown: false }}
                 />
               </>
+            ) : (
+              <Stack.Screen name={ScreenNames.LOADING_SCREEN} options={{ headerShown: false }}>
+                {() => <LoadingScreen launch={launch} onRetry={retry} />}
+              </Stack.Screen>
             )}
           </Stack.Navigator>
         </NavigationContainer>

@@ -1,7 +1,8 @@
 import type { ErrorResponse } from '@api/dto';
 
 interface AuthState {
-  isLoading: boolean;
+  // The session saved on this device: still being read, unreadable, or read (whether or not one was saved).
+  storedSession: 'reading' | 'failed' | 'read';
   isSignedIn: boolean;
   userToken: string | null;
   userEmail: string | null;
@@ -12,7 +13,7 @@ interface AuthState {
 }
 
 const initialState: AuthState = {
-  isLoading: true,
+  storedSession: 'reading',
   isSignedIn: false,
   userToken: null,
   userEmail: null,

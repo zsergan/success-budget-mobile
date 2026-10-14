@@ -3,11 +3,10 @@ import { createSlice, isRejected } from '@reduxjs/toolkit';
 import { isApiError } from '@shared/utils/error';
 
 import initialState from './initialState';
-import { checkAuth, registerMe, loginMe, logoutMe, verifyEmailMe } from './thunks';
+import { readStoredSession, registerMe, loginMe, logoutMe, verifyEmailMe } from './thunks';
 
 const login = (state: typeof initialState, action: string) => {
   state.isSignedIn = true;
-  state.isLoading = false;
   state.userToken = action;
   state.userEmail = null;
   state.error = undefined;
@@ -15,7 +14,6 @@ const login = (state: typeof initialState, action: string) => {
 
 const logout = (state: typeof initialState) => {
   state.isSignedIn = false;
-  state.isLoading = false;
   state.userToken = null;
   state.sessionKey += 1;
 };
@@ -26,7 +24,6 @@ const authSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder.addCase(registerMe.fulfilled, (state, action) => {
-      state.isLoading = false;
       state.userEmail = action.payload.email;
       state.error = undefined;
     });
@@ -37,7 +34,17 @@ const authSlice = createSlice({
 
     builder.addCase(logoutMe.fulfilled, (state) => logout(state));
 
-    builder.addCase(checkAuth.fulfilled, (state, action) => {
+    builder.addCase(readStoredSession.pending, (state) => {
+      state.storedSession = 'reading';
+    });
+
+    builder.addCase(readStoredSession.rejected, (state) => {
+      state.storedSession = 'failed';
+    });
+
+    builder.addCase(readStoredSession.fulfilled, (state, action) => {
+      state.storedSession = 'read';
+
       if (action.payload) {
         login(state, action.payload);
       } else {

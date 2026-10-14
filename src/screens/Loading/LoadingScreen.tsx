@@ -1,12 +1,23 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, Text, View } from 'react-native';
 
-import { Icon } from '@components';
+import { Icon, TinyButton } from '@components';
+import type { LaunchProgress } from '@navigation/launchState';
 import { colors } from '@shared/theme';
 
 import styles from './style';
 
-const LoadingScreen = () => {
+interface Props {
+  launch: LaunchProgress;
+  onRetry: () => void;
+}
+
+const FAILURE_TEXT = {
+  storedSession: 'This device didn’t give back your saved session. Try again.',
+  network: 'The server didn’t answer. Check your connection and try again.',
+};
+
+const LoadingScreen = ({ launch, onRetry }: Props) => {
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -31,13 +42,23 @@ const LoadingScreen = () => {
         <Text style={styles.subtitle}>Personal and shared budgets</Text>
       </View>
 
-      <View style={styles.progressContainer}>
-        <View style={styles.progressTrack}>
-          <Animated.View style={[styles.progressFill, { width }]} />
+      {launch.status === 'failed' ? (
+        <View style={styles.progressContainer}>
+          <Text style={styles.failureTitle}>Couldn’t check your session</Text>
+          <Text style={styles.status}>
+            {launch.stage === 'storedSession' ? FAILURE_TEXT.storedSession : FAILURE_TEXT.network}
+          </Text>
+          <TinyButton title="Try again" size="lg" onPress={onRetry} />
         </View>
+      ) : (
+        <View style={styles.progressContainer}>
+          <View style={styles.progressTrack}>
+            <Animated.View style={[styles.progressFill, { width }]} />
+          </View>
 
-        <Text style={styles.status}>Checking your session…</Text>
-      </View>
+          <Text style={styles.status}>Checking your session…</Text>
+        </View>
+      )}
     </View>
   );
 };
