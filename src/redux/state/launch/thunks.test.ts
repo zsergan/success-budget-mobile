@@ -2,7 +2,12 @@ import NetInfo from '@react-native-community/netinfo';
 import * as Font from 'expo-font';
 import * as SecureStore from 'expo-secure-store';
 
+import { baseApi } from '@redux/api/baseApi';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
+import { profileApi } from '@redux/state/profile/api';
+import { selectProfileId } from '@redux/state/profile/selectors';
+import { activateSpace } from '@redux/state/space/thunks';
+import { walletApi } from '@redux/state/wallet/api';
 import { createAppStore } from '@redux/Store';
 import { LAUNCH_ATTEMPT_DEADLINE_MS, LAUNCH_RATE_LIMIT_COOLDOWN_MS, retryLaunch, runLaunch } from './thunks';
 
@@ -77,6 +82,15 @@ it('checks the session and loads the profile, spaces and wallets before opening 
   expect(['/users/profile', '/spaces', '/spaces/1/wallets'].map(requested)).toEqual([1, 1, 1]);
 });
 
+it('opens the app as soon as the data is in, with no minimum display time', async () => {
+  const startedAt = Date.now();
+  const store = await launch();
+
+  // The fake clock never moved: nothing waited on a timer.
+  expect(store.getState().launch.phase).toBe('ready');
+  expect(Date.now()).toBe(startedAt);
+});
+
 it('opens the app with an empty spaces list, without asking for wallets', async () => {
   answer((url) => (url === '/spaces' ? Promise.resolve({ data: [] }) : undefined));
 
@@ -128,6 +142,32 @@ it('reports a 5xx as the server’s trouble, not the connection', async () => {
   expect(mockedNetInfoFetch).not.toHaveBeenCalled();
 });
 
+describe('a stored token and a failed check', () => {
+  const noResponse = () => Promise.reject({ code: 'ERR_NETWORK', message: 'Network Error' });
+  const timeout = () => Promise.reject({ code: 'ECONNABORTED', message: 'timeout of 20000ms exceeded' });
+
+  it.each([
+    ['offline', noResponse, 'offline'],
+    ['a timeout', timeout, 'unreachable'],
+    ['a 5xx', () => httpError(502), 'server'],
+  ] as const)('keeps the token on %s and opens the app on Try again', async (_, failure, expected) => {
+    mockedNetInfoFetch.mockResolvedValue({ isConnected: false, isInternetReachable: false } as never);
+    failProfile(failure);
+
+    const store = await launch();
+
+    expect(store.getState().launch).toMatchObject({ phase: 'failed', failure: expected });
+    expect(store.getState().auth).toMatchObject({ isSignedIn: true, userToken: 'a-token' });
+    expect(mockedDeleteItemAsync).not.toHaveBeenCalled();
+
+    answer();
+    store.dispatch(retryLaunch());
+    await jest.runOnlyPendingTimersAsync();
+
+    expect(store.getState().launch.phase).toBe('ready');
+  });
+});
+
 it('does not sign out on a 4xx other than the session’s 401', async () => {
   answer((url) => (url === '/spaces' ? httpError(403) : undefined));
 
@@ -148,6 +188,11 @@ it('waits for the client to end a refused session, then opens Welcome', async ()
   await store.dispatch(logoutMe());
 
   expect(store.getState().launch.phase).toBe('welcome');
+  expect(mockedDeleteItemAsync).toHaveBeenCalled();
+  // The ended session's data goes with it.
+  expect(selectProfileId(store.getState())).toBeUndefined();
+  expect(store.getState()[baseApi.reducerPath].queries).toEqual({});
+  expect(store.getState().space.currentSpaceId).toBeNull();
 });
 
 describe('a 429', () => {
@@ -310,4 +355,30 @@ it('loads the required data again after a sign-in before opening the app', async
 
   expect(store.getState().launch.phase).toBe('ready');
   expect(requested('/users/profile')).toBe(1);
+});
+
+describe('once the app is open', () => {
+  const space2 = { ...space, id: 2, type: 'group' };
+
+  it('stays open across a space switch while the new space loads', async () => {
+    answer((url) => (url === '/spaces' ? Promise.resolve({ data: [space, space2] }) : undefined));
+    const store = await launch();
+
+    answer((url) => (url === '/spaces/2/wallets' ? new Promise(() => {}) : undefined));
+    store.dispatch(activateSpace(2));
+    store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId: 2 }));
+    await jest.advanceTimersByTimeAsync(LAUNCH_ATTEMPT_DEADLINE_MS);
+
+    expect(store.getState().launch.phase).toBe('ready');
+  });
+
+  it('stays open through a failed background refresh of the required data', async () => {
+    const store = await launch();
+
+    answer(() => httpError(500));
+    await store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId: 1 }, { forceRefetch: true }));
+    await store.dispatch(profileApi.endpoints.getProfile.initiate(undefined, { forceRefetch: true }));
+
+    expect(store.getState().launch.phase).toBe('ready');
+  });
 });

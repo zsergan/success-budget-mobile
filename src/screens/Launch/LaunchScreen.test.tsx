@@ -3,7 +3,7 @@ import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
-import { attemptFailed, attemptStarted, stageReached } from '@redux/state/launch/actions';
+import { attemptFailed, attemptSettled, attemptStarted, stageReached } from '@redux/state/launch/actions';
 import type { LaunchFailure } from '@redux/state/launch/initialState';
 import { createAppStore } from '@redux/Store';
 import LaunchScreen from './LaunchScreen';
@@ -18,6 +18,10 @@ jest.mock('@api/instance', () => ({
   ApiClient: () => ({}),
   createHttpClient: () => ({ request: jest.fn(() => new Promise(() => {})) }),
 }));
+
+// A repeated attempt stays on reading the stored session, so the screen's own timing is what is seen.
+jest.mock('expo-secure-store', () => ({ getItemAsync: jest.fn(() => new Promise(() => {})) }));
+jest.mock('expo-font', () => ({ loadAsync: jest.fn(() => Promise.resolve()) }));
 
 jest.useFakeTimers();
 
@@ -60,6 +64,54 @@ it('shows only the lockup at first, the progress after 400 ms and the reason aft
   await act(() => jest.advanceTimersByTimeAsync(7600));
   expect(screen.getByText('Still checking your session…')).toBeTruthy();
   expect(screen.getByText('This is taking longer than usual. Check your connection.')).toBeTruthy();
+});
+
+it('holds the progress back for exactly 400 ms and the long-wait note for exactly 8 s', async () => {
+  renderLaunch();
+
+  await act(() => jest.advanceTimersByTimeAsync(399));
+  expect(screen.queryByRole('progressbar')).toBeNull();
+
+  await act(() => jest.advanceTimersByTimeAsync(1));
+  expect(screen.getByRole('progressbar', { name: 'Checking your session…' })).toBeTruthy();
+
+  await act(() => jest.advanceTimersByTimeAsync(7599));
+  expect(screen.queryByText('Still checking your session…')).toBeNull();
+
+  await act(() => jest.advanceTimersByTimeAsync(1));
+  expect(screen.getByText('Still checking your session…')).toBeTruthy();
+});
+
+it('never flashes the progress on a launch that finishes within 400 ms', async () => {
+  const store = renderLaunch();
+
+  await act(() => jest.advanceTimersByTimeAsync(300));
+  act(() => {
+    store.dispatch(attemptSettled({ attempt: 1, phase: 'ready' }));
+  });
+  await act(() => jest.advanceTimersByTimeAsync(10_000));
+
+  expect(screen.queryByRole('progressbar')).toBeNull();
+  expect(screen.queryByText(/Still/)).toBeNull();
+});
+
+it('starts the 400 ms and 8 s again for the attempt Try again begins', async () => {
+  const store = renderLaunch();
+
+  await act(() => jest.advanceTimersByTimeAsync(9000));
+  fail(store, 'unreachable');
+  await act(async () => {
+    fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
+  });
+
+  expect(store.getState().launch.attempt).toBe(2);
+  expect(screen.queryByRole('progressbar')).toBeNull();
+
+  await act(() => jest.advanceTimersByTimeAsync(400));
+  expect(screen.getByText('Checking your session…')).toBeTruthy();
+
+  await act(() => jest.advanceTimersByTimeAsync(7599));
+  expect(screen.queryByText('Still checking your session…')).toBeNull();
 });
 
 it('names the stage the attempt is in, and announces the status once rather than every cycle', async () => {
