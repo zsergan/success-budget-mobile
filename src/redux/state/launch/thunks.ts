@@ -59,7 +59,10 @@ export const runLaunch = (): AppThunk<Promise<void>> => async (dispatch, getStat
   const deadline = setTimeout(() => {
     if (!isLive()) return;
 
-    dispatch(attemptFailed({ attempt, failure: 'unreachable' }));
+    // Fonts that never finish loading are the app's own files, not the server.
+    const failure = getState().launch.stage === 'resources' ? 'resources' : 'unreachable';
+
+    dispatch(attemptFailed({ attempt, failure }));
     running.forEach((request) => request.abort());
   }, LAUNCH_ATTEMPT_DEADLINE_MS);
 

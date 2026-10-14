@@ -40,7 +40,7 @@ export enum ScreenNames {
   CREATE_SPACE_SCREEN = 'CreateSpaceScreen',
   MEMBERS_SCREEN = 'MembersScreen',
   ACCEPT_INVITE_SCREEN = 'AcceptInviteScreen',
-  LOADING_SCREEN = 'LoadingScreen',
+  LAUNCH_SCREEN = 'LaunchScreen',
   WELCOME_SCREEN = 'WelcomeScreen',
   SIGN_IN_SCREEN = 'SignInScreen',
   SIGN_UP_SCREEN = 'SighUpScreen',

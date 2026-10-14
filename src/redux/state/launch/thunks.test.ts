@@ -247,6 +247,17 @@ describe('the attempt deadline', () => {
     expect(store.getState().launch).toMatchObject({ phase: 'failed', failure: 'unreachable' });
   });
 
+  it('reports fonts that never finish loading as the app’s files, not the server', async () => {
+    jest.mocked(Font.loadAsync).mockReturnValueOnce(new Promise(() => {}));
+
+    const store = createAppStore();
+
+    store.dispatch(runLaunch());
+    await jest.advanceTimersByTimeAsync(LAUNCH_ATTEMPT_DEADLINE_MS);
+
+    expect(store.getState().launch).toMatchObject({ phase: 'failed', failure: 'resources' });
+  });
+
   it('does not fire for an attempt that already finished', async () => {
     const store = await launch();
 
