@@ -177,21 +177,16 @@ something to drop on purpose.
 
 ### Loading
 
-- **Boot.** `useAuth` dispatches `checkAuth` (token from SecureStore; a
-  read failure counts as signed out). `RootNavigator` shows
-  `LOADING_SCREEN` while that runs or while `useLoadInitData` reports
-  loading.
-- **Sign-in.** `useLoadInitData` dispatches `fetchSpaces` and
-  `fetchProfile`. `fetchSpaces` keeps the current space if it is still in
+- **Boot and sign-in.** The `launch` slice runs one attempt at a time:
+  fonts, the stored token, the session check (profile), then the spaces
+  list and the selected space's wallets. A failed required request is a
+  retryable failure on the Launch screen, never an open app without its
+  data; once open, a space switch or a background refresh never brings
+  the Launch screen back. See `docs/launch.md`.
+- **Sign-in.** `fetchSpaces` keeps the current space if it is still in
   the list, otherwise activates the personal space, otherwise the lowest
   id. Every change of `currentSpaceId` then dispatches `fetchWallets`,
   `fetchLimits`, `fetchCategories` and `fetchTransactions` (`History.Recent`).
-- **Initial-load gate.** The app stays on `LOADING_SCREEN` only for the
-  first load: spaces while no space is selected yet, each of wallets,
-  limits, categories and recent history while `isLoading && !hasLoaded`,
-  and profile while loading. `hasLoaded` survives space switches, so
-  background refreshes and switches never re-show the loading screen
-  (which would remount the whole signed-in navigator).
 - **Screen-owned fetches.** The Transactions tab fetches `History.Range`
   and `History.Latest` on mount and whenever the period, the space or
   `transaction.dataRevision` changes; `dataRevision` is bumped by
@@ -255,8 +250,8 @@ something to drop on purpose.
   follow-up refreshes and `transactionsInvalidated` if it changed while
   the request was in flight.
 - After the switch the new space's data loads through the same effects as
-  on sign-in (`useLoadInitData`, plus the Transactions and Members screens
-  if mounted).
+  on sign-in (the session data subscriptions, plus the Transactions and
+  Members screens if mounted).
 
 ### Sign-out
 
