@@ -18,11 +18,20 @@ const styles = StyleSheet.create({
   secondaryButton: {
     backgroundColor: colors.secondary,
   },
+  outlineButton: {
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.elevated,
+  },
   tertiaryButton: {
     backgroundColor: 'transparent',
   },
   dangerButton: {
     backgroundColor: colors.danger,
+  },
+  largeButton: {
+    height: 56,
+    borderRadius: 18,
   },
   primaryButtonDisabled: {
     backgroundColor: colors.track,
@@ -41,16 +50,27 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: colors.onSecondary,
   },
+  outlineButtonText: {
+    color: colors.text,
+  },
   tertiaryButtonText: {
     color: colors.text,
   },
   dangerButtonText: {
     color: '#FFFDFA',
   },
+  largeButtonText: {
+    fontFamily: theme.fonts.bold,
+    fontSize: 15.5,
+    letterSpacing: -0.1,
+  },
   primaryButtonTextDisabled: {
     color: colors.muted,
   },
   withShadow: { ...shadow },
+  accentGlow: {
+    boxShadow: '0 12px 26px -12px rgba(255, 176, 32, 0.7)',
+  },
   disabled: {
     opacity: 0.5,
   },
