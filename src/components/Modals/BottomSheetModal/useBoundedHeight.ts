@@ -3,7 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import theme from '@shared/theme';
 import { FITTED_SHEET_HANDLE_HEIGHT } from '@components/Modals/BottomSheetModal/BottomSheetModal';
-import useKeyboardHeight from './useKeyboardHeight';
+import useKeyboardHeight from '@hooks/useKeyboardHeight';
 
 // The form and its panels take most of the screen, and above the keyboard only what is left, so Save stays in view.
 // Android already resizes the window for the keyboard (adjustResize), so only iOS takes its height off again.

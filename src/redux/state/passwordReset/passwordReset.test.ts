@@ -21,6 +21,8 @@ const { requestPasswordReset, verifyPasswordReset, completePasswordReset } = pas
 
 const NOW = Date.now();
 
+const INITIAL = { email: null, resendAvailableAt: null, challenge: null, authorization: null };
+
 const rejectWith = (status: number, body: object = {}, headers: Record<string, string> = {}) =>
   mockedRequest.mockRejectedValueOnce({
     response: { status, data: { statusCode: status, message: 'Refused', ...body }, headers },
@@ -37,7 +39,15 @@ const verifyFor = async (store: ReturnType<typeof createAppStore>, email: string
   await store.dispatch(verifyPasswordReset.initiate({ email, code: '042917' }, { track: false }));
 };
 
-beforeEach(() => jest.clearAllMocks());
+const wrongCode = async (store: ReturnType<typeof createAppStore>) => {
+  rejectWith(400, { code: 'PASSWORD_RESET_CODE_INVALID' });
+  await store.dispatch(verifyPasswordReset.initiate({ email: 'anna@kovalenko.co', code: '000000' }, { track: false }));
+};
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  jest.setSystemTime(NOW);
+});
 
 afterEach(() => jest.clearAllTimers());
 
@@ -98,6 +108,7 @@ describe('passwordReset slice', () => {
     expect(store.getState().passwordReset).toEqual({
       email: 'anna@kovalenko.co',
       resendAvailableAt: NOW + 60_000,
+      challenge: { since: NOW, wrongCodes: 0, end: null },
       authorization: null,
     });
   });
@@ -210,7 +221,7 @@ describe('passwordReset slice', () => {
     expect(store.getState().passwordReset.email).toBe('anna@kovalenko.co');
 
     store.dispatch(passwordResetEmailEdited('anna@kovalenko.c'));
-    expect(store.getState().passwordReset).toEqual({ email: null, resendAvailableAt: null, authorization: null });
+    expect(store.getState().passwordReset).toEqual(INITIAL);
   });
 
   it('discards the authorization or the whole flow on request', async () => {
@@ -223,7 +234,55 @@ describe('passwordReset slice', () => {
     expect(store.getState().passwordReset).toMatchObject({ email: 'anna@kovalenko.co', authorization: null });
 
     store.dispatch(passwordResetEnded());
-    expect(store.getState().passwordReset).toEqual({ email: null, resendAvailableAt: null, authorization: null });
+    expect(store.getState().passwordReset).toEqual(INITIAL);
+  });
+
+  it('keeps a pending challenge’s start and wrong codes across a resend', async () => {
+    const store = createAppStore();
+
+    await requestFor(store, 'anna@kovalenko.co');
+    await wrongCode(store);
+    jest.advanceTimersByTime(90_000);
+    await requestFor(store, 'anna@kovalenko.co');
+
+    expect(store.getState().passwordReset.challenge).toEqual({ since: NOW, wrongCodes: 1, end: null });
+  });
+
+  it('starts a new challenge once the code was accepted, and once it surely expired', async () => {
+    const store = createAppStore();
+
+    await requestFor(store, 'anna@kovalenko.co');
+    await verifyFor(store, 'anna@kovalenko.co');
+    expect(store.getState().passwordReset.challenge?.end).toBe('accepted');
+
+    jest.advanceTimersByTime(60_000);
+    await requestFor(store, 'anna@kovalenko.co');
+    expect(store.getState().passwordReset.challenge).toEqual({ since: NOW + 60_000, wrongCodes: 0, end: null });
+
+    jest.advanceTimersByTime(30 * 60_000);
+    await requestFor(store, 'anna@kovalenko.co');
+    expect(store.getState().passwordReset.challenge).toEqual({ since: NOW + 31 * 60_000, wrongCodes: 0, end: null });
+  });
+
+  it('tells why a code stopped working when this device can', async () => {
+    const usedUpAfter = async (wrongCodes: number, waitMs = 0) => {
+      const store = createAppStore();
+
+      await requestFor(store, 'anna@kovalenko.co');
+      for (let i = 0; i < wrongCodes; i += 1) await wrongCode(store);
+      jest.advanceTimersByTime(waitMs);
+      rejectWith(400, { code: 'PASSWORD_RESET_CODE_UNUSABLE' });
+      await store.dispatch(
+        verifyPasswordReset.initiate({ email: 'anna@kovalenko.co', code: '000000' }, { track: false }),
+      );
+
+      return store.getState().passwordReset.challenge?.end;
+    };
+
+    expect(await usedUpAfter(4)).toBe('attempts');
+    expect(await usedUpAfter(4, 30 * 60_000)).toBe('expired');
+    expect(await usedUpAfter(0, 30 * 60_000)).toBe('expired');
+    expect(await usedUpAfter(2)).toBe('unknown');
   });
 
   it('stays apart from registration’s address', async () => {

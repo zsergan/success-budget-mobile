@@ -11,6 +11,7 @@ import ResetCodeScreen from '@screens/Auth/Screens/ResetCode/ResetCodeScreen';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => jest.requireActual('react-native-reanimated/mock'));
+jest.mock('expo-clipboard', () => ({ getStringAsync: jest.fn() }));
 const mockedRequest = jest.fn();
 
 jest.mock('@api/instance', () => ({
@@ -18,7 +19,11 @@ jest.mock('@api/instance', () => ({
   createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
 }));
 
+jest.useFakeTimers();
+
 beforeEach(() => jest.clearAllMocks());
+
+afterEach(() => jest.clearAllTimers());
 
 const metrics = {
   frame: { x: 0, y: 0, width: 402, height: 874 },

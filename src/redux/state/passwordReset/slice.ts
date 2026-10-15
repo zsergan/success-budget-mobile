@@ -5,10 +5,24 @@ import { ApiErrorCode } from '@api/dto';
 import type { ErrorResponse } from '@api/dto';
 import { isApiError } from '@shared/utils/error';
 import { passwordResetApi } from './api';
-import initialState from './initialState';
+import type { ChallengeEnd, ChallengeState } from './initialState';
+import initialState, { CODE_LIFETIME_MS, WRONG_CODES_PER_CHALLENGE } from './initialState';
 import { isSameEmail } from './selectors';
 
 const { requestPasswordReset, verifyPasswordReset, completePasswordReset } = passwordResetApi.endpoints;
+
+export const isChallengeSurelyExpired = (challenge: ChallengeState, now = Date.now()) =>
+  now >= challenge.since + CODE_LIFETIME_MS;
+
+const isChallengePending = (challenge: ChallengeState | null, now: number): challenge is ChallengeState =>
+  challenge !== null && challenge.end === null && !isChallengeSurelyExpired(challenge, now);
+
+// Expiry is the server's first check, so a challenge surely past it ended that way whatever else happened.
+const endOf = (challenge: ChallengeState, now: number): ChallengeEnd => {
+  if (isChallengeSurelyExpired(challenge, now)) return 'expired';
+
+  return challenge.wrongCodes >= WRONG_CODES_PER_CHALLENGE - 1 ? 'attempts' : 'unknown';
+};
 
 const passwordResetSlice = createSlice({
   name: 'passwordReset',
@@ -23,12 +37,20 @@ const passwordResetSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // An accepted request ends the address's previous challenge, and with it any authorization.
-    builder.addMatcher(requestPasswordReset.matchFulfilled, (_, action) => ({
-      email: action.meta.arg.originalArgs.email,
-      resendAvailableAt: Date.now() + action.payload.resend_after_seconds * 1000,
-      authorization: null,
-    }));
+    // A resend keeps a pending challenge's expiry and wrong codes; otherwise an accepted request starts a new one.
+    // Either way it ends any earlier authorization.
+    builder.addMatcher(requestPasswordReset.matchFulfilled, (state, action) => {
+      const now = Date.now();
+      const { email } = action.meta.arg.originalArgs;
+      const isResend = isSameEmail(state.email, email) && isChallengePending(state.challenge, now);
+
+      return {
+        email,
+        resendAvailableAt: now + action.payload.resend_after_seconds * 1000,
+        challenge: isResend ? state.challenge : { since: now, wrongCodes: 0, end: null },
+        authorization: null,
+      };
+    });
 
     builder.addMatcher(requestPasswordReset.matchRejected, (state, action) => {
       const error = action.payload as ErrorResponse | undefined;
@@ -46,11 +68,24 @@ const passwordResetSlice = createSlice({
         token: action.payload.reset_token,
         expiresAt: Date.now() + action.payload.expires_in_seconds * 1000,
       };
+
+      if (state.challenge) state.challenge.end = 'accepted';
     });
 
-    // The fifth wrong code ends the challenge and the authorization issued for it.
     builder.addMatcher(verifyPasswordReset.matchRejected, (state, action) => {
-      if (isApiError(action.payload, 400, ApiErrorCode.PASSWORD_RESET_CODE_UNUSABLE)) state.authorization = null;
+      const { challenge } = state;
+
+      if (!challenge || !isSameEmail(state.email, action.meta.arg.originalArgs.email)) return;
+
+      if (isApiError(action.payload, 400, ApiErrorCode.PASSWORD_RESET_CODE_INVALID)) {
+        challenge.wrongCodes += 1;
+      }
+
+      // The fifth wrong code ends the challenge and the authorization issued for it.
+      if (isApiError(action.payload, 400, ApiErrorCode.PASSWORD_RESET_CODE_UNUSABLE)) {
+        challenge.end = endOf(challenge, Date.now());
+        state.authorization = null;
+      }
     });
 
     builder.addMatcher(completePasswordReset.matchFulfilled, (state) => {

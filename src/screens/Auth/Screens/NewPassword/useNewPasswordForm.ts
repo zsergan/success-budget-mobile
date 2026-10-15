@@ -12,7 +12,7 @@ import { ScreenNames } from '@shared/enums';
 import type { PasswordResetOutcome, RootStackScreenProps } from '@shared/types';
 import type { PasswordResetFailure } from '@screens/Auth/passwordReset/passwordResetFailure';
 import { getPasswordResetFailure } from '@screens/Auth/passwordReset/passwordResetFailure';
-import useAbortOnLeave from '@screens/Auth/passwordReset/useAbortOnLeave';
+import useLatestRequest from '@screens/Auth/passwordReset/useLatestRequest';
 
 const PASSWORD_MIN_LENGTH = 8;
 // bcrypt ignores every byte past the 72nd, so the backend refuses longer passwords.
@@ -56,7 +56,7 @@ type UseNewPasswordFormProps = Pick<RootStackScreenProps<ScreenNames.NEW_PASSWOR
 const useNewPasswordForm = ({ navigation }: UseNewPasswordFormProps) => {
   const dispatch = useAppDispatch();
   const store = useAppStore();
-  const abortOnLeave = useAbortOnLeave();
+  const { start, isLatest } = useLatestRequest();
   const { email, authorization } = useAppSelector(selectPasswordReset);
   const [failure, setFailure] = useState<PasswordResetFailure | null>(null);
   // Only a code the server just confirmed opens this screen.
@@ -103,7 +103,7 @@ const useNewPasswordForm = ({ navigation }: UseNewPasswordFormProps) => {
     }
 
     setFailure(null);
-    const result = await abortOnLeave(
+    const request = start(
       dispatch(
         passwordResetApi.endpoints.completePasswordReset.initiate(
           { reset_token: current.token, password },
@@ -111,6 +111,9 @@ const useNewPasswordForm = ({ navigation }: UseNewPasswordFormProps) => {
         ),
       ),
     );
+    const result = await request;
+
+    if (!isLatest(request)) return;
 
     if (!result.error) {
       finish('updated');

@@ -113,6 +113,10 @@ export type IconType =
   | 'download'
   | 'grid'
   | 'note'
+  | 'key'
+  | 'mail-check'
+  | 'clock'
+  | 'clipboard'
   | 'trend-up'
   | 'trend-down';
 

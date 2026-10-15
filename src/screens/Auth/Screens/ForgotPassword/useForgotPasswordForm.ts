@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import * as yup from 'yup';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
 import { useSingleSubmit } from '@hooks';
@@ -12,7 +12,8 @@ import { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
 import type { PasswordResetFailure } from '@screens/Auth/passwordReset/passwordResetFailure';
 import { getPasswordResetFailure } from '@screens/Auth/passwordReset/passwordResetFailure';
-import useAbortOnLeave from '@screens/Auth/passwordReset/useAbortOnLeave';
+import useLatestRequest from '@screens/Auth/passwordReset/useLatestRequest';
+import useSecondsUntil from '@screens/Auth/passwordReset/useSecondsUntil';
 import emailSchema from '@screens/Auth/validation/emailSchema';
 
 const schema = yup.object().shape({ email: emailSchema });
@@ -28,60 +29,81 @@ type UseForgotPasswordFormProps = Pick<RootStackScreenProps<ScreenNames.FORGOT_P
 const useForgotPasswordForm = ({ navigation, initialEmail }: UseForgotPasswordFormProps) => {
   const dispatch = useAppDispatch();
   const store = useAppStore();
-  const abortOnLeave = useAbortOnLeave();
+  const { start, isLatest, abort } = useLatestRequest();
   const [failure, setFailure] = useState<PasswordResetFailure | null>(null);
+  const waitSeconds = useSecondsUntil(failure?.kind === 'rateLimited' ? failure.retryAt : null);
 
   const {
     control,
     handleSubmit,
-    watch,
-    formState: { isSubmitting, isValid },
+    formState: { isSubmitting },
   } = useForm({
     resolver: yupResolver(schema),
-    mode: 'onChange',
     defaultValues: { email: initialEmail ?? '' },
   });
 
-  useEffect(() => {
-    const subscription = watch(({ email }) => {
-      setFailure(null);
-      dispatch(passwordResetEmailEdited(email ?? ''));
-    });
+  const email = useWatch({ control, name: 'email' });
 
-    return () => subscription.unsubscribe();
-  }, [watch, dispatch]);
+  // Another address has no code, cooldown or refusal of its own yet, and an answer for the old one is moot.
+  const editEmail = (next: string) => {
+    abort();
+    setFailure(null);
+    dispatch(passwordResetEmailEdited(next));
+  };
 
   // This screen opens the flow, so leaving it, back to Sign In or by finishing, ends it.
   useEffect(() => () => void dispatch(passwordResetEnded()), [dispatch]);
 
-  const sendCode = async ({ email }: FormData) => {
-    const { email: sentTo, resendAvailableAt } = store.getState().passwordReset;
+  const hasPendingCode = (address: string) => {
+    const { email: sentTo, challenge } = store.getState().passwordReset;
 
-    // Back from the code screen with the same address: its code is still on the way.
-    if (isSameEmail(sentTo, email) && resendAvailableAt !== null && Date.now() < resendAvailableAt) {
+    return isSameEmail(sentTo, address) && challenge?.end === null;
+  };
+
+  const sendCode = async ({ email: address }: FormData) => {
+    const { resendAvailableAt } = store.getState().passwordReset;
+
+    // Back from the code screen with the same address: its code is still on the way, and so is its cooldown.
+    if (hasPendingCode(address) && resendAvailableAt !== null && Date.now() < resendAvailableAt) {
       navigation.navigate(ScreenNames.RESET_CODE_SCREEN);
       return;
     }
 
     setFailure(null);
-    const result = await abortOnLeave(
-      dispatch(passwordResetApi.endpoints.requestPasswordReset.initiate({ email }, { track: false })),
+    const request = start(
+      dispatch(passwordResetApi.endpoints.requestPasswordReset.initiate({ email: address }, { track: false })),
     );
+    const result = await request;
 
-    if (result.error) {
-      setFailure(getPasswordResetFailure(result.error));
-    } else {
+    if (!isLatest(request)) return;
+
+    if (!result.error) {
       navigation.navigate(ScreenNames.RESET_CODE_SCREEN);
+      return;
     }
+
+    const next = getPasswordResetFailure(result.error);
+
+    // Refused only because a code for this address went out moments ago: that code still works.
+    if (next?.kind === 'rateLimited' && hasPendingCode(address)) {
+      navigation.navigate(ScreenNames.RESET_CODE_SCREEN);
+      return;
+    }
+
+    setFailure(next);
   };
 
   const onSubmit = useSingleSubmit(sendCode);
+  const isEmailComplete = emailSchema.isValidSync(email);
 
   return {
     control,
+    editEmail,
     onSubmit: handleSubmit(onSubmit),
     isSubmitting,
-    isSubmitDisabled: !isValid,
+    isSubmitDisabled: !isEmailComplete || waitSeconds > 0,
+    // Only once something is typed: an empty field needs no explaining.
+    emailHint: email.trim() !== '' && !isEmailComplete ? 'Enter the full address, like you@example.com.' : undefined,
     failure,
   };
 };

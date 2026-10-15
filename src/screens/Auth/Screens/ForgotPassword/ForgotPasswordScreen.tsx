@@ -13,7 +13,7 @@ import styles from './style';
 interface Props extends RootStackScreenProps<ScreenNames.FORGOT_PASSWORD_SCREEN> {}
 
 const ForgotPasswordScreen = ({ navigation, route }: Props) => {
-  const { control, onSubmit, isSubmitting, isSubmitDisabled, failure } = useForgotPasswordForm({
+  const { control, editEmail, onSubmit, isSubmitting, isSubmitDisabled, emailHint, failure } = useForgotPasswordForm({
     navigation,
     initialEmail: route.params?.email,
   });
@@ -22,11 +22,13 @@ const ForgotPasswordScreen = ({ navigation, route }: Props) => {
     <AuthFormLayout
       title="Reset password"
       description="We’ll send a 6-digit code to your email. It stays valid for 30 minutes."
+      illustration={{ icon: 'key', tone: 'neutral' }}
       onBackButtonPress={() => navigation.goBack()}
       action={
         <>
           <Button
             title="Send code"
+            busyTitle="Sending code…"
             size="lg"
             withShadow
             onPress={onSubmit}
@@ -35,7 +37,8 @@ const ForgotPasswordScreen = ({ navigation, route }: Props) => {
           />
           <Button
             title="Back to sign in"
-            variant="tertiary"
+            variant="outline"
+            size="lg"
             onPress={() => navigation.goBack()}
             disabled={isSubmitting}
           />
@@ -51,7 +54,7 @@ const ForgotPasswordScreen = ({ navigation, route }: Props) => {
       <Controller
         name="email"
         control={control}
-        render={({ field: { ref, onChange, onBlur, value }, fieldState: { error, isDirty } }) => (
+        render={({ field: { ref, onChange, onBlur, value } }) => (
           <Input
             ref={ref}
             variant="outlined"
@@ -59,7 +62,10 @@ const ForgotPasswordScreen = ({ navigation, route }: Props) => {
             iconLeft="mail"
             value={value}
             placeholder="you@example.com"
-            onChangeText={onChange}
+            onChangeText={(text) => {
+              onChange(text);
+              editEmail(text);
+            }}
             onBlur={onBlur}
             editable={!isSubmitting}
             keyboardType="email-address"
@@ -69,7 +75,7 @@ const ForgotPasswordScreen = ({ navigation, route }: Props) => {
             autoCorrect={false}
             returnKeyType="send"
             onSubmitEditing={onSubmit}
-            error={isDirty ? error?.message : undefined}
+            hint={emailHint}
           />
         )}
       />

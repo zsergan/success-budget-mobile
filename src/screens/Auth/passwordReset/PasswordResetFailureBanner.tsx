@@ -33,6 +33,39 @@ const RateLimitedBanner = ({ retryAt }: { retryAt?: number }) => {
   );
 };
 
+const CodeUnusableBanner = ({ reason }: { reason?: 'expired' | 'attempts' }) => {
+  switch (reason) {
+    case 'expired':
+      return (
+        <Banner
+          variant="card"
+          tone="warn"
+          icon="clock"
+          title="This code has expired"
+          text="Codes work for 30 minutes. Send a new code to continue."
+        />
+      );
+    case 'attempts':
+      return (
+        <Banner
+          variant="card"
+          tone="danger"
+          title="Too many wrong attempts"
+          text="This code is blocked after 5 wrong tries. Send a new code to continue."
+        />
+      );
+    default:
+      return (
+        <Banner
+          variant="card"
+          tone="warn"
+          title="This code no longer works"
+          text="It expired or was blocked after too many wrong tries. Send a new code to continue."
+        />
+      );
+  }
+};
+
 // The code screen shows a wrong code on the field itself; every other recovery failure leads the form.
 const PasswordResetFailureBanner = ({ failure, kept, isRetrying, onRetry }: Props) => {
   switch (failure.kind) {
@@ -68,21 +101,15 @@ const PasswordResetFailureBanner = ({ failure, kept, isRetrying, onRetry }: Prop
     case 'codeInvalid':
       return <Banner variant="card" tone="danger" title="That code doesn’t match" text="Check the latest email." />;
     case 'codeUnusable':
-      return (
-        <Banner
-          variant="card"
-          tone="warn"
-          title="This code no longer works"
-          text="It expired, was blocked after too many wrong tries, or was already used. Send a new code to continue."
-        />
-      );
+      return <CodeUnusableBanner reason={failure.reason} />;
     case 'authorizationInvalid':
       return (
         <Banner
           variant="card"
           tone="warn"
+          icon="clock"
           title="Time to set a password ran out"
-          text="Send a new code to start again."
+          text="The code was confirmed too long ago. Send a new code to start again."
         />
       );
     case 'refused':

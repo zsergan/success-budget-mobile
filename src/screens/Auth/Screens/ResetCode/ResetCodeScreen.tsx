@@ -1,16 +1,30 @@
-import { Text, View } from 'react-native';
-import { Controller } from 'react-hook-form';
+import { Text, useWindowDimensions, View } from 'react-native';
 
-import { Button, Input } from '@components';
+import { Button } from '@components';
+import { useKeyboardHeight } from '@hooks';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import AuthFormLayout from '@screens/Auth/AuthFormLayout/AuthFormLayout';
+import type { PasswordResetFailure } from '@screens/Auth/passwordReset/passwordResetFailure';
 import PasswordResetFailureBanner from '@screens/Auth/passwordReset/PasswordResetFailureBanner';
-import useResetCodeForm from './useResetCodeForm';
+import CodeInput from './components/CodeInput/CodeInput';
+import SentToChip from './components/SentToChip/SentToChip';
+import type { CodeBlock } from './useResetCode';
+import useResetCode from './useResetCode';
 
 import styles from './style';
 
 interface Props extends RootStackScreenProps<ScreenNames.RESET_CODE_SCREEN> {}
+
+// An iPhone SE is 667 points tall: with the keypad up, only the code and Next fit.
+const SMALL_SCREEN_HEIGHT = 700;
+
+const BLOCK_FAILURES: Record<CodeBlock, PasswordResetFailure> = {
+  expired: { kind: 'codeUnusable', reason: 'expired' },
+  attempts: { kind: 'codeUnusable', reason: 'attempts' },
+  unknown: { kind: 'codeUnusable' },
+  authorizationExpired: { kind: 'authorizationInvalid' },
+};
 
 const formatWait = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 
@@ -18,83 +32,122 @@ const ResetCodeScreen = ({ navigation, route }: Props) => {
   const {
     hasChallenge,
     email,
-    control,
+    inputRef,
+    code,
     changeCode,
-    onSubmit,
-    isSubmitting,
-    isSubmitDisabled,
-    resend,
+    pasteCode,
+    codeError,
+    hint,
+    block,
+    isVerifying,
+    isNextDisabled,
+    verify,
     isResending,
     resendSeconds,
     isResendDisabled,
+    resend,
+    isJustSent,
     failure,
-  } = useResetCodeForm({ navigation, route });
+    retry,
+  } = useResetCode({ navigation, route });
+  const isKeyboardUp = useKeyboardHeight() > 0;
+  const { height } = useWindowDimensions();
+  const isCompact = isKeyboardUp && height < SMALL_SCREEN_HEIGHT;
 
-  if (!hasChallenge) return null;
+  if (!hasChallenge || email === null) return null;
+
+  const wait = formatWait(resendSeconds);
+  const shownFailure = failure ?? (block && BLOCK_FAILURES[block]);
+  const note = block
+    ? null
+    : isJustSent && resendSeconds > 0
+      ? `New code sent. Earlier codes no longer work. You can resend in ${wait}.`
+      : resendSeconds > 0
+        ? `No email? Check spam — you can resend in ${wait}.`
+        : 'No email? Check spam, then send a new code.';
 
   return (
     <AuthFormLayout
       title="Check your email"
-      description={`Enter the 6-digit code we sent to ${email ?? ''}`}
+      description={isCompact ? undefined : 'Enter the 6-digit code we sent to'}
+      headerAccessory={
+        !isCompact && <SentToChip email={email} onChange={() => navigation.goBack()} disabled={isVerifying} />
+      }
+      illustration={{ icon: 'mail-check', tone: 'ok' }}
       onBackButtonPress={() => navigation.goBack()}
       action={
         <>
-          <Button
-            title="Next"
-            size="lg"
-            withShadow
-            onPress={onSubmit}
-            disabled={isSubmitDisabled}
-            isLoading={isSubmitting}
-          />
-          <Button
-            title={isResending ? 'Sending new code…' : 'Send again'}
-            variant="tertiary"
-            onPress={resend}
-            disabled={isResendDisabled}
-          />
+          {note && !isCompact && (
+            <Text style={styles.note} accessibilityLiveRegion="polite">
+              {note}
+            </Text>
+          )}
+
+          {block ? (
+            <Button
+              title={resendSeconds > 0 ? `Send new code in ${wait}` : 'Send new code'}
+              busyTitle="Sending new code…"
+              size="lg"
+              withShadow
+              onPress={resend}
+              disabled={isResendDisabled}
+              isLoading={isResending}
+            />
+          ) : (
+            <Button
+              title="Next"
+              busyTitle="Checking…"
+              size="lg"
+              withShadow
+              onPress={verify}
+              disabled={isNextDisabled}
+              isLoading={isVerifying}
+            />
+          )}
+
+          {!block && !isKeyboardUp && (
+            <Button
+              title={isResending ? 'Sending new code…' : 'Send again'}
+              variant="outline"
+              size="lg"
+              onPress={resend}
+              disabled={isResendDisabled}
+            />
+          )}
         </>
       }
-      prompt={{
-        text: 'Remembered your password?',
-        linkTitle: 'Sign In',
-        onLinkPress: () => navigation.popTo(ScreenNames.SIGN_IN_SCREEN),
-      }}
+      prompt={
+        isKeyboardUp
+          ? undefined
+          : {
+              text: 'Remembered your password?',
+              linkTitle: 'Sign In',
+              onLinkPress: () => navigation.popTo(ScreenNames.SIGN_IN_SCREEN),
+            }
+      }
     >
-      {failure && (
+      {shownFailure && (
         <View style={styles.failure}>
-          <PasswordResetFailureBanner failure={failure} kept="code" isRetrying={isSubmitting} onRetry={onSubmit} />
+          <PasswordResetFailureBanner
+            failure={shownFailure}
+            kept="code"
+            isRetrying={isVerifying || isResending}
+            onRetry={retry}
+          />
         </View>
       )}
 
-      <Controller
-        name="code"
-        control={control}
-        render={({ field: { ref, onBlur, value }, fieldState: { error } }) => (
-          <Input
-            ref={ref}
-            variant="outlined"
-            label="6-digit code"
-            value={value}
-            placeholder="000000"
-            onChangeText={changeCode}
-            onBlur={onBlur}
-            editable={!isSubmitting && !isResending}
-            keyboardType="number-pad"
-            textContentType="oneTimeCode"
-            autoComplete="one-time-code"
-            returnKeyType="next"
-            onSubmitEditing={onSubmit}
-            error={value.length === 6 ? error?.message : undefined}
-          />
-        )}
+      <CodeInput
+        ref={inputRef}
+        value={code}
+        onChangeText={changeCode}
+        onPaste={pasteCode}
+        onSubmit={verify}
+        error={codeError ?? undefined}
+        hint={hint}
+        isLocked={isVerifying || isResending}
+        isDisabled={!!block}
       />
-
-      <Text style={styles.note}>
-        {resendSeconds > 0
-          ? `No email? Check spam — you can resend in ${formatWait(resendSeconds)}.`
-          : 'No email? Check spam, then send a new code.'}
-      </Text>
     </AuthFormLayout>
   );
 };

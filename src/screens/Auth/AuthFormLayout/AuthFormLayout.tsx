@@ -2,21 +2,45 @@ import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { RootLayout, TextLink, TinyButton } from '@components';
+import { Icon, RootLayout, TextLink, TinyButton } from '@components';
+import { useKeyboardHeight } from '@hooks';
+import { colors } from '@shared/theme';
+import type { IconType } from '@shared/types';
 
 import styles, { BOTTOM_GAP } from './style';
 
+const ILLUSTRATION_TONES = {
+  neutral: { background: colors.track, icon: colors.text },
+  ok: { background: colors.okSoft, icon: colors.ok },
+};
+
 interface Props {
   title: string;
-  description: string;
+  // Left out where a small screen with the keyboard up needs the room.
+  description?: string;
+  // Hidden while the keyboard is up, so the form and its action keep the room.
+  illustration?: { icon: IconType; tone: keyof typeof ILLUSTRATION_TONES };
+  // Under the description, part of the header (e.g. the address a code went to).
+  headerAccessory?: ReactNode;
   onBackButtonPress: () => void;
   children: ReactNode;
   action: ReactNode;
   prompt?: { text: string; linkTitle: string; onLinkPress: () => void };
 }
 
-const AuthFormLayout = ({ title, description, onBackButtonPress, children, action, prompt }: Props) => {
+const AuthFormLayout = ({
+  title,
+  description,
+  illustration,
+  headerAccessory,
+  onBackButtonPress,
+  children,
+  action,
+  prompt,
+}: Props) => {
   const { bottom } = useSafeAreaInsets();
+  const isKeyboardUp = useKeyboardHeight() > 0;
+  const illustrationTone = illustration && ILLUSTRATION_TONES[illustration.tone];
 
   return (
     <RootLayout
@@ -37,11 +61,19 @@ const AuthFormLayout = ({ title, description, onBackButtonPress, children, actio
       </View>
 
       <View style={styles.header}>
+        {illustration && illustrationTone && !isKeyboardUp && (
+          <View style={[styles.illustration, { backgroundColor: illustrationTone.background }]}>
+            <Icon name={illustration.icon} size={32} color={illustrationTone.icon} strokeWidth={2.2} />
+          </View>
+        )}
+
         <Text accessibilityRole="header" style={styles.title}>
           {title}
         </Text>
 
-        <Text style={styles.description}>{description}</Text>
+        {description && <Text style={styles.description}>{description}</Text>}
+
+        {headerAccessory}
       </View>
 
       <View style={styles.body}>{children}</View>

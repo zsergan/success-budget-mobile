@@ -20,6 +20,14 @@ const styles = StyleSheet.create({
     marginTop: 26,
     rowGap: 9,
   },
+  illustration: {
+    width: 64,
+    height: 64,
+    borderRadius: 22,
+    marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   title: {
     fontFamily: theme.fonts.bold,
     fontSize: 30,

@@ -8,8 +8,8 @@ export type PasswordResetFailure =
   // When the server allows another attempt, as a timestamp, so the wait can be counted down.
   | { kind: 'rateLimited'; retryAt?: number }
   | { kind: 'codeInvalid' }
-  // Expired, five wrong codes or already used: only a new code helps.
-  | { kind: 'codeUnusable' }
+  // Expired, five wrong codes or already used: only a new code helps. `reason` when this device can tell.
+  | { kind: 'codeUnusable'; reason?: 'expired' | 'attempts' }
   // Expired, used or replaced by a newer request: the code has to be confirmed again.
   | { kind: 'authorizationInvalid' }
   | { kind: 'refused'; message: string };

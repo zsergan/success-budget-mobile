@@ -4,13 +4,15 @@ import theme, { colors } from '@shared/theme';
 
 const styles = StyleSheet.create({
   failure: {
+    marginTop: -2,
     marginBottom: 22,
   },
   note: {
-    marginTop: 14,
+    marginBottom: 2,
+    textAlign: 'center',
     fontFamily: theme.fonts.medium,
-    fontSize: 13.5,
-    lineHeight: 20,
+    fontSize: 12.5,
+    lineHeight: 18,
     color: colors.muted,
   },
 });
