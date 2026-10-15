@@ -8,6 +8,17 @@ import Banner from './Banner';
 const iconNames = () => screen.UNSAFE_getAllByType(Icon).map((icon) => icon.props.name);
 
 describe.each(['inline', 'card'] as const)('a %s banner', (variant) => {
+  it('draws the action’s icon only when it is given one', () => {
+    const props = { variant, tone: 'warn', text: 'Offline.', actionLabel: 'Open', onAction: jest.fn() } as const;
+    const { rerender } = render(<Banner {...props} />);
+
+    expect(iconNames()).toEqual(['alert']);
+
+    rerender(<Banner {...props} actionIcon="refresh" />);
+
+    expect(iconNames()).toEqual(['alert', 'refresh']);
+  });
+
   it('shows the icon it is given', () => {
     render(<Banner variant={variant} tone="warn" text="Offline." icon="offline" />);
 

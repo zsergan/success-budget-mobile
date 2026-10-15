@@ -29,7 +29,10 @@ const styles = StyleSheet.create({
   },
   action: {
     minWidth: 44,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    columnGap: 4,
   },
   // SemiBold under-measures its width in a content-sized label (see cde3346).
   actionText: {

@@ -15,6 +15,8 @@ interface Props {
   text: string;
   // Left out when the next step is in the form itself.
   actionLabel?: string;
+  // Drawn before the action's label; left out, the label stands alone.
+  actionIcon?: IconType;
   isBusy?: boolean;
   onAction?: () => void;
   // 'card' is the bordered block that leads a form, with its action under the text.
@@ -42,6 +44,7 @@ const CardBanner = ({
   title,
   text,
   actionLabel,
+  actionIcon,
   isBusy = false,
   onAction,
   icon = DEFAULT_ICONS[tone],
@@ -76,7 +79,7 @@ const CardBanner = ({
               <ActivityIndicator size="small" color={colors.text} />
             ) : (
               <>
-                <Icon name="refresh" size={13} color={colors.text} strokeWidth={2.1} />
+                {actionIcon && <Icon name={actionIcon} size={13} color={colors.text} strokeWidth={2.1} />}
                 <Text style={styles.cardActionText}>{actionLabel}</Text>
               </>
             )}
@@ -94,6 +97,7 @@ const Banner = (props: Props) => {
     title,
     text,
     actionLabel,
+    actionIcon,
     isBusy = false,
     onAction,
     variant = 'inline',
@@ -128,7 +132,10 @@ const Banner = (props: Props) => {
           {isBusy ? (
             <ActivityIndicator size="small" color={colors.text} />
           ) : (
-            <Text style={styles.actionText}>{actionLabel}</Text>
+            <>
+              {actionIcon && <Icon name={actionIcon} size={14} color={colors.text} strokeWidth={2.1} />}
+              <Text style={styles.actionText}>{actionLabel}</Text>
+            </>
           )}
         </TouchableOpacity>
       )}

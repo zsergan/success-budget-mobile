@@ -36,6 +36,7 @@ const SignInFailureBanner = ({ failure, isRetrying, onRetry }: Props) => {
           title="Couldn’t reach the server"
           text="The server didn’t answer, so nothing was checked. Everything you typed is kept; check your connection."
           actionLabel="Retry"
+          actionIcon="refresh"
           isBusy={isRetrying}
           onAction={onRetry}
         />
@@ -48,6 +49,7 @@ const SignInFailureBanner = ({ failure, isRetrying, onRetry }: Props) => {
           title="Something went wrong on our side"
           text="The server couldn’t sign you in just now. Everything you typed is kept; try again in a moment."
           actionLabel="Retry"
+          actionIcon="refresh"
           isBusy={isRetrying}
           onAction={onRetry}
         />
