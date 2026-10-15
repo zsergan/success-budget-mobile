@@ -1,4 +1,4 @@
-import { Children, isValidElement } from 'react';
+import { Children, isValidElement, useState } from 'react';
 import { Picker } from '@react-native-picker/picker';
 import { Modal } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
@@ -19,6 +19,11 @@ const rows = () => items().map((item) => item.props.label);
 const chosenRow = () => items().find((item) => item.props.value === list().props.selectedValue)?.props.label;
 
 const open = () => fireEvent.press(screen.getByRole('button', { name: 'Currency' }));
+
+const close = () => act(() => screen.UNSAFE_getByType(Modal).props.onRequestClose());
+
+// What the native wheel reports when it settles on a row.
+const turnTo = (row: number) => act(() => list().props.onValueChange(items()[row].props.value, row));
 
 describe('a picker with a placeholder', () => {
   it('starts its list on an empty row, not on the first item, while nothing is picked', () => {
@@ -53,8 +58,8 @@ describe('a picker with a placeholder', () => {
     );
 
     open();
-    list().props.onValueChange(9, 2);
-    list().props.onValueChange('', 0);
+    turnTo(2);
+    turnTo(0);
 
     expect(onValueChange.mock.calls).toEqual([
       [9, 1],
@@ -161,5 +166,109 @@ it('announces an outlined picker whose items are loading as busy and unavailable
   expect(screen.getByRole('button', { name: 'Currency' }).props.accessibilityState).toMatchObject({
     disabled: true,
     busy: true,
+  });
+});
+
+describe('the picked item', () => {
+  const STRING_ITEMS = [
+    { label: 'US dollar', value: 'USD' },
+    { label: 'Euro', value: 'EUR' },
+  ];
+
+  it('is found by a numeric id', () => {
+    render(
+      <InputPicker
+        variant="outlined"
+        label="Currency"
+        placeholder="Pick"
+        items={ITEMS}
+        selectedValue={9}
+        onValueChange={jest.fn()}
+      />,
+    );
+
+    open();
+
+    expect(chosenRow()).toBe('EUR · Euro');
+    expect(screen.getByRole('button', { name: 'Currency' }).props.accessibilityValue).toEqual({ text: 'EUR · Euro' });
+  });
+
+  it('is found by a string value', () => {
+    render(
+      <InputPicker
+        variant="outlined"
+        label="Currency"
+        placeholder="Pick"
+        items={STRING_ITEMS}
+        selectedValue="EUR"
+        onValueChange={jest.fn()}
+      />,
+    );
+
+    open();
+
+    expect(chosenRow()).toBe('Euro');
+    expect(screen.getByText('Euro')).toBeTruthy();
+  });
+
+  it('counts as picked even when its label is empty', () => {
+    render(
+      <InputPicker
+        variant="outlined"
+        label="Currency"
+        placeholder="Pick"
+        items={[{ label: '', value: 'NONE' }, ...STRING_ITEMS]}
+        selectedValue="NONE"
+        onValueChange={jest.fn()}
+      />,
+    );
+
+    open();
+
+    expect(list().props.selectedValue).toBe('NONE');
+    expect(screen.queryByText('Pick')).toBeNull();
+  });
+
+  it('leaves the list on the empty row when the value matches no item', () => {
+    render(
+      <InputPicker
+        variant="outlined"
+        label="Currency"
+        placeholder="Pick"
+        items={ITEMS}
+        selectedValue={42}
+        onValueChange={jest.fn()}
+      />,
+    );
+
+    open();
+
+    expect(chosenRow()).toBe('Pick');
+    expect(screen.getByRole('button', { name: 'Currency' }).props.accessibilityValue).toEqual({ text: 'Pick' });
+  });
+
+  it('opens again on the item turned to last time', () => {
+    const Form = () => {
+      const [value, setValue] = useState<number | string | undefined>();
+
+      return (
+        <InputPicker
+          variant="outlined"
+          label="Currency"
+          placeholder="Pick"
+          items={ITEMS}
+          selectedValue={value}
+          onValueChange={setValue}
+        />
+      );
+    };
+    render(<Form />);
+
+    open();
+    turnTo(1);
+    close();
+    open();
+
+    expect(chosenRow()).toBe('USD · US dollar');
   });
 });

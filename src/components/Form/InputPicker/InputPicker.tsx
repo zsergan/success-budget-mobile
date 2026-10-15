@@ -13,7 +13,8 @@ import outlinedStyles from '../OutlinedField/style';
 import styles from './style';
 
 // The native list shows its first row as chosen when the value matches none, so an empty value gets its own row.
-const EMPTY_VALUE = '';
+// Its value is one no item is expected to use, so a real empty-string value is never taken for it.
+const EMPTY_VALUE = '__input-picker-empty__';
 
 interface Props {
   items: { label: string; value: number | string }[];
@@ -53,10 +54,10 @@ const InputPicker = ({
 }: Props) => {
   const [isPickerVisible, setIsPickerVisible] = useState(false);
 
-  const selectedLabel = items.find((item) => item.value === Number(selectedValue))?.label || '';
-  const shownText = selectedLabel || placeholder;
+  const selectedItem = items.find((item) => item.value === selectedValue);
+  const shownText = selectedItem ? selectedItem.label : placeholder;
   const hasEmptyRow = placeholder !== undefined;
-  const pickerValue = hasEmptyRow && !selectedLabel ? EMPTY_VALUE : selectedValue;
+  const pickerValue = hasEmptyRow && !selectedItem ? EMPTY_VALUE : selectedValue;
 
   const changeValue = (value: number | string, index: number) => {
     if (!hasEmptyRow) return onValueChange(value, index);
@@ -113,7 +114,7 @@ const InputPicker = ({
           }
         >
           <Text
-            style={[outlinedStyles.value, styles.outlinedValue, !selectedLabel && outlinedStyles.placeholder]}
+            style={[outlinedStyles.value, styles.outlinedValue, !selectedItem && outlinedStyles.placeholder]}
             numberOfLines={1}
           >
             {shownText}
@@ -133,7 +134,7 @@ const InputPicker = ({
             accessibilityValue={shownText ? { text: shownText } : undefined}
             accessibilityState={{ disabled: !!disabled, expanded: isPickerVisible }}
           >
-            <Text style={[styles.input, !selectedLabel && styles.placeholder]} numberOfLines={1}>
+            <Text style={[styles.input, !selectedItem && styles.placeholder]} numberOfLines={1}>
               {shownText}
             </Text>
           </TouchableOpacity>

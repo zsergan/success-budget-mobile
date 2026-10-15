@@ -258,7 +258,9 @@ describe('validation', () => {
     await renderSignUp();
 
     await fillInValidForm();
-    await act(async () => screen.UNSAFE_getByType(Picker).props.onValueChange('', 0));
+    const list = screen.UNSAFE_getByType(Picker);
+    const [emptyRow] = Children.toArray(list.props.children).filter(isValidElement<{ value: unknown }>);
+    await act(async () => list.props.onValueChange(emptyRow.props.value, 0));
     await act(async () => {
       fireEvent(screen.UNSAFE_getByType(Modal), 'requestClose');
     });
