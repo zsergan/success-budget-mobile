@@ -20,7 +20,9 @@ interface Props extends RootStackScreenProps<ScreenNames.SIGN_UP_SCREEN> {}
 
 const SignUpScreen = ({ navigation }: Props) => {
   const { error } = useAppSelector(selectAuth);
-  const { control, onSubmit, isSubmitting } = useSignUpForm({ navigation });
+  const { control, onSubmit, isSubmitting, isSubmitDisabled, isEmailWellFormed } = useSignUpForm({
+    navigation,
+  });
   const currencies = useCurrencyOptions();
   const { addAlert } = useAlert();
 
@@ -35,7 +37,16 @@ const SignUpScreen = ({ navigation }: Props) => {
       title="Create your account"
       description="Name, email, password and the currency of your personal space."
       onBackButtonPress={() => navigation.goBack()}
-      action={<Button title="Create account" size="lg" withShadow onPress={onSubmit} isLoading={isSubmitting} />}
+      action={
+        <Button
+          title="Create account"
+          size="lg"
+          withShadow
+          onPress={onSubmit}
+          disabled={isSubmitDisabled}
+          isLoading={isSubmitting}
+        />
+      }
       prompt={{
         text: 'Already have an account?',
         linkTitle: 'Sign In',
@@ -81,6 +92,7 @@ const SignUpScreen = ({ navigation }: Props) => {
               autoComplete="email"
               autoCapitalize="none"
               autoCorrect={false}
+              isValid={isEmailWellFormed}
               error={errors.email?.message}
             />
           )}
@@ -129,7 +141,7 @@ const SignUpScreen = ({ navigation }: Props) => {
           <Controller
             name="currency"
             control={control}
-            render={({ field: { onChange, value }, formState: { errors } }) => (
+            render={({ field: { onChange, onBlur, value }, formState: { errors } }) => (
               <InputPicker
                 variant="outlined"
                 label="Currency of your space"
@@ -137,6 +149,7 @@ const SignUpScreen = ({ navigation }: Props) => {
                 items={currencies.options}
                 selectedValue={value}
                 onValueChange={(v) => onChange(v as number)}
+                onBlur={onBlur}
                 placeholder={currencies.isLoading ? 'Loading currencies…' : 'Pick a currency'}
                 isLoading={currencies.isLoading}
                 disabled={currencies.hasError}

@@ -1,4 +1,5 @@
 import { Provider } from 'react-redux';
+import { Modal } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Picker } from '@react-native-picker/picker';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
@@ -58,6 +59,28 @@ const renderSignUp = async () => {
   return { navigation };
 };
 
+const createAccountButton = () => screen.getByRole('button', { name: 'Create account' });
+
+const type = async (label: string, text: string) => {
+  await act(async () => {
+    fireEvent.changeText(screen.getByLabelText(label), text);
+  });
+};
+
+const leave = async (label: string) => {
+  await act(async () => {
+    fireEvent(screen.getByLabelText(label), 'blur');
+  });
+};
+
+const fillInValidForm = async () => {
+  await type('Name', 'Anna');
+  await type('Email', 'anna@kovalenko.co');
+  await type('Password', 'secret12');
+  await type('Confirm password', 'secret12');
+  await pickCurrency(7);
+};
+
 const pickCurrency = async (id: number) => {
   fireEvent.press(screen.getByRole('button', { name: 'Currency of your space' }));
   await act(async () => screen.UNSAFE_getByType(Picker).props.onValueChange(id, 0));
@@ -95,18 +118,12 @@ it('shows a picked currency by its code and name, and sends its id as base_curre
   mockedRegister.mockReturnValue(new Promise(() => {}));
   await renderSignUp();
 
-  await act(async () => {
-    fireEvent.changeText(screen.getByLabelText('Name'), 'Anna');
-    fireEvent.changeText(screen.getByLabelText('Email'), 'anna@kovalenko.co');
-    fireEvent.changeText(screen.getByLabelText('Password'), 'secret12');
-    fireEvent.changeText(screen.getByLabelText('Confirm password'), 'secret12');
-  });
-  await pickCurrency(7);
+  await fillInValidForm();
 
   expect(screen.getByText('USD · US dollar')).toBeTruthy();
 
   await act(async () => {
-    fireEvent.press(screen.getByText('Create account'));
+    fireEvent.press(createAccountButton());
   });
 
   expect(mockedRegister).toHaveBeenCalledWith({
@@ -114,6 +131,121 @@ it('shows a picked currency by its code and name, and sends its id as base_curre
     email: 'anna@kovalenko.co',
     password: 'secret12',
     base_currency_id: 7,
+  });
+});
+
+describe('validation', () => {
+  it('shows nothing wrong with a fresh, empty form, and keeps Create account off', async () => {
+    answerCurrencies();
+    await renderSignUp();
+
+    expect(screen.queryByText(/^Enter .*\.$|^Pick a currency\.$|Too short|don’t match/)).toBeNull();
+    expect(createAccountButton().props.accessibilityState).toMatchObject({ disabled: true });
+  });
+
+  it('explains an empty field once it is left, and drops the message once it is filled in', async () => {
+    answerCurrencies();
+    await renderSignUp();
+
+    await leave('Name');
+
+    expect(screen.getByText('Enter your name.')).toBeTruthy();
+
+    await type('Name', 'Anna');
+
+    expect(screen.queryByText('Enter your name.')).toBeNull();
+  });
+
+  it('counts the characters of a short password, and updates the count as it is typed', async () => {
+    answerCurrencies();
+    await renderSignUp();
+
+    await type('Password', 'abc12');
+    await leave('Password');
+
+    expect(screen.getByText('Too short: 5 characters of the 8 required.')).toBeTruthy();
+    expect(screen.queryByText('At least 8 characters, with a letter and a digit.')).toBeNull();
+
+    await type('Password', 'a');
+
+    expect(screen.getByText('Too short: 1 character of the 8 required.')).toBeTruthy();
+
+    await type('Password', 'abcdefgh');
+
+    expect(screen.getByText('Add at least one digit.')).toBeTruthy();
+
+    await type('Password', 'abcdefg1');
+
+    expect(screen.getByText('At least 8 characters, with a letter and a digit.')).toBeTruthy();
+  });
+
+  it('checks the confirmation again whenever the password changes', async () => {
+    answerCurrencies();
+    await renderSignUp();
+
+    await type('Password', 'secret12');
+    await type('Confirm password', 'secret12');
+    await leave('Confirm password');
+
+    expect(screen.queryByText('Passwords don’t match.')).toBeNull();
+
+    await type('Password', 'secret123');
+
+    expect(screen.getByText('Passwords don’t match.')).toBeTruthy();
+
+    await type('Confirm password', 'secret123');
+
+    expect(screen.queryByText('Passwords don’t match.')).toBeNull();
+  });
+
+  it('marks an email whose format is right, and only then', async () => {
+    answerCurrencies();
+    await renderSignUp();
+
+    const checkMarks = () => screen.UNSAFE_queryAllByProps({ name: 'check' });
+
+    await type('Email', 'anna@kovalenko');
+    await leave('Email');
+
+    expect(screen.getByText('Enter a valid email, like you@example.com.')).toBeTruthy();
+    expect(checkMarks()).toHaveLength(0);
+
+    await type('Email', 'anna@kovalenko.co');
+
+    expect(screen.queryByText('Enter a valid email, like you@example.com.')).toBeNull();
+    expect(checkMarks()).toHaveLength(1);
+  });
+
+  it('asks for a currency when the list closes without one', async () => {
+    answerCurrencies();
+    await renderSignUp();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Currency of your space' }));
+    await act(async () => {
+      fireEvent(screen.UNSAFE_getByType(Modal), 'requestClose');
+    });
+
+    expect(screen.getByText('Pick a currency.')).toBeTruthy();
+  });
+
+  it('turns Create account on for a valid form, and holds it while the account is created', async () => {
+    answerCurrencies();
+    mockedRegister.mockReturnValue(new Promise(() => {}));
+    await renderSignUp();
+
+    await fillInValidForm();
+
+    expect(createAccountButton().props.accessibilityState).toMatchObject({ disabled: false });
+
+    await act(async () => {
+      fireEvent.press(createAccountButton());
+    });
+    await act(async () => {
+      fireEvent.press(createAccountButton());
+    });
+
+    expect(createAccountButton().props.accessibilityState).toMatchObject({ busy: true });
+    expect(mockedRegister).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -139,7 +271,7 @@ it('opens Sign In from its link', async () => {
   answerCurrencies();
   const { navigation } = await renderSignUp();
 
-  fireEvent.press(screen.getByText('Sign In'));
+  fireEvent.press(screen.getByRole('link', { name: 'Sign In' }));
 
   expect(navigation.navigate).toHaveBeenCalledWith(ScreenNames.SIGN_IN_SCREEN, undefined, { pop: true });
 });
