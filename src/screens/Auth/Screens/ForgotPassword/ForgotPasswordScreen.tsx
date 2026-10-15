@@ -6,6 +6,7 @@ import type { RootStackScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
 import AuthFormLayout from '@screens/Auth/AuthFormLayout/AuthFormLayout';
 import PasswordResetFailureBanner from '@screens/Auth/passwordReset/PasswordResetFailureBanner';
+import useKeyboardLayout from '@screens/Auth/passwordReset/useKeyboardLayout';
 import useForgotPasswordForm from './useForgotPasswordForm';
 
 import styles from './style';
@@ -17,6 +18,7 @@ const ForgotPasswordScreen = ({ navigation, route }: Props) => {
     navigation,
     initialEmail: route.params?.email,
   });
+  const { isCompact } = useKeyboardLayout();
 
   return (
     <AuthFormLayout
@@ -35,13 +37,15 @@ const ForgotPasswordScreen = ({ navigation, route }: Props) => {
             disabled={isSubmitDisabled}
             isLoading={isSubmitting}
           />
-          <Button
-            title="Back to sign in"
-            variant="outline"
-            size="lg"
-            onPress={() => navigation.goBack()}
-            disabled={isSubmitting}
-          />
+          {!isCompact && (
+            <Button
+              title="Back to sign in"
+              variant="outline"
+              size="lg"
+              onPress={() => navigation.goBack()}
+              disabled={isSubmitting}
+            />
+          )}
         </>
       }
     >

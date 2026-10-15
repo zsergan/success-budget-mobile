@@ -1,12 +1,12 @@
-import { Text, useWindowDimensions, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { Button } from '@components';
-import { useKeyboardHeight } from '@hooks';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import AuthFormLayout from '@screens/Auth/AuthFormLayout/AuthFormLayout';
 import type { PasswordResetFailure } from '@screens/Auth/passwordReset/passwordResetFailure';
 import PasswordResetFailureBanner from '@screens/Auth/passwordReset/PasswordResetFailureBanner';
+import useKeyboardLayout from '@screens/Auth/passwordReset/useKeyboardLayout';
 import CodeInput from './components/CodeInput/CodeInput';
 import SentToChip from './components/SentToChip/SentToChip';
 import type { CodeBlock } from './useResetCode';
@@ -15,9 +15,6 @@ import useResetCode from './useResetCode';
 import styles from './style';
 
 interface Props extends RootStackScreenProps<ScreenNames.RESET_CODE_SCREEN> {}
-
-// An iPhone SE is 667 points tall: with the keypad up, only the code and Next fit.
-const SMALL_SCREEN_HEIGHT = 700;
 
 const BLOCK_FAILURES: Record<CodeBlock, PasswordResetFailure> = {
   expired: { kind: 'codeUnusable', reason: 'expired' },
@@ -50,9 +47,7 @@ const ResetCodeScreen = ({ navigation, route }: Props) => {
     failure,
     retry,
   } = useResetCode({ navigation, route });
-  const isKeyboardUp = useKeyboardHeight() > 0;
-  const { height } = useWindowDimensions();
-  const isCompact = isKeyboardUp && height < SMALL_SCREEN_HEIGHT;
+  const { isKeyboardUp, isCompact } = useKeyboardLayout();
 
   if (!hasChallenge || email === null) return null;
 
@@ -142,7 +137,6 @@ const ResetCodeScreen = ({ navigation, route }: Props) => {
         value={code}
         onChangeText={changeCode}
         onPaste={pasteCode}
-        onSubmit={verify}
         error={codeError ?? undefined}
         hint={hint}
         isLocked={isVerifying || isResending}

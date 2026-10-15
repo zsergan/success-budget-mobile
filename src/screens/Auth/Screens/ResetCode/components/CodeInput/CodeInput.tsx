@@ -10,12 +10,14 @@ import styles from './style';
 
 export const CODE_LENGTH = 6;
 
+// Six fixed boxes share the width: a digit grown further than this no longer fits its box.
+const DIGIT_SCALE_LIMIT = 1.3;
+
 interface Props {
   ref?: Ref<TextInputType>;
   value: string;
   onChangeText: (text: string) => void;
   onPaste: () => void;
-  onSubmit: () => void;
   error?: string;
   hint?: string;
   // A request is running: the digits stay but can't change.
@@ -25,7 +27,7 @@ interface Props {
 }
 
 // One real field under six drawn boxes: the keypad, paste, long-press and one-time-code autofill all fill it at once.
-const CodeInput = ({ ref, value, onChangeText, onPaste, onSubmit, error, hint, isLocked, isDisabled }: Props) => {
+const CodeInput = ({ ref, value, onChangeText, onPaste, error, hint, isLocked, isDisabled }: Props) => {
   const [isFocused, setIsFocused] = useState(false);
   const isEditable = !isLocked && !isDisabled;
   const activeIndex = isFocused && isEditable ? Math.min(value.length, CODE_LENGTH - 1) : -1;
@@ -69,7 +71,9 @@ const CodeInput = ({ ref, value, onChangeText, onPaste, onSubmit, error, hint, i
                 !!error && styles.cellError,
               ]}
             >
-              <Text style={[styles.digit, isLocked && styles.mutedText]}>{digit}</Text>
+              <Text maxFontSizeMultiplier={DIGIT_SCALE_LIMIT} style={[styles.digit, isLocked && styles.mutedText]}>
+                {digit}
+              </Text>
               {isActive && digit === '' && <View style={styles.caret} />}
             </View>
           );
@@ -88,8 +92,6 @@ const CodeInput = ({ ref, value, onChangeText, onPaste, onSubmit, error, hint, i
           autoComplete={Platform.OS === 'android' ? 'sms-otp' : 'one-time-code'}
           caretHidden
           selectionColor="transparent"
-          returnKeyType="next"
-          onSubmitEditing={onSubmit}
           accessibilityLabel="6-digit code"
           accessibilityHint={message}
           accessibilityValue={{ text: value.split('').join(' ') }}

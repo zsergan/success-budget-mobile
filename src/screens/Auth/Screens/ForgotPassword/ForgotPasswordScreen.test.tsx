@@ -1,5 +1,7 @@
 import 'react-native-gesture-handler/jestSetup';
 import * as SecureStore from 'expo-secure-store';
+import type { KeyboardMetrics } from 'react-native';
+import { Dimensions, Keyboard } from 'react-native';
 import { act, fireEvent, screen } from '@testing-library/react-native';
 
 import {
@@ -167,4 +169,38 @@ it('drops a request whose screen was left before it answered', async () => {
 
   expect(header('Welcome back')).toBeTruthy();
   expect(store.getState().passwordReset.email).toBeNull();
+});
+
+describe('keyboard', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  const keyboardUp = () =>
+    jest
+      .spyOn(Keyboard, 'metrics')
+      .mockReturnValue({ height: 300, screenX: 0, screenY: 500, width: 393 } as KeyboardMetrics);
+
+  it('keeps Back to sign in above the keyboard where there is room', async () => {
+    keyboardUp();
+    await openForgotPassword();
+
+    expect(button('Send code')).toBeTruthy();
+    expect(button('Back to sign in')).toBeTruthy();
+  });
+
+  it('keeps only Send code above the keyboard on a small screen', async () => {
+    const window = Dimensions.get('window');
+
+    keyboardUp();
+    await act(async () => {
+      Dimensions.set({ window: { ...window, height: 667 }, screen: { ...window, height: 667 } });
+    });
+    await openForgotPassword();
+
+    expect(button('Send code')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Back to sign in' })).toBeNull();
+
+    await act(async () => {
+      Dimensions.set({ window, screen: window });
+    });
+  });
 });
