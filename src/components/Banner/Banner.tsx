@@ -74,7 +74,7 @@ const CardBanner = ({ tone, title, text, actionLabel, isBusy = false, onAction, 
 
 // An inline message with the one step that resolves it, when there is one.
 const Banner = (props: Props) => {
-  const { tone, title, text, actionLabel, isBusy = false, onAction, variant = 'inline' } = props;
+  const { tone, title, text, actionLabel, isBusy = false, onAction, variant = 'inline', icon = 'alert' } = props;
 
   if (variant === 'card') {
     return <CardBanner {...props} />;
@@ -84,7 +84,7 @@ const Banner = (props: Props) => {
 
   return (
     <View style={[styles.root, { backgroundColor: hexToRgba(color, 0.12) }]} accessibilityRole="alert">
-      <Icon name="alert" size={16} color={color} strokeWidth={2} />
+      <Icon name={icon} size={16} color={color} strokeWidth={2} />
 
       <View style={styles.textColumn}>
         {title && <Text style={styles.title}>{title}</Text>}
