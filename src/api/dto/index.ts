@@ -4,6 +4,7 @@ export * from './currencyDto';
 export * from './errorDto';
 export * from './limitDto';
 export * from './memberDto';
+export * from './passwordResetDto';
 export * from './profileDto';
 export * from './spaceDto';
 export * from './statisticsDto';

@@ -43,6 +43,16 @@ describe('httpBaseQuery', () => {
     expect(result).toEqual({ data: { ok: true } });
   });
 
+  it('passes a caller’s own 429 handling to the client, so its generic alert stays quiet', async () => {
+    const isHandledRateLimit = () => true;
+
+    mockedRequest.mockResolvedValue({ data: null });
+
+    await httpBaseQuery({ url: '/x', method: 'POST', isHandledRateLimit }, apiWithSession([1]), {});
+
+    expect(mockedRequest).toHaveBeenCalledWith(expect.objectContaining({ isHandledRateLimit }));
+  });
+
   it('turns an empty body into null so RTK Query accepts it as a result', async () => {
     mockedRequest.mockResolvedValue({ data: undefined });
 

@@ -37,9 +37,12 @@ currencies. Redux Toolkit + RTK Query, React Navigation, react-hook-form + yup.
   `space` (selected space), `member` (invite cooldown), `transactionFlow`
   (the open transaction sheet; ends on logout or space switch),
   `pendingWrite` (transaction writes persisted per user before sending,
-  until their outcome is known; see `transaction/operations.ts`) and
-  `launch` (fonts + stored session → Welcome or the app; see
-  `docs/launch.md`). Do not add server data to a slice.
+  until their outcome is known; see `transaction/operations.ts`),
+  `passwordReset` (the recovery flow's address, resend cooldown and
+  in-memory reset authorization, apart from registration's `userEmail`;
+  its mutations run with `track: false`) and `launch` (fonts + stored
+  session → Welcome or the app; see `docs/launch.md`). Do not add server
+  data to a slice.
 - Selecting a space after create/accept/leave goes through
   `space/thunks.ts`, which checks the session is still current.
 - Space-scoped endpoints take `spaceId` in their argument; get it from
