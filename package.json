@@ -13,6 +13,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
+    "brand:assets": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/export-brand-assets.mjs",
     "test": "jest",
     "react-devtools": "react-devtools",
     "prepare": "husky"
@@ -23,6 +24,7 @@
     "@hookform/resolvers": "^3.4.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "9.1.0",
+    "@react-native-community/netinfo": "12.0.1",
     "@react-native-masked-view/masked-view": "0.3.2",
     "@react-native-picker/picker": "2.11.4",
     "@react-navigation/bottom-tabs": "^7.19.2",
@@ -58,6 +60,7 @@
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@react-native/jest-preset": "^0.86.3",
+    "@resvg/resvg-js": "^2.6.2",
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^29.5.14",
     "@types/node": "^24.13.3",

@@ -95,12 +95,12 @@ describe('deleteTransaction', () => {
     expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }))).toBe('uncertain');
 
     mockedRequest.mockRejectedValueOnce({
-      response: { data: { statusCode: 400, code: 'TRANSACTION_IS_SYSTEM', message: 'System' } },
+      response: { status: 400, data: { statusCode: 400, code: 'TRANSACTION_IS_SYSTEM', message: 'System' } },
     });
     expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }))).toBe('failed');
 
     mockedRequest.mockRejectedValueOnce({
-      response: { data: { statusCode: 409, code: 'TRANSACTION_VERSION_CONFLICT', message: 'Conflict' } },
+      response: { status: 409, data: { statusCode: 409, code: 'TRANSACTION_VERSION_CONFLICT', message: 'Conflict' } },
     });
     expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }))).toBe('conflict');
 

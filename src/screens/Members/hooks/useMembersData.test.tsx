@@ -28,7 +28,7 @@ const member: SpaceMember = {
   can_remove: false,
 };
 
-const serverError = { response: { data: { statusCode: 500, message: 'boom' } } };
+const serverError = { response: { status: 500, data: { statusCode: 500, message: 'boom' } } };
 
 const renderMembers = () => {
   const store = createAppStore();

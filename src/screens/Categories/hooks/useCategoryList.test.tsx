@@ -43,7 +43,9 @@ beforeEach(() => jest.clearAllMocks());
 it('alerts a failed restore of the current session', async () => {
   const { result } = renderCategoryList();
 
-  mockedRequest.mockRejectedValue({ response: { data: { message: 'Category not found', statusCode: 404 } } });
+  mockedRequest.mockRejectedValue({
+    response: { status: 404, data: { message: 'Category not found', statusCode: 404 } },
+  });
 
   await act(() => result.current.handleRestore(archivedCategory));
 

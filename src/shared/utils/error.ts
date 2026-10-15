@@ -1,8 +1,16 @@
 import type { ErrorResponse } from '@api/dto';
 
 export const NETWORK_ERROR_MESSAGE = 'Could not reach the server. Check your connection and try again.';
+export const RATE_LIMITED_MESSAGE = 'Too many requests. Please wait a moment and try again.';
 const SERVER_ERROR_MESSAGE = 'Something went wrong on our end. Please try again later.';
 const FALLBACK_ERROR_MESSAGE = 'Something went wrong. Please try again.';
+
+// For a response whose body carries no message of the API's own: never a proxy page or its text.
+export const getStatusMessage = (statusCode: number): string => {
+  if (statusCode === 429) return RATE_LIMITED_MESSAGE;
+
+  return statusCode >= 500 ? SERVER_ERROR_MESSAGE : FALLBACK_ERROR_MESSAGE;
+};
 
 export const isApiError = (error: unknown, statusCode: number, code?: string): boolean => {
   const response = error as Partial<ErrorResponse> | null | undefined;

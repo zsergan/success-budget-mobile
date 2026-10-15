@@ -99,7 +99,7 @@ describe('useAddTransaction', () => {
   });
 
   it('reports a failed request instead of treating it as no wallets', async () => {
-    mockedRequest.mockRejectedValue({ response: { data: { statusCode: 500, message: 'boom' } } });
+    mockedRequest.mockRejectedValue({ response: { status: 500, data: { statusCode: 500, message: 'boom' } } });
     const { result, onHasWallets, onNoWallets } = renderAddTransaction();
 
     await act(() => result.current());

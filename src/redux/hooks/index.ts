@@ -32,7 +32,7 @@ export const useSpaceArg = (): SpaceArg | typeof skipToken => {
   return spaceId === null ? skipToken : { spaceId };
 };
 
-// Home's latest records, read by Home and kept warm by the initial load: one cache entry for both.
+// Home's latest records, read by Home and asked for early by the session data: one cache entry for both.
 export const useRecentArg = (): RecentTransactionsArg | typeof skipToken => {
   const spaceId = useAppSelector(selectCurrentSpaceId);
 

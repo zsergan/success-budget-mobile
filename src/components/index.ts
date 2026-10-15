@@ -1,4 +1,5 @@
 export * from './Alert';
+export * from './Brand';
 export * from './Buttons';
 export { default as Carousel } from './Carousel/Carousel';
 export { default as CategoryEditorSheet } from './CategoryEditor/CategoryEditorSheet';

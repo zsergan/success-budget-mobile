@@ -4,14 +4,17 @@ import * as SecureStore from 'expo-secure-store';
 
 import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
 import { BASE_API_URL, AUTH_TOKEN_KEY } from '@shared/constants';
+import { RATE_LIMITED_MESSAGE } from '@shared/utils/error';
 
-import { endHttpSession, getHttpSessionKey } from './session';
+import type { ErrorResponse } from './dto';
+import { getRejectValue } from './errors';
+import { endHttpSession, getHttpSessionKey, isHttpSessionLaunching } from './session';
 
 declare module 'axios' {
   interface AxiosRequestConfig {
     sessionKey?: number;
-    // A caller that handles this 429 body itself keeps the generic alert quiet.
-    isHandledRateLimit?: (body: unknown) => boolean;
+    // A caller that handles this 429 itself keeps the generic alert quiet.
+    isHandledRateLimit?: (error: ErrorResponse) => boolean;
   }
 }
 
@@ -56,8 +59,13 @@ export const createHttpClient = () => {
         endHttpSession();
       }
 
-      if (status === 429 && isSessionCurrent && !error.config?.isHandledRateLimit?.(error.response?.data)) {
-        showGlobalAlert('Too many requests. Please wait a moment and try again.');
+      if (
+        status === 429 &&
+        isSessionCurrent &&
+        !isHttpSessionLaunching() &&
+        !error.config?.isHandledRateLimit?.(getRejectValue(error))
+      ) {
+        showGlobalAlert(RATE_LIMITED_MESSAGE);
       }
 
       return Promise.reject(error);

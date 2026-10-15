@@ -15,7 +15,7 @@ members.
 - State: Redux Toolkit. Each domain lives under `src/redux/state/<domain>/`
   (domains: `auth`, `wallet`, `transaction`, `category`, `limit`,
   `currency`, `profile`, `space`, `member`, `transactionFlow`,
-  `pendingWrite`).
+  `pendingWrite`, `launch`).
 - Server data lives in RTK Query (see `docs/server-data.md` for the tag
   and invalidation rules). One `createApi` lives in
   `src/redux/api/baseApi.ts` over the shared axios client; each domain
@@ -23,11 +23,13 @@ members.
   derived values are pure functions or cache selectors in that domain's
   `selectors.ts`. Slices hold client state only: `auth` (session and
   `sessionKey`), `space` (the selected space), `member` (the invite
-  cooldown) and `transactionFlow` (the open transaction sheet: its view,
+  cooldown), `transactionFlow` (the open transaction sheet: its view,
   draft, saved record and request state; it ends on a logout or a space
-  switch) and `pendingWrite` (every transaction write stored in
+  switch), `pendingWrite` (every transaction write stored in
   AsyncStorage, per user, before it is sent, until its outcome is known;
-  see `transaction/operations.ts`). Selecting a space after create/accept/leave goes through
+  see `transaction/operations.ts`) and `launch` (one attempt at a time
+  from the fonts and the stored session to Welcome or the app, with its
+  stage and a retryable failure; see `launch/thunks.ts`). Selecting a space after create/accept/leave goes through
   `space/thunks.ts`, which checks the session is still current; the
   spaces list refreshes separately through its tag.
 - Space-scoped endpoints take `spaceId` in their argument (`useSpaceArg()`
@@ -40,7 +42,9 @@ members.
   entry. Mutations invalidate only on success.
 - API layer: `src/api/instance.ts` builds the shared axios client (auth
   header, 401 and 429 handling); sign-in/up still call it through
-  `src/api/auth.api.ts`. Request/response shapes are declared in
+  `src/api/auth.api.ts`. `src/api/errors.ts` turns any failed request into
+  an `ErrorResponse`, its status taken from the response whatever the body.
+  Request/response shapes are declared in
   `src/api/dto/*.ts` and must match the backend's actual DTOs (see
   "Backend contract" below); DTO-to-model mapping lives in
   `src/api/models/`.

@@ -7,15 +7,20 @@ import styles from './style';
 interface Props {
   title?: string;
   icon?: ReactNode;
-  variant?: 'primary' | 'secondary' | 'tertiary' | 'danger';
+  variant?: 'primary' | 'secondary' | 'outline' | 'tertiary' | 'danger';
+  // 'lg' is the auth screens' button: taller, rounder and bold.
+  size?: 'md' | 'lg';
   onPress: () => void;
   withShadow?: boolean;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
-const Button = ({ title, icon, variant = 'primary', onPress, withShadow, disabled, style }: Props) => {
+const Button = ({ title, icon, variant = 'primary', size = 'md', onPress, withShadow, disabled, style }: Props) => {
   const isPrimaryDisabled = disabled && variant === 'primary';
+  const isLarge = size === 'lg';
+  // A large primary button glows in its own colour instead of the card shadow.
+  const shadowStyle = isLarge && variant === 'primary' ? styles.accentGlow : styles.withShadow;
 
   return (
     <TouchableOpacity
@@ -23,7 +28,8 @@ const Button = ({ title, icon, variant = 'primary', onPress, withShadow, disable
       style={[
         styles.button,
         styles[`${variant}Button`],
-        withShadow && styles.withShadow,
+        isLarge && styles.largeButton,
+        withShadow && shadowStyle,
         disabled && (isPrimaryDisabled ? styles.primaryButtonDisabled : styles.disabled),
         style,
       ]}
@@ -37,6 +43,7 @@ const Button = ({ title, icon, variant = 'primary', onPress, withShadow, disable
           style={[
             styles.buttonText,
             styles[`${variant}ButtonText`],
+            isLarge && styles.largeButtonText,
             isPrimaryDisabled && styles.primaryButtonTextDisabled,
           ]}
         >

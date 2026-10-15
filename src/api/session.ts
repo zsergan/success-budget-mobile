@@ -3,6 +3,8 @@
 export interface HttpSession {
   getKey: () => number;
   end: () => void;
+  // The launch screen reports its own failures, a 429 included.
+  isLaunching: () => boolean;
 }
 
 let session: HttpSession | null = null;
@@ -14,3 +16,5 @@ export const bindHttpSession = (next: HttpSession | null) => {
 export const getHttpSessionKey = () => session?.getKey();
 
 export const endHttpSession = () => session?.end();
+
+export const isHttpSessionLaunching = () => session?.isLaunching() ?? false;

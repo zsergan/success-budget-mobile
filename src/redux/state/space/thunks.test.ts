@@ -124,7 +124,7 @@ describe('acceptInviteAndSelect', () => {
     const store = signedInStore();
 
     store.dispatch(activateSpace(1));
-    mockedRequest.mockRejectedValue({ response: { data: { statusCode: 404, message: 'Not found' } } });
+    mockedRequest.mockRejectedValue({ response: { status: 404, data: { statusCode: 404, message: 'Not found' } } });
 
     await expect(store.dispatch(acceptInviteAndSelect('000000'))).rejects.toMatchObject({ statusCode: 404 });
     expect(store.getState().space.currentSpaceId).toBe(1);
@@ -209,7 +209,7 @@ describe('a request from before a logout and a new login', () => {
   const oldResponses = {
     success: (value: unknown) => ({ data: value }),
     failure: () => {
-      throw { response: { data: { statusCode: 500, message: 'Server error' } } };
+      throw { response: { status: 500, data: { statusCode: 500, message: 'Server error' } } };
     },
   };
 
@@ -328,7 +328,7 @@ describe('loseSpaceAccess', () => {
     mockedRequest.mockImplementation(async ({ url }: { url: string }) => {
       if (url === '/spaces') return { data: isMember ? [space({ id: 10 }), space({ id: 20 })] : [space({ id: 20 })] };
       if (url === '/spaces/10/wallets' && !isMember) {
-        throw { response: { data: { statusCode: 403, code: 'FORBIDDEN_SPACE', message: 'No access' } } };
+        throw { response: { status: 403, data: { statusCode: 403, code: 'FORBIDDEN_SPACE', message: 'No access' } } };
       }
       return { data: overview };
     });

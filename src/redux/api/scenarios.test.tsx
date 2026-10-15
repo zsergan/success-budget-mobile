@@ -3,7 +3,6 @@ import { Provider } from 'react-redux';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import type { Category, LimitView, Space, Transaction, WalletWithBalance } from '@api/dto';
-import useLoadInitData from '@hooks/useLoadInitData';
 import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useRecentArg, useSpaceArg } from '@redux/hooks';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
@@ -12,6 +11,7 @@ import { useGetLimitsQuery, limitApi } from '@redux/state/limit/api';
 import { activateSpace, refreshSpaceData } from '@redux/state/space/thunks';
 import { transactionApi, useGetRecentTransactionsQuery } from '@redux/state/transaction/api';
 import { useGetWalletsQuery, walletApi } from '@redux/state/wallet/api';
+import { runLaunch } from '@redux/state/launch/thunks';
 import { createAppStore } from '@redux/Store';
 import useTransactionsData from '@screens/Transactions/hooks/useTransactionsData';
 import { AppColor, SpaceType, TransactionKind, TransactionType } from '@shared/enums';
@@ -211,11 +211,10 @@ const getRequests = () =>
 
 // What a signed-in user has mounted: the navigator gate, Home, History and the Limits/Categories data.
 const useMountedScreens = () => {
-  const isSignedIn = useAppSelector((state) => state.auth.isSignedIn);
   const spaceArg = useSpaceArg();
 
   return {
-    gate: useLoadInitData({ isSignedIn }),
+    gate: useAppSelector((state) => state.launch.phase),
     home: useGetRecentTransactionsQuery(useRecentArg()),
     history: useTransactionsData({ range: getCurrentMonthRange(), filter: null }),
     wallets: useGetWalletsQuery(spaceArg),
@@ -224,8 +223,11 @@ const useMountedScreens = () => {
   };
 };
 
-const signIn = (store: ReturnType<typeof createAppStore>) =>
+// Like a sign-in in the app, where the navigator then starts the launch that loads the session's required data.
+const signIn = (store: ReturnType<typeof createAppStore>) => {
   store.dispatch(loginMe.fulfilled('token', 'req-login', { email: 'me@example.com', password: 'password1' }));
+  store.dispatch(runLaunch());
+};
 
 // Mutations invalidate and store notifications flush on timers, so let those run before and after the refetches.
 const settle = (store: ReturnType<typeof createAppStore>) =>
@@ -246,14 +248,14 @@ const renderApp = async () => {
     () => {
       const screens = useMountedScreens();
 
-      gateLog.push(screens.gate.isLoading);
+      gateLog.push(screens.gate !== 'ready');
 
       return screens;
     },
     { wrapper },
   );
 
-  await waitFor(() => expect(rendered.result.current.gate.isLoading).toBe(false));
+  await waitFor(() => expect(rendered.result.current.gate).toBe('ready'));
   await settle(store);
 
   return { store, gateLog, ...rendered };
@@ -540,7 +542,7 @@ describe('server data scenarios', () => {
 
     mockedRequest.mockImplementation((config: RequestConfig) =>
       (config.method ?? 'GET') === 'GET'
-        ? Promise.reject({ response: { data: { statusCode: 500, message: 'boom' } } })
+        ? Promise.reject({ response: { status: 500, data: { statusCode: 500, message: 'boom' } } })
         : respond(config),
     );
     await act(async () => {

@@ -3,7 +3,8 @@ import * as SecureStore from 'expo-secure-store';
 import type { LoginPayload, RegisterPayload, VerifyEmailPayload } from '@api/dto';
 import { isConfirmationAlreadyRequested, login, register, verifyEmail } from '@api/auth.api';
 import { AUTH_TOKEN_KEY } from '@shared/constants';
-import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
+import { getRejectValue } from '@api/errors';
+import { createAppAsyncThunk } from '@redux/createAppAsyncThunk';
 
 export const registerMe = createAppAsyncThunk('auth/registerMe', async (payload: RegisterPayload, thunkAPI) => {
   try {
@@ -61,17 +62,7 @@ export const logoutMe = createAppAsyncThunk('auth/logoutMe', async () => {
   }
 });
 
-export const checkAuth = createAppAsyncThunk('auth/checkAuth', async () => {
-  try {
-    const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
-
-    if (!token) {
-      return null;
-    }
-
-    return token;
-  } catch {
-    // Treat a SecureStore failure as "no token" instead of hanging on LoadingScreen forever.
-    return null;
-  }
-});
+// Rejects when the storage itself fails: a saved session may still be there, so it is read again, not dropped.
+export const readStoredSession = createAppAsyncThunk('auth/readStoredSession', (_: { attempt: number }) =>
+  SecureStore.getItemAsync(AUTH_TOKEN_KEY),
+);

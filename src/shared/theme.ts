@@ -51,6 +51,7 @@ const theme = {
     regular: 'PlusJakartaSans-Regular',
     medium: 'PlusJakartaSans-Medium',
     semiBold: 'PlusJakartaSans-SemiBold',
+    bold: 'PlusJakartaSans-Bold',
   },
   // fontSizes/lineHeights/letterSpacing are parallel maps keyed by the same token names.
   fontSizes: {

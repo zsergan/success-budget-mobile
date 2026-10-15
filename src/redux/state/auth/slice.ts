@@ -2,12 +2,15 @@ import { createSlice, isRejected } from '@reduxjs/toolkit';
 
 import { isApiError } from '@shared/utils/error';
 
+import { attemptFailed, attemptStarted } from '../launch/actions';
 import initialState from './initialState';
-import { checkAuth, registerMe, loginMe, logoutMe, verifyEmailMe } from './thunks';
+import { readStoredSession, registerMe, loginMe, logoutMe, verifyEmailMe } from './thunks';
 
 const login = (state: typeof initialState, action: string) => {
   state.isSignedIn = true;
-  state.isLoading = false;
+  // Signing in or out settles the stored session: whatever the device held no longer matters.
+  state.storedSession = 'read';
+  state.storedSessionRead = null;
   state.userToken = action;
   state.userEmail = null;
   state.error = undefined;
@@ -15,10 +18,14 @@ const login = (state: typeof initialState, action: string) => {
 
 const logout = (state: typeof initialState) => {
   state.isSignedIn = false;
-  state.isLoading = false;
+  state.storedSession = 'read';
+  state.storedSessionRead = null;
   state.userToken = null;
   state.sessionKey += 1;
 };
+
+const isCurrentRead = (state: typeof initialState, requestId: string) =>
+  state.storedSessionRead?.requestId === requestId;
 
 const authSlice = createSlice({
   name: 'auth',
@@ -26,7 +33,6 @@ const authSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder.addCase(registerMe.fulfilled, (state, action) => {
-      state.isLoading = false;
       state.userEmail = action.payload.email;
       state.error = undefined;
     });
@@ -37,12 +43,41 @@ const authSlice = createSlice({
 
     builder.addCase(logoutMe.fulfilled, (state) => logout(state));
 
-    builder.addCase(checkAuth.fulfilled, (state, action) => {
+    builder.addCase(readStoredSession.pending, (state, action) => {
+      state.storedSession = 'reading';
+      state.storedSessionRead = { requestId: action.meta.requestId, attempt: action.meta.arg.attempt };
+    });
+
+    builder.addCase(readStoredSession.rejected, (state, action) => {
+      if (!isCurrentRead(state, action.meta.requestId)) return;
+
+      state.storedSession = 'failed';
+      state.storedSessionRead = null;
+    });
+
+    builder.addCase(readStoredSession.fulfilled, (state, action) => {
+      if (!isCurrentRead(state, action.meta.requestId)) return;
+
       if (action.payload) {
         login(state, action.payload);
       } else {
         logout(state);
       }
+    });
+
+    // The native read cannot be stopped: once its attempt fails or is replaced, the session counts as unread again.
+    builder.addCase(attemptStarted, (state) => {
+      if (state.storedSessionRead === null) return;
+
+      state.storedSession = 'failed';
+      state.storedSessionRead = null;
+    });
+
+    builder.addCase(attemptFailed, (state, action) => {
+      if (state.storedSessionRead?.attempt !== action.payload.attempt) return;
+
+      state.storedSession = 'failed';
+      state.storedSessionRead = null;
     });
 
     builder.addMatcher(isRejected(registerMe, verifyEmailMe, loginMe), (state, action) => {

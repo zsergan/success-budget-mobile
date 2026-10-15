@@ -47,7 +47,7 @@ const answer = async (index: number, data: TransactionFeedResponse) => {
 };
 
 const refuse = async (index: number, data: Partial<ErrorResponse>) => {
-  sent[index].reject({ response: { data: { path: '', timestamp: '', ...data } } });
+  sent[index].reject({ response: { status: data.statusCode, data: { path: '', timestamp: '', ...data } } });
   await flush();
 };
 

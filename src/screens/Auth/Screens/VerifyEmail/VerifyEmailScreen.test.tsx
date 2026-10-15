@@ -26,7 +26,10 @@ const mockedVerifyEmail = jest.mocked(verifyEmail);
 
 const rejectWith = (message: string, statusCode: number) =>
   mockedVerifyEmail.mockRejectedValue({
-    response: { data: { message, statusCode, path: '/users/verify-email', timestamp: '2026-01-01T00:00:00.000Z' } },
+    response: {
+      status: statusCode,
+      data: { message, statusCode, path: '/users/verify-email', timestamp: '2026-01-01T00:00:00.000Z' },
+    },
   });
 
 const submitCode = () => {

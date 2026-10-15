@@ -24,9 +24,11 @@ export interface ErrorResponse {
   path: string;
   statusCode: number;
   timestamp: string;
-  // From a 429's Retry-After header when it parses; only `getRejectValue` sets it.
+  // From the response's Retry-After header when it parses, whatever the body; only `getRejectValue` sets it.
   retryAfterMs?: number;
   // Set by httpBaseQuery (not getRejectValue) when the session that sent the
   // request ended before it settled; consumers treat it as a no-op.
   isStale?: boolean;
+  // Why a request got no response at all (statusCode 0); only `getRejectValue` sets it.
+  transport?: 'timeout' | 'canceled' | 'network';
 }

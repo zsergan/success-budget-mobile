@@ -124,7 +124,7 @@ describe('useMemberActions confirm()', () => {
   it('alerts a failed removal of the current session', async () => {
     const store = createTestStore();
 
-    mockedRequest.mockRejectedValue({ response: { data: { message: 'Not allowed', statusCode: 403 } } });
+    mockedRequest.mockRejectedValue({ response: { status: 403, data: { message: 'Not allowed', statusCode: 403 } } });
 
     const { result } = renderHook(() => useMemberActions({ onLeft: jest.fn() }), { wrapper: wrapperFor(store) });
 
@@ -163,7 +163,7 @@ describe('useMemberActions confirm()', () => {
     [
       'failure',
       (_: unknown, reject: (reason: unknown) => void) =>
-        reject({ response: { data: { message: 'Server error', statusCode: 500 } } }),
+        reject({ response: { status: 500, data: { message: 'Server error', statusCode: 500 } } }),
     ],
   ] as const)('ignores a leave from before a logout and a new login (%s)', async (_, respond) => {
     const store = createTestStore();

@@ -54,7 +54,7 @@ describe('httpBaseQuery', () => {
   it('returns the backend error body with Retry-After parsed', async () => {
     const body = { message: 'Too many', statusCode: 429, path: '/x', timestamp: 't' };
 
-    mockedRequest.mockRejectedValue({ response: { data: body, headers: { 'retry-after': '30' } } });
+    mockedRequest.mockRejectedValue({ response: { status: 429, data: body, headers: { 'retry-after': '30' } } });
 
     const result = await httpBaseQuery({ url: '/x' }, apiWithSession([1]), {});
 
@@ -80,7 +80,7 @@ describe('httpBaseQuery', () => {
   });
 
   it('marks a failure that lands after the session ended as stale', async () => {
-    mockedRequest.mockRejectedValue({ response: { data: { message: 'x', statusCode: 500 } } });
+    mockedRequest.mockRejectedValue({ response: { status: 500, data: { message: 'x', statusCode: 500 } } });
 
     const result = await httpBaseQuery({ url: '/x' }, apiWithSession([1, 2]), {});
 

@@ -70,7 +70,9 @@ interface RequestConfig {
 }
 
 const failure = (statusCode: number) => () =>
-  Promise.reject({ response: { data: { statusCode, message: 'boom', timestamp: '2026-09-28T09:41:22.000Z' } } });
+  Promise.reject({
+    response: { status: statusCode, data: { statusCode, message: 'boom', timestamp: '2026-09-28T09:41:22.000Z' } },
+  });
 
 let fixture: StatsFixture;
 let fixtureFor: (config: RequestConfig) => StatsFixture;
@@ -107,7 +109,10 @@ const answer = (config: RequestConfig) => {
   const asOf = config.params?.as_of;
   if (asOf && asOf > serverNow) {
     return Promise.reject({
-      response: { data: { statusCode: 400, message: [{ field: 'as_of', error: 'future' }], timestamp: serverNow } },
+      response: {
+        status: 400,
+        data: { statusCode: 400, message: [{ field: 'as_of', error: 'future' }], timestamp: serverNow },
+      },
     });
   }
 

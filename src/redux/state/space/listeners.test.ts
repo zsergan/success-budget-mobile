@@ -117,7 +117,7 @@ describe('a read or a write refused for a space', () => {
 
   const refuseRead = (store: ReturnType<typeof createAppStore>, code: string) => {
     mockedRequest.mockImplementationOnce(() =>
-      Promise.reject({ response: { data: { statusCode: 403, code, message: code } } }),
+      Promise.reject({ response: { status: 403, data: { statusCode: 403, code, message: code } } }),
     );
     return store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId: 1 }, { forceRefetch: true }));
   };
@@ -140,7 +140,7 @@ describe('a read or a write refused for a space', () => {
     const store = await setUp();
     const refuseWrite = (code: string) => {
       mockedRequest.mockImplementationOnce(() =>
-        Promise.reject({ response: { data: { statusCode: 403, code, message: code } } }),
+        Promise.reject({ response: { status: 403, data: { statusCode: 403, code, message: code } } }),
       );
       return store.dispatch(categoryApi.endpoints.reorderCategories.initiate({ spaceId: 1, categoryIds: [1, 2] }));
     };
@@ -162,7 +162,9 @@ describe('a read or a write refused for a space', () => {
     };
 
     mockedRequest.mockImplementationOnce(() =>
-      Promise.reject({ response: { data: { statusCode: 403, code: 'FORBIDDEN_SPACE', message: 'FORBIDDEN_SPACE' } } }),
+      Promise.reject({
+        response: { status: 403, data: { statusCode: 403, code: 'FORBIDDEN_SPACE', message: 'FORBIDDEN_SPACE' } },
+      }),
     );
     await store.dispatch(transactionApi.endpoints.getTransactionsFeed.initiate(feedArg));
 

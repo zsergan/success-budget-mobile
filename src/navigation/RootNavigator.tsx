@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { NavigationContainer } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import * as SplashScreen from 'expo-splash-screen';
 
 import {
   AcceptInviteScreen,
@@ -12,43 +14,63 @@ import {
   SignInScreen,
   SignUpScreen,
   VerifyEmailScreen,
-  LoadingScreen,
+  LaunchScreen,
   WelcomeScreen,
 } from '@screens';
 import type { RootStackParamList } from '@shared/types';
-import { useAuth, useLoadInitData, usePendingWritesSync } from '@hooks';
+import { usePendingWritesSync } from '@hooks';
+import { useAppDispatch, useAppSelector } from '@redux/hooks';
+import { selectLaunch } from '@redux/state/launch/selectors';
+import { runLaunch } from '@redux/state/launch/thunks';
 import { ScreenNames } from '@shared/enums';
+import { colors } from '@shared/theme';
 import MainNavigator from './MainNavigator';
+import useSessionData from './useSessionData';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+// Screens and transitions sit on the app's own background, the same as the launch screen's.
+// The screens that open a launch phase (launch, Welcome, the app) replace the whole stack, so they fade in.
+const phaseScreenOptions = { headerShown: false, animation: 'fade' } as const;
+
+const navigationTheme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: colors.bg } };
+
 const RootNavigator = () => {
-  const { isSignedIn, isLoading } = useAuth();
-  const { isLoading: isDataLoading } = useLoadInitData({ isSignedIn });
+  const dispatch = useAppDispatch();
+  const { phase, stage } = useAppSelector(selectLaunch);
+  const isSignedIn = useAppSelector((state) => state.auth.isSignedIn);
+  const [hasDrawn, setHasDrawn] = useState(false);
+  useSessionData();
   usePendingWritesSync();
 
-  const isAppLoading = isLoading || isDataLoading;
+  useEffect(() => {
+    dispatch(runLaunch());
+  }, [dispatch]);
+
+  // A sign-in from Welcome loads the session's required data the same way a cold start does.
+  useEffect(() => {
+    if (isSignedIn && phase === 'welcome') dispatch(runLaunch());
+  }, [dispatch, isSignedIn, phase]);
+
+  const isReady = phase === 'ready';
+
+  // The system launch screen stays up while the fonts load, so the first frame never swaps its typeface; once it is
+  // gone the app keeps drawing, a repeated attempt included.
+  if (!hasDrawn && phase === 'running' && stage === 'resources') return null;
 
   return (
-    <GestureHandlerRootView>
+    <GestureHandlerRootView
+      onLayout={() => {
+        setHasDrawn(true);
+        SplashScreen.hideAsync();
+      }}
+    >
       <BottomSheetModalProvider>
-        <NavigationContainer>
-          <Stack.Navigator screenOptions={{ animation: isSignedIn ? 'slide_from_right' : 'slide_from_left' }}>
-            {isAppLoading && (
-              <Stack.Screen
-                name={ScreenNames.LOADING_SCREEN}
-                component={LoadingScreen}
-                options={{ headerShown: false }}
-              />
-            )}
-
-            {!isAppLoading && isSignedIn ? (
+        <NavigationContainer theme={navigationTheme}>
+          <Stack.Navigator screenOptions={{ animation: isReady ? 'slide_from_right' : 'slide_from_left' }}>
+            {isReady ? (
               <>
-                <Stack.Screen
-                  name={ScreenNames.HOME_SCREEN}
-                  component={MainNavigator}
-                  options={{ headerShown: false }}
-                />
+                <Stack.Screen name={ScreenNames.HOME_SCREEN} component={MainNavigator} options={phaseScreenOptions} />
                 <Stack.Screen
                   name={ScreenNames.ADD_WALLET_SCREEN}
                   component={CreateWalletScreen}
@@ -75,12 +97,12 @@ const RootNavigator = () => {
                   options={{ headerShown: false }}
                 />
               </>
-            ) : (
+            ) : phase === 'welcome' ? (
               <>
                 <Stack.Screen
                   name={ScreenNames.WELCOME_SCREEN}
                   component={WelcomeScreen}
-                  options={{ headerShown: false }}
+                  options={phaseScreenOptions}
                 />
                 <Stack.Screen
                   name={ScreenNames.SIGN_IN_SCREEN}
@@ -98,6 +120,8 @@ const RootNavigator = () => {
                   options={{ headerShown: false }}
                 />
               </>
+            ) : (
+              <Stack.Screen name={ScreenNames.LAUNCH_SCREEN} component={LaunchScreen} options={phaseScreenOptions} />
             )}
           </Stack.Navigator>
         </NavigationContainer>

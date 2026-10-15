@@ -1,4 +1,5 @@
 import type { CreateTransactionRequest } from '@api/dto';
+import { getRejectValue } from '@api/errors';
 import { createAppStore } from '@redux/Store';
 import { withProfile } from '@redux/state/profile/fixtures';
 import { logoutMe } from '@redux/state/auth/thunks';
@@ -33,7 +34,7 @@ interface SentRequest {
 
 const noAnswer = () => Promise.reject(new Error('Network Error'));
 const fails = (statusCode: number, code: string) => () =>
-  Promise.reject({ response: { data: { statusCode, code, message: code } } });
+  Promise.reject({ response: { status: statusCode, data: { statusCode, code, message: code } } });
 const answers = (data: unknown) => () => Promise.resolve({ data });
 
 // A write goes out once it is stored, a few promise turns after it is submitted.
@@ -93,6 +94,13 @@ describe('classifyTransactionError', () => {
     [undefined, 'uncertain'],
   ])('reads %j as %s', (error, kind) => {
     expect(classifyTransactionError(error)).toBe(kind);
+  });
+
+  it.each([
+    [502, '<html><body>502 Bad Gateway</body></html>'],
+    [504, ''],
+  ])('reads a %i without the API’s body as possibly applied', (status, data) => {
+    expect(classifyTransactionError(getRejectValue({ response: { status, data } }))).toBe('uncertain');
   });
 });
 

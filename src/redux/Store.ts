@@ -6,6 +6,8 @@ import { bindHttpSession } from '@api/session';
 import { baseApi } from './api/baseApi';
 import authReducer from './state/auth/slice';
 import { logoutMe } from './state/auth/thunks';
+import launchReducer from './state/launch/slice';
+import { selectIsLaunching } from './state/launch/selectors';
 import { startSpaceSelectionListener } from './state/space/listeners';
 import memberReducer from './state/member/slice';
 import pendingWriteReducer from './state/pendingWrite/slice';
@@ -14,6 +16,7 @@ import transactionFlowReducer from './state/transactionFlow/slice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
+  launch: launchReducer,
   member: memberReducer,
   pendingWrite: pendingWriteReducer,
   space: spaceReducer,
@@ -59,6 +62,7 @@ const store = createAppStore();
 bindHttpSession({
   getKey: () => store.getState().auth.sessionKey,
   end: () => store.dispatch(logoutMe()),
+  isLaunching: () => selectIsLaunching(store.getState()),
 });
 
 export default store;

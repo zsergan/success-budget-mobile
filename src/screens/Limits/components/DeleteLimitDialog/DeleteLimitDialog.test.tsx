@@ -33,7 +33,7 @@ const deferredResponse = () => {
   mockedRequest.mockReturnValueOnce(
     new Promise((res, rej) => {
       resolve = () => res({ data: undefined });
-      reject = (message) => rej({ response: { data: { message, statusCode: 409 } } });
+      reject = (message) => rej({ response: { status: 409, data: { message, statusCode: 409 } } });
     }),
   );
 
