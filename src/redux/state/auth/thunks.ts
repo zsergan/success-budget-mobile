@@ -62,6 +62,6 @@ export const logoutMe = createAppAsyncThunk('auth/logoutMe', async () => {
 });
 
 // Rejects when the storage itself fails: a saved session may still be there, so it is read again, not dropped.
-export const readStoredSession = createAppAsyncThunk('auth/readStoredSession', () =>
+export const readStoredSession = createAppAsyncThunk('auth/readStoredSession', (_: { attempt: number }) =>
   SecureStore.getItemAsync(AUTH_TOKEN_KEY),
 );

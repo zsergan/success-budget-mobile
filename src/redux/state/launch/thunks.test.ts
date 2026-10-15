@@ -2,8 +2,9 @@ import NetInfo from '@react-native-community/netinfo';
 import * as Font from 'expo-font';
 import * as SecureStore from 'expo-secure-store';
 
+import { login } from '@api/auth.api';
 import { baseApi } from '@redux/api/baseApi';
-import { logoutMe } from '@redux/state/auth/thunks';
+import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { profileApi } from '@redux/state/profile/api';
 import { selectProfileId } from '@redux/state/profile/selectors';
 import { activateSpace } from '@redux/state/space/thunks';
@@ -17,6 +18,7 @@ jest.mock('@api/instance', () => ({
   ApiClient: () => ({}),
   createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
 }));
+jest.mock('@api/auth.api', () => ({ ...jest.requireActual('@api/auth.api'), login: jest.fn() }));
 jest.mock('expo-secure-store');
 jest.mock('expo-font', () => ({ loadAsync: jest.fn(() => Promise.resolve()) }));
 
@@ -340,6 +342,119 @@ it('does not treat a cancelled request as a lost connection', async () => {
 
   expect(store.getState().launch.phase).toBe('running');
   expect(mockedNetInfoFetch).not.toHaveBeenCalled();
+});
+
+describe('a stored-session read that answers after its attempt', () => {
+  let settleFirstRead: { resolve: (token: string | null) => void; reject: (error: Error) => void };
+
+  // The first read hangs until the test settles it; every later one answers at once.
+  const hangFirstRead = (laterToken: string | null) =>
+    mockedGetItemAsync
+      .mockImplementationOnce(() => new Promise((resolve, reject) => (settleFirstRead = { resolve, reject })))
+      .mockResolvedValue(laterToken);
+
+  const timeOutOnRead = async () => {
+    const store = createAppStore();
+    const running = store.dispatch(runLaunch());
+
+    await jest.advanceTimersByTimeAsync(LAUNCH_ATTEMPT_DEADLINE_MS);
+    await running;
+
+    return store;
+  };
+
+  const retry = async (store: ReturnType<typeof createAppStore>) => {
+    store.dispatch(retryLaunch());
+    await jest.runOnlyPendingTimersAsync();
+  };
+
+  it('times out as a session that could not be restored, not an unreachable server', async () => {
+    hangFirstRead(null);
+
+    const store = await timeOutOnRead();
+
+    expect(store.getState().launch).toMatchObject({ phase: 'failed', stage: 'storedSession', failure: 'storage' });
+    expect(store.getState().auth.storedSession).toBe('failed');
+    expect(mockedRequest).not.toHaveBeenCalled();
+    expect(mockedDeleteItemAsync).not.toHaveBeenCalled();
+  });
+
+  it('cannot sign in with an old token once Try again found none', async () => {
+    hangFirstRead(null);
+
+    const store = await timeOutOnRead();
+
+    await retry(store);
+
+    expect(store.getState().launch.phase).toBe('welcome');
+
+    const { auth } = store.getState();
+
+    settleFirstRead.resolve('old-token');
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(store.getState().launch.phase).toBe('welcome');
+    expect(store.getState().auth).toEqual(auth);
+    expect(store.getState().auth).toMatchObject({ isSignedIn: false, userToken: null, storedSession: 'read' });
+    expect(mockedRequest).not.toHaveBeenCalled();
+  });
+
+  it('cannot fail a session that Try again restored', async () => {
+    hangFirstRead('a-token');
+
+    const store = await timeOutOnRead();
+
+    await retry(store);
+
+    expect(store.getState().launch.phase).toBe('ready');
+
+    const { auth } = store.getState();
+
+    settleFirstRead.reject(new Error('Keystore is corrupted'));
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(store.getState().launch.phase).toBe('ready');
+    expect(store.getState().auth).toEqual(auth);
+  });
+
+  it('cannot bring back a session ended while it was reading', async () => {
+    hangFirstRead(null);
+
+    const store = createAppStore();
+
+    store.dispatch(runLaunch());
+    await jest.advanceTimersByTimeAsync(0);
+    await store.dispatch(logoutMe());
+
+    const { auth } = store.getState();
+
+    settleFirstRead.resolve('old-token');
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(store.getState().launch.phase).toBe('welcome');
+    expect(store.getState().auth).toEqual(auth);
+    expect(store.getState().auth.isSignedIn).toBe(false);
+  });
+
+  it('cannot replace or end the session of a later sign-in', async () => {
+    jest.mocked(login).mockResolvedValue('new-token');
+    hangFirstRead(null);
+
+    const store = await timeOutOnRead();
+
+    await retry(store);
+    await store.dispatch(loginMe({ email: 'me@example.com', password: 'secret' }));
+
+    const { auth } = store.getState();
+
+    for (const settle of [() => settleFirstRead.resolve('old-token'), () => settleFirstRead.resolve(null)]) {
+      settle();
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(store.getState().auth).toEqual(auth);
+      expect(store.getState().auth).toMatchObject({ isSignedIn: true, userToken: 'new-token' });
+    }
+  });
 });
 
 describe('once the app is open', () => {

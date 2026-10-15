@@ -18,11 +18,16 @@ export const LAUNCH_ATTEMPT_DEADLINE_MS = 30_000;
 // Fallback only: prefer the 429's `retryAfterMs`.
 export const LAUNCH_RATE_LIMIT_COOLDOWN_MS = 10_000;
 
+const DEADLINE_FAILURE: Record<LaunchStage, LaunchFailure> = {
+  resources: 'resources',
+  storedSession: 'storage',
+  session: 'unreachable',
+  requiredData: 'unreachable',
+};
+
 interface Cancellable {
   abort: () => void;
 }
-
-type QueryOutcome = { data?: unknown; error?: unknown };
 
 const hasConfirmedNoInternet = async () => {
   const network = await NetInfo.fetch();
@@ -59,8 +64,8 @@ export const runLaunch = (): AppThunk<Promise<void>> => async (dispatch, getStat
   const deadline = setTimeout(() => {
     if (!isLive()) return;
 
-    // Fonts that never finish loading are the app's own files, not the server.
-    const failure = getState().launch.stage === 'resources' ? 'resources' : 'unreachable';
+    // Fonts or a stored session that never come back are the device's trouble, not the server's.
+    const failure = DEADLINE_FAILURE[getState().launch.stage];
 
     dispatch(attemptFailed({ attempt, failure }));
     running.forEach((request) => request.abort());
@@ -68,7 +73,7 @@ export const runLaunch = (): AppThunk<Promise<void>> => async (dispatch, getStat
 
   const enter = (stage: LaunchStage) => dispatch(stageReached({ attempt, stage }));
 
-  const fetch = async <T extends QueryOutcome>(request: Cancellable & PromiseLike<T>) => {
+  const fetch = async <T>(request: Cancellable & PromiseLike<T>) => {
     running.add(request);
 
     try {
@@ -100,7 +105,7 @@ export const runLaunch = (): AppThunk<Promise<void>> => async (dispatch, getStat
     if (getState().auth.storedSession !== 'read') {
       enter('storedSession');
 
-      const read = await dispatch(readStoredSession());
+      const read = await fetch(dispatch(readStoredSession({ attempt })));
 
       if (!isLive()) return;
       if (readStoredSession.rejected.match(read)) {

@@ -13,7 +13,10 @@ sends nothing on a sign-in.
    (`src/shared/fonts.ts`). The system launch screen stays up until they
    settle, so the first frame never swaps its typeface.
 2. **Stored session** — the token in SecureStore. None saved: Welcome, with
-   no request. Unreadable: a failure to retry, never "signed out".
+   no request. Unreadable, or no answer by the deadline: a failure to retry,
+   never "signed out". Only the read of the current attempt may settle the
+   session; a late one, after a timeout, a newer attempt, a sign-in or a
+   logout, changes nothing.
 3. **Session** — `GET /users/profile`. A `401` (`code: UNAUTHORIZED`) ends
    the session through the HTTP client and opens Welcome; no other status
    signs the user out.

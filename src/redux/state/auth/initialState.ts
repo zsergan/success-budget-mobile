@@ -3,6 +3,8 @@ import type { ErrorResponse } from '@api/dto';
 interface AuthState {
   // The session saved on this device: still being read, unreadable, or read (whether or not one was saved).
   storedSession: 'reading' | 'failed' | 'read';
+  // The one read allowed to settle storedSession; any other answer, however late, changes nothing.
+  storedSessionRead: { requestId: string; attempt: number } | null;
   isSignedIn: boolean;
   userToken: string | null;
   userEmail: string | null;
@@ -14,6 +16,7 @@ interface AuthState {
 
 const initialState: AuthState = {
   storedSession: 'reading',
+  storedSessionRead: null,
   isSignedIn: false,
   userToken: null,
   userEmail: null,
