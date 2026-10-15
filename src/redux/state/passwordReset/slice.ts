@@ -11,7 +11,7 @@ import { isSameEmail } from './selectors';
 
 const { requestPasswordReset, verifyPasswordReset, completePasswordReset } = passwordResetApi.endpoints;
 
-export const isChallengeSurelyExpired = (challenge: ChallengeState, now = Date.now()) =>
+const isChallengeSurelyExpired = (challenge: ChallengeState, now = Date.now()) =>
   now >= challenge.since + CODE_LIFETIME_MS;
 
 const isChallengePending = (challenge: ChallengeState | null, now: number): challenge is ChallengeState =>

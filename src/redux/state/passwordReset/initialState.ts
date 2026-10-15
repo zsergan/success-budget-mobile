@@ -16,7 +16,7 @@ export interface ChallengeState {
 }
 
 // Kept apart from auth's registration address: recovery never signs in and never touches sign-up's verification.
-export interface PasswordResetState {
+interface PasswordResetState {
   // The address the latest accepted request sent a code to; the cooldown and authorization below belong to it.
   email: string | null;
   // When another code can be requested for `email`, from the server's own answer.

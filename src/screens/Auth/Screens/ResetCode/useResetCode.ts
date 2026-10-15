@@ -15,7 +15,7 @@ import useSecondsUntil from '@screens/Auth/passwordReset/useSecondsUntil';
 import { CODE_LENGTH } from './components/CodeInput/CodeInput';
 
 // Paste and code autofill may bring spaces or dashes; only the digits count, leading zeros included.
-export const toCode = (text: string) => text.replace(/\D/g, '').slice(0, CODE_LENGTH);
+const toCode = (text: string) => text.replace(/\D/g, '').slice(0, CODE_LENGTH);
 
 // Why the code on screen can't be used any more; only a new code moves on from here.
 export type CodeBlock = 'expired' | 'attempts' | 'unknown' | 'authorizationExpired';

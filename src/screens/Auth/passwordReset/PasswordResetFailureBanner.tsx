@@ -99,7 +99,7 @@ const PasswordResetFailureBanner = ({ failure, kept, isRetrying, onRetry }: Prop
     case 'rateLimited':
       return <RateLimitedBanner key={failure.retryAt} retryAt={failure.retryAt} />;
     case 'codeInvalid':
-      return <Banner variant="card" tone="danger" title="That code doesn’t match" text="Check the latest email." />;
+      return null;
     case 'codeUnusable':
       return <CodeUnusableBanner reason={failure.reason} />;
     case 'authorizationInvalid':

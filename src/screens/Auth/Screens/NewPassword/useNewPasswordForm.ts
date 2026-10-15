@@ -31,13 +31,13 @@ export const utf8Length = (text: string) => {
 };
 
 // The backend's rule for a new password; Sign In keeps its older, looser check for existing accounts.
-export const getPasswordRules = (password: string) => ({
+const getPasswordRules = (password: string) => ({
   length: password.length >= PASSWORD_MIN_LENGTH,
   letter: /[A-Za-z]/.test(password),
   digit: /\d/.test(password),
 });
 
-export const isStrongPassword = (password: string) => {
+const isStrongPassword = (password: string) => {
   const rules = getPasswordRules(password);
 
   return rules.length && rules.letter && rules.digit;
