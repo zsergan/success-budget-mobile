@@ -102,6 +102,7 @@ export type IconType =
   | 'info'
   | 'refresh'
   | 'offline'
+  | 'currency'
   | 'download'
   | 'grid'
   | 'note'

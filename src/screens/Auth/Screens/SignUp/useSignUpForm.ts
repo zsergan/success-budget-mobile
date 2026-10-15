@@ -5,7 +5,6 @@ import { yupResolver } from '@hookform/resolvers/yup';
 
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { registerMe } from '@redux/state/auth/thunks';
-import { useGetCurrenciesQuery } from '@redux/state/currency/api';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { selectAuth } from '@redux/state/auth/selectors';
@@ -19,7 +18,7 @@ const passwordSchema = yup
 
 const schema = yup.object().shape({
   name: yup.string().required(),
-  currency: yup.number().required(),
+  currency: yup.number().required('Pick a currency.'),
   email: yup.string().email().required(),
   password: passwordSchema,
   passwordConfirm: passwordSchema.oneOf([yup.ref('password')], 'Passwords must match'),
@@ -36,7 +35,6 @@ interface FormData {
 type UseSignInFormProps = Pick<RootStackScreenProps<ScreenNames.SIGN_UP_SCREEN>, 'navigation'>;
 
 const useSignInForm = ({ navigation }: UseSignInFormProps) => {
-  const { currentData: currencies = [] } = useGetCurrenciesQuery();
   const { userEmail } = useAppSelector(selectAuth);
   const dispatch = useAppDispatch();
 
@@ -73,7 +71,6 @@ const useSignInForm = ({ navigation }: UseSignInFormProps) => {
   };
 
   return {
-    currencies: currencies.map((c) => ({ label: c.code, value: c.id })),
     control,
     onSubmit: handleSubmit(onSubmit),
     isSubmitting,
