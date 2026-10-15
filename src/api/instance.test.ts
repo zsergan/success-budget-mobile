@@ -4,6 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
 import { createAppStore } from '@redux/Store';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
+import type { ErrorResponse } from './dto';
 import { getRejectValue } from './errors';
 import { createHttpClient, REQUEST_TIMEOUT_MS } from './instance';
 import { bindHttpSession } from './session';
@@ -32,7 +33,7 @@ const interceptorsOf = (instance: AxiosInstance) => {
 interface SendOptions {
   beforeResponse?: () => void;
   body?: unknown;
-  isHandledRateLimit?: (body: unknown) => boolean;
+  isHandledRateLimit?: (error: ErrorResponse) => boolean;
 }
 
 const sendAndFail = async (status: number, { beforeResponse, body, isHandledRateLimit }: SendOptions = {}) => {
@@ -128,15 +129,25 @@ describe('429 handling', () => {
   });
 
   it('leaves a 429 the caller handles to the caller, and alerts for any other', async () => {
-    const isHandledRateLimit = (body: unknown) => (body as { message?: string }).message === 'Code already sent';
+    const isHandledRateLimit = jest.fn(({ code }: { code?: string }) => code === 'CODE_ALREADY_SENT');
+    const apiError = (code: string) => ({
+      statusCode: 429,
+      code,
+      message: 'Too many requests',
+      path: '',
+      timestamp: '',
+    });
 
-    await sendAndFail(429, { body: { message: 'Code already sent' }, isHandledRateLimit });
+    await sendAndFail(429, { body: apiError('CODE_ALREADY_SENT'), isHandledRateLimit });
 
     expect(mockedShowGlobalAlert).not.toHaveBeenCalled();
 
-    await sendAndFail(429, { body: { message: 'Too Many Requests' }, isHandledRateLimit });
+    await sendAndFail(429, { body: apiError('TOO_MANY_REQUESTS'), isHandledRateLimit });
+    await sendAndFail(429, { body: '<html>429 Too Many Requests</html>', isHandledRateLimit });
 
-    expect(mockedShowGlobalAlert).toHaveBeenCalledTimes(1);
+    expect(mockedShowGlobalAlert).toHaveBeenCalledTimes(2);
+    // The caller judges the normalized error: the status comes from the response, whatever the body.
+    expect(isHandledRateLimit).toHaveBeenLastCalledWith(expect.objectContaining({ statusCode: 429 }));
   });
 });
 

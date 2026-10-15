@@ -6,13 +6,15 @@ import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
 import { BASE_API_URL, AUTH_TOKEN_KEY } from '@shared/constants';
 import { RATE_LIMITED_MESSAGE } from '@shared/utils/error';
 
+import type { ErrorResponse } from './dto';
+import { getRejectValue } from './errors';
 import { endHttpSession, getHttpSessionKey, isHttpSessionLaunching } from './session';
 
 declare module 'axios' {
   interface AxiosRequestConfig {
     sessionKey?: number;
-    // A caller that handles this 429 body itself keeps the generic alert quiet.
-    isHandledRateLimit?: (body: unknown) => boolean;
+    // A caller that handles this 429 itself keeps the generic alert quiet.
+    isHandledRateLimit?: (error: ErrorResponse) => boolean;
   }
 }
 
@@ -61,7 +63,7 @@ export const createHttpClient = () => {
         status === 429 &&
         isSessionCurrent &&
         !isHttpSessionLaunching() &&
-        !error.config?.isHandledRateLimit?.(error.response?.data)
+        !error.config?.isHandledRateLimit?.(getRejectValue(error))
       ) {
         showGlobalAlert(RATE_LIMITED_MESSAGE);
       }
