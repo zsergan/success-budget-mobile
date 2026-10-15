@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import Button from './Button';
 
@@ -24,4 +24,35 @@ describe('a large button', () => {
       expect(screen.getByText('Create account').props.numberOfLines).toBeUndefined();
     },
   );
+});
+
+describe('a loading button', () => {
+  it('shows a spinner instead of its label, keeps the label for screen readers and ignores presses', () => {
+    const onPress = jest.fn();
+
+    render(<Button title="Sign In" size="lg" isLoading onPress={onPress} />);
+
+    expect(screen.queryByText('Sign In')).toBeNull();
+
+    const button = screen.getByRole('button', { name: 'Sign In' });
+
+    expect(button.props.accessibilityState).toMatchObject({ busy: true });
+
+    fireEvent.press(button);
+
+    expect(onPress).not.toHaveBeenCalled();
+  });
+});
+
+describe('a large primary button', () => {
+  it('glows while it can be pressed and loses the glow when disabled', () => {
+    const { rerender } = render(<Button title="Sign In" size="lg" withShadow onPress={() => {}} />);
+    const boxShadow = () => StyleSheet.flatten(screen.getByRole('button', { name: 'Sign In' }).props.style).boxShadow;
+
+    expect(boxShadow()).toBeDefined();
+
+    rerender(<Button title="Sign In" size="lg" withShadow disabled onPress={() => {}} />);
+
+    expect(boxShadow()).toBeUndefined();
+  });
 });
