@@ -92,6 +92,12 @@ describe('401 handling', () => {
     expect(endSession).not.toHaveBeenCalled();
   });
 
+  it('ends the session on a 401 whose body is a proxy page', async () => {
+    await sendAndFail(401, { body: '<html><body>401 Authorization Required</body></html>' });
+
+    expect(endSession).toHaveBeenCalledTimes(1);
+  });
+
   it('does not end the session for a 401 from a request sent without a token', async () => {
     mockedGetItemAsync.mockResolvedValue(null);
 
@@ -137,6 +143,16 @@ describe('429 handling', () => {
 it('passes other errors through without side effects', async () => {
   await sendAndFail(500);
 
+  expect(endSession).not.toHaveBeenCalled();
+  expect(mockedShowGlobalAlert).not.toHaveBeenCalled();
+});
+
+it('neither ends the session nor alerts for a request with no response', async () => {
+  const { prepare, rejected } = interceptorsOf(createHttpClient());
+  const config = await prepare({ headers: {} } as InternalAxiosRequestConfig);
+  const error = { code: 'ERR_NETWORK', message: 'Network Error', config };
+
+  await expect(rejected(error)).rejects.toBe(error);
   expect(endSession).not.toHaveBeenCalled();
   expect(mockedShowGlobalAlert).not.toHaveBeenCalled();
 });

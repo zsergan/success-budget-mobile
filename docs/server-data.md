@@ -228,7 +228,10 @@ something to drop on purpose.
   rejects without a request because the caller's user id is unknown.
 - **Network failures** are turned into a truthy `ErrorResponse`
   (`statusCode: 0`) by `getRejectValue`, so they never look like an empty
-  successful result.
+  successful result. A response keeps its HTTP status and `Retry-After`
+  whatever its body; only the API's own JSON error passes its fields on, and
+  anything else (an empty body, a proxy's HTML page, other JSON) gets a
+  message of the app's own.
 - **401** from the axios instance dispatches `logoutMe`, but only if the
   request carried the token that is still stored.
 - **429** shows a global alert; `inviteMember` additionally starts a

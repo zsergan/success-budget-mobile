@@ -4,6 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 
 import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
 import { BASE_API_URL, AUTH_TOKEN_KEY } from '@shared/constants';
+import { RATE_LIMITED_MESSAGE } from '@shared/utils/error';
 
 import { endHttpSession, getHttpSessionKey, isHttpSessionLaunching } from './session';
 
@@ -62,7 +63,7 @@ export const createHttpClient = () => {
         !isHttpSessionLaunching() &&
         !error.config?.isHandledRateLimit?.(error.response?.data)
       ) {
-        showGlobalAlert('Too many requests. Please wait a moment and try again.');
+        showGlobalAlert(RATE_LIMITED_MESSAGE);
       }
 
       return Promise.reject(error);

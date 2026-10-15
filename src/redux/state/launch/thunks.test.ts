@@ -146,6 +146,52 @@ it('reports a 5xx as the server’s trouble, not the connection', async () => {
   expect(mockedNetInfoFetch).not.toHaveBeenCalled();
 });
 
+describe('a response without the API’s error body', () => {
+  const raw =
+    (status: number, data: unknown, headers: Record<string, string> = {}) =>
+    () =>
+      Promise.reject({ response: { status, data, headers } }) as Answer;
+
+  it.each([
+    ['a 503 proxy page', raw(503, '<html><body>503 Service Unavailable</body></html>')],
+    ['a 502 with no body', raw(502, '')],
+    ['a 503 with no body', raw(503, undefined)],
+  ])('reports %s as the server’s trouble and keeps the session', async (_, failure) => {
+    failProfile(failure);
+
+    const store = await launch();
+
+    expect(store.getState().launch).toMatchObject({ phase: 'failed', failure: 'server' });
+    expect(store.getState().auth).toMatchObject({ isSignedIn: true, userToken: 'a-token' });
+    expect(mockedNetInfoFetch).not.toHaveBeenCalled();
+  });
+
+  it('holds Try again for the Retry-After of a 429 with no body', async () => {
+    failProfile(raw(429, '', { 'retry-after': '5' }));
+
+    const store = await launch();
+    const { attempt, retryAt } = store.getState().launch;
+
+    expect(store.getState().launch.failure).toBe('rateLimited');
+    expect(retryAt).toBe(Date.now() + 5000);
+
+    store.dispatch(retryLaunch());
+    expect(store.getState().launch.attempt).toBe(attempt);
+  });
+
+  it('waits until the HTTP-date of a 429 with some other JSON', async () => {
+    const until = new Date(Date.now() + 45_000);
+
+    // An HTTP-date has whole seconds only.
+    until.setMilliseconds(0);
+    failProfile(raw(429, { error: 'rate_limited' }, { 'retry-after': until.toUTCString() }));
+
+    const store = await launch();
+
+    expect(store.getState().launch).toMatchObject({ failure: 'rateLimited', retryAt: until.getTime() });
+  });
+});
+
 describe('a stored token and a failed check', () => {
   const noResponse = () => Promise.reject({ code: 'ERR_NETWORK', message: 'Network Error' });
   const timeout = () => Promise.reject({ code: 'ECONNABORTED', message: 'timeout of 20000ms exceeded' });

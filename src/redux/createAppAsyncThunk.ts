@@ -4,7 +4,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 
 import type { ErrorResponse } from '@api/dto';
 import type { RootState } from '@redux/Store';
-import { NETWORK_ERROR_MESSAGE } from '@shared/utils/error';
+import { getStatusMessage, NETWORK_ERROR_MESSAGE } from '@shared/utils/error';
 
 export const createAppAsyncThunk = createAsyncThunk.withTypes<{
   state: RootState;
@@ -41,13 +41,45 @@ const transportOf = (error: AxiosError): ErrorResponse['transport'] => {
   return error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT' ? 'timeout' : 'network';
 };
 
+const isString = (value: unknown): value is string => typeof value === 'string';
+
+const isFieldErrors = (value: unknown): value is { field: string; error: string }[] =>
+  Array.isArray(value) &&
+  value.every((item) => typeof item === 'object' && item !== null && isString(item.field) && isString(item.error));
+
+// The API's own error body; anything else (an empty body, a proxy's HTML, some other JSON) keeps only its status.
+const readApiBody = (data: unknown): Partial<ErrorResponse> => {
+  if (typeof data !== 'object' || data === null) return {};
+
+  const body = data as Record<string, unknown>;
+
+  if (typeof body.statusCode !== 'number' || !(isString(body.message) || isFieldErrors(body.message))) return {};
+
+  return {
+    message: body.message,
+    ...(isString(body.code) && { code: body.code }),
+    ...(isString(body.error) && { error: body.error }),
+    ...(isString(body.requestId) && { requestId: body.requestId }),
+    ...(isString(body.path) && { path: body.path }),
+    ...(isString(body.timestamp) && { timestamp: body.timestamp }),
+  };
+};
+
 export const getRejectValue = (error: unknown): ErrorResponse => {
-  const axiosError = error as AxiosError<ErrorResponse>;
-  const data = axiosError.response?.data;
+  const axiosError = error as AxiosError;
+  const response = axiosError.response;
 
-  if (!data) return networkError(transportOf(axiosError));
+  if (!response) return networkError(transportOf(axiosError));
 
-  const retryAfterMs = parseRetryAfterMs(axiosError.response?.headers?.['retry-after']);
+  const statusCode = response.status;
+  const retryAfterMs = parseRetryAfterMs(response.headers?.['retry-after']);
 
-  return retryAfterMs === undefined ? data : { ...data, retryAfterMs };
+  return {
+    message: getStatusMessage(statusCode),
+    path: axiosError.config?.url ?? '',
+    timestamp: new Date().toISOString(),
+    ...readApiBody(response.data),
+    statusCode,
+    ...(retryAfterMs !== undefined && { retryAfterMs }),
+  };
 };
