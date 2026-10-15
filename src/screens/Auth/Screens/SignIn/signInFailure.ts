@@ -8,18 +8,21 @@ export type SignInFailure =
   | { kind: 'credentials' }
   | { kind: 'connection' }
   | { kind: 'server' }
-  | { kind: 'rateLimited'; retryAfterMs?: number }
+  // When the server allows another attempt, as a timestamp, so the wait can be counted down.
+  | { kind: 'rateLimited'; retryAt?: number }
   | { kind: 'refused'; message: string; code?: string };
 
 // Null for a request canceled because its session ended: nothing went wrong that the user can act on.
-export const getSignInFailure = (error: ErrorResponse | undefined): SignInFailure | null => {
+export const getSignInFailure = (error: ErrorResponse | undefined, now = Date.now()): SignInFailure | null => {
   if (!error) return { kind: 'refused', message: getErrorMessage({}) };
 
   if (error.statusCode === 0) return error.transport === 'canceled' ? null : { kind: 'connection' };
 
   if (error.statusCode === 401) return { kind: 'credentials' };
 
-  if (error.statusCode === 429) return { kind: 'rateLimited', retryAfterMs: error.retryAfterMs };
+  if (error.statusCode === 429) {
+    return { kind: 'rateLimited', retryAt: error.retryAfterMs === undefined ? undefined : now + error.retryAfterMs };
+  }
 
   if (error.statusCode >= 500) return { kind: 'server' };
 

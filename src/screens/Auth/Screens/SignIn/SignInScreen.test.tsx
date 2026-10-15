@@ -213,6 +213,48 @@ describe('a failed sign-in', () => {
     expect(screen.getByText('Try again in 42 seconds.')).toBeTruthy();
   });
 
+  it('counts the wait down, and says when another attempt is allowed', async () => {
+    jest.useFakeTimers();
+    try {
+      rejectWith(429, { statusCode: 429, message: 'ThrottlerException: Too Many Requests' }, { 'retry-after': '42' });
+      renderSignIn();
+
+      await submit();
+      await act(async () => jest.advanceTimersByTime(30_000));
+
+      expect(screen.getByText('Try again in 12 seconds.')).toBeTruthy();
+
+      await act(async () => jest.advanceTimersByTime(11_000));
+
+      expect(screen.getByText('Try again in 1 second.')).toBeTruthy();
+
+      await act(async () => jest.advanceTimersByTime(1_000));
+
+      expect(screen.getByText('You can try again now.')).toBeTruthy();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('starts a new wait from its own refusal, not the earlier one', async () => {
+    jest.useFakeTimers();
+    try {
+      rejectWith(429, { statusCode: 429, message: 'ThrottlerException: Too Many Requests' }, { 'retry-after': '5' });
+      renderSignIn();
+
+      await submit();
+      await act(async () => jest.advanceTimersByTime(10_000));
+      expect(screen.getByText('You can try again now.')).toBeTruthy();
+
+      rejectWith(429, { statusCode: 429, message: 'ThrottlerException: Too Many Requests' }, { 'retry-after': '20' });
+      await act(async () => fireEvent.press(signInButton()));
+
+      expect(screen.getByText('Try again in 20 seconds.')).toBeTruthy();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('shows the server’s reason for any other refusal', async () => {
     rejectWith(403, { statusCode: 403, code: 'EMAIL_NOT_VERIFIED', message: 'Email is not verified' });
     renderSignIn();

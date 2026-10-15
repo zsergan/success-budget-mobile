@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Banner } from '@components';
 
 import type { SignInFailure } from '@screens/Auth/Screens/SignIn/signInFailure';
@@ -8,12 +9,35 @@ interface Props {
   onRetry: () => void;
 }
 
-const waitText = (retryAfterMs?: number) => {
-  if (retryAfterMs === undefined) return 'Wait a minute, then try again.';
+const secondsUntil = (time: number, now: number) => Math.max(0, Math.ceil((time - now) / 1000));
 
-  const seconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
+const waitText = (seconds: number) => {
+  if (seconds === 0) return 'You can try again now.';
 
   return `Try again in ${seconds} ${seconds === 1 ? 'second' : 'seconds'}.`;
+};
+
+// Mounted anew for each refusal (see its key), so the countdown never starts from an earlier one's clock.
+const RateLimitedBanner = ({ retryAt }: { retryAt?: number }) => {
+  const [now, setNow] = useState(Date.now);
+  const isWaiting = retryAt !== undefined && now < retryAt;
+
+  useEffect(() => {
+    if (!isWaiting) return;
+
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+
+    return () => clearInterval(timer);
+  }, [isWaiting]);
+
+  return (
+    <Banner
+      variant="card"
+      tone="warn"
+      title="Too many sign-in attempts"
+      text={retryAt === undefined ? 'Wait a minute, then try again.' : waitText(secondsUntil(retryAt, now))}
+    />
+  );
 };
 
 const SignInFailureBanner = ({ failure, isRetrying, onRetry }: Props) => {
@@ -55,9 +79,7 @@ const SignInFailureBanner = ({ failure, isRetrying, onRetry }: Props) => {
         />
       );
     case 'rateLimited':
-      return (
-        <Banner variant="card" tone="warn" title="Too many sign-in attempts" text={waitText(failure.retryAfterMs)} />
-      );
+      return <RateLimitedBanner key={failure.retryAt} retryAt={failure.retryAt} />;
     case 'refused':
       return <Banner variant="card" tone="danger" title="Couldn’t sign you in" text={failure.message} />;
   }
