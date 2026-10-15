@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { ActivityIndicator, TouchableOpacity, TouchableWithoutFeedback, View, Text } from 'react-native';
+import { ActivityIndicator, Keyboard, TouchableOpacity, TouchableWithoutFeedback, View, Text } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 
 import Icon from '@components/Icon/Icon';
@@ -16,6 +16,8 @@ interface Props {
   items: { label: string; value: number | string }[];
   selectedValue: number | string;
   onValueChange: (itemValue: number | string, itemIndex: number) => void;
+  // Called when the list closes, picked or not, the way a text field reports a blur.
+  onBlur?: () => void;
   label?: string;
   placeholder?: string;
   disabled?: boolean;
@@ -33,6 +35,7 @@ const InputPicker = ({
   items,
   selectedValue,
   onValueChange,
+  onBlur,
   label,
   placeholder,
   disabled,
@@ -48,9 +51,19 @@ const InputPicker = ({
 
   const selectedLabel = items.find((item) => item.value === Number(selectedValue))?.label || '';
 
+  const openPicker = () => {
+    Keyboard.dismiss();
+    setIsPickerVisible(true);
+  };
+
+  const closePicker = () => {
+    setIsPickerVisible(false);
+    onBlur?.();
+  };
+
   return (
     <>
-      <ModalContainer isVisible={isPickerVisible} animationType="fade" onClose={() => setIsPickerVisible(false)}>
+      <ModalContainer isVisible={isPickerVisible} animationType="fade" onClose={closePicker}>
         <View style={styles.container}>
           <TouchableWithoutFeedback>
             <View style={styles.contentContainer}>
@@ -72,7 +85,7 @@ const InputPicker = ({
           iconLeft={iconLeft}
           isFocused={isPickerVisible}
           disabled={disabled || isLoading}
-          onPress={() => setIsPickerVisible(true)}
+          onPress={openPicker}
           containerStyle={containerStyle}
           trailing={
             isLoading ? (
@@ -95,7 +108,7 @@ const InputPicker = ({
 
           <TouchableOpacity
             style={[styles.inputContainer, withShadow && styles.inputWithShadow]}
-            onPress={() => setIsPickerVisible(true)}
+            onPress={openPicker}
             activeOpacity={0.5}
             disabled={disabled}
           >
