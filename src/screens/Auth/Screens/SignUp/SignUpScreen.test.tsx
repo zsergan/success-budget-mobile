@@ -265,6 +265,33 @@ it('moves on to the next field from the keyboard', async () => {
   expect(screen.getByLabelText('Confirm password').props.returnKeyType).toBe('done');
 });
 
+it('keeps what was typed when the server is unreachable, and lets the form be sent again', async () => {
+  answerCurrencies();
+  mockedRegister.mockRejectedValueOnce({ code: 'ERR_NETWORK', message: 'Network Error' });
+  const { navigation } = await renderSignUp();
+
+  await fillInValidForm();
+  await act(async () => {
+    fireEvent.press(createAccountButton());
+  });
+
+  expect(navigation.navigate).not.toHaveBeenCalled();
+  expect(screen.getByLabelText('Name').props.value).toBe('Anna');
+  expect(screen.getByLabelText('Email').props.value).toBe('anna@kovalenko.co');
+  expect(screen.getByLabelText('Password').props.value).toBe('secret12');
+  expect(screen.getByLabelText('Confirm password').props.value).toBe('secret12');
+  expect(screen.getByText('USD · US dollar')).toBeTruthy();
+  expect(createAccountButton().props.accessibilityState).toMatchObject({ disabled: false, busy: false });
+
+  mockedRegister.mockResolvedValueOnce({ email: 'anna@kovalenko.co' } as Awaited<ReturnType<typeof register>>);
+  await act(async () => {
+    fireEvent.press(createAccountButton());
+  });
+
+  expect(mockedRegister).toHaveBeenCalledTimes(2);
+  expect(navigation.navigate).toHaveBeenCalledWith(ScreenNames.VERIFY_EMAIL_SCREEN);
+});
+
 it('waits for the currencies, offers a retry when they fail, and keeps what was typed', async () => {
   failCurrencies();
   await renderSignUp();
