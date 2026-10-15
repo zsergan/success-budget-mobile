@@ -1,3 +1,4 @@
+import { Children, isValidElement } from 'react';
 import { Provider } from 'react-redux';
 import { Modal, TextInput } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -219,16 +220,36 @@ describe('validation', () => {
     expect(checkMarks()).toHaveLength(1);
   });
 
-  it('asks for a currency when the list closes without one', async () => {
+  it('opens the list on no currency, and asks for one when it closes there', async () => {
     answerCurrencies();
     await renderSignUp();
 
     fireEvent.press(screen.getByRole('button', { name: 'Currency of your space' }));
+
+    const list = screen.UNSAFE_getByType(Picker);
+    const rows = Children.toArray(list.props.children).filter(isValidElement<{ label: string; value: unknown }>);
+
+    expect(rows.find((row) => row.props.value === list.props.selectedValue)?.props.label).toBe('Pick a currency');
+
     await act(async () => {
       fireEvent(screen.UNSAFE_getByType(Modal), 'requestClose');
     });
 
     expect(screen.getByText('Pick a currency.')).toBeTruthy();
+  });
+
+  it('drops the currency when the list is turned back to no currency', async () => {
+    answerCurrencies();
+    await renderSignUp();
+
+    await fillInValidForm();
+    await act(async () => screen.UNSAFE_getByType(Picker).props.onValueChange('', 0));
+    await act(async () => {
+      fireEvent(screen.UNSAFE_getByType(Modal), 'requestClose');
+    });
+
+    expect(screen.getByText('Pick a currency.')).toBeTruthy();
+    expect(createAccountButton().props.accessibilityState).toMatchObject({ disabled: true });
   });
 
   it('turns Create account on for a valid form, and holds it while the account is created', async () => {

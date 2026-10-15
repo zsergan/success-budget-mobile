@@ -12,10 +12,14 @@ import OutlinedField from '../OutlinedField/OutlinedField';
 import outlinedStyles from '../OutlinedField/style';
 import styles from './style';
 
+// The native list shows its first row as chosen when the value matches none, so an empty value gets its own row.
+const EMPTY_VALUE = '';
+
 interface Props {
   items: { label: string; value: number | string }[];
-  selectedValue: number | string;
-  onValueChange: (itemValue: number | string, itemIndex: number) => void;
+  selectedValue: number | string | undefined;
+  // Undefined for the empty row, which the list offers when there is a placeholder.
+  onValueChange: (itemValue: number | string | undefined, itemIndex: number) => void;
   // Called when the list closes, picked or not, the way a text field reports a blur.
   onBlur?: () => void;
   label?: string;
@@ -50,6 +54,14 @@ const InputPicker = ({
   const [isPickerVisible, setIsPickerVisible] = useState(false);
 
   const selectedLabel = items.find((item) => item.value === Number(selectedValue))?.label || '';
+  const hasEmptyRow = placeholder !== undefined;
+  const pickerValue = hasEmptyRow && !selectedLabel ? EMPTY_VALUE : selectedValue;
+
+  const changeValue = (value: number | string, index: number) => {
+    if (!hasEmptyRow) return onValueChange(value, index);
+
+    onValueChange(value === EMPTY_VALUE ? undefined : value, index - 1);
+  };
 
   const openPicker = () => {
     Keyboard.dismiss();
@@ -67,7 +79,9 @@ const InputPicker = ({
         <View style={styles.container}>
           <TouchableWithoutFeedback>
             <View style={styles.contentContainer}>
-              <Picker selectedValue={selectedValue} onValueChange={onValueChange}>
+              <Picker selectedValue={pickerValue} onValueChange={changeValue}>
+                {hasEmptyRow && <Picker.Item label={placeholder} value={EMPTY_VALUE} color={colors.placeholder} />}
+
                 {items.map((item) => (
                   <Picker.Item key={item.value} label={item.label} value={item.value} />
                 ))}
