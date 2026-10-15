@@ -1,6 +1,6 @@
 import { Banner } from '@components';
 
-import type { SignInFailure } from '../../signInFailure';
+import type { SignInFailure } from '@screens/Auth/Screens/SignIn/signInFailure';
 
 interface Props {
   failure: SignInFailure;
