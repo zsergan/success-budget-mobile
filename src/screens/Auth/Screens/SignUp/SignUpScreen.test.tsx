@@ -6,6 +6,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { register } from '@api/auth.api';
 import { createAppStore } from '@redux/Store';
+import { registerMe } from '@redux/state/auth/thunks';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
 import SignUpScreen from './SignUpScreen';
@@ -44,19 +45,19 @@ const answerCurrencies = () => mockedRequest.mockResolvedValue({ data: CURRENCIE
 
 const failCurrencies = () => mockedRequest.mockRejectedValue({ code: 'ERR_NETWORK', message: 'Network Error' });
 
-const renderSignUp = async () => {
-  const navigation = { navigate: jest.fn(), goBack: jest.fn() };
+const renderSignUp = async (store = createAppStore()) => {
+  const navigation = { navigate: jest.fn(), goBack: jest.fn(), isFocused: jest.fn(() => true) };
 
-  render(
+  const view = render(
     <SafeAreaProvider initialMetrics={metrics}>
-      <Provider store={createAppStore()}>
+      <Provider store={store}>
         <SignUpScreen {...({ navigation, route: {} } as unknown as RootStackScreenProps<ScreenNames.SIGN_UP_SCREEN>)} />
       </Provider>
     </SafeAreaProvider>,
   );
   await act(async () => {});
 
-  return { navigation };
+  return { navigation, store, unmount: view.unmount };
 };
 
 const createAccountButton = () => screen.getByRole('button', { name: 'Create account' });
@@ -317,4 +318,77 @@ it('opens Sign In from its link', async () => {
   fireEvent.press(screen.getByRole('link', { name: 'Sign In' }));
 
   expect(navigation.navigate).toHaveBeenCalledWith(ScreenNames.SIGN_IN_SCREEN, undefined, { pop: true });
+});
+
+describe('going on to verification', () => {
+  const registered = (email: string) => ({ email }) as Awaited<ReturnType<typeof register>>;
+
+  // An earlier sign-up of this session whose code was never entered.
+  const storeWithEarlierSignUp = () => {
+    const store = createAppStore();
+    const payload = { name: 'Anna', email: 'old@kovalenko.co', password: 'secret12', base_currency_id: 7 };
+
+    store.dispatch(registerMe.fulfilled({ email: payload.email }, 'earlier', payload));
+
+    return store;
+  };
+
+  const sendForm = async () => {
+    await fillInValidForm();
+    await act(async () => {
+      fireEvent.press(createAccountButton());
+    });
+  };
+
+  it('stays on a reopened Sign Up while an earlier sign-up still waits for its code', async () => {
+    answerCurrencies();
+    const { navigation } = await renderSignUp(storeWithEarlierSignUp());
+
+    expect(navigation.navigate).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Email').props.value).toBe('');
+  });
+
+  it('verifies the address this form registered, not the earlier one', async () => {
+    answerCurrencies();
+    mockedRegister.mockResolvedValue(registered('anna@kovalenko.co'));
+    const { navigation, store } = await renderSignUp(storeWithEarlierSignUp());
+
+    await sendForm();
+
+    expect(navigation.navigate).toHaveBeenCalledTimes(1);
+    expect(navigation.navigate).toHaveBeenCalledWith(ScreenNames.VERIFY_EMAIL_SCREEN);
+    expect(store.getState().auth.userEmail).toBe('anna@kovalenko.co');
+  });
+
+  it('goes on to verification when the code for this address is already on its way', async () => {
+    answerCurrencies();
+    mockedRegister.mockRejectedValue({
+      response: {
+        status: 429,
+        data: { statusCode: 429, code: 'CONFIRMATION_EMAIL_RATE_LIMITED', message: 'Already requested' },
+        headers: {},
+      },
+      config: { url: '/users/register' },
+    });
+    const { navigation, store } = await renderSignUp();
+
+    await sendForm();
+
+    expect(navigation.navigate).toHaveBeenCalledWith(ScreenNames.VERIFY_EMAIL_SCREEN);
+    expect(store.getState().auth.userEmail).toBe('anna@kovalenko.co');
+  });
+
+  it('leaves a user who went away during the request where they are', async () => {
+    answerCurrencies();
+    let answer: (profile: Awaited<ReturnType<typeof register>>) => void = () => {};
+    mockedRegister.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    const { navigation, unmount } = await renderSignUp();
+
+    await sendForm();
+    navigation.isFocused.mockReturnValue(false);
+    unmount();
+    await act(async () => answer(registered('anna@kovalenko.co')));
+
+    expect(navigation.navigate).not.toHaveBeenCalled();
+  });
 });

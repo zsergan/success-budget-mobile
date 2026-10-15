@@ -3,11 +3,10 @@ import * as yup from 'yup';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
-import { useAppDispatch, useAppSelector } from '@redux/hooks';
+import { useAppDispatch } from '@redux/hooks';
 import { registerMe } from '@redux/state/auth/thunks';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
-import { selectAuth } from '@redux/state/auth/selectors';
 import emailSchema from '@screens/Auth/Screens/emailSchema';
 import useSingleSubmit from '@screens/Auth/Screens/useSingleSubmit';
 
@@ -46,7 +45,6 @@ interface FormData {
 type UseSignUpFormProps = Pick<RootStackScreenProps<ScreenNames.SIGN_UP_SCREEN>, 'navigation'>;
 
 const useSignUpForm = ({ navigation }: UseSignUpFormProps) => {
-  const { userEmail } = useAppSelector(selectAuth);
   const dispatch = useAppDispatch();
 
   const {
@@ -77,14 +75,8 @@ const useSignUpForm = ({ navigation }: UseSignUpFormProps) => {
     }
   }, [password, getFieldState, trigger]);
 
-  useEffect(() => {
-    if (userEmail) {
-      navigation.navigate(ScreenNames.VERIFY_EMAIL_SCREEN);
-    }
-  }, [navigation, userEmail]);
-
-  const register = (formData: FormData) =>
-    dispatch(
+  const register = async (formData: FormData) => {
+    const result = await dispatch(
       registerMe({
         email: formData.email,
         password: formData.password,
@@ -92,6 +84,12 @@ const useSignUpForm = ({ navigation }: UseSignUpFormProps) => {
         base_currency_id: formData.currency,
       }),
     );
+
+    // A registration finished after the user left must not pull them back into it.
+    if (registerMe.fulfilled.match(result) && navigation.isFocused()) {
+      navigation.navigate(ScreenNames.VERIFY_EMAIL_SCREEN);
+    }
+  };
 
   const onSubmit = useSingleSubmit(register);
 
