@@ -2,6 +2,9 @@ import { StyleSheet } from 'react-native';
 
 import theme, { colors, shadow } from '@shared/theme';
 
+const LARGE_BUTTON_MIN_HEIGHT = 56;
+const OUTLINE_WIDTH = 1;
+
 const styles = StyleSheet.create({
   button: {
     height: 52,
@@ -19,7 +22,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.secondary,
   },
   outlineButton: {
-    borderWidth: 1,
+    borderWidth: OUTLINE_WIDTH,
     borderColor: colors.hairline,
     backgroundColor: colors.elevated,
   },
@@ -29,8 +32,12 @@ const styles = StyleSheet.create({
   dangerButton: {
     backgroundColor: colors.danger,
   },
+  // Grows with its label under large system text instead of clipping it. At the default size it stays 56 tall,
+  // the outlined one included: its border sits outside the padding.
   largeButton: {
-    height: 56,
+    height: 'auto',
+    minHeight: LARGE_BUTTON_MIN_HEIGHT,
+    paddingVertical: (LARGE_BUTTON_MIN_HEIGHT - theme.lineHeights.bodyLg) / 2 - OUTLINE_WIDTH,
     borderRadius: 18,
   },
   primaryButtonDisabled: {
