@@ -181,4 +181,38 @@ describe('a failed sign-in', () => {
     expect(screen.getByText('Couldn’t sign you in')).toBeTruthy();
     expect(screen.getByText('Email is not verified')).toBeTruthy();
   });
+
+  it('keeps an unverified email’s refusal through a password edit and drops it for another email', async () => {
+    rejectWith(403, { statusCode: 403, code: 'EMAIL_NOT_VERIFIED', message: 'Email is not verified' });
+    renderSignIn();
+
+    await submit();
+    await act(async () => fireEvent.changeText(screen.getByLabelText('Password'), 'secret12'));
+
+    expect(screen.getByText('Email is not verified')).toBeTruthy();
+
+    await act(async () => fireEvent.changeText(screen.getByLabelText('Email'), 'anna@kovalenko.com'));
+
+    expect(screen.queryByText('Couldn’t sign you in')).toBeNull();
+  });
+
+  it('drops any other refusal once either field changes', async () => {
+    rejectWith(400, { statusCode: 400, code: 'VALIDATION_FAILED', message: 'email must be an email' });
+    renderSignIn();
+
+    await submit();
+    await act(async () => fireEvent.changeText(screen.getByLabelText('Password'), 'secret12'));
+
+    expect(screen.queryByText('Couldn’t sign you in')).toBeNull();
+  });
+
+  it('keeps a lost connection’s banner while the form is edited', async () => {
+    rejectWithoutAnswer();
+    renderSignIn();
+
+    await submit();
+    await act(async () => fireEvent.changeText(screen.getByLabelText('Email'), 'anna@kovalenko.com'));
+
+    expect(screen.getByText('Couldn’t reach the server')).toBeTruthy();
+  });
 });
