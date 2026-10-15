@@ -80,7 +80,8 @@ const authSlice = createSlice({
       state.storedSessionRead = null;
     });
 
-    builder.addMatcher(isRejected(registerMe, verifyEmailMe, loginMe), (state, action) => {
+    // Sign In shows its own failures in place, so they never reach the sign-up or verify screens.
+    builder.addMatcher(isRejected(registerMe, verifyEmailMe), (state, action) => {
       // The verify screen sends an already verified account to sign in instead of showing this as an error.
       const isAlreadyVerified = verifyEmailMe.rejected.match(action) && isApiError(action.payload, 409);
 

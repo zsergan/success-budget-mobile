@@ -1,10 +1,12 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as yup from 'yup';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
 import { useAppDispatch } from '@redux/hooks';
 import { loginMe } from '@redux/state/auth/thunks';
+import type { SignInFailure } from './signInFailure';
+import { getSignInFailure } from './signInFailure';
 
 // Sign-up's stronger password rule is not checked here: accounts made under the older min(6) must still sign in.
 const schema = yup.object().shape({
@@ -21,10 +23,12 @@ const useSignInForm = () => {
   const dispatch = useAppDispatch();
   // isSubmitting reaches the button only on the next render, so a quick second press joins the request already sent.
   const pendingLogin = useRef<Promise<unknown> | null>(null);
+  const [failure, setFailure] = useState<SignInFailure | null>(null);
 
   const {
     control,
     handleSubmit,
+    watch,
     formState: { isSubmitting, isValid },
   } = useForm({
     resolver: yupResolver(schema),
@@ -35,8 +39,23 @@ const useSignInForm = () => {
     },
   });
 
+  // Wrong credentials stop being true once either field changes; a lost connection does not.
+  useEffect(() => {
+    const subscription = watch(() => setFailure((current) => (current?.kind === 'credentials' ? null : current)));
+
+    return () => subscription.unsubscribe();
+  }, [watch]);
+
+  const login = async ({ email, password }: FormData) => {
+    const result = await dispatch(loginMe({ email, password }));
+
+    if (loginMe.rejected.match(result)) {
+      setFailure(getSignInFailure(result.payload));
+    }
+  };
+
   const onSubmit = (formData: FormData) => {
-    pendingLogin.current ??= dispatch(loginMe({ email: formData.email, password: formData.password })).finally(() => {
+    pendingLogin.current ??= login(formData).finally(() => {
       pendingLogin.current = null;
     });
 
@@ -48,6 +67,7 @@ const useSignInForm = () => {
     onSubmit: handleSubmit(onSubmit),
     isSubmitting,
     isSubmitDisabled: !isValid,
+    failure,
   };
 };
 

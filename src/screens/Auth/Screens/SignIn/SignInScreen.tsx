@@ -1,16 +1,12 @@
-import { useEffect } from 'react';
 import { View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
 import { Button, Input, PasswordInput } from '@components';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
-import { useAppSelector } from '@redux/hooks';
-import { selectAuth } from '@redux/state/auth/selectors';
-import { useAlert } from '@hooks';
-import { getErrorMessage } from '@shared/utils';
 import AuthFormLayout from '@screens/Auth/AuthFormLayout/AuthFormLayout';
 import TextLink from '@screens/Auth/TextLink/TextLink';
+import FailureBanner from './components/FailureBanner/FailureBanner';
 import useSignInForm from './useSignInForm';
 
 import styles from './style';
@@ -18,15 +14,8 @@ import styles from './style';
 interface Props extends RootStackScreenProps<ScreenNames.SIGN_IN_SCREEN> {}
 
 const SignInScreen = ({ navigation }: Props) => {
-  const { error } = useAppSelector(selectAuth);
-  const { control, onSubmit, isSubmitting, isSubmitDisabled } = useSignInForm();
-  const { addAlert } = useAlert();
-
-  useEffect(() => {
-    if (error) {
-      addAlert(getErrorMessage(error));
-    }
-  }, [error, addAlert]);
+  const { control, onSubmit, isSubmitting, isSubmitDisabled, failure } = useSignInForm();
+  const isWrongCredentials = failure?.kind === 'credentials';
 
   return (
     <AuthFormLayout
@@ -49,6 +38,12 @@ const SignInScreen = ({ navigation }: Props) => {
         onLinkPress: () => navigation.navigate(ScreenNames.SIGN_UP_SCREEN, undefined, { pop: true }),
       }}
     >
+      {failure && (
+        <View style={styles.failure}>
+          <FailureBanner failure={failure} isRetrying={isSubmitting} onRetry={onSubmit} />
+        </View>
+      )}
+
       <View style={styles.fields}>
         <Controller
           name="email"
@@ -67,7 +62,10 @@ const SignInScreen = ({ navigation }: Props) => {
               autoComplete="email"
               autoCapitalize="none"
               autoCorrect={false}
-              error={errors.email?.message}
+              error={
+                errors.email?.message ??
+                (isWrongCredentials ? 'No account matches this email and password.' : undefined)
+              }
             />
           )}
         />

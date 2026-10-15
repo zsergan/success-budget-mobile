@@ -52,7 +52,7 @@ describe('loginMe', () => {
     expect(store.getState().auth.userToken).toBe('a-token');
   });
 
-  it('rejects with the server error body and does not sign the user in', async () => {
+  it('rejects with the server error body, keeping it out of the shared auth error', async () => {
     mockedLogin.mockRejectedValue(axiosErrorFor(errorResponse));
 
     const store = createTestStore();
@@ -62,7 +62,7 @@ describe('loginMe', () => {
     expect(action.payload).toEqual(errorResponse);
     expect(mockedSetItemAsync).not.toHaveBeenCalled();
     expect(store.getState().auth.isSignedIn).toBe(false);
-    expect(store.getState().auth.error).toEqual(errorResponse);
+    expect(store.getState().auth.error).toBeUndefined();
   });
 });
 
