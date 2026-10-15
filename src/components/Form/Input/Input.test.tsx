@@ -20,6 +20,16 @@ describe('an outlined input', () => {
 
     expect(screen.getByLabelText('Email')).toBeTruthy();
   });
+
+  it('reads its hint, or the error in its place, as the field’s accessibility hint', () => {
+    const { rerender } = render(<Input variant="outlined" label="Password" hint="At least 8 characters." />);
+
+    expect(screen.getByLabelText('Password').props.accessibilityHint).toBe('At least 8 characters.');
+
+    rerender(<Input variant="outlined" label="Password" hint="At least 8 characters." error="Too short." />);
+
+    expect(screen.getByLabelText('Password').props.accessibilityHint).toBe('Too short.');
+  });
 });
 
 it('names the password toggle by what it does next', () => {

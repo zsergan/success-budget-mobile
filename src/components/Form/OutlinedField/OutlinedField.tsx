@@ -67,6 +67,7 @@ const OutlinedField = ({
           activeOpacity={0.6}
           accessibilityRole="button"
           accessibilityLabel={label}
+          accessibilityHint={error ?? hint}
         >
           {content}
         </TouchableOpacity>

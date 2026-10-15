@@ -85,6 +85,7 @@ const Input = ({
           ref={ref}
           placeholderTextColor={colors.placeholder}
           accessibilityLabel={label}
+          accessibilityHint={error ?? hint}
           {...props}
           editable={editable}
           onFocus={handleFocus}
