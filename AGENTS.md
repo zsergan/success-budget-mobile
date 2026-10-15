@@ -123,6 +123,8 @@ relying on or changing them.
   over. Otherwise leave changes in the working tree and say so.
 - **Never push or create a PR without explicit approval**, even when
   commits were authorized.
+- PR descriptions follow `.github/pull_request_template.md`; fill in
+  "Mobile API changes" (or leave "None").
 - One commit = one coherent, reviewable, buildable change. Don't split one
   logical change into tiny commits or bundle unrelated ones.
 - Commit messages follow the history: `type(scope): imperative subject`
