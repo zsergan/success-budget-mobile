@@ -1,3 +1,4 @@
+import type { Ref } from 'react';
 import { useState } from 'react';
 import type { TextInputProps, StyleProp, ViewStyle } from 'react-native';
 import { Text, TextInput, View, TouchableOpacity } from 'react-native';
@@ -11,6 +12,7 @@ import outlinedStyles from '../OutlinedField/style';
 import styles from './style';
 
 export interface InputProps extends TextInputProps {
+  ref?: Ref<TextInput>;
   label?: string;
   error?: string;
   iconLeft?: IconType;
@@ -26,6 +28,7 @@ export interface InputProps extends TextInputProps {
 }
 
 const Input = ({
+  ref,
   label,
   error,
   iconLeft,
@@ -79,6 +82,7 @@ const Input = ({
         }
       >
         <TextInput
+          ref={ref}
           placeholderTextColor={colors.placeholder}
           accessibilityLabel={label}
           {...props}
@@ -103,6 +107,7 @@ const Input = ({
         )}
 
         <TextInput
+          ref={ref}
           placeholderTextColor={colors.muted}
           {...props}
           editable={editable}
