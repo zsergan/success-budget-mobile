@@ -5,7 +5,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 
 import { useAppDispatch } from '@redux/hooks';
 import { loginMe } from '@redux/state/auth/thunks';
-import emailSchema from '@screens/Auth/Screens/emailSchema';
+import emailSchema from '@screens/Auth/validation/emailSchema';
 import { useSingleSubmit } from '@hooks';
 import type { SignInFailure, SignInField } from './signInFailure';
 import { getFailureFields, getSignInFailure } from './signInFailure';

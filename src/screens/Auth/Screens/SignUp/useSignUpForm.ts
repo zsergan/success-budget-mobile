@@ -9,7 +9,7 @@ import { registerMe } from '@redux/state/auth/thunks';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { getErrorMessage } from '@shared/utils';
-import emailSchema from '@screens/Auth/Screens/emailSchema';
+import emailSchema from '@screens/Auth/validation/emailSchema';
 
 const PASSWORD_MIN_LENGTH = 8;
 
