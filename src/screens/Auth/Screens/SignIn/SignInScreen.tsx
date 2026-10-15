@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import { Button, Input, PasswordInput, TextLink } from '@components';
+import { Banner, Button, Input, PasswordInput, TextLink } from '@components';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import AuthFormLayout from '@screens/Auth/AuthFormLayout/AuthFormLayout';
@@ -12,8 +12,10 @@ import styles from './style';
 
 interface Props extends RootStackScreenProps<ScreenNames.SIGN_IN_SCREEN> {}
 
-const SignInScreen = ({ navigation }: Props) => {
-  const { control, onSubmit, isSubmitting, isSubmitDisabled, failure, focusField } = useSignInForm();
+const SignInScreen = ({ navigation, route }: Props) => {
+  const passwordReset = route.params?.passwordReset;
+  const { control, onSubmit, isSubmitting, isSubmitDisabled, failure, focusField, getRecoveryEmail } =
+    useSignInForm(passwordReset);
   const isWrongCredentials = failure?.kind === 'credentials';
 
   return (
@@ -37,10 +39,25 @@ const SignInScreen = ({ navigation }: Props) => {
         onLinkPress: () => navigation.navigate(ScreenNames.SIGN_UP_SCREEN, undefined, { pop: true }),
       }}
     >
-      {failure && (
+      {failure ? (
         <View style={styles.failure}>
           <SignInFailureBanner failure={failure} isRetrying={isSubmitting} onRetry={onSubmit} />
         </View>
+      ) : (
+        passwordReset && (
+          <View style={styles.failure}>
+            {passwordReset.outcome === 'updated' ? (
+              <Banner variant="card" tone="success" title="Password updated." text="Sign in with your new password." />
+            ) : (
+              <Banner
+                variant="card"
+                tone="warn"
+                title="Your password may have changed"
+                text="The server’s answer was lost. Try the new password; if it’s refused, reset it again."
+              />
+            )}
+          </View>
+        )
       )}
 
       <View style={styles.fields}>
@@ -97,7 +114,10 @@ const SignInScreen = ({ navigation }: Props) => {
       </View>
 
       <View style={styles.forgotPassword}>
-        <TextLink title="Forgot password?" onPress={() => {}} />
+        <TextLink
+          title="Forgot password?"
+          onPress={() => navigation.navigate(ScreenNames.FORGOT_PASSWORD_SCREEN, { email: getRecoveryEmail() })}
+        />
       </View>
     </AuthFormLayout>
   );

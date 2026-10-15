@@ -12,7 +12,7 @@ interface Props {
   onBackButtonPress: () => void;
   children: ReactNode;
   action: ReactNode;
-  prompt: { text: string; linkTitle: string; onLinkPress: () => void };
+  prompt?: { text: string; linkTitle: string; onLinkPress: () => void };
 }
 
 const AuthFormLayout = ({ title, description, onBackButtonPress, children, action, prompt }: Props) => {
@@ -51,11 +51,13 @@ const AuthFormLayout = ({ title, description, onBackButtonPress, children, actio
       <View style={styles.footer}>
         {action}
 
-        <View style={styles.prompt}>
-          <Text style={styles.promptText}>{prompt.text}</Text>
+        {prompt && (
+          <View style={styles.prompt}>
+            <Text style={styles.promptText}>{prompt.text}</Text>
 
-          <TextLink title={prompt.linkTitle} onPress={prompt.onLinkPress} />
-        </View>
+            <TextLink title={prompt.linkTitle} onPress={prompt.onLinkPress} />
+          </View>
+        )}
       </View>
     </RootLayout>
   );

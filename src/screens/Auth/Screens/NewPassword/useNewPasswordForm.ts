@@ -1,0 +1,145 @@
+import { useEffect, useRef, useState } from 'react';
+import * as yup from 'yup';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+
+import { useSingleSubmit } from '@hooks';
+import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
+import { passwordResetApi } from '@redux/state/passwordReset/api';
+import { isAuthorizationUsable, selectPasswordReset } from '@redux/state/passwordReset/selectors';
+import { resetAuthorizationDiscarded } from '@redux/state/passwordReset/slice';
+import { ScreenNames } from '@shared/enums';
+import type { PasswordResetOutcome, RootStackScreenProps } from '@shared/types';
+import type { PasswordResetFailure } from '@screens/Auth/passwordReset/passwordResetFailure';
+import { getPasswordResetFailure } from '@screens/Auth/passwordReset/passwordResetFailure';
+import useAbortOnLeave from '@screens/Auth/passwordReset/useAbortOnLeave';
+
+const PASSWORD_MIN_LENGTH = 8;
+// bcrypt ignores every byte past the 72nd, so the backend refuses longer passwords.
+const PASSWORD_MAX_BYTES = 72;
+
+export const utf8Length = (text: string) => {
+  let bytes = 0;
+
+  for (const char of text) {
+    const codePoint = char.codePointAt(0) ?? 0;
+
+    bytes += codePoint < 0x80 ? 1 : codePoint < 0x800 ? 2 : codePoint < 0x10000 ? 3 : 4;
+  }
+
+  return bytes;
+};
+
+const WEAK_MESSAGE = 'Too weak. Use at least 8 characters, including a letter and a number.';
+
+const schema = yup.object().shape({
+  password: yup
+    .string()
+    .required('Enter a new password.')
+    .min(PASSWORD_MIN_LENGTH, WEAK_MESSAGE)
+    .matches(/[A-Za-z]/, WEAK_MESSAGE)
+    .matches(/\d/, WEAK_MESSAGE)
+    .test('max-bytes', 'Too long. Use a shorter password.', (value) => utf8Length(value ?? '') <= PASSWORD_MAX_BYTES),
+  passwordConfirm: yup
+    .string()
+    .required('Repeat the new password.')
+    .test('matches-password', 'Passwords don’t match.', (value, { parent }) => !value || value === parent.password),
+});
+
+interface FormData {
+  password: string;
+  passwordConfirm: string;
+}
+
+type UseNewPasswordFormProps = Pick<RootStackScreenProps<ScreenNames.NEW_PASSWORD_SCREEN>, 'navigation'>;
+
+const useNewPasswordForm = ({ navigation }: UseNewPasswordFormProps) => {
+  const dispatch = useAppDispatch();
+  const store = useAppStore();
+  const abortOnLeave = useAbortOnLeave();
+  const { email, authorization } = useAppSelector(selectPasswordReset);
+  const [failure, setFailure] = useState<PasswordResetFailure | null>(null);
+  // Only a code the server just confirmed opens this screen.
+  const [isAuthorized] = useState(() => isAuthorizationUsable(authorization));
+  // A save whose answer was lost may have changed the password, so a later refusal can't tell it failed.
+  const mayHaveSaved = useRef(false);
+
+  const {
+    control,
+    handleSubmit,
+    setFocus,
+    formState: { isSubmitting },
+  } = useForm({
+    resolver: yupResolver(schema),
+    mode: 'onTouched',
+    defaultValues: { password: '', passwordConfirm: '' },
+  });
+
+  useEffect(() => {
+    if (!isAuthorized) navigation.popTo(ScreenNames.RESET_CODE_SCREEN);
+  }, [isAuthorized, navigation]);
+
+  // Going back means confirming the code again; the authorization never outlives this screen.
+  useEffect(() => () => void dispatch(resetAuthorizationDiscarded()), [dispatch]);
+
+  const finish = (outcome: PasswordResetOutcome['outcome']) => {
+    navigation.popTo(ScreenNames.SIGN_IN_SCREEN, { passwordReset: { email: email ?? '', outcome } });
+  };
+
+  const onAuthorizationInvalid = () => {
+    if (mayHaveSaved.current) {
+      finish('unknown');
+    } else {
+      navigation.popTo(ScreenNames.RESET_CODE_SCREEN, { notice: 'authorizationExpired' });
+    }
+  };
+
+  const save = async ({ password }: FormData) => {
+    const current = store.getState().passwordReset.authorization;
+
+    if (current === null || !isAuthorizationUsable(current)) {
+      onAuthorizationInvalid();
+      return;
+    }
+
+    setFailure(null);
+    const result = await abortOnLeave(
+      dispatch(
+        passwordResetApi.endpoints.completePasswordReset.initiate(
+          { reset_token: current.token, password },
+          { track: false },
+        ),
+      ),
+    );
+
+    if (!result.error) {
+      finish('updated');
+      return;
+    }
+
+    const next = getPasswordResetFailure(result.error);
+
+    if (next?.kind === 'authorizationInvalid') {
+      onAuthorizationInvalid();
+      return;
+    }
+
+    if (next?.kind === 'connection') mayHaveSaved.current = true;
+
+    setFailure(next);
+  };
+
+  const onSubmit = useSingleSubmit(save);
+
+  return {
+    isAuthorized,
+    email,
+    control,
+    onSubmit: handleSubmit(onSubmit),
+    isSubmitting,
+    failure,
+    focusField: setFocus,
+  };
+};
+
+export default useNewPasswordForm;

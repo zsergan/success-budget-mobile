@@ -7,6 +7,7 @@ import { useAppDispatch } from '@redux/hooks';
 import { loginMe } from '@redux/state/auth/thunks';
 import emailSchema from '@screens/Auth/validation/emailSchema';
 import { useSingleSubmit } from '@hooks';
+import type { PasswordResetOutcome } from '@shared/types';
 import type { SignInFailure, SignInField } from './signInFailure';
 import { getFailureFields, getSignInFailure } from './signInFailure';
 
@@ -21,7 +22,7 @@ interface FormData {
   password: string;
 }
 
-const useSignInForm = () => {
+const useSignInForm = (passwordReset?: PasswordResetOutcome) => {
   const dispatch = useAppDispatch();
   const [failure, setFailure] = useState<SignInFailure | null>(null);
   const editedSinceSubmit = useRef(new Set<SignInField>());
@@ -31,6 +32,8 @@ const useSignInForm = () => {
     handleSubmit,
     watch,
     setFocus,
+    getValues,
+    setValue,
     formState: { isSubmitting, isValid },
   } = useForm({
     resolver: yupResolver(schema),
@@ -51,6 +54,23 @@ const useSignInForm = () => {
 
     return () => subscription.unsubscribe();
   }, [watch]);
+
+  // Back from recovery: the address it reset, with the old password gone.
+  useEffect(() => {
+    if (!passwordReset) return;
+
+    setFailure(null);
+    setValue('email', passwordReset.email, { shouldValidate: true });
+    setValue('password', '');
+    setFocus('password');
+  }, [passwordReset, setValue, setFocus]);
+
+  // Recovery starts from the address typed here, but only a complete one.
+  const getRecoveryEmail = () => {
+    const email = getValues('email').trim();
+
+    return emailSchema.isValidSync(email) ? email : undefined;
+  };
 
   const login = async ({ email, password }: FormData) => {
     editedSinceSubmit.current.clear();
@@ -73,6 +93,7 @@ const useSignInForm = () => {
     isSubmitDisabled: !isValid,
     failure,
     focusField: setFocus,
+    getRecoveryEmail,
   };
 };
 

@@ -10,7 +10,10 @@ import {
   CategoriesScreen,
   CreateSpaceScreen,
   CreateWalletScreen,
+  ForgotPasswordScreen,
   MembersScreen,
+  NewPasswordScreen,
+  ResetCodeScreen,
   SignInScreen,
   SignUpScreen,
   VerifyEmailScreen,
@@ -117,6 +120,21 @@ const RootNavigator = () => {
                 <Stack.Screen
                   name={ScreenNames.VERIFY_EMAIL_SCREEN}
                   component={VerifyEmailScreen}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name={ScreenNames.FORGOT_PASSWORD_SCREEN}
+                  component={ForgotPasswordScreen}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name={ScreenNames.RESET_CODE_SCREEN}
+                  component={ResetCodeScreen}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name={ScreenNames.NEW_PASSWORD_SCREEN}
+                  component={NewPasswordScreen}
                   options={{ headerShown: false }}
                 />
               </>
