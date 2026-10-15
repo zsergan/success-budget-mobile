@@ -117,6 +117,7 @@ export type IconType =
   | 'mail-check'
   | 'clock'
   | 'clipboard'
+  | 'lock-open'
   | 'trend-up'
   | 'trend-down';
 

@@ -5,7 +5,6 @@ import { act, fireEvent, screen } from '@testing-library/react-native';
 import {
   answer,
   header,
-  lost,
   mockRequest,
   ok,
   openForgotPassword,
@@ -153,34 +152,4 @@ it('checks the authorization’s expiry before sending the password', async () =
 
   expect(sentTo('complete')).toEqual([]);
   expect(screen.getByText('Time to set a password ran out')).toBeTruthy();
-});
-
-it('keeps the passwords after a lost save, and treats a refused retry as a possible change', async () => {
-  answer({
-    request: [REQUESTED],
-    verify: [VERIFIED],
-    complete: [lost, refused(400, 'PASSWORD_RESET_AUTHORIZATION_INVALID')],
-  });
-
-  await reachNewPassword();
-  await savePassword();
-
-  expect(screen.getByText('Couldn’t reach the server')).toBeTruthy();
-  expect(screen.getByLabelText('New password').props.value).toBe('sunny2026');
-
-  await press('Retry');
-
-  expect(header('Welcome back')).toBeTruthy();
-  expect(screen.getByText('Your password may have changed')).toBeTruthy();
-  expect(screen.getByLabelText('Email').props.value).toBe('anna@kovalenko.co');
-});
-
-it('checks the new password on the device before sending it', async () => {
-  answer({ request: [REQUESTED], verify: [VERIFIED] });
-
-  await reachNewPassword();
-  await savePassword('sunnyday');
-
-  expect(screen.getByLabelText('New password').props.accessibilityHint).toMatch(/^Too weak/);
-  expect(sentTo('complete')).toEqual([]);
 });

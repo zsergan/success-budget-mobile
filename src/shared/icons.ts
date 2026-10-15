@@ -51,6 +51,7 @@ const UI_ICON_PATHS = {
   'mail-check': 'M3.5 6.5h17v6M3.5 6.5l8.5 6 8.5-6M3.5 6.5v11h9M15 18.5l2 2 4-4',
   clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7.5V12l3 2',
   clipboard: 'M9 4.5h6v3H9zM9 6H6.5v14h11V6H15',
+  'lock-open': 'M7 11V8a5 5 0 0 1 9.6-2M5 11h14v9H5z',
   'trend-up': 'M12 19V5M6 11l6-6 6 6',
   'trend-down': 'M12 5v14M6 13l6 6 6-6',
 } as const;

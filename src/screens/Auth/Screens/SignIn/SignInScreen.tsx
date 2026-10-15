@@ -53,7 +53,9 @@ const SignInScreen = ({ navigation, route }: Props) => {
                 variant="card"
                 tone="warn"
                 title="Your password may have changed"
-                text="The server’s answer was lost. Try the new password; if it’s refused, reset it again."
+                text="We couldn’t confirm the reset. Try the new password; if it’s refused, reset it again."
+                actionLabel="Reset again"
+                onAction={() => navigation.navigate(ScreenNames.FORGOT_PASSWORD_SCREEN, { email: passwordReset.email })}
               />
             )}
           </View>

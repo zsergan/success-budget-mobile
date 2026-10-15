@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import * as yup from 'yup';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
 import { useSingleSubmit } from '@hooks';
@@ -30,20 +30,34 @@ export const utf8Length = (text: string) => {
   return bytes;
 };
 
-const WEAK_MESSAGE = 'Too weak. Use at least 8 characters, including a letter and a number.';
+// The backend's rule for a new password; Sign In keeps its older, looser check for existing accounts.
+export const getPasswordRules = (password: string) => ({
+  length: password.length >= PASSWORD_MIN_LENGTH,
+  letter: /[A-Za-z]/.test(password),
+  digit: /\d/.test(password),
+});
+
+export const isStrongPassword = (password: string) => {
+  const rules = getPasswordRules(password);
+
+  return rules.length && rules.letter && rules.digit;
+};
 
 const schema = yup.object().shape({
   password: yup
     .string()
     .required('Enter a new password.')
-    .min(PASSWORD_MIN_LENGTH, WEAK_MESSAGE)
-    .matches(/[A-Za-z]/, WEAK_MESSAGE)
-    .matches(/\d/, WEAK_MESSAGE)
+    .test('strong', 'Too weak. Add what’s missing below.', (value) => isStrongPassword(value ?? ''))
     .test('max-bytes', 'Too long. Use a shorter password.', (value) => utf8Length(value ?? '') <= PASSWORD_MAX_BYTES),
   passwordConfirm: yup
     .string()
     .required('Repeat the new password.')
-    .test('matches-password', 'Passwords don’t match.', (value, { parent }) => !value || value === parent.password),
+    // Only against a password that passes: a weak one is the thing to fix first.
+    .test(
+      'matches-password',
+      'Passwords don’t match.',
+      (value, { parent }) => !isStrongPassword(parent.password) || value === parent.password,
+    ),
 });
 
 interface FormData {
@@ -62,7 +76,8 @@ const useNewPasswordForm = ({ navigation }: UseNewPasswordFormProps) => {
   // Only a code the server just confirmed opens this screen.
   const [isAuthorized] = useState(() => isAuthorizationUsable(authorization));
   // A save whose answer was lost may have changed the password, so a later refusal can't tell it failed.
-  const mayHaveSaved = useRef(false);
+  const mayHaveSavedRef = useRef(false);
+  const [mayHaveSaved, setMayHaveSaved] = useState(false);
 
   const {
     control,
@@ -71,9 +86,14 @@ const useNewPasswordForm = ({ navigation }: UseNewPasswordFormProps) => {
     formState: { isSubmitting },
   } = useForm({
     resolver: yupResolver(schema),
-    mode: 'onTouched',
+    // Missing values are reported on Save, which is always on; after that every change rechecks them.
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
     defaultValues: { password: '', passwordConfirm: '' },
   });
+
+  const [password, passwordConfirm] = useWatch({ control, name: ['password', 'passwordConfirm'] });
+  const isStrong = isStrongPassword(password);
 
   useEffect(() => {
     if (!isAuthorized) navigation.popTo(ScreenNames.RESET_CODE_SCREEN);
@@ -87,7 +107,7 @@ const useNewPasswordForm = ({ navigation }: UseNewPasswordFormProps) => {
   };
 
   const onAuthorizationInvalid = () => {
-    if (mayHaveSaved.current) {
+    if (mayHaveSavedRef.current) {
       finish('unknown');
     } else {
       navigation.popTo(ScreenNames.RESET_CODE_SCREEN, { notice: 'authorizationExpired' });
@@ -127,7 +147,10 @@ const useNewPasswordForm = ({ navigation }: UseNewPasswordFormProps) => {
       return;
     }
 
-    if (next?.kind === 'connection') mayHaveSaved.current = true;
+    if (next?.kind === 'connection') {
+      mayHaveSavedRef.current = true;
+      setMayHaveSaved(true);
+    }
 
     setFailure(next);
   };
@@ -141,6 +164,12 @@ const useNewPasswordForm = ({ navigation }: UseNewPasswordFormProps) => {
     onSubmit: handleSubmit(onSubmit),
     isSubmitting,
     failure,
+    mayHaveSaved,
+    // The answer to the lost save never came: the new password may already work.
+    signInInstead: () => finish('unknown'),
+    passwordRules: getPasswordRules(password),
+    isPasswordValid: isStrong && utf8Length(password) <= PASSWORD_MAX_BYTES,
+    isConfirmValid: isStrong && passwordConfirm === password,
     focusField: setFocus,
   };
 };
