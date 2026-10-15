@@ -38,6 +38,11 @@ const styles = StyleSheet.create({
     paddingRight: theme.spacing.lg + 32 + theme.spacing.md,
   },
   inputWithShadow: { ...shadow },
+  // Fills the box's height so a tap anywhere in it focuses the field.
+  outlinedInput: {
+    alignSelf: 'stretch',
+    paddingVertical: 0,
+  },
   icon: {
     position: 'absolute',
     top: 0,

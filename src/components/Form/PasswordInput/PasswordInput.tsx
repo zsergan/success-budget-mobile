@@ -18,6 +18,7 @@ const PasswordInput = ({ ...props }: Props) => {
       autoCorrect={false}
       secureTextEntry={hidePassword}
       onIconRightPress={togglePassword}
+      iconRightAccessibilityLabel={hidePassword ? 'Show password' : 'Hide password'}
     />
   );
 };
