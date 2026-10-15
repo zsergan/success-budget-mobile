@@ -19,6 +19,30 @@ describe.each(['inline', 'card'] as const)('a %s banner', (variant) => {
     expect(iconNames()).toEqual(['alert', 'refresh']);
   });
 
+  it('keeps its action named while it is busy, and says it is busy and unavailable', () => {
+    const props = {
+      variant,
+      tone: 'danger',
+      text: 'Couldn’t load.',
+      actionLabel: 'Retry',
+      onAction: jest.fn(),
+    } as const;
+    const { rerender } = render(<Banner {...props} />);
+
+    expect(screen.getByRole('button', { name: 'Retry' }).props.accessibilityState).toMatchObject({
+      disabled: false,
+      busy: false,
+    });
+
+    rerender(<Banner {...props} isBusy />);
+
+    expect(screen.queryByText('Retry')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Retry' }).props.accessibilityState).toMatchObject({
+      disabled: true,
+      busy: true,
+    });
+  });
+
   it('shows the icon it is given', () => {
     render(<Banner variant={variant} tone="warn" text="Offline." icon="offline" />);
 

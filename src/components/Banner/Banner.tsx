@@ -73,7 +73,7 @@ const CardBanner = ({
             hitSlop={6}
             accessibilityRole="button"
             accessibilityLabel={actionLabel}
-            accessibilityState={{ busy: isBusy }}
+            accessibilityState={{ disabled: isBusy, busy: isBusy }}
           >
             {isBusy ? (
               <ActivityIndicator size="small" color={colors.text} />
@@ -127,7 +127,9 @@ const Banner = (props: Props) => {
           activeOpacity={0.7}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityState={{ busy: isBusy }}
+          // The spinner replaces the label, so the label names the action meanwhile.
+          accessibilityLabel={actionLabel}
+          accessibilityState={{ disabled: isBusy, busy: isBusy }}
         >
           {isBusy ? (
             <ActivityIndicator size="small" color={colors.text} />
