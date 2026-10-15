@@ -8,6 +8,8 @@ interface AuthState {
   isSignedIn: boolean;
   userToken: string | null;
   userEmail: string | null;
+  // The one registration allowed to set userEmail; any other answer, however late, changes nothing.
+  registrationRequestId: string | null;
   error?: ErrorResponse;
   // Bumped whenever the session ends; captured before a request to tell later
   // whether the session that sent it is still active.
@@ -20,6 +22,7 @@ const initialState: AuthState = {
   isSignedIn: false,
   userToken: null,
   userEmail: null,
+  registrationRequestId: null,
   sessionKey: 0,
 };
 

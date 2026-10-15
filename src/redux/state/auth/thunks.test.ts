@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 
 import { createAppStore } from '@redux/Store';
 import { attemptFailed, attemptStarted } from '@redux/state/launch/actions';
+import { registrationAbandoned } from './actions';
 import { login, register, verifyEmail } from '@api/auth.api';
 import { AUTH_TOKEN_KEY } from '@shared/constants';
 import type authReducer from './slice';
@@ -52,7 +53,7 @@ describe('loginMe', () => {
     expect(store.getState().auth.userToken).toBe('a-token');
   });
 
-  it('rejects with the server error body and does not sign the user in', async () => {
+  it('rejects with the server error body, keeping it out of the shared auth error', async () => {
     mockedLogin.mockRejectedValue(axiosErrorFor(errorResponse));
 
     const store = createTestStore();
@@ -62,7 +63,7 @@ describe('loginMe', () => {
     expect(action.payload).toEqual(errorResponse);
     expect(mockedSetItemAsync).not.toHaveBeenCalled();
     expect(store.getState().auth.isSignedIn).toBe(false);
-    expect(store.getState().auth.error).toEqual(errorResponse);
+    expect(store.getState().auth.error).toBeUndefined();
   });
 });
 
@@ -81,7 +82,7 @@ describe('registerMe', () => {
     expect(store.getState().auth.isSignedIn).toBe(false);
   });
 
-  it('rejects with the server error body, e.g. a duplicate email', async () => {
+  it('rejects with the server error body, e.g. a duplicate email, keeping it out of the shared auth error', async () => {
     const duplicateEmailError = {
       message: 'Email already registered',
       statusCode: 409,
@@ -96,7 +97,7 @@ describe('registerMe', () => {
 
     expect(action.type).toBe('auth/registerMe/rejected');
     expect(action.payload).toEqual(duplicateEmailError);
-    expect(store.getState().auth.error).toEqual(duplicateEmailError);
+    expect(store.getState().auth.error).toBeUndefined();
   });
 
   it('continues to verification when a parallel sign-up for the email is already sending the code', async () => {
@@ -116,6 +117,60 @@ describe('registerMe', () => {
     expect(action.type).toBe('auth/registerMe/fulfilled');
     expect(store.getState().auth.userEmail).toBe('a@b.com');
     expect(store.getState().auth.error).toBeUndefined();
+  });
+
+  // Each call to register waits until the test answers it.
+  const holdRegistrations = () => {
+    const answers: ((email: string) => void)[] = [];
+    mockedRegister.mockImplementation(
+      () => new Promise((resolve) => answers.push((email) => resolve({ ...profileResponse, email }))),
+    );
+
+    return answers;
+  };
+
+  it('keeps the address of the latest registration when an earlier one answers late', async () => {
+    const answers = holdRegistrations();
+    const store = createTestStore();
+
+    const first = store.dispatch(registerMe({ ...registerPayload, email: 'a@b.com' }));
+    const second = store.dispatch(registerMe({ ...registerPayload, email: 'b@b.com' }));
+    answers[1]('b@b.com');
+    await second;
+    answers[0]('a@b.com');
+    await first;
+
+    expect(store.getState().auth.userEmail).toBe('b@b.com');
+  });
+
+  it('ignores a registration that answers after Sign Up was left', async () => {
+    const answers = holdRegistrations();
+    const store = createTestStore();
+
+    const request = store.dispatch(registerMe(registerPayload));
+    store.dispatch(registrationAbandoned());
+    answers[0]('a@b.com');
+    await request;
+
+    expect(store.getState().auth.userEmail).toBeNull();
+  });
+
+  it('lets a late failure of an earlier registration leave the latest one waiting for its answer', async () => {
+    const answers = holdRegistrations();
+    const store = createTestStore();
+    let failFirst: () => void = () => {};
+    mockedRegister.mockImplementationOnce(
+      () => new Promise((_, reject) => (failFirst = () => reject(axiosErrorFor({ statusCode: 500 })))),
+    );
+
+    const first = store.dispatch(registerMe({ ...registerPayload, email: 'a@b.com' }));
+    const second = store.dispatch(registerMe({ ...registerPayload, email: 'b@b.com' }));
+    failFirst();
+    await first;
+    answers[0]('b@b.com');
+    await second;
+
+    expect(store.getState().auth.userEmail).toBe('b@b.com');
   });
 
   it('still rejects any other 429, such as the request throttle', async () => {
@@ -325,6 +380,7 @@ describe('logoutMe', () => {
         isSignedIn: true,
         userToken: 'a-token',
         userEmail: null,
+        registrationRequestId: null,
         sessionKey: 0,
       },
     });
@@ -344,6 +400,7 @@ describe('logoutMe', () => {
         isSignedIn: true,
         userToken: 'a-token',
         userEmail: null,
+        registrationRequestId: null,
         sessionKey: 3,
       },
     });

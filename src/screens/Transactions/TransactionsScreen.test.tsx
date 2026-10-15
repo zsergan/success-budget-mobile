@@ -698,7 +698,7 @@ describe('TransactionsScreen', () => {
       expect(screen.getByText('Search is limited to 255 characters')).toBeTruthy();
       expect(isSameField()).toBe(true);
 
-      fireEvent.press(screen.getByRole('button', { name: 'Clear search' }));
+      fireEvent.press(screen.getByLabelText('Clear search'));
       await settle();
       expect(screen.getByTestId('search-status')).toBe(statusRow);
       expect(isSameField()).toBe(true);

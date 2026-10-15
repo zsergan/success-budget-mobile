@@ -23,6 +23,9 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
   inputWithShadow: { ...shadow },
+  outlinedValue: {
+    lineHeight: 20,
+  },
   label: {
     fontFamily: theme.fonts.medium,
     fontSize: theme.fontSizes.caption,

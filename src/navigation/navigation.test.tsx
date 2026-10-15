@@ -6,6 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { createAppStore } from '@redux/Store';
+import { registerMe } from '@redux/state/auth/thunks';
 import WelcomeScreen from '@screens/Welcome/WelcomeScreen';
 import SignInScreen from '@screens/Auth/Screens/SignIn/SignInScreen';
 import SignUpScreen from '@screens/Auth/Screens/SignUp/SignUpScreen';
@@ -24,6 +25,7 @@ jest.mock('@api/instance', () => ({
 }));
 
 jest.mock('@hooks', () => ({
+  ...jest.requireActual('@hooks'),
   useAlert: () => ({ addAlert: jest.fn() }),
 }));
 
@@ -42,9 +44,7 @@ const focusedTab = () => {
   return tabs?.index === undefined ? undefined : tabs.routes[tabs.index]?.name;
 };
 
-const renderAuthStack = (initialState?: InitialState) => {
-  const store = createAppStore();
-
+const renderAuthStack = (initialState?: InitialState, store = createAppStore()) => {
   render(
     <Provider store={store}>
       <NavigationContainer ref={navigationRef} initialState={initialState}>
@@ -69,10 +69,10 @@ describe('auth stack', () => {
     renderAuthStack();
 
     fireEvent.press(screen.getByText('Sign In'));
-    pressLast('Sign up');
+    pressLast('Create account');
     expect(routeNames()).toEqual([ScreenNames.WELCOME_SCREEN, ScreenNames.SIGN_IN_SCREEN, ScreenNames.SIGN_UP_SCREEN]);
 
-    pressLast('Sign in');
+    pressLast('Sign In');
     expect(routeNames()).toEqual([ScreenNames.WELCOME_SCREEN, ScreenNames.SIGN_IN_SCREEN]);
   });
 
@@ -80,8 +80,8 @@ describe('auth stack', () => {
     renderAuthStack();
 
     fireEvent.press(screen.getByText('Create account'));
-    pressLast('Sign in');
-    pressLast('Sign up');
+    pressLast('Sign In');
+    pressLast('Create account');
 
     expect(routeNames()).toEqual([ScreenNames.WELCOME_SCREEN, ScreenNames.SIGN_UP_SCREEN]);
   });
@@ -100,6 +100,17 @@ describe('auth stack', () => {
     pressLast('Sign in');
 
     expect(routeNames()).toEqual([ScreenNames.WELCOME_SCREEN, ScreenNames.SIGN_IN_SCREEN]);
+  });
+
+  it('opens Sign up again on its form while an earlier sign-up still waits for its code', () => {
+    const store = createAppStore();
+    const payload = { name: 'Anna', email: 'anna@kovalenko.co', password: 'secret12', base_currency_id: 7 };
+    store.dispatch(registerMe.fulfilled({ email: payload.email }, 'earlier', payload));
+    renderAuthStack(undefined, store);
+
+    fireEvent.press(screen.getByText('Create account'));
+
+    expect(routeNames()).toEqual([ScreenNames.WELCOME_SCREEN, ScreenNames.SIGN_UP_SCREEN]);
   });
 
   it('pushes Sign in from Verify Email when it is not in the stack yet', () => {

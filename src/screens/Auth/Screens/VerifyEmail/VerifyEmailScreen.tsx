@@ -12,7 +12,7 @@ import { getErrorMessage } from '@shared/utils';
 import AuthLayout from '@screens/Auth/AuthLayout/AuthLayout';
 import useVerifyEmailForm from './useVerifyEmailForm';
 
-import styles from '../style';
+import styles from './style';
 
 interface Props extends RootStackScreenProps<ScreenNames.VERIFY_EMAIL_SCREEN> {}
 

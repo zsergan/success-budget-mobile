@@ -101,6 +101,8 @@ export type IconType =
   | 'alert'
   | 'info'
   | 'refresh'
+  | 'offline'
+  | 'currency'
   | 'download'
   | 'grid'
   | 'note'
