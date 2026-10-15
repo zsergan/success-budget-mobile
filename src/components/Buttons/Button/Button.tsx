@@ -63,7 +63,7 @@ const Button = ({
       accessibilityRole="button"
       // The spinner replaces the title, so the title names the button meanwhile.
       accessibilityLabel={isLoading ? title : undefined}
-      accessibilityState={{ disabled: !!disabled, busy: isLoading }}
+      accessibilityState={{ disabled: !!disabled || isLoading, busy: isLoading }}
     >
       {isLoading && <ActivityIndicator color={SPINNER_COLORS[variant]} />}
 

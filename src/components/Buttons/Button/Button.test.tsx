@@ -27,7 +27,7 @@ describe('a large button', () => {
 });
 
 describe('a loading button', () => {
-  it('shows a spinner instead of its label, keeps the label for screen readers and ignores presses', () => {
+  it('shows a spinner instead of its label, keeps the label for screen readers, and ignores presses and says so', () => {
     const onPress = jest.fn();
 
     render(<Button title="Sign In" size="lg" isLoading onPress={onPress} />);
@@ -36,7 +36,7 @@ describe('a loading button', () => {
 
     const button = screen.getByRole('button', { name: 'Sign In' });
 
-    expect(button.props.accessibilityState).toMatchObject({ busy: true });
+    expect(button.props.accessibilityState).toMatchObject({ busy: true, disabled: true });
 
     fireEvent.press(button);
 
