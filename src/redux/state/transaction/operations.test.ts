@@ -1,5 +1,5 @@
 import type { CreateTransactionRequest } from '@api/dto';
-import { getRejectValue } from '@redux/createAppAsyncThunk';
+import { getRejectValue } from '@api/errors';
 import { createAppStore } from '@redux/Store';
 import { withProfile } from '@redux/state/profile/fixtures';
 import { logoutMe } from '@redux/state/auth/thunks';

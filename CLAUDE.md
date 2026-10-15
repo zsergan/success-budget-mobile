@@ -42,7 +42,9 @@ members.
   entry. Mutations invalidate only on success.
 - API layer: `src/api/instance.ts` builds the shared axios client (auth
   header, 401 and 429 handling); sign-in/up still call it through
-  `src/api/auth.api.ts`. Request/response shapes are declared in
+  `src/api/auth.api.ts`. `src/api/errors.ts` turns any failed request into
+  an `ErrorResponse`, its status taken from the response whatever the body.
+  Request/response shapes are declared in
   `src/api/dto/*.ts` and must match the backend's actual DTOs (see
   "Backend contract" below); DTO-to-model mapping lives in
   `src/api/models/`.

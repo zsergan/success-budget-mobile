@@ -1,7 +1,7 @@
 import { CanceledError } from 'axios';
 
 import { getErrorMessage, NETWORK_ERROR_MESSAGE, RATE_LIMITED_MESSAGE } from '@shared/utils/error';
-import { getRejectValue } from './createAppAsyncThunk';
+import { getRejectValue } from './errors';
 
 const errorBody = {
   message: 'Too many requests',

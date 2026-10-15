@@ -2,8 +2,8 @@ import type { BaseQueryFn } from '@reduxjs/toolkit/query';
 import type { Method } from 'axios';
 
 import type { ErrorResponse } from '@api/dto';
+import { getRejectValue } from '@api/errors';
 import { createHttpClient } from '@api/instance';
-import { getRejectValue } from '@redux/createAppAsyncThunk';
 import type { RootState } from '@redux/Store';
 
 export interface HttpRequest {

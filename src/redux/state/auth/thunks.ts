@@ -3,7 +3,8 @@ import * as SecureStore from 'expo-secure-store';
 import type { LoginPayload, RegisterPayload, VerifyEmailPayload } from '@api/dto';
 import { isConfirmationAlreadyRequested, login, register, verifyEmail } from '@api/auth.api';
 import { AUTH_TOKEN_KEY } from '@shared/constants';
-import { createAppAsyncThunk, getRejectValue } from '@redux/createAppAsyncThunk';
+import { getRejectValue } from '@api/errors';
+import { createAppAsyncThunk } from '@redux/createAppAsyncThunk';
 
 export const registerMe = createAppAsyncThunk('auth/registerMe', async (payload: RegisterPayload, thunkAPI) => {
   try {

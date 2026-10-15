@@ -4,7 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
 import { createAppStore } from '@redux/Store';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
-import { getRejectValue } from '@redux/createAppAsyncThunk';
+import { getRejectValue } from './errors';
 import { createHttpClient, REQUEST_TIMEOUT_MS } from './instance';
 import { bindHttpSession } from './session';
 

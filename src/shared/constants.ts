@@ -27,7 +27,7 @@ export const SPACE_LIMITS = {
 
 export const INVITE_EXPIRY_DAYS = 7;
 
-// Fallback only: prefer the 429's `error.retryAfterMs` (see getRejectValue).
+// Fallback only: prefer the 429's `error.retryAfterMs` (see @api/errors).
 export const INVITE_RATE_LIMIT_COOLDOWN_MS = 60_000;
 
 // Wallet-card gradient presets, paired per color scheme like the rest of the theme (angle/stops in WalletGradientBackground.tsx).
