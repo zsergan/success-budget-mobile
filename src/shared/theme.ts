@@ -18,6 +18,13 @@ const colorTokens = {
     danger: '#E04F3D',
     ok: '#3FAE6A',
     warn: '#F0A92A',
+    // Tinted message surfaces, as in Auth & Settings.dc.html.
+    dangerSoft: '#FDECEA',
+    dangerBorder: '#F3C8C1',
+    dangerText: '#8D3428',
+    warnSoft: '#FFF6E4',
+    warnBorder: '#F4DFB0',
+    warnText: '#8A5806',
   },
   dark: {
     bg: '#0E1218',
@@ -35,6 +42,12 @@ const colorTokens = {
     danger: '#F2695A',
     ok: '#4DC07B',
     warn: '#F7BD4D',
+    dangerSoft: '#2A1A18',
+    dangerBorder: '#4C2B26',
+    dangerText: '#F0A79C',
+    warnSoft: '#2B2110',
+    warnBorder: '#4D3A15',
+    warnText: '#F0CD8A',
   },
 } as const;
 
