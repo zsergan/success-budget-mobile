@@ -25,6 +25,9 @@ const colorTokens = {
     warnSoft: '#FFF6E4',
     warnBorder: '#F4DFB0',
     warnText: '#8A5806',
+    okSoft: '#E9F6EE',
+    okBorder: '#C2E5CF',
+    okText: '#276B45',
   },
   dark: {
     bg: '#0E1218',
@@ -48,6 +51,9 @@ const colorTokens = {
     warnSoft: '#2B2110',
     warnBorder: '#4D3A15',
     warnText: '#F0CD8A',
+    okSoft: '#12261B',
+    okBorder: '#26492F',
+    okText: '#8FD8AB',
   },
 } as const;
 

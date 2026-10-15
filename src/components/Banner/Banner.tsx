@@ -7,8 +7,10 @@ import { hexToRgba } from '@shared/utils';
 
 import styles from './style';
 
+type Tone = 'warn' | 'danger' | 'success';
+
 interface Props {
-  tone: 'warn' | 'danger';
+  tone: Tone;
   title?: string;
   text: string;
   // Left out when the next step is in the form itself.
@@ -28,9 +30,22 @@ const CARD_TONES = {
     text: colors.dangerText,
   },
   warn: { background: colors.warnSoft, border: colors.warnBorder, accent: colors.warnText, text: colors.warnText },
+  success: { background: colors.okSoft, border: colors.okBorder, accent: colors.okText, text: colors.okText },
 };
 
-const CardBanner = ({ tone, title, text, actionLabel, isBusy = false, onAction, icon = 'alert' }: Props) => {
+const INLINE_COLORS: Record<Tone, string> = { warn: colors.warn, danger: colors.danger, success: colors.ok };
+
+const DEFAULT_ICONS: Record<Tone, IconType> = { warn: 'alert', danger: 'alert', success: 'check' };
+
+const CardBanner = ({
+  tone,
+  title,
+  text,
+  actionLabel,
+  isBusy = false,
+  onAction,
+  icon = DEFAULT_ICONS[tone],
+}: Props) => {
   const palette = CARD_TONES[tone];
 
   return (
@@ -74,13 +89,22 @@ const CardBanner = ({ tone, title, text, actionLabel, isBusy = false, onAction, 
 
 // An inline message with the one step that resolves it, when there is one.
 const Banner = (props: Props) => {
-  const { tone, title, text, actionLabel, isBusy = false, onAction, variant = 'inline', icon = 'alert' } = props;
+  const {
+    tone,
+    title,
+    text,
+    actionLabel,
+    isBusy = false,
+    onAction,
+    variant = 'inline',
+    icon = DEFAULT_ICONS[tone],
+  } = props;
 
   if (variant === 'card') {
     return <CardBanner {...props} />;
   }
 
-  const color = tone === 'warn' ? colors.warn : colors.danger;
+  const color = INLINE_COLORS[tone];
 
   return (
     <View style={[styles.root, { backgroundColor: hexToRgba(color, 0.12) }]} accessibilityRole="alert">
