@@ -54,6 +54,7 @@ const useSignUpForm = ({ navigation }: UseSignUpFormProps) => {
     handleSubmit,
     getFieldState,
     trigger,
+    setFocus,
     formState: { isSubmitting, isValid },
   } = useForm({
     resolver: yupResolver(schema),
@@ -101,6 +102,7 @@ const useSignUpForm = ({ navigation }: UseSignUpFormProps) => {
     isSubmitDisabled: !isValid,
     // Only the address's format: whether it is free or real is for the server to say.
     isEmailWellFormed: emailSchema.isValidSync(email),
+    focusField: setFocus,
   };
 };
 

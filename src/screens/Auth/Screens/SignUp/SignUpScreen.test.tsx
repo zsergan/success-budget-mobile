@@ -1,5 +1,5 @@
 import { Provider } from 'react-redux';
-import { Modal } from 'react-native';
+import { Modal, TextInput } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Picker } from '@react-native-picker/picker';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
@@ -249,6 +249,22 @@ describe('validation', () => {
   });
 });
 
+it('moves on to the next field from the keyboard', async () => {
+  answerCurrencies();
+  await renderSignUp();
+  const focus = jest.spyOn(TextInput.prototype, 'focus');
+  const focusedLabels = () => focus.mock.contexts.map((input) => (input as TextInput).props.accessibilityLabel);
+
+  for (const label of ['Name', 'Email', 'Password']) {
+    fireEvent(screen.getByLabelText(label), 'submitEditing');
+  }
+  // react-hook-form focuses on the next tick.
+  await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+
+  expect(focusedLabels()).toEqual(['Email', 'Password', 'Confirm password']);
+  expect(screen.getByLabelText('Confirm password').props.returnKeyType).toBe('done');
+});
+
 it('waits for the currencies, offers a retry when they fail, and keeps what was typed', async () => {
   failCurrencies();
   await renderSignUp();
@@ -259,7 +275,7 @@ it('waits for the currencies, offers a retry when they fail, and keeps what was 
 
   mockedRequest.mockReturnValue(new Promise(() => {}));
   await act(async () => {
-    fireEvent.press(screen.getByText('Try again'));
+    fireEvent.press(screen.getByRole('button', { name: 'Load the currencies again' }));
   });
 
   expect(await screen.findByText('Loading currencies…')).toBeTruthy();

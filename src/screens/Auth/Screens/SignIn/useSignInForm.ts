@@ -29,6 +29,7 @@ const useSignInForm = () => {
     control,
     handleSubmit,
     watch,
+    setFocus,
     formState: { isSubmitting, isValid },
   } = useForm({
     resolver: yupResolver(schema),
@@ -62,6 +63,7 @@ const useSignInForm = () => {
     isSubmitting,
     isSubmitDisabled: !isValid,
     failure,
+    focusField: setFocus,
   };
 };
 

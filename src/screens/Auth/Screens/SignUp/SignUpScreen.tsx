@@ -18,9 +18,15 @@ import styles from './style';
 
 interface Props extends RootStackScreenProps<ScreenNames.SIGN_UP_SCREEN> {}
 
+// The backend keeps names and emails up to 255 characters.
+const MAX_TEXT_LENGTH = 255;
+
+// Lets iOS suggest a strong password that already meets the rule checked below the field.
+const PASSWORD_RULES = 'minlength: 8; required: lower, upper; required: digit;';
+
 const SignUpScreen = ({ navigation }: Props) => {
   const { error } = useAppSelector(selectAuth);
-  const { control, onSubmit, isSubmitting, isSubmitDisabled, isEmailWellFormed } = useSignUpForm({
+  const { control, onSubmit, isSubmitting, isSubmitDisabled, isEmailWellFormed, focusField } = useSignUpForm({
     navigation,
   });
   const currencies = useCurrencyOptions();
@@ -57,8 +63,9 @@ const SignUpScreen = ({ navigation }: Props) => {
         <Controller
           name="name"
           control={control}
-          render={({ field: { onChange, onBlur, value }, formState: { errors } }) => (
+          render={({ field: { ref, onChange, onBlur, value }, formState: { errors } }) => (
             <Input
+              ref={ref}
               variant="outlined"
               label="Name"
               iconLeft="user"
@@ -70,6 +77,10 @@ const SignUpScreen = ({ navigation }: Props) => {
               autoComplete="name"
               autoCapitalize="words"
               autoCorrect={false}
+              maxLength={MAX_TEXT_LENGTH}
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => focusField('email')}
               error={errors.name?.message}
             />
           )}
@@ -78,8 +89,9 @@ const SignUpScreen = ({ navigation }: Props) => {
         <Controller
           name="email"
           control={control}
-          render={({ field: { onChange, onBlur, value }, formState: { errors } }) => (
+          render={({ field: { ref, onChange, onBlur, value }, formState: { errors } }) => (
             <Input
+              ref={ref}
               variant="outlined"
               label="Email"
               iconLeft="mail"
@@ -88,10 +100,14 @@ const SignUpScreen = ({ navigation }: Props) => {
               onChangeText={onChange}
               onBlur={onBlur}
               keyboardType="email-address"
-              textContentType="emailAddress"
+              textContentType="username"
               autoComplete="email"
               autoCapitalize="none"
               autoCorrect={false}
+              maxLength={MAX_TEXT_LENGTH}
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => focusField('password')}
               isValid={isEmailWellFormed}
               error={errors.email?.message}
             />
@@ -101,8 +117,9 @@ const SignUpScreen = ({ navigation }: Props) => {
         <Controller
           name="password"
           control={control}
-          render={({ field: { onChange, onBlur, value }, formState: { errors } }) => (
+          render={({ field: { ref, onChange, onBlur, value }, formState: { errors } }) => (
             <PasswordInput
+              ref={ref}
               variant="outlined"
               label="Password"
               iconLeft="lock"
@@ -112,6 +129,10 @@ const SignUpScreen = ({ navigation }: Props) => {
               onBlur={onBlur}
               textContentType="newPassword"
               autoComplete="new-password"
+              passwordRules={PASSWORD_RULES}
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => focusField('passwordConfirm')}
               hint="At least 8 characters, with a letter and a digit."
               error={errors.password?.message}
             />
@@ -121,8 +142,9 @@ const SignUpScreen = ({ navigation }: Props) => {
         <Controller
           name="passwordConfirm"
           control={control}
-          render={({ field: { onChange, onBlur, value }, formState: { errors } }) => (
+          render={({ field: { ref, onChange, onBlur, value }, formState: { errors } }) => (
             <PasswordInput
+              ref={ref}
               variant="outlined"
               label="Confirm password"
               iconLeft="lock"
@@ -132,6 +154,8 @@ const SignUpScreen = ({ navigation }: Props) => {
               onBlur={onBlur}
               textContentType="newPassword"
               autoComplete="new-password"
+              passwordRules={PASSWORD_RULES}
+              returnKeyType="done"
               error={errors.passwordConfirm?.message}
             />
           )}
@@ -161,7 +185,12 @@ const SignUpScreen = ({ navigation }: Props) => {
 
           {currencies.hasError && (
             <View style={styles.retryCurrencies}>
-              <TextLink title="Try again" onPress={currencies.retry} />
+              <TextLink
+                title="Try again"
+                onPress={currencies.retry}
+                accessibilityRole="button"
+                accessibilityLabel="Load the currencies again"
+              />
             </View>
           )}
         </View>
