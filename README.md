@@ -1,22 +1,22 @@
 # success-budget-mobile
 
 A React Native (Expo) personal-finance app: wallets, transactions,
-categories, spending limits, multi-currency support.
+categories, spending limits, shared spaces with one currency each.
 
 ## Stack
 
-- Expo SDK 54, React 19, React Native 0.81, TypeScript
+- Expo SDK 57, React 19, React Native 0.86, TypeScript
 - Redux Toolkit for state
 - React Navigation (stack + bottom tabs)
 - react-hook-form + yup for forms
 
-See [`CLAUDE.md`](./CLAUDE.md) for the full project layout and conventions.
+See [`AGENTS.md`](./AGENTS.md) for the full project layout and conventions.
 
 ## Project structure
 
 Screens live under `src/screens/**`; a screen that outgrows a single
 file decomposes into `components/` and `hooks/` subfolders. See
-["Screen organization" in `CLAUDE.md`](./CLAUDE.md#screen-organization)
+["Code organization" in `AGENTS.md`](./AGENTS.md#code-organization)
 for the rules behind that split.
 
 ## Requirements
