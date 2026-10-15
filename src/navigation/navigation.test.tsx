@@ -25,6 +25,7 @@ jest.mock('@api/instance', () => ({
 }));
 
 jest.mock('@hooks', () => ({
+  ...jest.requireActual('@hooks'),
   useAlert: () => ({ addAlert: jest.fn() }),
 }));
 

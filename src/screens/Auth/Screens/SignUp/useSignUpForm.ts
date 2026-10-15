@@ -3,14 +3,13 @@ import * as yup from 'yup';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
-import { useAlert } from '@hooks';
+import { useAlert, useSingleSubmit } from '@hooks';
 import { useAppDispatch } from '@redux/hooks';
 import { registerMe } from '@redux/state/auth/thunks';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { getErrorMessage } from '@shared/utils';
 import emailSchema from '@screens/Auth/Screens/emailSchema';
-import useSingleSubmit from '@screens/Auth/Screens/useSingleSubmit';
 
 const PASSWORD_MIN_LENGTH = 8;
 

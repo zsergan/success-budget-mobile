@@ -29,6 +29,7 @@ jest.mock('@api/auth.api', () => ({
 const mockedAddAlert = jest.fn();
 
 jest.mock('@hooks', () => ({
+  ...jest.requireActual('@hooks'),
   useAlert: () => ({ addAlert: mockedAddAlert }),
 }));
 
