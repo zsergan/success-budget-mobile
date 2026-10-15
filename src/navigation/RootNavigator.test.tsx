@@ -71,7 +71,7 @@ it('opens Welcome straight away without a stored session, and Sign In leads to t
 
   fireEvent.press(screen.getByText('Sign In'));
   await act(() => jest.advanceTimersByTimeAsync(1000));
-  expect(screen.getByText("Don't have an account?")).toBeTruthy();
+  expect(screen.getByText('No account yet?')).toBeTruthy();
 });
 
 it('loads the required data after a sign-in from Welcome before opening the app', async () => {

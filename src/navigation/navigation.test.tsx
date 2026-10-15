@@ -69,7 +69,7 @@ describe('auth stack', () => {
     renderAuthStack();
 
     fireEvent.press(screen.getByText('Sign In'));
-    pressLast('Sign up');
+    pressLast('Create account');
     expect(routeNames()).toEqual([ScreenNames.WELCOME_SCREEN, ScreenNames.SIGN_IN_SCREEN, ScreenNames.SIGN_UP_SCREEN]);
 
     pressLast('Sign in');
@@ -81,7 +81,7 @@ describe('auth stack', () => {
 
     fireEvent.press(screen.getByText('Create account'));
     pressLast('Sign in');
-    pressLast('Sign up');
+    pressLast('Create account');
 
     expect(routeNames()).toEqual([ScreenNames.WELCOME_SCREEN, ScreenNames.SIGN_UP_SCREEN]);
   });

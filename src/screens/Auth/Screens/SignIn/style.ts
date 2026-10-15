@@ -4,7 +4,7 @@ const styles = StyleSheet.create({
   fields: {
     rowGap: 15,
   },
-  resetPassword: {
+  forgotPassword: {
     marginTop: 14,
     flexDirection: 'row',
     justifyContent: 'flex-end',

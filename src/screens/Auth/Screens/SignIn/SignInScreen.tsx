@@ -19,7 +19,7 @@ interface Props extends RootStackScreenProps<ScreenNames.SIGN_IN_SCREEN> {}
 
 const SignInScreen = ({ navigation }: Props) => {
   const { error } = useAppSelector(selectAuth);
-  const { control, onSubmit, isSubmitting } = useSignInForm();
+  const { control, onSubmit, isSubmitting, isSubmitDisabled } = useSignInForm();
   const { addAlert } = useAlert();
 
   useEffect(() => {
@@ -33,10 +33,19 @@ const SignInScreen = ({ navigation }: Props) => {
       title="Welcome back"
       description="Sign in to your Success Budget account."
       onBackButtonPress={() => navigation.goBack()}
-      action={<Button title="Sign in" size="lg" withShadow onPress={onSubmit} isLoading={isSubmitting} />}
+      action={
+        <Button
+          title="Sign In"
+          size="lg"
+          withShadow
+          onPress={onSubmit}
+          disabled={isSubmitDisabled}
+          isLoading={isSubmitting}
+        />
+      }
       prompt={{
-        text: "Don't have an account?",
-        linkTitle: 'Sign up',
+        text: 'No account yet?',
+        linkTitle: 'Create account',
         onLinkPress: () => navigation.navigate(ScreenNames.SIGN_UP_SCREEN, undefined, { pop: true }),
       }}
     >
@@ -44,7 +53,7 @@ const SignInScreen = ({ navigation }: Props) => {
         <Controller
           name="email"
           control={control}
-          render={({ field: { onChange, value }, formState: { errors } }) => (
+          render={({ field: { onChange, onBlur, value }, formState: { errors } }) => (
             <Input
               variant="outlined"
               label="Email"
@@ -52,6 +61,10 @@ const SignInScreen = ({ navigation }: Props) => {
               value={value}
               placeholder="you@example.com"
               onChangeText={onChange}
+              onBlur={onBlur}
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              autoComplete="email"
               autoCapitalize="none"
               autoCorrect={false}
               error={errors.email?.message}
@@ -62,7 +75,7 @@ const SignInScreen = ({ navigation }: Props) => {
         <Controller
           name="password"
           control={control}
-          render={({ field: { onChange, value }, formState: { errors } }) => (
+          render={({ field: { onChange, onBlur, value }, formState: { errors } }) => (
             <PasswordInput
               variant="outlined"
               label="Password"
@@ -70,14 +83,17 @@ const SignInScreen = ({ navigation }: Props) => {
               value={value}
               placeholder="••••••••"
               onChangeText={onChange}
+              onBlur={onBlur}
+              textContentType="password"
+              autoComplete="current-password"
               error={errors.password?.message}
             />
           )}
         />
       </View>
 
-      <View style={styles.resetPassword}>
-        <TextLink title="Reset password" onPress={() => {}} />
+      <View style={styles.forgotPassword}>
+        <TextLink title="Forgot password?" onPress={() => {}} />
       </View>
     </AuthFormLayout>
   );
