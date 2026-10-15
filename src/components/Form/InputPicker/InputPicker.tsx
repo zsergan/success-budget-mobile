@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { TouchableOpacity, TouchableWithoutFeedback, View, Text } from 'react-native';
+import { ActivityIndicator, TouchableOpacity, TouchableWithoutFeedback, View, Text } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 
 import Icon from '@components/Icon/Icon';
@@ -24,6 +24,9 @@ interface Props {
   variant?: 'filled' | 'outlined';
   iconLeft?: IconType;
   hint?: string;
+  error?: string;
+  // Outlined only: the items are still on their way, so the field cannot open yet.
+  isLoading?: boolean;
 }
 
 const InputPicker = ({
@@ -38,6 +41,8 @@ const InputPicker = ({
   variant = 'filled',
   iconLeft,
   hint,
+  error,
+  isLoading = false,
 }: Props) => {
   const [isPickerVisible, setIsPickerVisible] = useState(false);
 
@@ -63,12 +68,19 @@ const InputPicker = ({
         <OutlinedField
           label={label}
           hint={hint}
+          error={error}
           iconLeft={iconLeft}
           isFocused={isPickerVisible}
-          disabled={disabled}
+          disabled={disabled || isLoading}
           onPress={() => setIsPickerVisible(true)}
           containerStyle={containerStyle}
-          trailing={<Icon name="chevron-down" size={19} color={colors.muted} strokeWidth={1.9} />}
+          trailing={
+            isLoading ? (
+              <ActivityIndicator size="small" color={colors.muted} />
+            ) : (
+              <Icon name="chevron-down" size={19} color={colors.muted} strokeWidth={1.9} />
+            )
+          }
         >
           <Text
             style={[outlinedStyles.value, styles.outlinedValue, !selectedLabel && outlinedStyles.placeholder]}
