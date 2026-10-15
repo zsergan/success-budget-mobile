@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as yup from 'yup';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -7,7 +7,7 @@ import { useAppDispatch } from '@redux/hooks';
 import { loginMe } from '@redux/state/auth/thunks';
 import emailSchema from '@screens/Auth/Screens/emailSchema';
 import useSingleSubmit from '@screens/Auth/Screens/useSingleSubmit';
-import type { SignInFailure } from './signInFailure';
+import type { SignInFailure, SignInField } from './signInFailure';
 import { getFailureFields, getSignInFailure } from './signInFailure';
 
 // Sign-up's stronger password rule is not checked here: accounts made under the older min(6) must still sign in.
@@ -24,6 +24,7 @@ interface FormData {
 const useSignInForm = () => {
   const dispatch = useAppDispatch();
   const [failure, setFailure] = useState<SignInFailure | null>(null);
+  const editedSinceSubmit = useRef(new Set<SignInField>());
 
   const {
     control,
@@ -41,18 +42,25 @@ const useSignInForm = () => {
   });
 
   useEffect(() => {
-    const subscription = watch((_, { name }) =>
-      setFailure((current) => (current && name && getFailureFields(current).includes(name) ? null : current)),
-    );
+    const subscription = watch((_, { name }) => {
+      if (!name) return;
+
+      editedSinceSubmit.current.add(name);
+      setFailure((current) => (current && getFailureFields(current).includes(name) ? null : current));
+    });
 
     return () => subscription.unsubscribe();
   }, [watch]);
 
   const login = async ({ email, password }: FormData) => {
+    editedSinceSubmit.current.clear();
     const result = await dispatch(loginMe({ email, password }));
 
     if (loginMe.rejected.match(result)) {
-      setFailure(getSignInFailure(result.payload));
+      const next = getSignInFailure(result.payload);
+      const isOutdated = next && getFailureFields(next).some((field) => editedSinceSubmit.current.has(field));
+
+      setFailure(isOutdated ? null : next);
     }
   };
 

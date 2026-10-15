@@ -110,6 +110,14 @@ const submit = async (email = 'anna@kovalenko.co', password = 'secret1') => {
   await act(async () => fireEvent.press(signInButton()));
 };
 
+// The press returns the pending submit, which act would otherwise wait for.
+const submitWithoutWaiting = async () => {
+  await fillIn('anna@kovalenko.co', 'secret1');
+  await act(async () => {
+    fireEvent.press(signInButton());
+  });
+};
+
 describe('a failed sign-in', () => {
   it('marks the email and explains wrong credentials in place, without an alert', async () => {
     rejectWith(401, { statusCode: 401, code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' });
@@ -132,6 +140,39 @@ describe('a failed sign-in', () => {
 
     expect(screen.queryByText('Wrong email or password')).toBeNull();
     expect(screen.queryByText('No account matches this email and password.')).toBeNull();
+  });
+
+  it('ignores wrong credentials for a password edited while the request was pending', async () => {
+    let answer: (error: object) => void = () => {};
+    mockedLogin.mockReturnValue(new Promise((_, reject) => (answer = reject)));
+    renderSignIn();
+
+    await submitWithoutWaiting();
+    await act(async () => fireEvent.changeText(screen.getByLabelText('Password'), 'secret12'));
+    await act(async () => answer({ response: { status: 401, data: {}, headers: {} }, config: {} }));
+
+    expect(screen.queryByText('Wrong email or password')).toBeNull();
+    expect(screen.queryByText('No account matches this email and password.')).toBeNull();
+    expect(screen.getByLabelText('Password').props.value).toBe('secret12');
+    expect(signInButton().props.accessibilityState).toMatchObject({ disabled: false, busy: false });
+
+    rejectWith(401, { statusCode: 401, code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' });
+    await act(async () => fireEvent.press(signInButton()));
+
+    expect(mockedLogin).toHaveBeenLastCalledWith({ email: 'anna@kovalenko.co', password: 'secret12' });
+    expect(screen.getByText('Wrong email or password')).toBeTruthy();
+  });
+
+  it('still shows a lost connection that answers after the form was edited', async () => {
+    let answer: (error: object) => void = () => {};
+    mockedLogin.mockReturnValue(new Promise((_, reject) => (answer = reject)));
+    renderSignIn();
+
+    await submitWithoutWaiting();
+    await act(async () => fireEvent.changeText(screen.getByLabelText('Email'), 'anna@kovalenko.com'));
+    await act(async () => answer({ code: 'ERR_NETWORK', message: 'Network Error' }));
+
+    expect(screen.getByText('Couldn’t reach the server')).toBeTruthy();
   });
 
   it('keeps what was typed when the server is unreachable, and Retry sends the form as it is now', async () => {
