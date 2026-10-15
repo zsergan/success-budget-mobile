@@ -6,7 +6,7 @@ import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import AuthFormLayout from '@screens/Auth/AuthFormLayout/AuthFormLayout';
 import TextLink from '@screens/Auth/TextLink/TextLink';
-import FailureBanner from './components/FailureBanner/FailureBanner';
+import SignInFailureBanner from './components/SignInFailureBanner/SignInFailureBanner';
 import useSignInForm from './useSignInForm';
 
 import styles from './style';
@@ -40,7 +40,7 @@ const SignInScreen = ({ navigation }: Props) => {
     >
       {failure && (
         <View style={styles.failure}>
-          <FailureBanner failure={failure} isRetrying={isSubmitting} onRetry={onSubmit} />
+          <SignInFailureBanner failure={failure} isRetrying={isSubmitting} onRetry={onSubmit} />
         </View>
       )}
 

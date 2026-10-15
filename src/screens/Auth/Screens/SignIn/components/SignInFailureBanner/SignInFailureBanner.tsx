@@ -16,7 +16,7 @@ const waitText = (retryAfterMs?: number) => {
   return `Try again in ${seconds} ${seconds === 1 ? 'second' : 'seconds'}.`;
 };
 
-const FailureBanner = ({ failure, isRetrying, onRetry }: Props) => {
+const SignInFailureBanner = ({ failure, isRetrying, onRetry }: Props) => {
   switch (failure.kind) {
     case 'credentials':
       return (
@@ -61,4 +61,4 @@ const FailureBanner = ({ failure, isRetrying, onRetry }: Props) => {
   }
 };
 
-export default FailureBanner;
+export default SignInFailureBanner;
