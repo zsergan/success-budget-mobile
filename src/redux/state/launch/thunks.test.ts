@@ -45,7 +45,9 @@ const ok = (url: string): Answer => {
 };
 
 const httpError = (statusCode: number, headers: Record<string, string> = {}) =>
-  Promise.reject({ response: { data: { statusCode, message: 'error', path: '', timestamp: '' }, headers } });
+  Promise.reject({
+    response: { status: statusCode, data: { statusCode, message: 'error', path: '', timestamp: '' }, headers },
+  });
 
 const answer = (override: (url: string) => Answer | undefined = () => undefined) =>
   mockedRequest.mockImplementation(({ url }: { url: string }) => override(url) ?? ok(url));

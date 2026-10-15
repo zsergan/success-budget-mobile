@@ -83,7 +83,7 @@ describe('RangeCount', () => {
   });
 
   it('shows a failed count with Retry', async () => {
-    mockedRequest.mockRejectedValueOnce({ response: { data: { statusCode: 500, message: 'boom' } } });
+    mockedRequest.mockRejectedValueOnce({ response: { status: 500, data: { statusCode: 500, message: 'boom' } } });
     mockedRequest.mockResolvedValue({ data: { count: 1 } });
 
     renderCount(august);

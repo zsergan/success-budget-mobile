@@ -185,7 +185,9 @@ const answerWrite = (value: unknown) => writeAnswer(answeredWrites++).resolve(va
 const failWrite = (reason: unknown) => writeAnswer(answeredWrites++).reject(reason);
 let answerRead: (() => Promise<unknown>) | null = null;
 
-const refusal = (statusCode: number, code: string) => ({ response: { data: { statusCode, code, message: code } } });
+const refusal = (statusCode: number, code: string) => ({
+  response: { status: statusCode, data: { statusCode, code, message: code } },
+});
 
 let stored = transactionDto({ amount: '50.00', version: 2 });
 
@@ -447,7 +449,10 @@ describe('TransactionFlowSheet', () => {
     fireEvent.press(screen.getByText('Save expense'));
     await act(async () =>
       failWrite({
-        response: { data: { statusCode: 400, code: 'CATEGORY_ARCHIVED', message: 'This category is archived' } },
+        response: {
+          status: 400,
+          data: { statusCode: 400, code: 'CATEGORY_ARCHIVED', message: 'This category is archived' },
+        },
       }),
     );
     await settle();

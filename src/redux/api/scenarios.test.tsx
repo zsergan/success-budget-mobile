@@ -542,7 +542,7 @@ describe('server data scenarios', () => {
 
     mockedRequest.mockImplementation((config: RequestConfig) =>
       (config.method ?? 'GET') === 'GET'
-        ? Promise.reject({ response: { data: { statusCode: 500, message: 'boom' } } })
+        ? Promise.reject({ response: { status: 500, data: { statusCode: 500, message: 'boom' } } })
         : respond(config),
     );
     await act(async () => {

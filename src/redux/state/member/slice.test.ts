@@ -17,6 +17,7 @@ jest.useFakeTimers();
 
 const rateLimited = (headers: Record<string, string> = {}) => ({
   response: {
+    status: 429,
     data: { message: 'Too many requests', statusCode: 429, path: '/spaces/1/invites', timestamp: '' },
     headers,
   },
@@ -58,7 +59,7 @@ describe('invite cooldown', () => {
   it('ignores a failure other than 429', async () => {
     const store = signedInStore();
 
-    mockedRequest.mockRejectedValue({ response: { data: { message: 'Bad email', statusCode: 400 } } });
+    mockedRequest.mockRejectedValue({ response: { status: 400, data: { message: 'Bad email', statusCode: 400 } } });
     await invite(store);
 
     expect(store.getState().member.inviteCooldownUntil).toBeNull();

@@ -26,7 +26,9 @@ beforeEach(() => {
   mockedRequest.mockImplementation(({ url }: { url: string }) => {
     if (url === '/users/profile') return Promise.resolve({ data: { id: 1, email: 'me@example.com', name: 'Me' } });
     if (url === '/spaces' && spacesFail)
-      return Promise.reject({ response: { data: { statusCode: 500, message: 'boom', path: '', timestamp: '' } } });
+      return Promise.reject({
+        response: { status: 500, data: { statusCode: 500, message: 'boom', path: '', timestamp: '' } },
+      });
 
     return Promise.resolve({ data: [] });
   });

@@ -31,7 +31,8 @@ let mutationFails: boolean;
 let mutationError: unknown;
 
 const respond = ({ url, method }: RequestConfig) => {
-  if (method !== 'GET' && mutationFails) throw { response: { data: mutationError } };
+  if (method !== 'GET' && mutationFails)
+    throw { response: { status: (mutationError as { statusCode: number }).statusCode, data: mutationError } };
   if (method !== 'GET') return { data: mutationResponse };
   if (url.endsWith('/wallets'))
     return { data: { wallets: [], total_balance: 0, total_balance_currency: 'USD', delta_percent: 0 } };

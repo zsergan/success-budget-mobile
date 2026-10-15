@@ -279,7 +279,7 @@ describe('TransactionsScreen', () => {
     mockedRequest.mockImplementation(({ url }: RequestConfig) => {
       if (url !== FEED) return Promise.resolve({ data: null });
       return failList
-        ? Promise.reject({ response: { data: { statusCode: 500, message: 'boom' } } })
+        ? Promise.reject({ response: { status: 500, data: { statusCode: 500, message: 'boom' } } })
         : Promise.resolve({ data: feedDto([taxi]) });
     });
 
@@ -315,7 +315,7 @@ describe('TransactionsScreen', () => {
           }),
         });
       return failNext
-        ? Promise.reject({ response: { data: { statusCode: 500, message: 'boom' } } })
+        ? Promise.reject({ response: { status: 500, data: { statusCode: 500, message: 'boom' } } })
         : Promise.resolve({
             data: feedDto([september('second', 20), september('third', 3)], {
               day_totals: [
@@ -451,7 +451,10 @@ describe('TransactionsScreen', () => {
         if (url !== FEED) return Promise.resolve({ data: null });
         if (params?.around_id)
           return Promise.reject({
-            response: { data: { statusCode: 404, code: 'TRANSACTION_NOT_FOUND', message: 'Transaction not found' } },
+            response: {
+              status: 404,
+              data: { statusCode: 404, code: 'TRANSACTION_NOT_FOUND', message: 'Transaction not found' },
+            },
           });
         return Promise.resolve({ data: feedDto(params?.from === new Date(2026, 7, 1).toISOString() ? [taxi] : []) });
       });
@@ -474,7 +477,10 @@ describe('TransactionsScreen', () => {
         if (url !== FEED) return Promise.resolve({ data: null });
         if (params?.around_id === 's2')
           return Promise.reject({
-            response: { data: { statusCode: 404, code: 'TRANSACTION_NOT_FOUND', message: 'Transaction not found' } },
+            response: {
+              status: 404,
+              data: { statusCode: 404, code: 'TRANSACTION_NOT_FOUND', message: 'Transaction not found' },
+            },
           });
         // A window below the newest record, as after scrolling down past dropped pages.
         return Promise.resolve({ data: feedDto(shown, { page_info: { next_cursor: null, previous_cursor: 'p0' } }) });
@@ -706,7 +712,8 @@ describe('TransactionsScreen', () => {
       let fail = true;
       mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
         if (url !== FEED) return Promise.resolve({ data: null });
-        if (params?.q && fail) return Promise.reject({ response: { data: { statusCode: 500, message: 'boom' } } });
+        if (params?.q && fail)
+          return Promise.reject({ response: { status: 500, data: { statusCode: 500, message: 'boom' } } });
         return Promise.resolve({ data: feedDto(params?.q ? [coffee] : [coffee, taxi]) });
       });
       renderTransactions(undefined);

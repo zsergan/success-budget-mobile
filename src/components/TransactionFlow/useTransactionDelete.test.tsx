@@ -95,7 +95,7 @@ describe('useTransactionDelete from a list row', () => {
     const { result } = setUp();
 
     mockedRequest.mockRejectedValueOnce({
-      response: { data: { statusCode: 409, code: 'TRANSACTION_VERSION_CONFLICT', message: 'Conflict' } },
+      response: { status: 409, data: { statusCode: 409, code: 'TRANSACTION_VERSION_CONFLICT', message: 'Conflict' } },
     });
     result.current.requestDelete(lunch);
     await confirm();
@@ -110,7 +110,7 @@ describe('useTransactionDelete from a list row', () => {
     const { result, store } = setUp();
 
     mockedRequest.mockRejectedValueOnce(new Error('Network Error')).mockRejectedValueOnce({
-      response: { data: { statusCode: 409, code: 'TRANSACTION_VERSION_CONFLICT', message: 'Conflict' } },
+      response: { status: 409, data: { statusCode: 409, code: 'TRANSACTION_VERSION_CONFLICT', message: 'Conflict' } },
     });
     result.current.requestDelete(lunch);
     await confirm(0);

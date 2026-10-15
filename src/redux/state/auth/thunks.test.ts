@@ -31,7 +31,9 @@ const errorResponse = {
   timestamp: '2026-01-01T00:00:00.000Z',
 };
 
-const axiosErrorFor = (data: unknown) => ({ response: { data } });
+const axiosErrorFor = (data: { statusCode: number } & Record<string, unknown>) => ({
+  response: { status: data.statusCode, data },
+});
 
 beforeEach(() => {
   jest.clearAllMocks();

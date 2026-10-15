@@ -70,7 +70,8 @@ const body = (config: RequestConfig) => {
 };
 
 const ok: Responder = (config) => Promise.resolve({ data: body(config) });
-const serverError: Responder = () => Promise.reject({ response: { data: { statusCode: 500, message: 'boom' } } });
+const serverError: Responder = () =>
+  Promise.reject({ response: { status: 500, data: { statusCode: 500, message: 'boom' } } });
 const hang: Responder = () => new Promise(() => {});
 
 const september: DateRange = {
@@ -194,7 +195,7 @@ describe('block errors', () => {
     unmount();
 
     respond.summary = () =>
-      Promise.reject({ response: { data: { statusCode: 503, message: 'down', timestamp: SERVER_NOW } } });
+      Promise.reject({ response: { status: 503, data: { statusCode: 503, message: 'down', timestamp: SERVER_NOW } } });
     const failing = renderForSpace(2);
     await waitFor(() => expect(failing.result.current.loadFailed).toBe(true));
     expect(failing.result.current.loadError?.statusCode).toBe(503);
@@ -211,7 +212,7 @@ describe('block errors', () => {
 
   it('tells a refused space apart from a failure to retry', async () => {
     const forbidden: Responder = () =>
-      Promise.reject({ response: { data: { statusCode: 403, message: 'Space does not exist' } } });
+      Promise.reject({ response: { status: 403, data: { statusCode: 403, message: 'Space does not exist' } } });
     respond = { summary: forbidden, trend: forbidden, breakdown: forbidden };
 
     const { result, unmount } = renderForSpace(1);
@@ -598,7 +599,9 @@ describe('control sums', () => {
 // The device clock runs ahead of the server's, so its as_of lies in the server's future.
 const rejectAsOf: Responder = (config) =>
   config.params?.as_of && config.params.as_of > serverNow
-    ? Promise.reject({ response: { data: { statusCode: 400, message: [{ field: 'as_of', error: 'future' }] } } })
+    ? Promise.reject({
+        response: { status: 400, data: { statusCode: 400, message: [{ field: 'as_of', error: 'future' }] } },
+      })
     : ok(config);
 
 const createTransaction = (store: ReturnType<typeof createAppStore>) =>
@@ -760,7 +763,7 @@ describe('after a mutation', () => {
 
     await loaded(result);
     mockedRequest.mockImplementationOnce(() =>
-      Promise.reject({ response: { data: { statusCode: 500, message: 'boom' } } }),
+      Promise.reject({ response: { status: 500, data: { statusCode: 500, message: 'boom' } } }),
     );
 
     await act(async () => {

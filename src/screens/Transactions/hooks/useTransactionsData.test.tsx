@@ -32,7 +32,7 @@ type Responder = (config: RequestConfig) => Promise<unknown>;
 let respondRange: Responder;
 let respondLatest: Responder;
 
-const serverError = () => Promise.reject({ response: { data: { statusCode: 500, message: 'boom' } } });
+const serverError = () => Promise.reject({ response: { status: 500, data: { statusCode: 500, message: 'boom' } } });
 const rows = (...ids: string[]) => Promise.resolve({ data: feedDto(ids.map((id) => ({ ...dto, id }))) });
 const feed = (data: TransactionFeedResponse) => Promise.resolve({ data });
 

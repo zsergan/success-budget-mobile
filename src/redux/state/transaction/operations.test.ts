@@ -33,7 +33,7 @@ interface SentRequest {
 
 const noAnswer = () => Promise.reject(new Error('Network Error'));
 const fails = (statusCode: number, code: string) => () =>
-  Promise.reject({ response: { data: { statusCode, code, message: code } } });
+  Promise.reject({ response: { status: statusCode, data: { statusCode, code, message: code } } });
 const answers = (data: unknown) => () => Promise.resolve({ data });
 
 // A write goes out once it is stored, a few promise turns after it is submitted.

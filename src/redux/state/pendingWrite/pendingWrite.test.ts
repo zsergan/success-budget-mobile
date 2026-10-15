@@ -42,7 +42,7 @@ const create: TransactionRequest = { type: 'create', spaceId: 1, data: lunch };
 
 const noAnswer = () => Promise.reject(new Error('Network Error'));
 const refusal = (statusCode: number, code: string) => () =>
-  Promise.reject({ response: { data: { statusCode, code, message: code } } });
+  Promise.reject({ response: { status: statusCode, data: { statusCode, code, message: code } } });
 const answers = (data: unknown) => () => Promise.resolve({ data });
 const operation = (status: 'applied' | 'deleted') =>
   answers({

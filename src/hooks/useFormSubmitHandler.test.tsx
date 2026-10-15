@@ -63,7 +63,7 @@ const renderSubmitHandler = (onSubmit: (store: AppStore) => Promise<unknown> = c
 beforeEach(() => jest.clearAllMocks());
 
 it('alerts a failure of the current session and leaves the form unsubmitted', async () => {
-  mockedRequest.mockRejectedValue({ response: { data: { message: 'Name taken', statusCode: 409 } } });
+  mockedRequest.mockRejectedValue({ response: { status: 409, data: { message: 'Name taken', statusCode: 409 } } });
 
   const { result, onSuccess } = renderSubmitHandler();
 
@@ -122,7 +122,7 @@ describe('a space form submitted before a logout and a new login', () => {
   const oldResponses = {
     success: (resolve: (value: unknown) => void) => resolve({ data: { id: 7 } }),
     failure: (_: unknown, reject: (reason: unknown) => void) =>
-      reject({ response: { data: { message: 'Server error', statusCode: 500 } } }),
+      reject({ response: { status: 500, data: { message: 'Server error', statusCode: 500 } } }),
   };
   const cases = Object.entries(submits).flatMap(([form, submit]) =>
     Object.entries(oldResponses).map(([outcome, respond]) => [form, outcome, submit, respond] as const),

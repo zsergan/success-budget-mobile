@@ -40,7 +40,9 @@ const renderInviteMember = () => {
 beforeEach(() => jest.clearAllMocks());
 
 it('alerts a failed invite of the current session', async () => {
-  mockedRequest.mockRejectedValue({ response: { data: { message: 'Already a member', statusCode: 409 } } });
+  mockedRequest.mockRejectedValue({
+    response: { status: 409, data: { message: 'Already a member', statusCode: 409 } },
+  });
 
   const { result } = renderInviteMember();
 
