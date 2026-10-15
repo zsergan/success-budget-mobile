@@ -29,6 +29,7 @@ export interface TinyButtonProps {
   showCircle?: boolean;
   selected?: boolean;
   disabled?: boolean;
+  accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -46,9 +47,17 @@ const TinyButton = ({
   showCircle,
   disabled,
   selected,
+  accessibilityLabel,
   style,
 }: TinyButtonProps) => (
-  <TouchableOpacity disabled={disabled} onPress={onPress} onLongPress={onLongPress} activeOpacity={0.5}>
+  <TouchableOpacity
+    disabled={disabled}
+    onPress={onPress}
+    onLongPress={onLongPress}
+    activeOpacity={0.5}
+    accessibilityRole="button"
+    accessibilityLabel={accessibilityLabel}
+  >
     <View
       style={[
         styles.button,
