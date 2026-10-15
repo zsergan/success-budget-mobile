@@ -40,7 +40,7 @@ currencies. Redux Toolkit + RTK Query, React Navigation, react-hook-form + yup.
   until their outcome is known; see `transaction/operations.ts`),
   `passwordReset` (the recovery flow's address, resend cooldown and
   in-memory reset authorization, apart from registration's `userEmail`;
-  its mutations run with `track: false`) and `launch` (fonts + stored
+  see `docs/password-recovery.md`) and `launch` (fonts + stored
   session → Welcome or the app; see `docs/launch.md`). Do not add server
   data to a slice.
 - Selecting a space after create/accept/leave goes through
