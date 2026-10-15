@@ -51,6 +51,12 @@ const styles = StyleSheet.create({
   footer: {
     rowGap: 11,
   },
+  footerPinned: {
+    paddingTop: 12,
+    paddingBottom: 12,
+    paddingHorizontal: 26,
+    backgroundColor: colors.bg,
+  },
   prompt: {
     marginTop: 2,
     flexDirection: 'row',

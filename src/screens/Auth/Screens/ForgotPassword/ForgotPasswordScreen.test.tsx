@@ -179,6 +179,21 @@ describe('keyboard', () => {
       .spyOn(Keyboard, 'metrics')
       .mockReturnValue({ height: 300, screenX: 0, screenY: 500, width: 393 } as KeyboardMetrics);
 
+  const isInScroll = (element: { type: unknown; parent: unknown } | null): boolean =>
+    element !== null && (element.type === 'RCTScrollView' || isInScroll(element.parent as typeof element));
+
+  it('follows the content without a keyboard, and is pinned outside the scroll above one', async () => {
+    await openForgotPassword();
+    expect(isInScroll(button('Send code'))).toBe(true);
+
+    keyboardUp();
+    await press('Back');
+    fireEvent.press(screen.getByText('Forgot password?'));
+    await settle();
+
+    expect(isInScroll(button('Send code'))).toBe(false);
+  });
+
   it('keeps Back to sign in above the keyboard where there is room', async () => {
     keyboardUp();
     await openForgotPassword();

@@ -42,12 +42,28 @@ const AuthFormLayout = ({
   const isKeyboardUp = useKeyboardHeight() > 0;
   const illustrationTone = illustration && ILLUSTRATION_TONES[illustration.tone];
 
+  const footer = (
+    <View style={[styles.footer, isKeyboardUp && styles.footerPinned]}>
+      {action}
+
+      {prompt && (
+        <View style={styles.prompt}>
+          <Text style={styles.promptText}>{prompt.text}</Text>
+
+          <TextLink title={prompt.linkTitle} onPress={prompt.onLinkPress} />
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <RootLayout
       scrollable
       edges={['top', 'left', 'right']}
       style={styles.scroll}
-      contentContainerStyle={[styles.content, { paddingBottom: Math.max(BOTTOM_GAP, bottom) }]}
+      contentContainerStyle={[styles.content, { paddingBottom: isKeyboardUp ? 0 : Math.max(BOTTOM_GAP, bottom) }]}
+      // With the keyboard up the action is pinned above it; otherwise it follows the content, even at large text sizes.
+      footer={isKeyboardUp ? footer : undefined}
     >
       <View style={styles.backRow}>
         <TinyButton
@@ -80,17 +96,7 @@ const AuthFormLayout = ({
 
       <View style={styles.spacer} />
 
-      <View style={styles.footer}>
-        {action}
-
-        {prompt && (
-          <View style={styles.prompt}>
-            <Text style={styles.promptText}>{prompt.text}</Text>
-
-            <TextLink title={prompt.linkTitle} onPress={prompt.onLinkPress} />
-          </View>
-        )}
-      </View>
+      {!isKeyboardUp && footer}
     </RootLayout>
   );
 };
