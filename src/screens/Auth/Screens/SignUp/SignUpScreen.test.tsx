@@ -187,6 +187,17 @@ describe('validation', () => {
     expect(screen.getByText('At least 8 characters, with a letter and a digit.')).toBeTruthy();
   });
 
+  it('asks to repeat the password when the confirmation is left empty, not that they differ', async () => {
+    answerCurrencies();
+    await renderSignUp();
+
+    await type('Password', 'secret12');
+    await leave('Confirm password');
+
+    expect(screen.getByText('Repeat the password.')).toBeTruthy();
+    expect(screen.queryByText('Passwords don’t match.')).toBeNull();
+  });
+
   it('checks the confirmation again whenever the password changes', async () => {
     answerCurrencies();
     await renderSignUp();

@@ -31,7 +31,8 @@ const schema = yup.object().shape({
   passwordConfirm: yup
     .string()
     .required('Repeat the password.')
-    .oneOf([yup.ref('password')], 'Passwords don’t match.'),
+    // Not oneOf: yup checks that before required, so an empty confirmation would read as a mismatch.
+    .test('matches-password', 'Passwords don’t match.', (value, { parent }) => !value || value === parent.password),
   currency: yup.number().required('Pick a currency.'),
 });
 
