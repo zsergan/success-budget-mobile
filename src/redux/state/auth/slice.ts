@@ -3,6 +3,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import { isApiError } from '@shared/utils/error';
 
 import { attemptFailed, attemptStarted } from '../launch/actions';
+import { registrationAbandoned } from './actions';
 import initialState from './initialState';
 import { readStoredSession, registerMe, loginMe, logoutMe, verifyEmailMe } from './thunks';
 
@@ -13,6 +14,7 @@ const login = (state: typeof initialState, action: string) => {
   state.storedSessionRead = null;
   state.userToken = action;
   state.userEmail = null;
+  state.registrationRequestId = null;
   state.error = undefined;
 };
 
@@ -21,6 +23,7 @@ const logout = (state: typeof initialState) => {
   state.storedSession = 'read';
   state.storedSessionRead = null;
   state.userToken = null;
+  state.registrationRequestId = null;
   state.sessionKey += 1;
 };
 
@@ -32,9 +35,24 @@ const authSlice = createSlice({
   initialState,
   reducers: {},
   extraReducers: (builder) => {
+    builder.addCase(registerMe.pending, (state, action) => {
+      state.registrationRequestId = action.meta.requestId;
+    });
+
     builder.addCase(registerMe.fulfilled, (state, action) => {
+      if (state.registrationRequestId !== action.meta.requestId) return;
+
+      state.registrationRequestId = null;
       state.userEmail = action.payload.email;
       state.error = undefined;
+    });
+
+    builder.addCase(registerMe.rejected, (state, action) => {
+      if (state.registrationRequestId === action.meta.requestId) state.registrationRequestId = null;
+    });
+
+    builder.addCase(registrationAbandoned, (state) => {
+      state.registrationRequestId = null;
     });
 
     builder.addCase(verifyEmailMe.fulfilled, (state, action) => login(state, action.payload));

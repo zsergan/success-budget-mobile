@@ -431,6 +431,35 @@ describe('going on to verification', () => {
 
     expect(navigation.navigate).not.toHaveBeenCalled();
   });
+
+  it('keeps verifying the address registered last when one sent before leaving answers late', async () => {
+    answerCurrencies();
+    let answerFirst: (profile: Awaited<ReturnType<typeof register>>) => void = () => {};
+    mockedRegister.mockReturnValueOnce(new Promise((resolve) => (answerFirst = resolve)));
+    const first = await renderSignUp();
+
+    await sendForm();
+    first.navigation.isFocused.mockReturnValue(false);
+    first.unmount();
+
+    mockedRegister.mockResolvedValueOnce(registered('bohdan@kovalenko.co'));
+    const second = await renderSignUp(first.store);
+
+    await fillInValidForm();
+    await type('Email', 'bohdan@kovalenko.co');
+    await act(async () => {
+      fireEvent.press(createAccountButton());
+    });
+
+    expect(second.navigation.navigate).toHaveBeenCalledWith(ScreenNames.VERIFY_EMAIL_SCREEN);
+    expect(first.store.getState().auth.userEmail).toBe('bohdan@kovalenko.co');
+
+    await act(async () => answerFirst(registered('anna@kovalenko.co')));
+
+    expect(first.store.getState().auth.userEmail).toBe('bohdan@kovalenko.co');
+    expect(first.navigation.navigate).not.toHaveBeenCalled();
+    expect(second.navigation.navigate).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('a failed registration', () => {

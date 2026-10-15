@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import * as yup from 'yup';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
 import { useAlert, useSingleSubmit } from '@hooks';
 import { useAppDispatch } from '@redux/hooks';
+import { registrationAbandoned } from '@redux/state/auth/actions';
 import { registerMe } from '@redux/state/auth/thunks';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
@@ -78,8 +79,19 @@ const useSignUpForm = ({ navigation }: UseSignUpFormProps) => {
     }
   }, [password, getFieldState, trigger]);
 
+  // The registration this screen is waiting for; cleared when the screen goes, so a late answer is no longer its own.
+  const currentRequestId = useRef<string | null>(null);
+
+  useEffect(
+    () => () => {
+      currentRequestId.current = null;
+      dispatch(registrationAbandoned());
+    },
+    [dispatch],
+  );
+
   const register = async (formData: FormData) => {
-    const result = await dispatch(
+    const request = dispatch(
       registerMe({
         email: formData.email,
         password: formData.password,
@@ -88,8 +100,11 @@ const useSignUpForm = ({ navigation }: UseSignUpFormProps) => {
       }),
     );
 
+    currentRequestId.current = request.requestId;
+    const result = await request;
+
     // A registration that ends after the user left neither pulls them back nor alerts its failure.
-    if (!navigation.isFocused()) return;
+    if (currentRequestId.current !== request.requestId || !navigation.isFocused()) return;
 
     if (registerMe.fulfilled.match(result)) {
       navigation.navigate(ScreenNames.VERIFY_EMAIL_SCREEN);
