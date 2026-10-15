@@ -10,13 +10,13 @@ categories, spending limits, multi-currency support.
 - React Navigation (stack + bottom tabs)
 - react-hook-form + yup for forms
 
-See [`CLAUDE.md`](./CLAUDE.md) for the full project layout and conventions.
+See [`AGENTS.md`](./AGENTS.md) for the full project layout and conventions.
 
 ## Project structure
 
 Screens live under `src/screens/**`; a screen that outgrows a single
 file decomposes into `components/` and `hooks/` subfolders. See
-["Screen organization" in `CLAUDE.md`](./CLAUDE.md#screen-organization)
+["Code organization" in `AGENTS.md`](./AGENTS.md#code-organization)
 for the rules behind that split.
 
 ## Requirements
