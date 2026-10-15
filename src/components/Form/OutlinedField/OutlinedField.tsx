@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
+import { useRef } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
+import { useRevealWhileFocused } from '@components/RootLayout/FieldReveal';
 import { colors } from '@shared/theme';
 import type { IconType } from '@shared/types';
 
@@ -36,6 +38,9 @@ const OutlinedField = ({
   onPress,
   containerStyle,
 }: Props) => {
+  const rootRef = useRef<View>(null);
+  useRevealWhileFocused(rootRef, !!isFocused, error ?? hint);
+
   const boxStyle = [
     styles.box,
     isFocused && styles.boxFocused,
@@ -56,7 +61,7 @@ const OutlinedField = ({
   );
 
   return (
-    <View style={[styles.root, containerStyle]}>
+    <View ref={rootRef} style={[styles.root, containerStyle]}>
       {label && <Text style={[styles.label, !!error && styles.labelError]}>{label}</Text>}
 
       {onPress ? (
