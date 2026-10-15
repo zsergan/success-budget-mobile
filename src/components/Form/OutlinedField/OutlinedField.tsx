@@ -22,6 +22,9 @@ interface Props {
   disabled?: boolean;
   // Makes the whole box the touch target, for a field that opens a picker instead of taking text.
   onPress?: () => void;
+  // For a pressable field: what it shows, read out after its label, and whether that is still loading.
+  valueText?: string;
+  isBusy?: boolean;
   containerStyle?: StyleProp<ViewStyle>;
 }
 
@@ -36,6 +39,8 @@ const OutlinedField = ({
   isValid,
   disabled,
   onPress,
+  valueText,
+  isBusy,
   containerStyle,
 }: Props) => {
   const rootRef = useRef<View>(null);
@@ -72,7 +77,10 @@ const OutlinedField = ({
           activeOpacity={0.6}
           accessibilityRole="button"
           accessibilityLabel={label}
+          accessibilityValue={valueText ? { text: valueText } : undefined}
           accessibilityHint={error ?? hint}
+          // The field is focused while the list it opens is shown.
+          accessibilityState={{ disabled: !!disabled, expanded: !!isFocused, busy: !!isBusy }}
         >
           {content}
         </TouchableOpacity>

@@ -54,6 +54,7 @@ const InputPicker = ({
   const [isPickerVisible, setIsPickerVisible] = useState(false);
 
   const selectedLabel = items.find((item) => item.value === Number(selectedValue))?.label || '';
+  const shownText = selectedLabel || placeholder;
   const hasEmptyRow = placeholder !== undefined;
   const pickerValue = hasEmptyRow && !selectedLabel ? EMPTY_VALUE : selectedValue;
 
@@ -100,6 +101,8 @@ const InputPicker = ({
           isFocused={isPickerVisible}
           disabled={disabled || isLoading}
           onPress={openPicker}
+          valueText={shownText}
+          isBusy={isLoading}
           containerStyle={containerStyle}
           trailing={
             isLoading ? (
@@ -113,7 +116,7 @@ const InputPicker = ({
             style={[outlinedStyles.value, styles.outlinedValue, !selectedLabel && outlinedStyles.placeholder]}
             numberOfLines={1}
           >
-            {selectedLabel || placeholder}
+            {shownText}
           </Text>
         </OutlinedField>
       ) : (
@@ -125,9 +128,13 @@ const InputPicker = ({
             onPress={openPicker}
             activeOpacity={0.5}
             disabled={disabled}
+            accessibilityRole="button"
+            accessibilityLabel={label}
+            accessibilityValue={shownText ? { text: shownText } : undefined}
+            accessibilityState={{ disabled: !!disabled, expanded: isPickerVisible }}
           >
             <Text style={[styles.input, !selectedLabel && styles.placeholder]} numberOfLines={1}>
-              {selectedLabel || placeholder}
+              {shownText}
             </Text>
           </TouchableOpacity>
         </View>

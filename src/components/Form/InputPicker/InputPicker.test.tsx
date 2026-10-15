@@ -1,6 +1,7 @@
 import { Children, isValidElement } from 'react';
 import { Picker } from '@react-native-picker/picker';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { Modal } from 'react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import InputPicker from './InputPicker';
 
@@ -90,4 +91,75 @@ it('lists only the items when there is no placeholder', () => {
 
   expect(rows()).toEqual(['USD · US dollar', 'EUR · Euro']);
   expect(onValueChange).toHaveBeenCalledWith(9, 1);
+});
+
+describe.each(['outlined', 'filled'] as const)('a %s picker, to a screen reader', (variant) => {
+  const field = () => screen.getByRole('button', { name: 'Currency' });
+
+  it('reads the picked item as its value, and the placeholder until then', () => {
+    const props = {
+      variant,
+      label: 'Currency',
+      placeholder: 'Pick a currency',
+      items: ITEMS,
+      onValueChange: jest.fn(),
+    };
+    const { rerender } = render(<InputPicker {...props} selectedValue={undefined} />);
+
+    expect(field().props.accessibilityValue).toEqual({ text: 'Pick a currency' });
+
+    rerender(<InputPicker {...props} selectedValue={7} />);
+
+    expect(field().props.accessibilityValue).toEqual({ text: 'USD · US dollar' });
+  });
+
+  it('is expanded while its list is shown', () => {
+    render(
+      <InputPicker variant={variant} label="Currency" items={ITEMS} selectedValue={7} onValueChange={jest.fn()} />,
+    );
+
+    expect(field().props.accessibilityState).toMatchObject({ expanded: false });
+
+    fireEvent.press(field());
+
+    expect(field().props.accessibilityState).toMatchObject({ expanded: true });
+
+    act(() => screen.UNSAFE_getByType(Modal).props.onRequestClose());
+
+    expect(field().props.accessibilityState).toMatchObject({ expanded: false });
+  });
+
+  it('is announced as unavailable when it is disabled', () => {
+    render(
+      <InputPicker
+        variant={variant}
+        label="Currency"
+        items={ITEMS}
+        selectedValue={7}
+        onValueChange={jest.fn()}
+        disabled
+      />,
+    );
+
+    expect(field().props.accessibilityState).toMatchObject({ disabled: true });
+  });
+});
+
+it('announces an outlined picker whose items are loading as busy and unavailable', () => {
+  render(
+    <InputPicker
+      variant="outlined"
+      label="Currency"
+      placeholder="Loading currencies…"
+      items={[]}
+      selectedValue={undefined}
+      onValueChange={jest.fn()}
+      isLoading
+    />,
+  );
+
+  expect(screen.getByRole('button', { name: 'Currency' }).props.accessibilityState).toMatchObject({
+    disabled: true,
+    busy: true,
+  });
 });

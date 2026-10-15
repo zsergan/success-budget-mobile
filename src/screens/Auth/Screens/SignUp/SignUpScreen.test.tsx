@@ -65,6 +65,8 @@ const renderSignUp = async (store = createAppStore()) => {
 
 const createAccountButton = () => screen.getByRole('button', { name: 'Create account' });
 
+const currencyField = () => screen.getByRole('button', { name: 'Currency of your space' });
+
 const type = async (label: string, text: string) => {
   await act(async () => {
     fireEvent.changeText(screen.getByLabelText(label), text);
@@ -125,6 +127,7 @@ it('shows a picked currency by its code and name, and sends its id as base_curre
   await fillInValidForm();
 
   expect(screen.getByText('USD · US dollar')).toBeTruthy();
+  expect(currencyField().props.accessibilityValue).toEqual({ text: 'USD · US dollar' });
 
   await act(async () => {
     fireEvent.press(createAccountButton());
@@ -321,6 +324,7 @@ it('waits for the currencies, offers a retry when they fail, and keeps what was 
   await renderSignUp();
 
   expect(await screen.findByText('Couldn’t load the currencies.')).toBeTruthy();
+  expect(currencyField().props.accessibilityState).toMatchObject({ disabled: true, busy: false });
 
   await act(async () => fireEvent.changeText(screen.getByLabelText('Name'), 'Anna'));
 
@@ -330,6 +334,7 @@ it('waits for the currencies, offers a retry when they fail, and keeps what was 
   });
 
   expect(await screen.findByText('Loading currencies…')).toBeTruthy();
+  expect(currencyField().props.accessibilityState).toMatchObject({ disabled: true, busy: true });
   expect(screen.queryByText('Couldn’t load the currencies.')).toBeNull();
   expect(screen.getByLabelText('Name').props.value).toBe('Anna');
 });
