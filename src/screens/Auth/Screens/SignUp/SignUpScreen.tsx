@@ -1,14 +1,9 @@
-import { useEffect } from 'react';
 import { View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
 import { Button, Input, InputPicker, PasswordInput } from '@components';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
-import { useAppSelector } from '@redux/hooks';
-import { selectAuth } from '@redux/state/auth/selectors';
-import { useAlert } from '@hooks';
-import { getErrorMessage } from '@shared/utils';
 import AuthFormLayout from '@screens/Auth/AuthFormLayout/AuthFormLayout';
 import TextLink from '@screens/Auth/TextLink/TextLink';
 import useCurrencyOptions from './useCurrencyOptions';
@@ -25,18 +20,10 @@ const MAX_TEXT_LENGTH = 255;
 const PASSWORD_RULES = 'minlength: 8; required: lower, upper; required: digit;';
 
 const SignUpScreen = ({ navigation }: Props) => {
-  const { error } = useAppSelector(selectAuth);
   const { control, onSubmit, isSubmitting, isSubmitDisabled, isEmailWellFormed, focusField } = useSignUpForm({
     navigation,
   });
   const currencies = useCurrencyOptions();
-  const { addAlert } = useAlert();
-
-  useEffect(() => {
-    if (error) {
-      addAlert(getErrorMessage(error));
-    }
-  }, [error, addAlert]);
 
   return (
     <AuthFormLayout

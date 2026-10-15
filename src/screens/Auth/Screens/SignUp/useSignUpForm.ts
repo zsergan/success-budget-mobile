@@ -3,10 +3,12 @@ import * as yup from 'yup';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
+import { useAlert } from '@hooks';
 import { useAppDispatch } from '@redux/hooks';
 import { registerMe } from '@redux/state/auth/thunks';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
+import { getErrorMessage } from '@shared/utils';
 import emailSchema from '@screens/Auth/Screens/emailSchema';
 import useSingleSubmit from '@screens/Auth/Screens/useSingleSubmit';
 
@@ -46,6 +48,7 @@ type UseSignUpFormProps = Pick<RootStackScreenProps<ScreenNames.SIGN_UP_SCREEN>,
 
 const useSignUpForm = ({ navigation }: UseSignUpFormProps) => {
   const dispatch = useAppDispatch();
+  const { addAlert } = useAlert();
 
   const {
     control,
@@ -85,9 +88,13 @@ const useSignUpForm = ({ navigation }: UseSignUpFormProps) => {
       }),
     );
 
-    // A registration finished after the user left must not pull them back into it.
-    if (registerMe.fulfilled.match(result) && navigation.isFocused()) {
+    // A registration that ends after the user left neither pulls them back nor alerts its failure.
+    if (!navigation.isFocused()) return;
+
+    if (registerMe.fulfilled.match(result)) {
       navigation.navigate(ScreenNames.VERIFY_EMAIL_SCREEN);
+    } else {
+      addAlert(getErrorMessage(result.payload));
     }
   };
 

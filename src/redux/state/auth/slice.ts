@@ -1,4 +1,4 @@
-import { createSlice, isRejected } from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit';
 
 import { isApiError } from '@shared/utils/error';
 
@@ -80,12 +80,10 @@ const authSlice = createSlice({
       state.storedSessionRead = null;
     });
 
-    // Sign In shows its own failures in place, so they never reach the sign-up or verify screens.
-    builder.addMatcher(isRejected(registerMe, verifyEmailMe), (state, action) => {
+    // Only the verify screen reads this: Sign In and Sign Up show their own failures from the request's result.
+    builder.addCase(verifyEmailMe.rejected, (state, action) => {
       // The verify screen sends an already verified account to sign in instead of showing this as an error.
-      const isAlreadyVerified = verifyEmailMe.rejected.match(action) && isApiError(action.payload, 409);
-
-      state.error = isAlreadyVerified ? undefined : action.payload;
+      state.error = isApiError(action.payload, 409) ? undefined : action.payload;
     });
   },
 });

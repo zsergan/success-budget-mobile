@@ -6,7 +6,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { register } from '@api/auth.api';
 import { createAppStore } from '@redux/Store';
-import { registerMe } from '@redux/state/auth/thunks';
+import { registerMe, verifyEmailMe } from '@redux/state/auth/thunks';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
 import SignUpScreen from './SignUpScreen';
@@ -25,8 +25,10 @@ jest.mock('@api/auth.api', () => ({
   ...jest.requireActual('@api/auth.api'),
   register: jest.fn(),
 }));
+const mockedAddAlert = jest.fn();
+
 jest.mock('@hooks', () => ({
-  useAlert: () => ({ addAlert: jest.fn() }),
+  useAlert: () => ({ addAlert: mockedAddAlert }),
 }));
 
 const mockedRegister = jest.mocked(register);
@@ -390,5 +392,73 @@ describe('going on to verification', () => {
     await act(async () => answer(registered('anna@kovalenko.co')));
 
     expect(navigation.navigate).not.toHaveBeenCalled();
+  });
+});
+
+describe('a failed registration', () => {
+  const rejectWith = (status: number, message: string) =>
+    mockedRegister.mockRejectedValue({
+      response: { status, data: { statusCode: status, message }, headers: {} },
+      config: { url: '/users/register' },
+    });
+
+  const sendForm = async () => {
+    await fillInValidForm();
+    await act(async () => {
+      fireEvent.press(createAccountButton());
+    });
+  };
+
+  it('shows nothing for a code the verify screen refused', async () => {
+    answerCurrencies();
+    const store = createAppStore();
+    store.dispatch(
+      verifyEmailMe.rejected(
+        null,
+        'earlier',
+        { email: 'anna@kovalenko.co', code: '000000' },
+        {
+          statusCode: 400,
+          message: 'Invalid verification code',
+          path: '/users/verify-email',
+          timestamp: '2026-01-01T00:00:00.000Z',
+        },
+      ),
+    );
+
+    await renderSignUp(store);
+
+    expect(mockedAddAlert).not.toHaveBeenCalled();
+  });
+
+  it('tells its own failure once, and not again when Sign Up is opened anew', async () => {
+    answerCurrencies();
+    rejectWith(409, 'Email already registered');
+    const { navigation, store, unmount } = await renderSignUp();
+
+    await sendForm();
+
+    expect(mockedAddAlert).toHaveBeenCalledTimes(1);
+    expect(mockedAddAlert).toHaveBeenCalledWith('Email already registered');
+    expect(navigation.navigate).not.toHaveBeenCalled();
+
+    unmount();
+    await renderSignUp(store);
+
+    expect(mockedAddAlert).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps quiet about a failure that answers after the user left', async () => {
+    answerCurrencies();
+    let answer: (error: object) => void = () => {};
+    mockedRegister.mockReturnValue(new Promise((_, reject) => (answer = reject)));
+    const { navigation, unmount } = await renderSignUp();
+
+    await sendForm();
+    navigation.isFocused.mockReturnValue(false);
+    unmount();
+    await act(async () => answer({ response: { status: 409, data: {}, headers: {} }, config: {} }));
+
+    expect(mockedAddAlert).not.toHaveBeenCalled();
   });
 });

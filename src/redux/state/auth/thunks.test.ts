@@ -81,7 +81,7 @@ describe('registerMe', () => {
     expect(store.getState().auth.isSignedIn).toBe(false);
   });
 
-  it('rejects with the server error body, e.g. a duplicate email', async () => {
+  it('rejects with the server error body, e.g. a duplicate email, keeping it out of the shared auth error', async () => {
     const duplicateEmailError = {
       message: 'Email already registered',
       statusCode: 409,
@@ -96,7 +96,7 @@ describe('registerMe', () => {
 
     expect(action.type).toBe('auth/registerMe/rejected');
     expect(action.payload).toEqual(duplicateEmailError);
-    expect(store.getState().auth.error).toEqual(duplicateEmailError);
+    expect(store.getState().auth.error).toBeUndefined();
   });
 
   it('continues to verification when a parallel sign-up for the email is already sending the code', async () => {
