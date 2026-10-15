@@ -14,18 +14,6 @@ const styles = StyleSheet.create({
     width: '100%',
     rowGap: theme.spacing.lg,
   },
-  rowInputs: {
-    flexDirection: 'row',
-    columnGap: theme.spacing.xl,
-  },
-  currency: {
-    flex: 1,
-    textAlign: 'center',
-    height: '100%',
-  },
-  name: {
-    flex: 2,
-  },
   bottomContainer: {
     position: 'absolute',
     bottom: 0,
