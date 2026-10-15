@@ -1,11 +1,11 @@
 # success-budget-mobile
 
 A React Native (Expo) personal-finance app: wallets, transactions,
-categories, spending limits, multi-currency support.
+categories, spending limits, shared spaces with one currency each.
 
 ## Stack
 
-- Expo SDK 54, React 19, React Native 0.81, TypeScript
+- Expo SDK 57, React 19, React Native 0.86, TypeScript
 - Redux Toolkit for state
 - React Navigation (stack + bottom tabs)
 - react-hook-form + yup for forms
