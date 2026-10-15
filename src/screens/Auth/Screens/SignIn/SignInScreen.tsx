@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
@@ -17,6 +18,21 @@ const SignInScreen = ({ navigation, route }: Props) => {
   const { control, onSubmit, isSubmitting, isSubmitDisabled, failure, focusField, getRecoveryEmail } =
     useSignInForm(passwordReset);
   const isWrongCredentials = failure?.kind === 'credentials';
+
+  // Back from recovery, the password is next; focused once the screen has appeared, since a focus during the
+  // transition blurs again and marks the empty field as touched.
+  useEffect(() => {
+    if (!passwordReset) return;
+
+    const unsubscribe = navigation.addListener('transitionEnd', (event) => {
+      if (event.data.closing) return;
+
+      unsubscribe();
+      focusField('password');
+    });
+
+    return unsubscribe;
+  }, [navigation, passwordReset, focusField]);
 
   return (
     <AuthFormLayout

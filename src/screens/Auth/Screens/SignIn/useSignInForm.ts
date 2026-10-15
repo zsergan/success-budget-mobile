@@ -62,8 +62,7 @@ const useSignInForm = (passwordReset?: PasswordResetOutcome) => {
     setFailure(null);
     setValue('email', passwordReset.email, { shouldValidate: true });
     setValue('password', '');
-    setFocus('password');
-  }, [passwordReset, setValue, setFocus]);
+  }, [passwordReset, setValue]);
 
   // Recovery starts from the address typed here, but only a complete one.
   const getRecoveryEmail = () => {
