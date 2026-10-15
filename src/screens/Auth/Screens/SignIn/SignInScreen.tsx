@@ -1,11 +1,10 @@
 import { View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import { Button, Input, PasswordInput } from '@components';
+import { Button, Input, PasswordInput, TextLink } from '@components';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import AuthFormLayout from '@screens/Auth/AuthFormLayout/AuthFormLayout';
-import TextLink from '@screens/Auth/TextLink/TextLink';
 import SignInFailureBanner from './components/SignInFailureBanner/SignInFailureBanner';
 import useSignInForm from './useSignInForm';
 

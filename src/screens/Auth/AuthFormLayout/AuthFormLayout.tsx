@@ -2,8 +2,7 @@ import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { RootLayout, TinyButton } from '@components';
-import TextLink from '@screens/Auth/TextLink/TextLink';
+import { RootLayout, TextLink, TinyButton } from '@components';
 
 import styles, { BOTTOM_GAP } from './style';
 
