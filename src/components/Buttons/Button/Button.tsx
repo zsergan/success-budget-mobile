@@ -2,19 +2,22 @@ import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { ActivityIndicator, Text, TouchableOpacity } from 'react-native';
 
-import { colors } from '@shared/theme';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
+import type { ThemeColors } from '@shared/theme';
 
-import styles from './style';
+import createStyles from './style';
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'tertiary' | 'danger';
 
-const SPINNER_COLORS: Record<Variant, string> = {
-  primary: colors.onAccent,
-  secondary: colors.onSecondary,
-  outline: colors.text,
-  tertiary: colors.text,
-  danger: '#FFFDFA',
-};
+const spinnerColor = (variant: Variant, colors: ThemeColors) =>
+  ({
+    primary: colors.onAccent,
+    secondary: colors.onSecondary,
+    outline: colors.text,
+    tertiary: colors.text,
+    danger: colors.onDanger,
+  })[variant];
 
 interface Props {
   title?: string;
@@ -44,6 +47,8 @@ const Button = ({
   busyTitle,
   style,
 }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const shownTitle = isLoading ? busyTitle : title;
   const isPrimaryDisabled = disabled && variant === 'primary';
   const isLarge = size === 'lg';
@@ -69,7 +74,7 @@ const Button = ({
       accessibilityLabel={isLoading ? (busyTitle ?? title) : undefined}
       accessibilityState={{ disabled: !!disabled || isLoading, busy: isLoading }}
     >
-      {isLoading && <ActivityIndicator color={SPINNER_COLORS[variant]} />}
+      {isLoading && <ActivityIndicator color={spinnerColor(variant, colors)} />}
 
       {!isLoading && icon}
 

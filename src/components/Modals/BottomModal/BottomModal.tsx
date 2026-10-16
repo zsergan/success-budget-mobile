@@ -4,9 +4,10 @@ import { TouchableWithoutFeedback, View } from 'react-native';
 
 import Button from '@components/Buttons/Button/Button';
 import Divider from '@components/Divider/Divider';
+import useThemedStyles from '@hooks/useThemedStyles';
 import ModalContainer from '../ModalContainer/ModalContainer';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   isVisible: boolean;
@@ -18,6 +19,7 @@ interface Props {
 }
 
 const BottomModal = ({ isVisible, onClose, content, actions, disabled }: Props) => {
+  const styles = useThemedStyles(createStyles);
   const handleClose = disabled ? () => {} : onClose;
 
   return (

@@ -3,11 +3,14 @@ import { Component } from 'react';
 import { Text, View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
+
 import Button from '../Buttons/Button/Button';
 import Icon from '../Icon/Icon';
-import { colors } from '@shared/theme';
+import { ThemeFallback } from '../ThemeProvider/ThemeProvider';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   children: ReactNode;
@@ -16,6 +19,21 @@ interface Props {
 interface State {
   hasError: boolean;
 }
+
+const ErrorFallback = ({ onReset }: { onReset: () => void }) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
+
+  return (
+    <View style={styles.root}>
+      <Icon name="alert" size={60} color={colors.muted} />
+
+      <Text style={styles.message}>Something went wrong. Please try again.</Text>
+
+      <Button title="Try again" onPress={onReset} style={styles.button} />
+    </View>
+  );
+};
 
 // Class component: error boundaries only support
 // getDerivedStateFromError/componentDidCatch, no hook equivalent exists.
@@ -40,13 +58,9 @@ class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <View style={styles.root}>
-          <Icon name="alert" size={60} color={colors.muted} />
-
-          <Text style={styles.message}>Something went wrong. Please try again.</Text>
-
-          <Button title="Try again" onPress={this.handleReset} style={styles.button} />
-        </View>
+        <ThemeFallback>
+          <ErrorFallback onReset={this.handleReset} />
+        </ThemeFallback>
       );
     }
 

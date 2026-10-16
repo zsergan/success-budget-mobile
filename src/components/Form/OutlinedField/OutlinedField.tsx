@@ -5,10 +5,11 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
 import { useRevealWhileFocused } from '@components/RootLayout/FieldReveal';
-import { colors } from '@shared/theme';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import type { IconType } from '@shared/types';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   children: ReactNode;
@@ -43,6 +44,8 @@ const OutlinedField = ({
   isBusy,
   containerStyle,
 }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const rootRef = useRef<View>(null);
   useRevealWhileFocused(rootRef, !!isFocused, error ?? hint);
 

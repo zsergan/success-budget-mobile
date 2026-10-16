@@ -2,7 +2,10 @@ import type { ReactNode } from 'react';
 import { Modal, Pressable, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 
-import styles from './style';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
+
+import createStyles from './style';
 
 interface Props {
   isVisible: boolean;
@@ -12,15 +15,22 @@ interface Props {
   animationType?: 'fade' | 'slide' | 'none';
 }
 
-const ModalContainer = ({ isVisible, onClose, children, backgroundStyle = 'dark', animationType }: Props) => (
-  <Modal visible={isVisible} transparent animationType={animationType} onRequestClose={onClose}>
-    <Pressable onPress={onClose} style={[styles.absolute, styles.pressable]}>
-      {backgroundStyle === 'blur' && <BlurView intensity={40} style={styles.absolute} />}
-      {backgroundStyle === 'dark' && <View style={[styles.absolute, styles.dark]} />}
+const ModalContainer = ({ isVisible, onClose, children, backgroundStyle = 'dark', animationType }: Props) => {
+  const { scheme } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
-      {children}
-    </Pressable>
-  </Modal>
-);
+  return (
+    <Modal visible={isVisible} transparent animationType={animationType} onRequestClose={onClose}>
+      <Pressable onPress={onClose} style={[styles.absolute, styles.pressable]}>
+        {backgroundStyle === 'blur' && (
+          <BlurView intensity={40} tint={scheme === 'dark' ? 'dark' : 'default'} style={styles.absolute} />
+        )}
+        {backgroundStyle === 'dark' && <View style={[styles.absolute, styles.dark]} />}
+
+        {children}
+      </Pressable>
+    </Modal>
+  );
+};
 
 export default ModalContainer;

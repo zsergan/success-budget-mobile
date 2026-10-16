@@ -1,6 +1,8 @@
 import { Platform } from 'react-native';
 import { default as Picker } from '@react-native-community/datetimepicker';
 
+import useTheme from '@hooks/useTheme';
+
 interface Props {
   value: Date;
   mode?: 'date' | 'time';
@@ -11,8 +13,11 @@ interface Props {
 
 // 'compact' (iOS) is a self-contained tappable pill; Android has no such style, so 'default' pops the dialog on mount.
 const DateTimePicker = ({ value, mode = 'date', onChange, onDismiss }: Props) => {
+  const { scheme } = useTheme();
+
   return (
     <Picker
+      themeVariant={scheme}
       mode={mode}
       value={value}
       onValueChange={(_, date) => onChange(date)}

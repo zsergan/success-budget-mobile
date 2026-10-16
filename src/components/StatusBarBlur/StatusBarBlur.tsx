@@ -4,7 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import theme, { colorScheme } from '@shared/theme';
+import useTheme from '@hooks/useTheme';
+import theme from '@shared/theme';
 
 import styles from './style';
 
@@ -12,6 +13,7 @@ const FADE_HEIGHT = theme.spacing.lg;
 
 const StatusBarBlur = () => {
   const { top } = useSafeAreaInsets();
+  const { scheme } = useTheme();
 
   if (top === 0) {
     return null;
@@ -29,7 +31,7 @@ const StatusBarBlur = () => {
         />
       }
     >
-      <BlurView intensity={30} tint={colorScheme} style={StyleSheet.absoluteFill} />
+      <BlurView intensity={30} tint={scheme} style={StyleSheet.absoluteFill} />
     </MaskedView>
   );
 };

@@ -1,5 +1,9 @@
+import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+
+import { renderWithTheme } from '@components/ThemeProvider/themeTestUtils';
+import { colorThemes } from '@shared/theme';
 
 import Button from './Button';
 
@@ -55,4 +59,25 @@ describe('a large primary button', () => {
 
     expect(boxShadow()).toBeUndefined();
   });
+});
+
+it('takes on a new theme in place, keeping what it holds mounted', async () => {
+  let mounts = 0;
+  const Counted = () => {
+    useEffect(() => {
+      mounts += 1;
+    }, []);
+
+    return null;
+  };
+  const { setTheme } = await renderWithTheme(
+    <Button title="Expense" variant="secondary" icon={<Counted />} onPress={() => {}} />,
+  );
+
+  await setTheme('dark');
+
+  const { colors } = colorThemes.dark;
+  expect(boxOf('Expense').backgroundColor).toBe(colors.secondary);
+  expect(StyleSheet.flatten(screen.getByText('Expense').props.style).color).toBe(colors.onSecondary);
+  expect(mounts).toBe(1);
 });

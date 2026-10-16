@@ -314,11 +314,6 @@ export const colorScheme: ColorSchemeName = 'light';
 
 export const colors = colorThemes[colorScheme].colors;
 
-// A fixed dark scrim color, independent of colorScheme (the modal backdrop should stay dark even under a light theme).
-export const palette = {
-  black: '#1D2430',
-};
-
 const theme = {
   fonts: {
     regular: 'PlusJakartaSans-Regular',

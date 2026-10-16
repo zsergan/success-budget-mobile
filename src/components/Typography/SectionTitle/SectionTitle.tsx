@@ -3,8 +3,9 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { Text, View } from 'react-native';
 
 import TinyButton from '@components/Buttons/TinyButton/TinyButton';
+import useThemedStyles from '@hooks/useThemedStyles';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   title: string;
@@ -13,18 +14,22 @@ interface Props {
   style?: StyleProp<ViewStyle>;
 }
 
-const SectionTitle = ({ title, button, onBackButtonPress, style }: Props) => (
-  <View style={[styles.root, style]}>
-    <View style={styles.titleContainer}>
-      {onBackButtonPress && (
-        <TinyButton icon="back" size="lg" iconWrap={false} strokeWidth={2} onPress={onBackButtonPress} />
-      )}
+const SectionTitle = ({ title, button, onBackButtonPress, style }: Props) => {
+  const styles = useThemedStyles(createStyles);
 
-      {title && <Text style={[styles.title, onBackButtonPress && styles.headerTitle]}>{title}</Text>}
+  return (
+    <View style={[styles.root, style]}>
+      <View style={styles.titleContainer}>
+        {onBackButtonPress && (
+          <TinyButton icon="back" size="lg" iconWrap={false} strokeWidth={2} onPress={onBackButtonPress} />
+        )}
+
+        {title && <Text style={[styles.title, onBackButtonPress && styles.headerTitle]}>{title}</Text>}
+      </View>
+
+      {button}
     </View>
-
-    {button}
-  </View>
-);
+  );
+};
 
 export default SectionTitle;

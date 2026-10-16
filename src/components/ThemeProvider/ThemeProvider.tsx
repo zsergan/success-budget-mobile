@@ -1,6 +1,15 @@
 import type { ReactNode } from 'react';
-import { createContext, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { Appearance } from 'react-native';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
+import { Appearance, StatusBar } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
@@ -114,7 +123,27 @@ const ThemeProvider = ({ children }: Props) => {
     [preference, scheme, isReady, setPreference],
   );
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>
+      <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} />
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+const FALLBACK_THEME: ThemeContextValue = {
+  preference: 'system',
+  scheme: 'light',
+  colorTheme: colorThemes.light,
+  isReady: true,
+  setPreference: () => {},
+};
+
+// Light, for UI that must draw even without a ThemeProvider above it (the crash screen); a provider above wins.
+export const ThemeFallback = ({ children }: Props) => {
+  const context = useContext(ThemeContext);
+
+  return context ? children : <ThemeContext.Provider value={FALLBACK_THEME}>{children}</ThemeContext.Provider>;
 };
 
 export default ThemeProvider;

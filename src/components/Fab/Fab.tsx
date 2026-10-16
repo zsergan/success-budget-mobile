@@ -3,9 +3,10 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import Icon from '@components/Icon/Icon';
-import { colors } from '@shared/theme';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   onExpense: () => void;
@@ -13,6 +14,8 @@ interface Props {
 }
 
 const Fab = ({ onExpense, onIncome }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const [isOpen, setIsOpen] = useState(false);
   const rotation = useSharedValue(0);
   const menuProgress = useSharedValue(0);

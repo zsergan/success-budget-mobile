@@ -5,12 +5,13 @@ import { Picker } from '@react-native-picker/picker';
 
 import Icon from '@components/Icon/Icon';
 import ModalContainer from '@components/Modals/ModalContainer/ModalContainer';
-import { colors } from '@shared/theme';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import type { IconType } from '@shared/types';
 
 import OutlinedField from '../OutlinedField/OutlinedField';
-import outlinedStyles from '../OutlinedField/style';
-import styles from './style';
+import createOutlinedStyles from '../OutlinedField/style';
+import createStyles from './style';
 
 // The native list shows its first row as chosen when the value matches none, so an empty value gets its own row.
 // Its value is one no item is expected to use, so a real empty-string value is never taken for it.
@@ -52,6 +53,9 @@ const InputPicker = ({
   error,
   isLoading = false,
 }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
+  const outlinedStyles = useThemedStyles(createOutlinedStyles);
   const [isPickerVisible, setIsPickerVisible] = useState(false);
 
   const selectedItem = items.find((item) => item.value === selectedValue);
@@ -81,7 +85,7 @@ const InputPicker = ({
         <View style={styles.container}>
           <TouchableWithoutFeedback>
             <View style={styles.contentContainer}>
-              <Picker selectedValue={pickerValue} onValueChange={changeValue}>
+              <Picker selectedValue={pickerValue} onValueChange={changeValue} itemStyle={styles.pickerItem}>
                 {hasEmptyRow && <Picker.Item label={placeholder} value={EMPTY_VALUE} color={colors.placeholder} />}
 
                 {items.map((item) => (

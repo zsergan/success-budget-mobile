@@ -2,7 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { HomeScreen, LimitsScreen, SettingsScreen, StatsScreen, TransactionsScreen } from '@screens';
 import { Icon, TransactionFlowSheet } from '@components';
-import { colors } from '@shared/theme';
+import { useTheme } from '@hooks';
 import { ScreenNames } from '@shared/enums';
 import type { MainTabParamList } from '@shared/types';
 
@@ -20,6 +20,8 @@ const StatsIcon = ({ color, size }: IconProps) => <Icon name="chart" size={size}
 const SettingsIcon = ({ color, size }: IconProps) => <Icon name="settings" size={size} color={color} />;
 
 const MainNavigator = () => {
+  const { colors } = useTheme().colorTheme;
+
   return (
     <>
       <TransactionFlowSheet />

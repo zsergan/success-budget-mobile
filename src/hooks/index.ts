@@ -13,6 +13,7 @@ export { default as useSpaceRefresh } from './useSpaceRefresh';
 export { default as useSwipe } from './useSwipe';
 export { default as useTheme } from './useTheme';
 export { default as useThemePreference } from './useThemePreference';
+export { default as useThemedStyles } from './useThemedStyles';
 export { default as useTransactionOperation } from './useTransactionOperation';
 export type { TransactionSubmitOutcome } from './useTransactionOperation';
 export { default as useTransactionsFeed } from './useTransactionsFeed';

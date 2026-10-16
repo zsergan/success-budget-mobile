@@ -1,9 +1,10 @@
 import { View, Text, TouchableOpacity } from 'react-native';
 
 import type { IconType } from '@shared/types';
+import useThemedStyles from '@hooks/useThemedStyles';
 import CircleIcon from '../CircleIcon/CircleIcon';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   title: string;
@@ -11,18 +12,22 @@ interface Props {
   onPress?(): void;
 }
 
-const MenuItem = ({ title, icon, onPress }: Props) => (
-  <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-    <View style={styles.root}>
-      <View style={styles.labelContainer}>
-        <CircleIcon icon={icon} size="sm" />
+const MenuItem = ({ title, icon, onPress }: Props) => {
+  const styles = useThemedStyles(createStyles);
 
-        <Text style={styles.label}>{title}</Text>
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.root}>
+        <View style={styles.labelContainer}>
+          <CircleIcon icon={icon} size="sm" />
+
+          <Text style={styles.label}>{title}</Text>
+        </View>
+
+        <CircleIcon icon="forward" size="sm" />
       </View>
-
-      <CircleIcon icon="forward" size="sm" />
-    </View>
-  </TouchableOpacity>
-);
+    </TouchableOpacity>
+  );
+};
 
 export default MenuItem;

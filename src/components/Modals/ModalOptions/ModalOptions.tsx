@@ -1,12 +1,13 @@
 import { Fragment } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import { colors } from '@shared/theme';
 import type { IconType } from '@shared/types';
 import Divider from '@components/Divider/Divider';
 import Icon from '@components/Icon/Icon';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Option {
   text: string;
@@ -15,15 +16,21 @@ interface Option {
   color?: string;
 }
 
-const renderOption = ({ text, icon, onPress, color = colors.text }: Option) => (
-  <TouchableOpacity onPress={onPress}>
-    <View style={styles.option}>
-      <Text style={[styles.text, { color }]}>{text}</Text>
+const OptionRow = ({ text, icon, onPress, color }: Option) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
+  const shownColor = color ?? colors.text;
 
-      {icon && <Icon name={icon} size={16} color={color} />}
-    </View>
-  </TouchableOpacity>
-);
+  return (
+    <TouchableOpacity onPress={onPress}>
+      <View style={styles.option}>
+        <Text style={[styles.text, { color: shownColor }]}>{text}</Text>
+
+        {icon && <Icon name={icon} size={16} color={shownColor} />}
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 export interface ModalOptionsProps {
   onEdit?: () => void;
@@ -32,6 +39,8 @@ export interface ModalOptionsProps {
 }
 
 const ModalOptions = ({ onEdit, onDelete, customOptions = [] }: ModalOptionsProps) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const options: Option[] = [
     { onPress: onEdit, text: 'Edit', icon: 'edit' },
     ...customOptions,
@@ -50,7 +59,7 @@ const ModalOptions = ({ onEdit, onDelete, customOptions = [] }: ModalOptionsProp
     <View style={styles.options}>
       {optionsToRender.map((opt, index) => (
         <Fragment key={index}>
-          {renderOption(opt)}
+          <OptionRow {...opt} />
 
           {index !== optionsToRender.length - 1 && (
             <View>

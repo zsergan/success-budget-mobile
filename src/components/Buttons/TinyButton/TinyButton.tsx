@@ -2,10 +2,11 @@ import type { GestureResponderEvent, StyleProp, ViewStyle } from 'react-native';
 import { TouchableOpacity, Text, View } from 'react-native';
 
 import type { IconType } from '@shared/types';
-import { colors } from '@shared/theme';
 import Icon from '@components/Icon/Icon';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 
-import styles from './style';
+import createStyles from './style';
 
 const iconSize = {
   sm: 13,
@@ -49,36 +50,41 @@ const TinyButton = ({
   selected,
   accessibilityLabel,
   style,
-}: TinyButtonProps) => (
-  <TouchableOpacity
-    disabled={disabled}
-    onPress={onPress}
-    onLongPress={onLongPress}
-    activeOpacity={0.5}
-    accessibilityRole="button"
-    accessibilityLabel={accessibilityLabel}
-  >
-    <View
-      style={[
-        styles.button,
-        variant === 'filled' && [styles.filledButton, styles[`${size}Button`]],
-        variant === 'filled' && selected && styles.selected,
-        disabled && styles.disabled,
-        style,
-      ]}
-    >
-      {(icon || showCircle) &&
-        (iconWrap ? (
-          <View style={[styles.circle, styles[`${size}Circle`], { backgroundColor: circleColor || colors.elevated }]}>
-            {icon && <Icon name={icon} size={iconSize[size]} color={color} strokeWidth={strokeWidth} />}
-          </View>
-        ) : (
-          icon && <Icon name={icon} size={iconSize[size]} color={color} strokeWidth={strokeWidth} />
-        ))}
+}: TinyButtonProps) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
 
-      {title && <Text style={[styles[`${size}Title`], variant === 'plain' && styles.plainTitle]}>{title}</Text>}
-    </View>
-  </TouchableOpacity>
-);
+  return (
+    <TouchableOpacity
+      disabled={disabled}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      activeOpacity={0.5}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+    >
+      <View
+        style={[
+          styles.button,
+          variant === 'filled' && [styles.filledButton, styles[`${size}Button`]],
+          variant === 'filled' && selected && styles.selected,
+          disabled && styles.disabled,
+          style,
+        ]}
+      >
+        {(icon || showCircle) &&
+          (iconWrap ? (
+            <View style={[styles.circle, styles[`${size}Circle`], { backgroundColor: circleColor || colors.elevated }]}>
+              {icon && <Icon name={icon} size={iconSize[size]} color={color} strokeWidth={strokeWidth} />}
+            </View>
+          ) : (
+            icon && <Icon name={icon} size={iconSize[size]} color={color} strokeWidth={strokeWidth} />
+          ))}
+
+        {title && <Text style={[styles[`${size}Title`], variant === 'plain' && styles.plainTitle]}>{title}</Text>}
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 export default TinyButton;

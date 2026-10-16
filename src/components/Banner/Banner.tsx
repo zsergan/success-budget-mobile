@@ -1,11 +1,13 @@
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
-import { colors } from '@shared/theme';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
+import type { ThemeColors } from '@shared/theme';
 import type { IconType } from '@shared/types';
 import { hexToRgba } from '@shared/utils';
 
-import styles from './style';
+import createStyles from './style';
 
 type Tone = 'warn' | 'danger' | 'success';
 
@@ -24,18 +26,20 @@ interface Props {
   icon?: IconType;
 }
 
-const CARD_TONES = {
-  danger: {
-    background: colors.dangerSoft,
-    border: colors.dangerBorder,
-    accent: colors.danger,
-    text: colors.dangerText,
-  },
-  warn: { background: colors.warnSoft, border: colors.warnBorder, accent: colors.warnText, text: colors.warnText },
-  success: { background: colors.okSoft, border: colors.okBorder, accent: colors.okText, text: colors.okText },
-};
+const cardTone = (tone: Tone, colors: ThemeColors) =>
+  ({
+    danger: {
+      background: colors.dangerSoft,
+      border: colors.dangerBorder,
+      accent: colors.danger,
+      text: colors.dangerText,
+    },
+    warn: { background: colors.warnSoft, border: colors.warnBorder, accent: colors.warnText, text: colors.warnText },
+    success: { background: colors.okSoft, border: colors.okBorder, accent: colors.okText, text: colors.okText },
+  })[tone];
 
-const INLINE_COLORS: Record<Tone, string> = { warn: colors.warn, danger: colors.danger, success: colors.ok };
+const inlineColor = (tone: Tone, colors: ThemeColors) =>
+  ({ warn: colors.warn, danger: colors.danger, success: colors.ok })[tone];
 
 const DEFAULT_ICONS: Record<Tone, IconType> = { warn: 'alert', danger: 'alert', success: 'check' };
 
@@ -49,7 +53,9 @@ const CardBanner = ({
   onAction,
   icon = DEFAULT_ICONS[tone],
 }: Props) => {
-  const palette = CARD_TONES[tone];
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
+  const palette = cardTone(tone, colors);
 
   return (
     <View
@@ -103,12 +109,14 @@ const Banner = (props: Props) => {
     variant = 'inline',
     icon = DEFAULT_ICONS[tone],
   } = props;
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
 
   if (variant === 'card') {
     return <CardBanner {...props} />;
   }
 
-  const color = INLINE_COLORS[tone];
+  const color = inlineColor(tone, colors);
 
   return (
     <View style={[styles.root, { backgroundColor: hexToRgba(color, 0.12) }]} accessibilityRole="alert">

@@ -6,9 +6,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 
+import useThemedStyles from '@hooks/useThemedStyles';
 import theme from '@shared/theme';
 
-import styles from './style';
+import createStyles from './style';
 
 export type Ref = BottomSheetModal;
 export const FITTED_SHEET_HANDLE_HEIGHT = 24;
@@ -45,6 +46,7 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
   },
   ref,
 ) {
+  const styles = useThemedStyles(createStyles);
   const sheetRef = useRef<BottomSheetModal>(null);
   useImperativeHandle(ref, () => sheetRef.current as BottomSheetModal, []);
 
@@ -72,7 +74,7 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
         <View style={styles.handleIndicator} />
       </View>
     ),
-    [onHandleTouch],
+    [onHandleTouch, styles],
   );
 
   const renderBackdrop = useCallback(

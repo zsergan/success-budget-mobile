@@ -4,12 +4,13 @@ import type { TextInputProps, StyleProp, ViewStyle } from 'react-native';
 import { Text, TextInput, View, TouchableOpacity } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
-import { colors } from '@shared/theme';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import type { IconType } from '@shared/types';
 
 import OutlinedField from '../OutlinedField/OutlinedField';
-import outlinedStyles from '../OutlinedField/style';
-import styles from './style';
+import createOutlinedStyles from '../OutlinedField/style';
+import createStyles from './style';
 
 export interface InputProps extends TextInputProps {
   ref?: Ref<TextInput>;
@@ -45,6 +46,10 @@ const Input = ({
   editable = true,
   ...props
 }: InputProps) => {
+  const { scheme, colorTheme } = useTheme();
+  const { colors } = colorTheme;
+  const styles = useThemedStyles(createStyles);
+  const outlinedStyles = useThemedStyles(createOutlinedStyles);
   const [isFocused, setIsFocused] = useState(false);
 
   const handleFocus: TextInputProps['onFocus'] = (e) => {
@@ -84,6 +89,7 @@ const Input = ({
         <TextInput
           ref={ref}
           placeholderTextColor={colors.placeholder}
+          keyboardAppearance={scheme}
           accessibilityLabel={label}
           accessibilityHint={error ?? hint}
           {...props}
@@ -110,6 +116,7 @@ const Input = ({
         <TextInput
           ref={ref}
           placeholderTextColor={colors.muted}
+          keyboardAppearance={scheme}
           {...props}
           editable={editable}
           onFocus={handleFocus}
