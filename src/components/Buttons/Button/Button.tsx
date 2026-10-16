@@ -27,6 +27,8 @@ interface Props {
   disabled?: boolean;
   // Keeps the button's colours and shows a spinner in place of its content; presses are ignored meanwhile.
   isLoading?: boolean;
+  // Shown beside the spinner while loading, for a wait the user should be able to read.
+  busyTitle?: string;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -39,8 +41,10 @@ const Button = ({
   withShadow,
   disabled,
   isLoading = false,
+  busyTitle,
   style,
 }: Props) => {
+  const shownTitle = isLoading ? busyTitle : title;
   const isPrimaryDisabled = disabled && variant === 'primary';
   const isLarge = size === 'lg';
   // A large primary button glows in its own colour instead of the card shadow, and only while it can be pressed.
@@ -62,23 +66,24 @@ const Button = ({
       activeOpacity={0.8}
       accessibilityRole="button"
       // The spinner replaces the title, so the title names the button meanwhile.
-      accessibilityLabel={isLoading ? title : undefined}
+      accessibilityLabel={isLoading ? (busyTitle ?? title) : undefined}
       accessibilityState={{ disabled: !!disabled || isLoading, busy: isLoading }}
     >
       {isLoading && <ActivityIndicator color={SPINNER_COLORS[variant]} />}
 
       {!isLoading && icon}
 
-      {!isLoading && title && (
+      {shownTitle && (
         <Text
           style={[
             styles.buttonText,
             styles[`${variant}ButtonText`],
             isLarge && styles.largeButtonText,
             isPrimaryDisabled && styles.primaryButtonTextDisabled,
+            isLoading && styles.busyText,
           ]}
         >
-          {title}
+          {shownTitle}
         </Text>
       )}
     </TouchableOpacity>

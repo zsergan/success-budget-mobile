@@ -74,6 +74,12 @@ const styles = StyleSheet.create({
   primaryButtonTextDisabled: {
     color: colors.muted,
   },
+  // Hugs its label so it stays centred with the spinner beside it.
+  busyText: {
+    flex: 0,
+    // Plus Jakarta Sans under-measures its own width and clips the last glyph (see cde3346).
+    paddingRight: 2,
+  },
   withShadow: { ...shadow },
   accentGlow: {
     boxShadow: '0 12px 26px -12px rgba(255, 176, 32, 0.7)',

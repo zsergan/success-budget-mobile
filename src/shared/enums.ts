@@ -45,4 +45,7 @@ export enum ScreenNames {
   SIGN_IN_SCREEN = 'SignInScreen',
   SIGN_UP_SCREEN = 'SighUpScreen',
   VERIFY_EMAIL_SCREEN = 'VerifyEmailScreen',
+  FORGOT_PASSWORD_SCREEN = 'ForgotPasswordScreen',
+  RESET_CODE_SCREEN = 'ResetCodeScreen',
+  NEW_PASSWORD_SCREEN = 'NewPasswordScreen',
 }

@@ -29,6 +29,9 @@ export type HistoryFilter = {
 // A one-time request to bring a saved transaction into view: its month, no filter, the row scrolled to.
 export type RevealTransaction = { spaceId: number; transactionId: string; timestamp: string };
 
+// How a recovery ended, for Sign In: `unknown` when the answer to the new password was lost and it may have applied.
+export type PasswordResetOutcome = { email: string; outcome: 'updated' | 'unknown' };
+
 export type MainTabParamList = {
   [ScreenNames.HOME_TAB]: undefined;
   [ScreenNames.TRANSACTIONS_TAB]: { filter?: HistoryFilter; reveal?: RevealTransaction } | undefined;
@@ -46,9 +49,13 @@ export type RootStackParamList = {
   [ScreenNames.ACCEPT_INVITE_SCREEN]: undefined;
   [ScreenNames.LAUNCH_SCREEN]: undefined;
   [ScreenNames.WELCOME_SCREEN]: undefined;
-  [ScreenNames.SIGN_IN_SCREEN]: undefined;
+  [ScreenNames.SIGN_IN_SCREEN]: { passwordReset?: PasswordResetOutcome } | undefined;
   [ScreenNames.SIGN_UP_SCREEN]: undefined;
   [ScreenNames.VERIFY_EMAIL_SCREEN]: undefined;
+  // Recovery state (code, cooldown, reset authorization) lives in the passwordReset slice, never in params.
+  [ScreenNames.FORGOT_PASSWORD_SCREEN]: { email?: string } | undefined;
+  [ScreenNames.RESET_CODE_SCREEN]: { notice?: 'authorizationExpired' } | undefined;
+  [ScreenNames.NEW_PASSWORD_SCREEN]: undefined;
 };
 
 export type RootStackScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<RootStackParamList, T>;
@@ -106,6 +113,11 @@ export type IconType =
   | 'download'
   | 'grid'
   | 'note'
+  | 'key'
+  | 'mail-check'
+  | 'clock'
+  | 'clipboard'
+  | 'lock-open'
   | 'trend-up'
   | 'trend-down';
 

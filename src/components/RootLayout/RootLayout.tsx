@@ -18,6 +18,8 @@ interface Props {
   edges?: Edge[];
   // Scrollable only: content scrolls under a blurred status bar instead of clipping at the top inset.
   blurredStatusBar?: boolean;
+  // Below the content, outside its scroll: it stays right above the keyboard however long the content is.
+  footer?: ReactNode;
 }
 
 type ContainerProps = Pick<Props, 'children' | 'style' | 'contentContainerStyle'>;
@@ -49,7 +51,7 @@ const ViewContainer = ({ children, style }: ContainerProps) => (
   </TouchableWithoutFeedback>
 );
 
-const RootLayout = ({ children, scrollable, style, contentContainerStyle, edges, blurredStatusBar }: Props) => {
+const RootLayout = ({ children, scrollable, style, contentContainerStyle, edges, blurredStatusBar, footer }: Props) => {
   const Container = scrollable ? ScrollViewContainer : ViewContainer;
 
   return (
@@ -58,6 +60,8 @@ const RootLayout = ({ children, scrollable, style, contentContainerStyle, edges,
         <Container style={style} contentContainerStyle={contentContainerStyle}>
           {children}
         </Container>
+
+        {footer}
       </KeyboardAvoidingView>
     </ScreenFrame>
   );

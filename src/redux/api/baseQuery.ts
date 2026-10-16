@@ -1,5 +1,5 @@
 import type { BaseQueryFn } from '@reduxjs/toolkit/query';
-import type { Method } from 'axios';
+import type { AxiosRequestConfig, Method } from 'axios';
 
 import type { ErrorResponse } from '@api/dto';
 import { getRejectValue } from '@api/errors';
@@ -12,6 +12,8 @@ export interface HttpRequest {
   body?: unknown;
   params?: Record<string, unknown>;
   headers?: Record<string, string>;
+  // A 429 the caller explains itself keeps the generic alert quiet.
+  isHandledRateLimit?: AxiosRequestConfig['isHandledRateLimit'];
 }
 
 const http = createHttpClient();
@@ -27,14 +29,23 @@ const sessionEndedError = (url: string): ErrorResponse => ({
 // A response that outlives the session it was sent in never reaches the cache
 // or an onQueryStarted side effect as a success, even if logout could not abort it.
 export const httpBaseQuery: BaseQueryFn<HttpRequest, unknown, ErrorResponse> = async (
-  { url, method = 'GET', body, params, headers },
+  { url, method = 'GET', body, params, headers, isHandledRateLimit },
   { signal, getState },
 ) => {
   const sessionKey = (getState() as RootState).auth.sessionKey;
   const isSessionCurrent = () => (getState() as RootState).auth.sessionKey === sessionKey;
 
   try {
-    const response = await http.request({ url, method, data: body, params, headers, signal, sessionKey });
+    const response = await http.request({
+      url,
+      method,
+      data: body,
+      params,
+      headers,
+      signal,
+      sessionKey,
+      ...(isHandledRateLimit && { isHandledRateLimit }),
+    });
 
     // RTK Query treats `data: undefined` as a malformed result; empty bodies (void handlers) become null.
     return isSessionCurrent() ? { data: response.data ?? null } : { error: sessionEndedError(url) };

@@ -10,6 +10,7 @@ import launchReducer from './state/launch/slice';
 import { selectIsLaunching } from './state/launch/selectors';
 import { startSpaceSelectionListener } from './state/space/listeners';
 import memberReducer from './state/member/slice';
+import passwordResetReducer from './state/passwordReset/slice';
 import pendingWriteReducer from './state/pendingWrite/slice';
 import spaceReducer from './state/space/slice';
 import transactionFlowReducer from './state/transactionFlow/slice';
@@ -18,6 +19,7 @@ const rootReducer = combineReducers({
   auth: authReducer,
   launch: launchReducer,
   member: memberReducer,
+  passwordReset: passwordResetReducer,
   pendingWrite: pendingWriteReducer,
   space: spaceReducer,
   transactionFlow: transactionFlowReducer,

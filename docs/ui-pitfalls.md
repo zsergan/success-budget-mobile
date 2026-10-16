@@ -44,3 +44,15 @@ take an `edges` prop that defaults to all four edges. Every screen in a
 `MainNavigator` tab passes `edges={['top', 'left', 'right']}`. Screens
 with no tab bar below them keep the default. A new tab screen, or a
 screen rendered inside a tab, needs the same exclusion.
+
+## Focusing a field during a screen transition
+
+A field focused while its screen is still animating in (`autoFocus`, or
+`setFocus` in an effect) gets focus, loses it and gets it again. With
+react-hook-form's `onTouched` mode that blur marks the field touched, so an
+empty field shows its "required" error before the user typed anything.
+Seen on Sign In after a password reset and in simulator previews.
+
+The fix: focus once the screen has appeared, from the native stack's
+`transitionEnd` event for the screen being shown (`event.data.closing` is
+false); see `SignInScreen.tsx`.

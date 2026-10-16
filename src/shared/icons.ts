@@ -47,6 +47,11 @@ const UI_ICON_PATHS = {
   download: 'M12 4v11M7 11l5 5 5-5M5 20h14',
   grid: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
   note: 'M6 3h9l4 4v14H6zM15 3v4h4M9 12h6M9 16h4',
+  key: 'M15 4.5a4.5 4.5 0 1 0-3.4 7.8L9.5 14.4H7v2.5H4.5V19H3v-2.6l6.6-6.6A4.5 4.5 0 0 1 15 4.5z',
+  'mail-check': 'M3.5 6.5h17v6M3.5 6.5l8.5 6 8.5-6M3.5 6.5v11h9M15 18.5l2 2 4-4',
+  clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7.5V12l3 2',
+  clipboard: 'M9 4.5h6v3H9zM9 6H6.5v14h11V6H15',
+  'lock-open': 'M7 11V8a5 5 0 0 1 9.6-2M5 11h14v9H5z',
   'trend-up': 'M12 19V5M6 11l6-6 6 6',
   'trend-down': 'M12 5v14M6 13l6 6 6-6',
 } as const;
