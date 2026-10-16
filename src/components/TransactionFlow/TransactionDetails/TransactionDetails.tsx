@@ -6,20 +6,22 @@ import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import type { TransactionModel } from '@api/models';
 import { isInitialBalance } from '@api/models';
 import Icon from '@components/Icon/Icon';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { editStarted } from '@redux/state/transactionFlow/slice';
 import { checkFlowRecord, loadLatestRecord } from '@redux/state/transactionFlow/thunks';
 import { TransactionType } from '@shared/enums';
-import theme, { colors } from '@shared/theme';
+import theme from '@shared/theme';
 import { formatAmount, formatMoneyAmount, hexToRgba } from '@shared/utils';
 import DeleteButton from '../DeleteButton/DeleteButton';
 import { deleteFailureText } from '../deleteMessage';
 import Banner from '@components/Banner/Banner';
 import { formatDateTime } from '../format';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   flow: TransactionFlow & { saved: TransactionModel };
@@ -36,6 +38,8 @@ const TransactionDetails = ({
   onDelete,
   onRetryDelete,
 }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);

@@ -2,13 +2,14 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import type { Wallet } from '@api/dto';
 import Icon from '@components/Icon/Icon';
-import { gradients, resolveAppColor } from '@shared/constants';
-import { colors } from '@shared/theme';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
+import { resolveAppColor } from '@shared/constants';
 import { hexToRgba } from '@shared/utils';
 import type { ListLoad } from '@components/TransactionFlow/SectionLoad/SectionLoad';
 import SectionLoad from '@components/TransactionFlow/SectionLoad/SectionLoad';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   load: ListLoad;
@@ -35,6 +36,8 @@ const WalletPicker = ({
   onCreate,
   onRetry,
 }: Props) => {
+  const { colors, wallets: walletAppearance } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const selectedStyle = { backgroundColor: hexToRgba(typeColor, 0.09), borderColor: typeColor };
 
   return (
@@ -73,7 +76,9 @@ const WalletPicker = ({
                 activeOpacity={0.6}
                 accessibilityState={{ selected: isSelected }}
               >
-                <View style={[styles.walletDot, { backgroundColor: gradients[resolveAppColor(design)][0] }]} />
+                <View
+                  style={[styles.walletDot, { backgroundColor: walletAppearance[resolveAppColor(design)].gradient[0] }]}
+                />
 
                 <Text style={[styles.walletChipText, isSelected && { color: typeColor }]} numberOfLines={1}>
                   {wallet_name}

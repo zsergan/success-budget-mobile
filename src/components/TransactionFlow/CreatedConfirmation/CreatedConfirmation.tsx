@@ -14,6 +14,8 @@ import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Icon from '@components/Icon/Icon';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import { whereSaved } from '@redux/state/transactionFlow/selection';
@@ -21,13 +23,13 @@ import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { autoClosed, autoCloseStopped, CREATED_AUTO_CLOSE_MS } from '@redux/state/transactionFlow/slice';
 import type { CreateTransactionResult } from '@api/models';
 import { TransactionType } from '@shared/enums';
-import theme, { colors } from '@shared/theme';
+import theme from '@shared/theme';
 import { formatAmount, formatCurrencyAmount, formatDateLong, formatDayMonth, hexToRgba } from '@shared/utils';
 import { deleteFailureText } from '../deleteMessage';
 import Banner from '@components/Banner/Banner';
 import { formatDateTime } from '../format';
 
-import styles from './style';
+import createStyles from './style';
 
 // Read aloud or in large type, a confirmation that leaves on its own could go before it is read.
 const LARGE_FONT_SCALE = 1.3;
@@ -48,6 +50,8 @@ const savedToLabel = (timestamp: string) =>
 
 // Shown only after the API confirmed the create. It closes by itself after a while unless touched.
 const CreatedConfirmation = ({ flow, onUndo, onShow, onOpenRecord, onAddAnother, onDone }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
   const { fontScale } = useWindowDimensions();

@@ -100,6 +100,11 @@ relying on or changing them.
   barrel (`@screens`, `@components`) imports its file directly.
 - **Imports**: always use the `@<segment>/...` alias for anything under
   `src/` (maps to `src/<segment>/...`); no deep `../../..` paths.
+- **Theme**: colours and shadows come from the active theme. A `style.ts`
+  exports `createStyles(theme: ColorTheme)`, read with
+  `useThemedStyles(createStyles)`; colours outside a stylesheet (icons,
+  spinners, gradients) come from `useTheme().colorTheme`. Fonts, sizes and
+  spacing stay on the static default `theme` export.
 - Known layout pitfalls (Plus Jakarta Sans clipping, nested safe areas):
   `docs/ui-pitfalls.md`.
 

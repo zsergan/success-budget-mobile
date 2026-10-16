@@ -3,11 +3,11 @@ import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Icon from '@components/Icon/Icon';
-import theme, { colors } from '@shared/theme';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
+import theme from '@shared/theme';
 
-import styles from './style';
-
-const SAVE_READY_TEXT_COLOR = '#FFFDFA';
+import createStyles from './style';
 
 interface Props {
   label: string;
@@ -17,6 +17,8 @@ interface Props {
   // The home indicator is under the keyboard then, so its inset is not kept.
   isAboveKeyboard?: boolean;
   typeColor: string;
+  // Text and icons drawn on typeColor.
+  onTypeColor: string;
   // Shown over Save in place of the helper text.
   banner?: ReactNode;
   // Under Save, e.g. Delete in an edit.
@@ -31,10 +33,13 @@ const ActionRow = ({
   isSaving,
   isAboveKeyboard = false,
   typeColor,
+  onTypeColor,
   banner,
   footer,
   onPress,
 }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
   const isActive = ready || isSaving;
 
@@ -64,14 +69,12 @@ const ActionRow = ({
         accessibilityState={{ disabled: !ready || isSaving, busy: isSaving }}
       >
         {isSaving ? (
-          <ActivityIndicator size="small" color={SAVE_READY_TEXT_COLOR} />
+          <ActivityIndicator size="small" color={onTypeColor} />
         ) : (
-          ready && <Icon name="check" size={17} color={SAVE_READY_TEXT_COLOR} strokeWidth={2.4} />
+          ready && <Icon name="check" size={17} color={onTypeColor} strokeWidth={2.4} />
         )}
 
-        <Text style={[styles.saveButtonText, isActive && { color: SAVE_READY_TEXT_COLOR }]}>
-          {isSaving ? 'Saving…' : label}
-        </Text>
+        <Text style={[styles.saveButtonText, isActive && { color: onTypeColor }]}>{isSaving ? 'Saving…' : label}</Text>
       </TouchableOpacity>
 
       {footer}

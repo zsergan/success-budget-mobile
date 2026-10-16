@@ -2,12 +2,14 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import WalletGradientBackground from '../WalletGradientBackground/WalletGradientBackground';
-import { resolveAppColor, walletTextColors } from '@shared/constants';
+import { resolveAppColor } from '@shared/constants';
 import { formatCurrencyAmount } from '@shared/utils';
 import { AppColor } from '@shared/enums';
 
-import styles from './style';
+import createStyles from './style';
 
 export interface WalletCardProps {
   walletName: string;
@@ -33,7 +35,9 @@ const WalletCard = ({
   badgeLabel,
   style,
 }: WalletCardProps) => {
-  const { fg, dim, inner } = walletTextColors[resolveAppColor(design)];
+  const { wallets } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
+  const { fg, dim, inner } = wallets[resolveAppColor(design)];
 
   return (
     <View style={[styles.root, style]}>

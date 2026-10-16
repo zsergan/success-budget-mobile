@@ -1,23 +1,25 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { colors } from '@shared/theme';
+import type { ColorTheme } from '@shared/theme';
+import theme from '@shared/theme';
 
-const styles = StyleSheet.create({
-  colorRow: {
-    flexDirection: 'row',
-    columnGap: theme.spacing.sm,
-  },
-  colorSwatch: {
-    flex: 1,
-    height: 44,
-    borderRadius: theme.radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  colorSwatchSelected: {
-    borderWidth: 2,
-    borderColor: colors.text,
-  },
-});
+const createStyles = ({ colors }: ColorTheme) =>
+  StyleSheet.create({
+    colorRow: {
+      flexDirection: 'row',
+      columnGap: theme.spacing.sm,
+    },
+    colorSwatch: {
+      flex: 1,
+      height: 44,
+      borderRadius: theme.radius.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    colorSwatchSelected: {
+      borderWidth: 2,
+      borderColor: colors.text,
+    },
+  });
 
-export default styles;
+export default createStyles;

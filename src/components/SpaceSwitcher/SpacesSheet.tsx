@@ -4,10 +4,12 @@ import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
 import type { Space } from '@api/dto';
 import Icon from '@components/Icon/Icon';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import { SpaceType } from '@shared/enums';
-import theme, { colors } from '@shared/theme';
+import theme from '@shared/theme';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   spaces: Space[];
@@ -25,6 +27,8 @@ const spaceMeta = (space: Space) => {
 };
 
 const SpacesSheet = ({ spaces, currentSpaceId, onSelect, onCreateNew }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
 
   return (

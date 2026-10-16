@@ -1,13 +1,14 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
-import { colors } from '@shared/theme';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import { hexToRgba } from '@shared/utils';
 import type { ListLoad } from '@components/TransactionFlow/SectionLoad/SectionLoad';
 import SectionLoad from '@components/TransactionFlow/SectionLoad/SectionLoad';
 import type { GridCategory } from './categoryLayout';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   load: ListLoad;
@@ -36,6 +37,8 @@ const CategoryGrid = ({
   onCreate,
   onRetry,
 }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const selected = tiles.find(({ id }) => id === selectedId);
   const hint =
     selected && selected.id === archivedId ? 'Archived — you can keep it' : (selected?.name ?? 'Choose category');

@@ -1,10 +1,11 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
-import { colors } from '@shared/theme';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import { formatDateTime } from '../../format';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   timestamp: string;
@@ -12,17 +13,22 @@ interface Props {
   onPress: () => void;
 }
 
-const DateChip = ({ timestamp, error, onPress }: Props) => (
-  <View style={styles.section}>
-    <Text style={styles.sectionLabel}>Date</Text>
+const DateChip = ({ timestamp, error, onPress }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
 
-    <TouchableOpacity style={[styles.chip, error && styles.chipError]} onPress={onPress} activeOpacity={0.6}>
-      <Icon name="calendar" size={16} color={colors.muted} strokeWidth={1.8} />
-      <Text style={styles.chipText}>{formatDateTime(timestamp)}</Text>
-    </TouchableOpacity>
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionLabel}>Date</Text>
 
-    {error && <Text style={styles.error}>{error}</Text>}
-  </View>
-);
+      <TouchableOpacity style={[styles.chip, error && styles.chipError]} onPress={onPress} activeOpacity={0.6}>
+        <Icon name="calendar" size={16} color={colors.muted} strokeWidth={1.8} />
+        <Text style={styles.chipText}>{formatDateTime(timestamp)}</Text>
+      </TouchableOpacity>
+
+      {error && <Text style={styles.error}>{error}</Text>}
+    </View>
+  );
+};
 
 export default DateChip;
