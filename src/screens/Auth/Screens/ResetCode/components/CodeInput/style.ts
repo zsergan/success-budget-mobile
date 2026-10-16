@@ -50,6 +50,7 @@ const styles = StyleSheet.create({
   },
   cell: {
     flex: 1,
+    pointerEvents: 'none',
     height: 60,
     borderRadius: 16,
     borderWidth: 1.5,
@@ -89,9 +90,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
   },
   // Covers the boxes so a tap or long-press anywhere on them reaches the one real field.
+  // iOS skips touches on a view under 0.01 opacity (0.01 itself rounds below as a float), so the field stays faintly opaque.
   field: {
     ...StyleSheet.absoluteFill,
-    opacity: 0,
+    opacity: 0.02,
+    backgroundColor: 'transparent',
     color: 'transparent',
     fontSize: 16,
   },

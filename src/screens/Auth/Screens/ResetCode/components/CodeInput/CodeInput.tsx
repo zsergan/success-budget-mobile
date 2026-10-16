@@ -32,6 +32,7 @@ const CodeInput = ({ ref, value, onChangeText, onPaste, error, hint, isLocked, i
   const isEditable = !isLocked && !isDisabled;
   const activeIndex = isFocused && isEditable ? Math.min(value.length, CODE_LENGTH - 1) : -1;
   const message = error ?? hint;
+  const shownValue = isDisabled ? '' : value;
 
   return (
     <View style={styles.root}>
@@ -56,12 +57,13 @@ const CodeInput = ({ ref, value, onChangeText, onPaste, error, hint, isLocked, i
 
       <View style={styles.cells}>
         {Array.from({ length: CODE_LENGTH }, (_, index) => {
-          const digit = isDisabled ? '' : (value[index] ?? '');
+          const digit = shownValue[index] ?? '';
           const isActive = index === activeIndex;
 
           return (
             <View
               key={index}
+              testID="code-box"
               style={[
                 styles.cell,
                 digit !== '' && styles.cellFilled,
@@ -82,7 +84,7 @@ const CodeInput = ({ ref, value, onChangeText, onPaste, error, hint, isLocked, i
         <TextInput
           ref={ref}
           style={styles.field}
-          value={isDisabled ? '' : value}
+          value={shownValue}
           onChangeText={onChangeText}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
@@ -92,9 +94,11 @@ const CodeInput = ({ ref, value, onChangeText, onPaste, error, hint, isLocked, i
           autoComplete={Platform.OS === 'android' ? 'sms-otp' : 'one-time-code'}
           caretHidden
           selectionColor="transparent"
+          // A tap lands wherever it falls in the hidden text; typing and deleting always work at its end.
+          selection={{ start: shownValue.length, end: shownValue.length }}
           accessibilityLabel="6-digit code"
           accessibilityHint={message}
-          accessibilityValue={{ text: value.split('').join(' ') }}
+          accessibilityValue={{ text: shownValue.split('').join(' ') }}
         />
       </View>
 
