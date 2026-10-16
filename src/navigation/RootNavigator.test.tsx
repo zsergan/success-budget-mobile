@@ -1,9 +1,13 @@
 import 'react-native-gesture-handler/jestSetup';
 import { Provider } from 'react-redux';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
+import { ThemeProvider } from '@components';
+import { THEME_RESTORE_TIMEOUT_MS } from '@components/ThemeProvider/ThemeProvider';
+import { THEME_PREFERENCE_KEY } from '@shared/constants';
 import { loginMe } from '@redux/state/auth/thunks';
 import { createAppStore } from '@redux/Store';
 import RootNavigator from './RootNavigator';
@@ -34,11 +38,13 @@ const renderApp = async () => {
   const store = createAppStore();
 
   render(
-    <SafeAreaProvider initialMetrics={metrics}>
-      <Provider store={store}>
-        <RootNavigator />
-      </Provider>
-    </SafeAreaProvider>,
+    <ThemeProvider>
+      <SafeAreaProvider initialMetrics={metrics}>
+        <Provider store={store}>
+          <RootNavigator />
+        </Provider>
+      </SafeAreaProvider>
+    </ThemeProvider>,
   );
   await act(() => jest.advanceTimersByTimeAsync(0));
 
@@ -87,4 +93,21 @@ it('loads the required data after a sign-in from Welcome before opening the app'
   expect(store.getState().launch).toMatchObject({ attempt: attempt + 1, phase: 'running', stage: 'session' });
   expect(mockedRequest.mock.calls.map(([config]) => config.url)).toEqual(['/users/profile']);
   expect(screen.queryByText('See where the money goes')).toBeNull();
+});
+
+it('draws nothing while the theme preference is read, and stops waiting for it at the deadline', async () => {
+  jest.mocked(SecureStore.getItemAsync).mockResolvedValue(null);
+  const getItem = jest.mocked(AsyncStorage.getItem);
+  const readStored = getItem.getMockImplementation()!;
+  getItem.mockImplementation((key) => (key === THEME_PREFERENCE_KEY ? new Promise(() => {}) : readStored(key)));
+
+  try {
+    await renderApp();
+    expect(screen.queryByText('See where the money goes')).toBeNull();
+
+    await act(() => jest.advanceTimersByTimeAsync(THEME_RESTORE_TIMEOUT_MS));
+    expect(screen.getByText('See where the money goes')).toBeTruthy();
+  } finally {
+    getItem.mockImplementation(readStored);
+  }
 });

@@ -12,6 +12,9 @@ sends nothing on a sign-in.
 1. **Resources** — the Plus Jakarta Sans fonts, loaded from the app bundle
    (`src/shared/fonts.ts`). The system launch screen stays up until they
    settle, so the first frame never swaps its typeface.
+   The theme preference is restored beside them (`ThemeProvider`, outside
+   the `launch` slice): the first frame waits for it for at most 1 s, then
+   draws with System and ignores a later read.
 2. **Stored session** — the token in SecureStore. None saved: Welcome, with
    no request. Unreadable, or no answer by the deadline: a failure to retry,
    never "signed out". Only the read of the current attempt may settle the
@@ -56,8 +59,10 @@ after the system splash would be a visible jump.
 
 ## Theme
 
-The app is light only (`userInterfaceStyle: light`, `colorScheme` in
-`src/shared/theme.ts`), so the launch is light too. `splash-ios-dark.png` and
+The app still draws light only (`userInterfaceStyle: light`, `colorScheme` in
+`src/shared/theme.ts`), so the launch is light too; `userInterfaceStyle: light`
+also makes the device report light, so System resolves to light until it
+changes. `splash-ios-dark.png` and
 `splash-android-dark.png` are exported for when the app gets a dark theme;
 they go into the `expo-splash-screen` plugin's `dark` keys together with
 that change, never on their own.

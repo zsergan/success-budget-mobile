@@ -1,5 +1,5 @@
-// Escape hatch for code outside the React tree (the axios interceptor in
-// src/api/instance.ts) that has no way to reach useAlert()/AlertContext.
+// Escape hatch for code that has no way to reach useAlert()/AlertContext: the axios interceptor in
+// src/api/instance.ts, and ThemeProvider, which sits above AlertProvider.
 type AlertHandler = (message: string) => void;
 
 let handler: AlertHandler | null = null;

@@ -21,7 +21,7 @@ import {
   WelcomeScreen,
 } from '@screens';
 import type { RootStackParamList } from '@shared/types';
-import { usePendingWritesSync } from '@hooks';
+import { usePendingWritesSync, useTheme } from '@hooks';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectLaunch } from '@redux/state/launch/selectors';
 import { runLaunch } from '@redux/state/launch/thunks';
@@ -42,6 +42,7 @@ const RootNavigator = () => {
   const dispatch = useAppDispatch();
   const { phase, stage } = useAppSelector(selectLaunch);
   const isSignedIn = useAppSelector((state) => state.auth.isSignedIn);
+  const { isReady: isThemeReady } = useTheme();
   const [hasDrawn, setHasDrawn] = useState(false);
   useSessionData();
   usePendingWritesSync();
@@ -57,9 +58,9 @@ const RootNavigator = () => {
 
   const isReady = phase === 'ready';
 
-  // The system launch screen stays up while the fonts load, so the first frame never swaps its typeface; once it is
-  // gone the app keeps drawing, a repeated attempt included.
-  if (!hasDrawn && phase === 'running' && stage === 'resources') return null;
+  // The system launch screen stays up while the fonts and the theme preference load, so the first frame never swaps
+  // its typeface or colors; once it is gone the app keeps drawing, a repeated attempt included.
+  if (!hasDrawn && (!isThemeReady || (phase === 'running' && stage === 'resources'))) return null;
 
   return (
     <GestureHandlerRootView
