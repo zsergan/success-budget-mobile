@@ -57,8 +57,14 @@ email verification.
   The slice counts the wrong codes it saw since the challenge started and
   when it first saw it, so the screen says "expired" or "too many wrong
   attempts" only when that is certain, and a general message otherwise.
-  Thirty minutes after that start the code shows as expired without a
-  request. The server does not say how many attempts are left.
+  The server does not say how many attempts are left.
+- **Only the server blocks a code.** A `202` does not say whether it
+  started a new challenge or which expiry it has, so no local deadline
+  disables the field or Next; the block follows an `UNUSABLE` answer. After
+  a check that got no answer (it may have been accepted, or been the fifth
+  wrong code), the next request may have started a fresh 30 minutes, so the
+  slice stops vouching for that challenge (`isKnown`): it restarts the
+  count from that request and never says "too many wrong attempts" for it.
 - **Expired authorization** (`PASSWORD_RESET_AUTHORIZATION_INVALID`, or
   past its local expiry before sending) goes back to the code screen,
   which offers a new code.

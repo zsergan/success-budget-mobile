@@ -177,15 +177,41 @@ describe('code failures', () => {
     expect(button(/^Send new code/)).toBeTruthy();
   });
 
-  it('shows the code as expired once 30 minutes have passed, without asking the server', async () => {
-    answer({ request: [REQUESTED] });
+  it('keeps a resent code open past the first code’s 30 minutes, and says it expired once the server does', async () => {
+    answer({ request: [REQUESTED, REQUESTED], verify: [UNUSABLE] });
     await reachCode();
+    await settle(25 * 60_000);
+    await press('Send again');
+    await settle(6 * 60_000);
 
-    await settle(30 * 60_000);
+    expect(screen.queryByText('This code has expired')).toBeNull();
+    expect(codeField().props.editable).toBe(true);
 
+    await submitCode('042917');
+
+    expect(sentTo('verify')).toHaveLength(1);
     expect(screen.getByText('This code has expired')).toBeTruthy();
-    expect(isDisabled('Send new code')).toBe(false);
-    expect(sentTo('verify')).toEqual([]);
+    expect(button(/^Send new code/)).toBeTruthy();
+  });
+
+  it('takes a new code after a check the server accepted but whose answer was lost', async () => {
+    answer({ request: [REQUESTED, REQUESTED], verify: [lost, VERIFIED] });
+    await reachCode();
+    await settle(25 * 60_000);
+    await submitCode('042917');
+    await press('Send again');
+    await settle(6 * 60_000);
+
+    expect(screen.queryByText('This code has expired')).toBeNull();
+    expect(codeField().props.editable).toBe(true);
+
+    await submitCode('583104');
+
+    expect(sentTo('verify')).toEqual([
+      { email: 'anna@kovalenko.co', code: '042917' },
+      { email: 'anna@kovalenko.co', code: '583104' },
+    ]);
+    expect(header('Create a new password')).toBeTruthy();
   });
 
   it('keeps the code after a lost check, without counting it as a wrong attempt', async () => {

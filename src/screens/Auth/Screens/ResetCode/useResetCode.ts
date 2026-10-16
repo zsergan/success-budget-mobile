@@ -4,7 +4,6 @@ import * as Clipboard from 'expo-clipboard';
 
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { passwordResetApi } from '@redux/state/passwordReset/api';
-import { CODE_LIFETIME_MS } from '@redux/state/passwordReset/initialState';
 import { selectPasswordReset } from '@redux/state/passwordReset/selectors';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
@@ -46,19 +45,16 @@ const useResetCode = ({ navigation, route }: UseResetCodeProps) => {
   }, [hasChallenge, navigation]);
 
   const resendSeconds = useSecondsUntil(resendAvailableAt);
-  const isPending = challenge !== null && challenge.end === null;
-  const expirySeconds = useSecondsUntil(isPending ? challenge.since + CODE_LIFETIME_MS : null);
   const rateLimit = failure?.action === 'verify' && failure.failure.kind === 'rateLimited' ? failure.failure : null;
   const verifyWaitSeconds = useSecondsUntil(rateLimit?.retryAt);
 
   const hasExpiredNotice = route.params?.notice === 'authorizationExpired';
+  // Only the server's answer blocks the code: a request never says which challenge it started or when it ends.
   const block: CodeBlock | null = hasExpiredNotice
     ? 'authorizationExpired'
     : challenge?.end === 'expired' || challenge?.end === 'attempts' || challenge?.end === 'unknown'
       ? challenge.end
-      : isPending && expirySeconds === 0
-        ? 'expired'
-        : null;
+      : null;
 
   const clearAfterNewCode = () => {
     setCode('');

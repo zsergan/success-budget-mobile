@@ -21,8 +21,11 @@ const isChallengePending = (challenge: ChallengeState | null, now: number): chal
 const endOf = (challenge: ChallengeState, now: number): ChallengeEnd => {
   if (isChallengeSurelyExpired(challenge, now)) return 'expired';
 
-  return challenge.wrongCodes >= WRONG_CODES_PER_CHALLENGE - 1 ? 'attempts' : 'unknown';
+  return challenge.isKnown && challenge.wrongCodes >= WRONG_CODES_PER_CHALLENGE - 1 ? 'attempts' : 'unknown';
 };
+
+// A 400 or 429 is the server's own answer; anything else may have reached it and changed the challenge.
+const isAnswered = (error: unknown) => isApiError(error, 400) || isApiError(error, 429);
 
 const passwordResetSlice = createSlice({
   name: 'passwordReset',
@@ -38,16 +41,17 @@ const passwordResetSlice = createSlice({
   },
   extraReducers: (builder) => {
     // A resend keeps a pending challenge's expiry and wrong codes; otherwise an accepted request starts a new one.
-    // Either way it ends any earlier authorization.
+    // After an unanswered check either may have happened, so neither is assumed. Any request ends the authorization.
     builder.addMatcher(requestPasswordReset.matchFulfilled, (state, action) => {
       const now = Date.now();
       const { email } = action.meta.arg.originalArgs;
-      const isResend = isSameEmail(state.email, email) && isChallengePending(state.challenge, now);
+      const pending =
+        isSameEmail(state.email, email) && isChallengePending(state.challenge, now) ? state.challenge : null;
 
       return {
         email,
         resendAvailableAt: now + action.payload.resend_after_seconds * 1000,
-        challenge: isResend ? state.challenge : { since: now, wrongCodes: 0, end: null },
+        challenge: pending?.isKnown ? pending : { since: now, wrongCodes: 0, end: null, isKnown: !pending },
         authorization: null,
       };
     });
@@ -76,6 +80,8 @@ const passwordResetSlice = createSlice({
       const { challenge } = state;
 
       if (!challenge || !isSameEmail(state.email, action.meta.arg.originalArgs.email)) return;
+
+      if (!isAnswered(action.payload)) challenge.isKnown = false;
 
       if (isApiError(action.payload, 400, ApiErrorCode.PASSWORD_RESET_CODE_INVALID)) {
         challenge.wrongCodes += 1;

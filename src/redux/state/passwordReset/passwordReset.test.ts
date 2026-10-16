@@ -39,9 +39,12 @@ const verifyFor = async (store: ReturnType<typeof createAppStore>, email: string
   await store.dispatch(verifyPasswordReset.initiate({ email, code: '042917' }, { track: false }));
 };
 
+const checkCode = (store: ReturnType<typeof createAppStore>) =>
+  store.dispatch(verifyPasswordReset.initiate({ email: 'anna@kovalenko.co', code: '000000' }, { track: false }));
+
 const wrongCode = async (store: ReturnType<typeof createAppStore>) => {
   rejectWith(400, { code: 'PASSWORD_RESET_CODE_INVALID' });
-  await store.dispatch(verifyPasswordReset.initiate({ email: 'anna@kovalenko.co', code: '000000' }, { track: false }));
+  await checkCode(store);
 };
 
 beforeEach(() => {
@@ -108,7 +111,7 @@ describe('passwordReset slice', () => {
     expect(store.getState().passwordReset).toEqual({
       email: 'anna@kovalenko.co',
       resendAvailableAt: NOW + 60_000,
-      challenge: { since: NOW, wrongCodes: 0, end: null },
+      challenge: { since: NOW, wrongCodes: 0, end: null, isKnown: true },
       authorization: null,
     });
   });
@@ -245,7 +248,7 @@ describe('passwordReset slice', () => {
     jest.advanceTimersByTime(90_000);
     await requestFor(store, 'anna@kovalenko.co');
 
-    expect(store.getState().passwordReset.challenge).toEqual({ since: NOW, wrongCodes: 1, end: null });
+    expect(store.getState().passwordReset.challenge).toEqual({ since: NOW, wrongCodes: 1, end: null, isKnown: true });
   });
 
   it('starts a new challenge once the code was accepted, and once it surely expired', async () => {
@@ -257,11 +260,62 @@ describe('passwordReset slice', () => {
 
     jest.advanceTimersByTime(60_000);
     await requestFor(store, 'anna@kovalenko.co');
-    expect(store.getState().passwordReset.challenge).toEqual({ since: NOW + 60_000, wrongCodes: 0, end: null });
+    expect(store.getState().passwordReset.challenge).toEqual({
+      since: NOW + 60_000,
+      wrongCodes: 0,
+      end: null,
+      isKnown: true,
+    });
 
     jest.advanceTimersByTime(30 * 60_000);
     await requestFor(store, 'anna@kovalenko.co');
-    expect(store.getState().passwordReset.challenge).toEqual({ since: NOW + 31 * 60_000, wrongCodes: 0, end: null });
+    expect(store.getState().passwordReset.challenge).toEqual({
+      since: NOW + 31 * 60_000,
+      wrongCodes: 0,
+      end: null,
+      isKnown: true,
+    });
+  });
+
+  it('stops vouching for the challenge after a check that got no answer', async () => {
+    const store = createAppStore();
+
+    await requestFor(store, 'anna@kovalenko.co');
+    await wrongCode(store);
+    mockedRequest.mockRejectedValueOnce({ code: 'ERR_NETWORK', message: 'Network Error' });
+    await checkCode(store);
+
+    expect(store.getState().passwordReset.challenge).toEqual({ since: NOW, wrongCodes: 1, end: null, isKnown: false });
+
+    // The lost check may have been accepted, so this request may have started a new 30 minutes.
+    jest.advanceTimersByTime(25 * 60_000);
+    await requestFor(store, 'anna@kovalenko.co');
+
+    expect(store.getState().passwordReset.challenge).toEqual({
+      since: NOW + 25 * 60_000,
+      wrongCodes: 0,
+      end: null,
+      isKnown: false,
+    });
+
+    for (let i = 0; i < 4; i += 1) await wrongCode(store);
+    rejectWith(400, { code: 'PASSWORD_RESET_CODE_UNUSABLE' });
+    await checkCode(store);
+
+    expect(store.getState().passwordReset.challenge?.end).toBe('unknown');
+  });
+
+  it('keeps vouching for the challenge after the server’s own refusals', async () => {
+    const store = createAppStore();
+
+    await requestFor(store, 'anna@kovalenko.co');
+    await wrongCode(store);
+    rejectWith(400, { code: 'VALIDATION_FAILED' });
+    await checkCode(store);
+    rejectWith(429, { code: 'PASSWORD_RESET_RATE_LIMITED' }, { 'retry-after': '60' });
+    await checkCode(store);
+
+    expect(store.getState().passwordReset.challenge).toMatchObject({ wrongCodes: 1, isKnown: true });
   });
 
   it('tells why a code stopped working when this device can', async () => {
@@ -272,9 +326,7 @@ describe('passwordReset slice', () => {
       for (let i = 0; i < wrongCodes; i += 1) await wrongCode(store);
       jest.advanceTimersByTime(waitMs);
       rejectWith(400, { code: 'PASSWORD_RESET_CODE_UNUSABLE' });
-      await store.dispatch(
-        verifyPasswordReset.initiate({ email: 'anna@kovalenko.co', code: '000000' }, { track: false }),
-      );
+      await checkCode(store);
 
       return store.getState().passwordReset.challenge?.end;
     };

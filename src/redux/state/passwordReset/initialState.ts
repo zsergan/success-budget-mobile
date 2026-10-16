@@ -11,6 +11,8 @@ export interface ChallengeState {
   // When this device first saw it accepted: never earlier than its real start, so +30 min is surely past expiry.
   since: number;
   wrongCodes: number;
+  // False after a check got no answer: the server may have accepted it or ended the challenge without this device knowing.
+  isKnown: boolean;
   // Accepted, used up or expired: the next accepted request starts a new challenge.
   end: ChallengeEnd | 'accepted' | null;
 }
