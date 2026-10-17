@@ -9,7 +9,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       paddingTop: theme.spacing.md,
       paddingBottom: theme.spacing.xxl,
       paddingHorizontal: horizontalScreenPadding,
-      backgroundColor: colors.secondary,
+      backgroundColor: colors.toast,
     },
     container: {
       flexDirection: 'row',
@@ -22,7 +22,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       fontFamily: theme.fonts.medium,
       fontSize: theme.fontSizes.bodyLg,
       lineHeight: theme.lineHeights.bodyLg,
-      color: colors.onSecondary,
+      color: colors.onToast,
     },
   });
 

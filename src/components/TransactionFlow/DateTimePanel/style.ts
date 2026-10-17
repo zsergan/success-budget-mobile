@@ -24,9 +24,10 @@ const createStyles = ({ colors }: ColorTheme) =>
       borderWidth: 1,
       borderColor: colors.hairline,
     },
+    // Inverted like the sheet's main action: `secondary` is the sheet's own colour in the dark theme.
     quickChipActive: {
-      backgroundColor: colors.secondary,
-      borderColor: colors.secondary,
+      backgroundColor: colors.text,
+      borderColor: colors.text,
     },
     quickText: {
       fontFamily: theme.fonts.semiBold,
@@ -34,7 +35,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       color: colors.muted,
     },
     quickTextActive: {
-      color: colors.onSecondary,
+      color: colors.bg,
     },
     note: {
       fontFamily: theme.fonts.medium,

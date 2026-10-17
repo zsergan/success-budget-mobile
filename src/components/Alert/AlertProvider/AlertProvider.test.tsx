@@ -58,6 +58,6 @@ it('restyles a toast on screen when the theme changes', async () => {
   await setTheme('dark');
 
   expect(StyleSheet.flatten(screen.getByText('Transaction deleted').props.style).color).toBe(
-    colorThemes.dark.colors.onSecondary,
+    colorThemes.dark.colors.onToast,
   );
 });

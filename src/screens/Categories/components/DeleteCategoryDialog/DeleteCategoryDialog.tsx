@@ -31,7 +31,8 @@ const DeleteCategoryDialog = ({ deletion }: Props) => {
 
   const willDelete = category.transactionCount === 0;
 
-  const confirmColor = willDelete ? colors.onDanger : colors.onSecondary;
+  // Archive is inverted like a sheet's main action: `secondary` is the dialog's own colour in the dark theme.
+  const confirmColor = willDelete ? colors.onDanger : colors.bg;
   const confirmLabel = willDelete ? 'Delete category' : 'Archive category';
   const pendingLabel = willDelete ? 'Deleting…' : 'Archiving…';
 
@@ -113,7 +114,7 @@ const DeleteCategoryDialog = ({ deletion }: Props) => {
 
           <View style={styles.actions}>
             <TouchableOpacity
-              style={[styles.confirmButton, { backgroundColor: willDelete ? colors.danger : colors.secondary }]}
+              style={[styles.confirmButton, { backgroundColor: willDelete ? colors.danger : colors.text }]}
               onPress={handleConfirm}
               disabled={isPending}
               activeOpacity={0.8}

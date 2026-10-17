@@ -36,7 +36,8 @@ const WalletPicker = ({
   onCreate,
   onRetry,
 }: Props) => {
-  const { colors, wallets: walletAppearance } = useTheme().colorTheme;
+  // A wallet's dot takes its colour's flat tone, as categories do; the card gradient is too dark on a dark chip.
+  const { colors, categories } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const selectedStyle = { backgroundColor: hexToRgba(typeColor, 0.09), borderColor: typeColor };
 
@@ -76,9 +77,7 @@ const WalletPicker = ({
                 activeOpacity={0.6}
                 accessibilityState={{ selected: isSelected }}
               >
-                <View
-                  style={[styles.walletDot, { backgroundColor: walletAppearance[resolveAppColor(design)].gradient[0] }]}
-                />
+                <View style={[styles.walletDot, { backgroundColor: categories[resolveAppColor(design)].stroke }]} />
 
                 <Text style={[styles.walletChipText, isSelected && { color: typeColor }]} numberOfLines={1}>
                   {wallet_name}
