@@ -104,7 +104,8 @@ relying on or changing them.
   exports `createStyles(theme: ColorTheme)`, read with
   `useThemedStyles(createStyles)`; colours outside a stylesheet (icons,
   spinners, gradients) come from `useTheme().colorTheme`. Fonts, sizes and
-  spacing stay on the static default `theme` export.
+  spacing stay on the static default `theme` export. No light/dark branches:
+  a new role is a token in `src/shared/theme.ts`. Details: `docs/theming.md`.
 - Known layout pitfalls (Plus Jakarta Sans clipping, nested safe areas):
   `docs/ui-pitfalls.md`.
 
