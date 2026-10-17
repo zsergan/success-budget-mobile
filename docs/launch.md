@@ -52,17 +52,21 @@ The images come from the mark geometry: `npm run brand:assets` writes them to
 | System launch screen | Mark, name and tagline in one 260pt image, its centre 38pt above the screen's | The mark alone, 74dp wide, at the window's centre                              |
 | Why                  | The storyboard centres an image of any content                                | The system draws only an icon, clipped to a 192dp circle inside a 288dp square |
 | First frame          | The same lockup at the same place; nothing moves                              | The mark at the window's centre, the name and tagline fading in under it       |
-| Background           | `#F6F7F9` (`colors.bg`)                                                       | `#F6F7F9`                                                                      |
+| Background           | `#F6F7F9` (`colors.bg`); dark `#0E1218`                                       | `#F6F7F9`; dark `#0E1218`                                                      |
 
 So the Android lockup sits lower than the design's frame: moving the mark up
 after the system splash would be a visible jump.
 
 ## Theme
 
-Screens follow the theme preference (`ThemeProvider`), but
-`userInterfaceStyle: light` keeps the system launch screen light and makes the
-device report light, so System resolves to light until it changes.
-`splash-ios-dark.png` and
-`splash-android-dark.png` are exported for when the app gets a dark theme;
-they go into the `expo-splash-screen` plugin's `dark` keys together with
-that change, never on their own.
+The app follows the stored theme preference (`ThemeProvider`), System by
+default. `userInterfaceStyle: automatic` lets both platforms report the
+device's appearance; Android does it through its `DayNight` app theme, since
+the flag alone needs `expo-system-ui` there. A manual choice is also applied
+to native surfaces (alerts, keyboards, pickers) with `Appearance.setColorScheme`,
+and cleared with `'unspecified'` for System.
+
+The system launch screen follows the device, not a manual choice: its light
+and dark images and backgrounds (`#F6F7F9`, `#0E1218`) are chosen before any
+JavaScript runs. The first frame waits for the preference, so the app itself
+never draws in the wrong theme.

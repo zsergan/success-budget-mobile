@@ -25,6 +25,7 @@ const GRAPHITE = '#1D2430';
 const LIGHT = '#F2F4F8';
 const AMBER = '#FFB020';
 const MUTED = '#798393';
+const MUTED_DARK = '#8794A8';
 
 let maskSeq = 0;
 
@@ -109,15 +110,15 @@ write(
 
 // iOS launch screen: a 260pt square centred on the screen, holding the stacked lockup where the app's first frame
 // draws it. Android 12+ shows only an icon clipped to a 192dp circle, so its launch screen carries the mark alone.
-// The dark pair is ready for when the app gets a dark theme; until then the launch stays light like every screen.
+// The dark pair matches the dark theme's first frame (colors.text and colors.muted over colors.bg).
 const SPLASH = 260;
 const blockTop = SPLASH / 2 - LAUNCH_LOCKUP_RAISE - STACKED_LOCKUP_HEIGHT / 2;
 const nameTop = blockTop + STACKED_MARK_HEIGHT + 22;
 const taglineTop = nameTop + 32 + 6;
 
-const SPLASH_SCHEMES = { '': GRAPHITE, '-dark': LIGHT };
+const SPLASH_SCHEMES = { '': { ink: GRAPHITE, muted: MUTED }, '-dark': { ink: LIGHT, muted: MUTED_DARK } };
 
-Object.entries(SPLASH_SCHEMES).forEach(([suffix, ink]) => {
+Object.entries(SPLASH_SCHEMES).forEach(([suffix, { ink, muted }]) => {
   write(
     `splash-ios${suffix}.png`,
     svg(
@@ -132,7 +133,7 @@ Object.entries(SPLASH_SCHEMES).forEach(([suffix, ink]) => {
       }) +
         // Baselines centre each font's ascent + descent (1.038 + 0.222 em) in its line height.
         `<text x="${SPLASH / 2}" y="${nameTop + 26.61}" text-anchor="middle" font-family="Plus Jakarta Sans" font-weight="700" font-size="26" letter-spacing="-0.6" fill="${ink}">Success Budget</text>` +
-        `<text x="${SPLASH / 2}" y="${taglineTop + 15.71}" text-anchor="middle" font-family="Plus Jakarta Sans" font-weight="500" font-size="14" fill="${MUTED}">Personal and shared budgets</text>`,
+        `<text x="${SPLASH / 2}" y="${taglineTop + 15.71}" text-anchor="middle" font-family="Plus Jakarta Sans" font-weight="500" font-size="14" fill="${muted}">Personal and shared budgets</text>`,
     ),
     // Exactly @3x, the largest scale the storyboard asks for, so the image is never resampled into it.
     SPLASH * 3,

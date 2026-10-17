@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true
@@ -28,11 +28,19 @@
           "backgroundColor": "#F6F7F9",
           "ios": {
             "image": "./assets/splash-ios.png",
-            "imageWidth": 260
+            "imageWidth": 260,
+            "dark": {
+              "image": "./assets/splash-ios-dark.png",
+              "backgroundColor": "#0E1218"
+            }
           },
           "android": {
             "image": "./assets/splash-android.png",
-            "imageWidth": 74
+            "imageWidth": 74,
+            "dark": {
+              "image": "./assets/splash-android-dark.png",
+              "backgroundColor": "#0E1218"
+            }
           }
         }
       ]
