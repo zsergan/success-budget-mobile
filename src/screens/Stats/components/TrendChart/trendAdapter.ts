@@ -1,7 +1,7 @@
 import type { barDataItem } from 'react-native-gifted-charts';
 
 import type { Money, StatisticsTrend, StatisticsTrendBucket } from '@api/dto';
-import { colors } from '@shared/theme';
+import type { ThemeColors } from '@shared/theme';
 import { formatDayRange, getMoneySign, parseDateKey } from '@screens/Stats/format';
 
 export const BAR_AREA_HEIGHT = 104;
@@ -148,7 +148,12 @@ export const getColumnCenter = (index: number, geometry: TrendGeometry) =>
   index * (geometry.columnWidth + geometry.columnGap) + geometry.columnWidth / 2;
 
 // Income and expense side by side per group, both drawn upward on one scale.
-export const toBarData = (groups: TrendGroup[], geometry: TrendGeometry, maxValue: number): barDataItem[] => {
+export const toBarData = (
+  groups: TrendGroup[],
+  geometry: TrendGeometry,
+  maxValue: number,
+  colors: Pick<ThemeColors, 'ok' | 'danger'>,
+): barDataItem[] => {
   // A non-zero amount never draws thinner than MIN_BAR_HEIGHT; a zero draws nothing.
   const visible = (value: number) => (value > 0 ? Math.max(value, (maxValue * MIN_BAR_HEIGHT) / BAR_AREA_HEIGHT) : 0);
   const groupSpacing = geometry.columnGap + geometry.inset * 2;

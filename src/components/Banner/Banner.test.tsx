@@ -2,8 +2,10 @@ import { StyleSheet } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 
 import Icon from '@components/Icon/Icon';
-import { colors } from '@shared/theme';
+import { colorThemes } from '@shared/theme';
 import Banner from './Banner';
+
+const { colors } = colorThemes.light;
 
 const iconNames = () => screen.UNSAFE_getAllByType(Icon).map((icon) => icon.props.name);
 

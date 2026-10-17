@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { StatisticsTrend } from '@api/dto';
-import { colors } from '@shared/theme';
+import { useTheme, useThemedStyles } from '@hooks';
 import { formatMoney } from '@screens/Stats/format';
 import type { StatsBlock } from '@screens/Stats/hooks/useStatsData';
 import BlockError from '../BlockError/BlockError';
@@ -9,24 +9,29 @@ import BlockPlaceholder from '../BlockPlaceholder/BlockPlaceholder';
 import TrendChart from '../TrendChart/TrendChart';
 import { TREND_STEP, getTrendMax, toTrendGroups } from '../TrendChart/trendAdapter';
 
-import styles from './style';
+import createStyles from './style';
 
-const Legend = ({ max }: { max: string }) => (
-  <View style={styles.legendRow}>
-    <View style={styles.legend}>
-      <View style={styles.legendItem}>
-        <View style={[styles.swatch, { backgroundColor: colors.ok }]} />
-        <Text style={styles.legendText}>Income</Text>
+const Legend = ({ max }: { max: string }) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
+
+  return (
+    <View style={styles.legendRow}>
+      <View style={styles.legend}>
+        <View style={styles.legendItem}>
+          <View style={[styles.swatch, { backgroundColor: colors.ok }]} />
+          <Text style={styles.legendText}>Income</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.swatch, { backgroundColor: colors.danger }]} />
+          <Text style={styles.legendText}>Expense</Text>
+        </View>
       </View>
-      <View style={styles.legendItem}>
-        <View style={[styles.swatch, { backgroundColor: colors.danger }]} />
-        <Text style={styles.legendText}>Expense</Text>
-      </View>
+
+      {!!max && <Text style={styles.max}>{max}</Text>}
     </View>
-
-    {!!max && <Text style={styles.max}>{max}</Text>}
-  </View>
-);
+  );
+};
 
 interface Props {
   block: StatsBlock<StatisticsTrend>;
@@ -36,6 +41,7 @@ interface Props {
 }
 
 const TrendBlock = ({ block, selectedKey, onSelect, onTouchInside }: Props) => {
+  const styles = useThemedStyles(createStyles);
   const trend = block.data;
   const groups = trend ? toTrendGroups(trend) : [];
   const max = getTrendMax(groups);

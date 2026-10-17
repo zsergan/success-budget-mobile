@@ -2,11 +2,11 @@ import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BrandLockup, Button, Icon } from '@components';
+import { useTheme, useThemedStyles } from '@hooks';
 import { ScreenNames } from '@shared/enums';
 import type { IconType, RootStackScreenProps } from '@shared/types';
-import { colors } from '@shared/theme';
 
-import styles, { BOTTOM_GAP, TOP_GAP } from './style';
+import createStyles, { BOTTOM_GAP, TOP_GAP } from './style';
 
 interface Props extends RootStackScreenProps<ScreenNames.WELCOME_SCREEN> {}
 
@@ -20,6 +20,8 @@ const FEATURE_POINTS: { icon: IconType; label: string }[] = [
 const HEADLINE_SCALE_LIMIT = 1.25;
 
 const WelcomeScreen = ({ navigation }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
 
   return (

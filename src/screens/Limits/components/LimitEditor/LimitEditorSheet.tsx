@@ -3,6 +3,7 @@ import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
 import type { LimitModel } from '@api/models';
 import { Icon } from '@components';
+import { useTheme, useThemedStyles } from '@hooks';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
 import { getActiveCategories } from '@redux/state/category/selectors';
@@ -10,7 +11,6 @@ import { useGetLimitsQuery } from '@redux/state/limit/api';
 import { EMPTY_LIMITS, findLimitForCategory } from '@redux/state/limit/selectors';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import { formatCurrencyAmount } from '@shared/utils';
-import { colors } from '@shared/theme';
 import type { LimitScope } from './types';
 import { getCommittedTotal, isOverCommitted } from './allocation';
 import ScopeSwitcher from './ScopeSwitcher/ScopeSwitcher';
@@ -20,7 +20,7 @@ import AllocationDisplay from './AllocationDisplay/AllocationDisplay';
 import ActionRow from './ActionRow/ActionRow';
 import useLimitEditorForm from './useLimitEditorForm';
 
-import styles from './style';
+import createStyles from './style';
 
 export const LIMIT_EDITOR_SNAP_POINT = '94%';
 const SNAP_FRACTION = parseFloat(LIMIT_EDITOR_SNAP_POINT) / 100;
@@ -32,6 +32,8 @@ interface Props {
 }
 
 const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const { height: windowHeight } = useWindowDimensions();
   const spaceArg = useSpaceArg();
   const { currentData: categories } = useGetCategoriesQuery(spaceArg);

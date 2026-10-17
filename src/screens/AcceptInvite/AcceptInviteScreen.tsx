@@ -2,15 +2,17 @@ import { Text, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
 import { Button, Input, RootLayout, SectionTitle } from '@components';
+import { useThemedStyles } from '@hooks';
 import type { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
 import useAcceptInviteForm from './useAcceptInviteForm';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props extends RootStackScreenProps<ScreenNames.ACCEPT_INVITE_SCREEN> {}
 
 const AcceptInviteScreen = ({ navigation }: Props) => {
+  const styles = useThemedStyles(createStyles);
   const { control, onSubmit, isSubmitDisabled } = useAcceptInviteForm({ navigation });
 
   return (

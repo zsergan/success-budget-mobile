@@ -2,9 +2,9 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import type { LimitModel } from '@api/models';
 import { EmptyState, Icon, LimitItem } from '@components';
-import { colors } from '@shared/theme';
+import { useTheme, useThemedStyles } from '@hooks';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   categoryLimits: LimitModel[];
@@ -14,6 +14,8 @@ interface Props {
 }
 
 const CategoryLimitsSection = ({ categoryLimits, currencyCode, onAddLimit, onSelectLimit }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   if (categoryLimits.length === 0) {
     return (
       <EmptyState

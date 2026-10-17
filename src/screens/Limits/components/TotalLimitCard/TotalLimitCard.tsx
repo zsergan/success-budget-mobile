@@ -2,12 +2,11 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import type { LimitModel } from '@api/models';
 import { Icon, WalletGradientBackground } from '@components';
-import { walletTextColors } from '@shared/constants';
+import { useTheme, useThemedStyles } from '@hooks';
 import { AppColor } from '@shared/enums';
-import { colors } from '@shared/theme';
 import { formatCurrencyAmount, getDailyPace, getDaysLeftInMonth, getLimitStatus } from '@shared/utils';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   total: LimitModel;
@@ -23,7 +22,9 @@ const nextResetLabel = () => {
 };
 
 const TotalLimitCard = ({ total, currencyCode, onEdit }: Props) => {
-  const { fg, dim, inner } = walletTextColors[AppColor.SLATE];
+  const { colors, wallets } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
+  const { fg, dim, inner } = wallets[AppColor.SLATE];
   const amount = Number(total.amount);
   const status = getLimitStatus(total.spent, amount);
   const daysLeft = getDaysLeftInMonth();

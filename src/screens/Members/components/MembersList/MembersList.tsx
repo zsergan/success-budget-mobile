@@ -1,10 +1,11 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import type { SpaceInviteRow, SpaceMemberRow } from '@api/dto';
+import { useThemedStyles } from '@hooks';
 import type { MemberActionTarget } from '../../types';
 import MemberRow from '../MemberRow/MemberRow';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   memberRows: SpaceMemberRow[];
@@ -30,6 +31,7 @@ const MembersList = ({
   onRetry,
   onActionPress,
 }: Props) => {
+  const styles = useThemedStyles(createStyles);
   const memberCount = memberRows.length;
   const countLabel = [
     `${memberCount} member${memberCount === 1 ? '' : 's'}`,

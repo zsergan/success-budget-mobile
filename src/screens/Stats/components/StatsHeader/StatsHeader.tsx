@@ -1,11 +1,12 @@
 import { Text, View } from 'react-native';
 
 import { PeriodBar } from '@components';
+import { useThemedStyles } from '@hooks';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpace } from '@redux/state/space/selectors';
 import type { Period, PeriodUnit } from '@shared/utils';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   period: Period;
@@ -15,6 +16,7 @@ interface Props {
 }
 
 const StatsHeader = ({ period, onPresetPress, onOpenPicker, onReset }: Props) => {
+  const styles = useThemedStyles(createStyles);
   const space = useAppSelector(selectCurrentSpace);
 
   return (

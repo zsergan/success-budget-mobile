@@ -32,7 +32,8 @@ interface Props {
 }
 
 const CategoryEditorSheet = ({ category, defaultTransactionType, onRequestDelete, onSaved }: Props) => {
-  const { colors } = useTheme().colorTheme;
+  const { scheme, colorTheme } = useTheme();
+  const { colors } = colorTheme;
   const styles = useThemedStyles(createStyles);
   const { height, keyboardHeight } = useBoundedHeight(0.94);
   const insets = useSafeAreaInsets();
@@ -103,6 +104,7 @@ const CategoryEditorSheet = ({ category, defaultTransactionType, onRequestDelete
             render={({ field: { onChange, value, onBlur }, fieldState: { isTouched } }) => (
               <View style={[styles.nameField, isTouched && styles.nameFieldFocused]}>
                 <BottomSheetTextInput
+                  keyboardAppearance={scheme}
                   style={styles.nameInput}
                   value={value}
                   onChangeText={(text) => onChange(text.slice(0, NAME_MAX_LENGTH))}

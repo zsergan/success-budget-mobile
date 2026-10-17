@@ -59,10 +59,10 @@ after the system splash would be a visible jump.
 
 ## Theme
 
-The app still draws light only (`userInterfaceStyle: light`, `colorScheme` in
-`src/shared/theme.ts`), so the launch is light too; `userInterfaceStyle: light`
-also makes the device report light, so System resolves to light until it
-changes. `splash-ios-dark.png` and
+Screens follow the theme preference (`ThemeProvider`), but
+`userInterfaceStyle: light` keeps the system launch screen light and makes the
+device report light, so System resolves to light until it changes.
+`splash-ios-dark.png` and
 `splash-android-dark.png` are exported for when the app gets a dark theme;
 they go into the `expo-splash-screen` plugin's `dark` keys together with
 that change, never on their own.

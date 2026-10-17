@@ -18,6 +18,8 @@ import type { ViewSelection } from '@redux/state/transactionFlow/selection';
 import { checkFlowRecord, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { ScreenNames, AppColor, TransactionKind, TransactionType } from '@shared/enums';
+import { renderWithTheme } from '@components/ThemeProvider/themeTestUtils';
+import { colorThemes } from '@shared/theme';
 import TransactionFlowSheet from './TransactionFlowSheet';
 
 interface SheetProps {
@@ -220,24 +222,26 @@ const respond = ({ url, method }: { url: string; method: string }) => {
   return Promise.resolve({ data: [] });
 };
 
+const flowTree = (store: ReturnType<typeof createAppStore>) => (
+  <Provider store={store}>
+    <SafeAreaProvider
+      initialMetrics={{
+        frame: { x: 0, y: 0, width: 400, height: 800 },
+        insets: { top: 0, right: 0, bottom: 0, left: 0 },
+      }}
+    >
+      <TransactionFlowSheet />
+    </SafeAreaProvider>
+  </Provider>
+);
+
 const renderFlow = () => {
   const store = createAppStore();
   withProfile(store);
 
   store.dispatch(activateSpace(1));
 
-  render(
-    <Provider store={store}>
-      <SafeAreaProvider
-        initialMetrics={{
-          frame: { x: 0, y: 0, width: 400, height: 800 },
-          insets: { top: 0, right: 0, bottom: 0, left: 0 },
-        }}
-      >
-        <TransactionFlowSheet />
-      </SafeAreaProvider>
-    </Provider>,
-  );
+  render(flowTree(store));
 
   const open = (
     transactionType = TransactionType.EXPENSE,
@@ -291,6 +295,35 @@ beforeEach(() => {
 });
 
 describe('TransactionFlowSheet', () => {
+  it('keeps an unfinished transaction open and filled in through a theme change', async () => {
+    const store = createAppStore();
+    withProfile(store);
+    store.dispatch(activateSpace(1));
+    const { setTheme } = await renderWithTheme(flowTree(store));
+
+    act(() => {
+      store.dispatch(
+        createOpened({
+          spaceId: 1,
+          transactionType: TransactionType.EXPENSE,
+          walletId: 7,
+          now: new Date().toISOString(),
+          selection: null,
+        }),
+      );
+    });
+    await settle();
+    fillExpense();
+
+    await setTheme('dark');
+    await settle();
+
+    expect(mockSheet.presents).toBe(1);
+    expect(screen.getByLabelText('Amount').props.value).toBe('12');
+    expect(selectTransactionFlow(store.getState())?.draft).toMatchObject({ amount: '12' });
+    expect(screen.getByText('Save expense')).toHaveStyle({ color: colorThemes.dark.colors.onDanger });
+  });
+
   it('opens one sheet and keeps it when asked to open again', async () => {
     const { open } = renderFlow();
 

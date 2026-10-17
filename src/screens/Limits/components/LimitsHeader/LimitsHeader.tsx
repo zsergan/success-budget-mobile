@@ -1,21 +1,26 @@
 import { Text, View } from 'react-native';
 
+import { useThemedStyles } from '@hooks';
 import { formatDateMM, getDaysLeftInMonth } from '@shared/utils';
 
-import styles from './style';
+import createStyles from './style';
 
-const LimitsHeader = () => (
-  <View style={styles.header}>
-    <Text style={styles.title}>Limits</Text>
+const LimitsHeader = () => {
+  const styles = useThemedStyles(createStyles);
 
-    <View style={styles.periodPill}>
-      <Text style={styles.periodMonth}>{formatDateMM(new Date())}</Text>
+  return (
+    <View style={styles.header}>
+      <Text style={styles.title}>Limits</Text>
 
-      <View style={styles.periodDivider} />
+      <View style={styles.periodPill}>
+        <Text style={styles.periodMonth}>{formatDateMM(new Date())}</Text>
 
-      <Text style={styles.periodDays}>{`${getDaysLeftInMonth()} days left`}</Text>
+        <View style={styles.periodDivider} />
+
+        <Text style={styles.periodDays}>{`${getDaysLeftInMonth()} days left`}</Text>
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 export default LimitsHeader;

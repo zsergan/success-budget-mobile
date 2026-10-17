@@ -1,6 +1,7 @@
 import { Text, TouchableWithoutFeedback, View } from 'react-native';
 
 import { ModalContainer } from '@components';
+import { useThemedStyles } from '@hooks';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
 import { EMPTY_CATEGORIES } from '@redux/state/category/selectors';
@@ -15,7 +16,7 @@ import PasswordStep from './steps/PasswordStep';
 import ConfirmStep from './steps/ConfirmStep';
 import useDeleteAccountFlow from './hooks/useDeleteAccountFlow';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   isVisible: boolean;
@@ -23,6 +24,7 @@ interface Props {
 }
 
 const DeleteAccountDialog = ({ isVisible, onClose }: Props) => {
+  const styles = useThemedStyles(createStyles);
   const { step, password, passwordError, goToPassword, goToWarning, setPassword, continueFromPassword, reset } =
     useDeleteAccountFlow();
 

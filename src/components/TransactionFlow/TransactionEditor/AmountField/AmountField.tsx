@@ -24,7 +24,8 @@ interface Props {
 
 // The typed text stays exactly as entered, so the caret never jumps and nothing is cut; the sign comes from the type.
 const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currencyCode, error }: Props) => {
-  const { colors } = useTheme().colorTheme;
+  const { scheme, colorTheme } = useTheme();
+  const { colors } = colorTheme;
   const styles = useThemedStyles(createStyles);
   const inputRef = useRef<ComponentRef<typeof BottomSheetTextInput>>(null);
   const [isFocused, setFocused] = useState(false);
@@ -48,6 +49,7 @@ const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currency
         )}
 
         <BottomSheetTextInput
+          keyboardAppearance={scheme}
           ref={inputRef}
           value={value}
           onChangeText={onChange}

@@ -1,11 +1,13 @@
 import { Text, View } from 'react-native';
 
 import { CircleIcon } from '@components';
+import { useThemedStyles } from '@hooks';
 import { useGetProfileQuery } from '@redux/state/profile/api';
 
-import styles from './style';
+import createStyles from './style';
 
 const Profile = () => {
+  const styles = useThemedStyles(createStyles);
   const { name, email } = useGetProfileQuery().currentData ?? {};
 
   return (

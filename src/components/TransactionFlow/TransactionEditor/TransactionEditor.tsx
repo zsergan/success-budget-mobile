@@ -66,7 +66,8 @@ const TransactionEditor = ({
   onDelete,
   onRetryDelete,
 }: Props) => {
-  const { colors } = useTheme().colorTheme;
+  const { scheme, colorTheme } = useTheme();
+  const { colors } = colorTheme;
   const styles = useThemedStyles(createStyles);
   const dispatch = useAppDispatch();
   const { height, keyboardHeight } = useBoundedHeight();
@@ -292,6 +293,7 @@ const TransactionEditor = ({
               </View>
 
               <BottomSheetTextInput
+                keyboardAppearance={scheme}
                 style={styles.note}
                 value={draft.description}
                 onChangeText={(description) => change({ description })}

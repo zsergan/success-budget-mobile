@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { StatisticsSummary } from '@api/dto';
 import { Icon } from '@components';
-import { colors } from '@shared/theme';
+import { useTheme, useThemedStyles } from '@hooks';
 import type { ChangeTone, MoneySign } from '@screens/Stats/format';
 import {
   formatChange,
@@ -12,22 +12,23 @@ import {
   getMoneySign,
 } from '@screens/Stats/format';
 import type { StatsBlock } from '@screens/Stats/hooks/useStatsData';
+import type { ThemeColors } from '@shared/theme';
 import BlockError from '../BlockError/BlockError';
 import BlockPlaceholder from '../BlockPlaceholder/BlockPlaceholder';
 
-import styles from './style';
+import createStyles from './style';
 
-const TONE_COLOR: Record<ChangeTone, string> = {
-  good: colors.ok,
-  bad: colors.danger,
-  neutral: colors.muted,
-};
+type Styles = ReturnType<typeof createStyles>;
 
-const NET_STYLE = {
-  [1]: { word: 'Surplus', value: styles.netSurplus, chip: styles.chipSurplus, chipText: styles.chipTextSurplus },
-  [-1]: { word: 'Deficit', value: styles.netDeficit, chip: styles.chipDeficit, chipText: styles.chipTextDeficit },
-  [0]: { word: 'Balanced', value: undefined, chip: styles.chipBalanced, chipText: undefined },
-};
+const toneColor = (tone: ChangeTone, colors: ThemeColors) =>
+  ({ good: colors.ok, bad: colors.danger, neutral: colors.muted })[tone];
+
+const netStyle = (sign: MoneySign, styles: Styles) =>
+  ({
+    [1]: { word: 'Surplus', value: styles.netSurplus, chip: styles.chipSurplus, chipText: styles.chipTextSurplus },
+    [-1]: { word: 'Deficit', value: styles.netDeficit, chip: styles.chipDeficit, chipText: styles.chipTextDeficit },
+    [0]: { word: 'Balanced', value: undefined, chip: styles.chipBalanced, chipText: undefined },
+  })[sign];
 
 interface CardsContent {
   income: { amount: string; comparison: string; tone: ChangeTone };
@@ -71,30 +72,36 @@ interface TotalCardProps {
   total: CardsContent['income'];
 }
 
-const TotalCard = ({ direction, total }: TotalCardProps) => (
-  <View style={styles.totalCard}>
-    <View style={styles.totalLabelRow}>
-      {direction === 'income' ? (
-        <Icon name="income" size={11} color={colors.ok} strokeWidth={2.4} />
-      ) : (
-        <Icon name="expense" size={11} color={colors.danger} strokeWidth={2.4} />
-      )}
-      <Text style={styles.label}>{direction === 'income' ? 'Income' : 'Expense'}</Text>
+const TotalCard = ({ direction, total }: TotalCardProps) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
+
+  return (
+    <View style={styles.totalCard}>
+      <View style={styles.totalLabelRow}>
+        {direction === 'income' ? (
+          <Icon name="income" size={11} color={colors.ok} strokeWidth={2.4} />
+        ) : (
+          <Icon name="expense" size={11} color={colors.danger} strokeWidth={2.4} />
+        )}
+        <Text style={styles.label}>{direction === 'income' ? 'Income' : 'Expense'}</Text>
+      </View>
+
+      <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit>
+        {total.amount}
+      </Text>
+
+      {/* Holds its two lines even when there is nothing to compare, so the cards keep their height. */}
+      <Text style={[styles.comparison, { color: toneColor(total.tone, colors) }]} numberOfLines={2}>
+        {total.comparison}
+      </Text>
     </View>
-
-    <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit>
-      {total.amount}
-    </Text>
-
-    {/* Holds its two lines even when there is nothing to compare, so the cards keep their height. */}
-    <Text style={[styles.comparison, { color: TONE_COLOR[total.tone] }]} numberOfLines={2}>
-      {total.comparison}
-    </Text>
-  </View>
-);
+  );
+};
 
 const Cards = ({ content }: { content: CardsContent }) => {
-  const net = NET_STYLE[content.net.sign];
+  const styles = useThemedStyles(createStyles);
+  const net = netStyle(content.net.sign, styles);
 
   return (
     <View style={styles.root}>
@@ -127,6 +134,7 @@ interface Props {
 }
 
 const SummaryCards = ({ block, showComparison }: Props) => {
+  const styles = useThemedStyles(createStyles);
   const summary = block.data;
 
   if (summary) return <Cards content={toContent(summary, showComparison)} />;

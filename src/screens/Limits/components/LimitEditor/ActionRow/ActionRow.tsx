@@ -2,9 +2,10 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@components';
-import theme, { colors } from '@shared/theme';
+import { useTheme, useThemedStyles } from '@hooks';
+import theme from '@shared/theme';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   onDeletePress?: () => void;
@@ -14,6 +15,8 @@ interface Props {
 }
 
 const ActionRow = ({ onDeletePress, canSubmit, saveLabel, onSubmit }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
 
   return (
@@ -37,7 +40,7 @@ const ActionRow = ({ onDeletePress, canSubmit, saveLabel, onSubmit }: Props) => 
           disabled={!canSubmit}
           activeOpacity={0.8}
         >
-          {canSubmit && <Icon name="check" size={17} color="#FFFDFA" strokeWidth={2.4} />}
+          {canSubmit && <Icon name="check" size={17} color={colors.onAccent} strokeWidth={2.4} />}
 
           <Text style={[styles.saveButtonText, canSubmit && styles.saveButtonTextReady]}>{saveLabel}</Text>
         </TouchableOpacity>

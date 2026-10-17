@@ -5,12 +5,12 @@ import { ActivityIndicator, ScrollView, SectionList, Text, TouchableOpacity, Vie
 
 import type { Money } from '@api/dto';
 import { TransactionCard, useScreenTopInset } from '@components';
+import { useTheme, useThemedStyles } from '@hooks';
 import type { TransactionModel } from '@api/models';
-import { colors } from '@shared/theme';
 import type { DayGroup } from '@shared/utils';
 import { formatSignedAmount, toCents } from '@shared/utils';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Section {
   key: string;
@@ -21,7 +21,11 @@ interface Section {
   data: TransactionModel[];
 }
 
-const ItemSeparator = () => <View style={styles.itemSeparator} />;
+const ItemSeparator = () => {
+  const styles = useThemedStyles(createStyles);
+
+  return <View style={styles.itemSeparator} />;
+};
 
 type Group = DayGroup & { total: Money | null };
 
@@ -62,6 +66,8 @@ interface PageEdge {
 const EDGE_THRESHOLD = 0.75;
 
 const PageStatus = ({ edge, onRetry }: { edge?: PageEdge; onRetry?: () => void }) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   if (edge?.hasError)
     return (
       <View style={styles.pageStatus}>
@@ -113,6 +119,7 @@ const TransactionsList = ({
   newer,
   onRetryPage,
 }: Props) => {
+  const styles = useThemedStyles(createStyles);
   const topInset = useScreenTopInset();
   const listRef = useRef<SectionList<TransactionModel, Section>>(null);
   const scrolledToRef = useRef<string | null>(null);

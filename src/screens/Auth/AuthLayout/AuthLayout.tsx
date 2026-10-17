@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GradientBackground } from '@components';
-import { colors } from '@shared/theme';
+import { useTheme } from '@hooks';
 
 import styles from './style';
 
@@ -11,12 +11,16 @@ interface Props {
   children: ReactNode;
 }
 
-const AuthLayout = ({ children }: Props) => (
-  <SafeAreaView style={styles.root}>
-    <GradientBackground colors={[colors.bg, colors.track]} />
+const AuthLayout = ({ children }: Props) => {
+  const { colors } = useTheme().colorTheme;
 
-    <View style={styles.main}>{children}</View>
-  </SafeAreaView>
-);
+  return (
+    <SafeAreaView style={styles.root}>
+      <GradientBackground colors={[colors.bg, colors.track]} />
+
+      <View style={styles.main}>{children}</View>
+    </SafeAreaView>
+  );
+};
 
 export default AuthLayout;

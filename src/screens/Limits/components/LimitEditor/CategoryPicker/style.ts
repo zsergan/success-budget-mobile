@@ -1,101 +1,103 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { colors } from '@shared/theme';
+import type { ColorTheme } from '@shared/theme';
+import theme from '@shared/theme';
 
-const styles = StyleSheet.create({
-  section: {
-    rowGap: theme.spacing.md - 2,
-  },
-  sectionLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-  },
-  sectionLabel: {
-    fontFamily: theme.fonts.semiBold,
-    fontSize: theme.fontSizes.caption,
-    letterSpacing: 0.3,
-    color: colors.muted,
-  },
-  sectionHint: {
-    fontFamily: theme.fonts.semiBold,
-    fontSize: theme.fontSizes.caption,
-    color: colors.muted,
-  },
-  categoryGrid: {
-    marginHorizontal: -5,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  categoryCell: {
-    width: '25%',
-    paddingHorizontal: 5,
-    marginBottom: 14,
-    alignItems: 'center',
-    rowGap: 6,
-  },
-  categoryIconBox: {
-    width: '100%',
-    height: 52,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: colors.hairline,
-  },
-  categoryName: {
-    fontFamily: theme.fonts.semiBold,
-    fontSize: 10,
-    lineHeight: 13,
-    textAlign: 'center',
-    color: colors.muted,
-  },
-  categoryNameSelected: {
-    color: colors.text,
-  },
-  categoryNameTaken: {
-    color: colors.muted,
-    opacity: 0.6,
-  },
-  selectedBadge: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accent,
-    borderWidth: 2,
-    borderColor: colors.elevated,
-  },
-  takenBadge: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.track,
-    borderWidth: 2,
-    borderColor: colors.elevated,
-  },
-  takenHint: {
-    fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.micro,
-    lineHeight: 16,
-    color: colors.muted,
-  },
-  error: {
-    fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.caption,
-    lineHeight: theme.lineHeights.caption,
-    color: colors.danger,
-  },
-});
+const createStyles = ({ colors }: ColorTheme) =>
+  StyleSheet.create({
+    section: {
+      rowGap: theme.spacing.md - 2,
+    },
+    sectionLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      justifyContent: 'space-between',
+    },
+    sectionLabel: {
+      fontFamily: theme.fonts.semiBold,
+      fontSize: theme.fontSizes.caption,
+      letterSpacing: 0.3,
+      color: colors.muted,
+    },
+    sectionHint: {
+      fontFamily: theme.fonts.semiBold,
+      fontSize: theme.fontSizes.caption,
+      color: colors.muted,
+    },
+    categoryGrid: {
+      marginHorizontal: -5,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
+    categoryCell: {
+      width: '25%',
+      paddingHorizontal: 5,
+      marginBottom: 14,
+      alignItems: 'center',
+      rowGap: 6,
+    },
+    categoryIconBox: {
+      width: '100%',
+      height: 52,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surface,
+      borderWidth: 1.5,
+      borderColor: colors.hairline,
+    },
+    categoryName: {
+      fontFamily: theme.fonts.semiBold,
+      fontSize: 10,
+      lineHeight: 13,
+      textAlign: 'center',
+      color: colors.muted,
+    },
+    categoryNameSelected: {
+      color: colors.text,
+    },
+    categoryNameTaken: {
+      color: colors.muted,
+      opacity: 0.6,
+    },
+    selectedBadge: {
+      position: 'absolute',
+      top: -6,
+      right: -6,
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.accent,
+      borderWidth: 2,
+      borderColor: colors.elevated,
+    },
+    takenBadge: {
+      position: 'absolute',
+      top: -6,
+      right: -6,
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.track,
+      borderWidth: 2,
+      borderColor: colors.elevated,
+    },
+    takenHint: {
+      fontFamily: theme.fonts.medium,
+      fontSize: theme.fontSizes.micro,
+      lineHeight: 16,
+      color: colors.muted,
+    },
+    error: {
+      fontFamily: theme.fonts.medium,
+      fontSize: theme.fontSizes.caption,
+      lineHeight: theme.lineHeights.caption,
+      color: colors.danger,
+    },
+  });
 
-export default styles;
+export default createStyles;

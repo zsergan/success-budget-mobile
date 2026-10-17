@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { ThemeProvider } from '@components';
+import { renderWithTheme } from '@components/ThemeProvider/themeTestUtils';
 import { THEME_RESTORE_TIMEOUT_MS } from '@components/ThemeProvider/ThemeProvider';
 import { THEME_PREFERENCE_KEY } from '@shared/constants';
 import { loginMe } from '@redux/state/auth/thunks';
@@ -110,4 +111,25 @@ it('draws nothing while the theme preference is read, and stops waiting for it a
   } finally {
     getItem.mockImplementation(readStored);
   }
+});
+
+it('stays on the screen it is on when the theme changes', async () => {
+  jest.mocked(SecureStore.getItemAsync).mockResolvedValue(null);
+  const { setTheme } = await renderWithTheme(
+    <SafeAreaProvider initialMetrics={metrics}>
+      <Provider store={createAppStore()}>
+        <RootNavigator />
+      </Provider>
+    </SafeAreaProvider>,
+  );
+  await act(() => jest.advanceTimersByTimeAsync(0));
+  fireEvent.press(screen.getByText('Sign In'));
+  await act(() => jest.advanceTimersByTimeAsync(1000));
+  fireEvent.changeText(screen.getByLabelText('Email'), 'me@example.com');
+
+  await setTheme('dark');
+  await act(() => jest.advanceTimersByTimeAsync(1000));
+
+  expect(screen.getByText('No account yet?')).toBeTruthy();
+  expect(screen.getByLabelText('Email').props.value).toBe('me@example.com');
 });

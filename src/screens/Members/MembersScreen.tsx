@@ -1,10 +1,10 @@
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import { EmptyState, RootLayout, SectionTitle } from '@components';
+import { useTheme, useThemedStyles } from '@hooks';
 import { SpaceType } from '@shared/enums';
 import type { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
-import { colors } from '@shared/theme';
 import InviteCodeDialog from './components/InviteCodeDialog/InviteCodeDialog';
 import InviteMemberSection from './components/InviteMemberSection/InviteMemberSection';
 import LeaveSpaceDialog from './components/LeaveSpaceDialog/LeaveSpaceDialog';
@@ -16,11 +16,13 @@ import useInviteMember from './hooks/useInviteMember';
 import useMemberActions from './hooks/useMemberActions';
 import useMembersData from './hooks/useMembersData';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props extends RootStackScreenProps<ScreenNames.MEMBERS_SCREEN> {}
 
 const MembersScreen = ({ navigation }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const {
     currentSpace,
     isInitialLoading,

@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { AccessibilityInfo, Pressable, Text, View } from 'react-native';
 
 import { Icon } from '@components';
+import { useTheme, useThemedStyles } from '@hooks';
 import type { LaunchFailure as Failure } from '@redux/state/launch/initialState';
 import { TEXT_SCALE_LIMIT } from '@screens/Launch/style';
-import { colors } from '@shared/theme';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   failure: Failure;
@@ -58,6 +58,8 @@ const useSecondsUntil = (until: number | null) => {
 };
 
 const LaunchFailure = ({ failure, retryAt, onRetry }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const waitSeconds = useSecondsUntil(retryAt);
   const isWaiting = waitSeconds > 0;
   const { title, text } = FAILURE_COPY[failure];

@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { Icon } from '@components';
-import { useAlert } from '@hooks';
-import { colors } from '@shared/theme';
+import { useAlert, useTheme, useThemedStyles } from '@hooks';
 
-import styles from './style';
+import createStyles from './style';
 
 const MAX_INVITES = 10;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -16,6 +15,9 @@ interface Props {
 }
 
 const InviteChips = ({ emails, onChange }: Props) => {
+  const { scheme, colorTheme } = useTheme();
+  const { colors } = colorTheme;
+  const styles = useThemedStyles(createStyles);
   const [draft, setDraft] = useState('');
   const { addAlert } = useAlert();
 
@@ -68,6 +70,7 @@ const InviteChips = ({ emails, onChange }: Props) => {
           <Icon name="mail" size={17} color={colors.muted} strokeWidth={1.9} />
 
           <TextInput
+            keyboardAppearance={scheme}
             style={styles.inviteInput}
             value={draft}
             onChangeText={setDraft}

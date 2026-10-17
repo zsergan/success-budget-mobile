@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
+import { useTheme, useThemedStyles } from '@hooks';
 import { INVITE_EXPIRY_DAYS, SPACE_LIMITS } from '@shared/constants';
-import { colors } from '@shared/theme';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   canInvite: boolean;
@@ -26,6 +26,9 @@ const InviteMemberSection = ({
   failedEmail,
   onSubmit,
 }: Props) => {
+  const { scheme, colorTheme } = useTheme();
+  const { colors } = colorTheme;
+  const styles = useThemedStyles(createStyles);
   const [email, setEmail] = useState('');
   const [seenFailedEmail, setSeenFailedEmail] = useState<string | null>(null);
 
@@ -59,6 +62,7 @@ const InviteMemberSection = ({
             <Icon name="mail" size={18} color={colors.muted} strokeWidth={1.9} />
 
             <TextInput
+              keyboardAppearance={scheme}
               style={styles.inviteInput}
               value={email}
               onChangeText={setEmail}

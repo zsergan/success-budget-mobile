@@ -2,12 +2,12 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import type { Money } from '@api/dto';
 import { Icon } from '@components';
+import { useTheme, useThemedStyles } from '@hooks';
 import { TransactionType } from '@shared/enums';
-import { colors } from '@shared/theme';
 import type { HistoryFilter } from '@shared/types';
 import { formatMoneyAmount, formatRangeLabel } from '@shared/utils';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   filter: HistoryFilter;
@@ -18,6 +18,8 @@ interface Props {
 }
 
 const AppliedFilter = ({ filter, total, currencyCode, onClear }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const isExpense = filter.transactionType === TransactionType.EXPENSE;
   const range = formatRangeLabel({ from: new Date(filter.from), to: new Date(filter.to) });
 

@@ -12,18 +12,19 @@ import {
   TinyWallet,
   WalletCard,
 } from '@components';
+import { useTheme, useThemedStyles } from '@hooks';
 import type { GetWalletsResponse } from '@api/dto';
 import type { AppColor } from '@shared/enums';
 import type { MainTabNavigationProp } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
-import { colors } from '@shared/theme';
 import useWalletActions from './useWalletActions';
 
-import styles from './style';
+import createStyles from './style';
 
 const renderBottomModalContent = (
+  styles: ReturnType<typeof createStyles>,
   walletName: string,
   currencyCode: string,
   design: AppColor | undefined,
@@ -57,6 +58,8 @@ interface Props {
 }
 
 const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const {
     wallets,
     isLoading,
@@ -118,6 +121,7 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
           onClose={onConfirmCancel}
           disabled={isDeleting}
           content={renderBottomModalContent(
+            styles,
             walletToDelete?.wallet.wallet_name || '',
             currencyCode,
             walletToDelete?.wallet.design,

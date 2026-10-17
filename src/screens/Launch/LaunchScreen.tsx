@@ -4,6 +4,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BrandLockup } from '@components';
+import { useThemedStyles } from '@hooks';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import type { LaunchStage } from '@redux/state/launch/initialState';
 import { selectLaunch } from '@redux/state/launch/selectors';
@@ -12,7 +13,7 @@ import { retryLaunch } from '@redux/state/launch/thunks';
 import LaunchFailure from './components/LaunchFailure/LaunchFailure';
 import LaunchIndicator from './components/LaunchIndicator/LaunchIndicator';
 import useLaunchWait from './hooks/useLaunchWait';
-import styles, { FAILURE_BOTTOM, PROGRESS_BOTTOM, TEXT_SCALE_LIMIT } from './style';
+import createStyles, { FAILURE_BOTTOM, PROGRESS_BOTTOM, TEXT_SCALE_LIMIT } from './style';
 
 const PROGRESS_FADE_MS = 200;
 
@@ -29,6 +30,7 @@ const SLOW_NOTE = 'This is taking longer than usual. Check your connection.';
 // Continues the system launch screen: the lockup is drawn where the system drew it (see style.ts) and never moves;
 // only the area under it changes, between nothing, the progress and a failure.
 const LaunchScreen = () => {
+  const styles = useThemedStyles(createStyles);
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
   const { phase, stage, failure, retryAt, startedAt } = useAppSelector(selectLaunch);

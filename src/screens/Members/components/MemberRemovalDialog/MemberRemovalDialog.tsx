@@ -1,9 +1,10 @@
 import { Text } from 'react-native';
 
 import { BottomModal } from '@components';
+import { useThemedStyles } from '@hooks';
 import type { MemberActionTarget } from '../../types';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   target: Extract<MemberActionTarget, { kind: 'remove' | 'revoke' }> | null;
@@ -13,6 +14,7 @@ interface Props {
 }
 
 const MemberRemovalDialog = ({ target, isPending, onConfirm, onCancel }: Props) => {
+  const styles = useThemedStyles(createStyles);
   const isRevoke = target?.kind === 'revoke';
 
   return (

@@ -2,11 +2,11 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import type { ErrorResponse } from '@api/dto';
 import { Icon } from '@components';
-import { colors } from '@shared/theme';
+import { useTheme, useThemedStyles } from '@hooks';
 import type { IconType } from '@shared/types';
 import { formatErrorNote } from '@screens/Stats/format';
 
-import styles from './style';
+import createStyles from './style';
 
 type Variant = 'loadFailed' | 'noAccess' | 'spacesFailed' | 'noSpaces' | 'noSpaceSelected';
 
@@ -57,6 +57,8 @@ const CONTENT: Record<Variant, { icon: IconType; title: string; text: string; ac
 
 // Replaces the blocks when there is nothing to show; the period bar above stays usable.
 const StatsFailure = ({ variant, error, onAction }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const content = CONTENT[variant];
 
   return (

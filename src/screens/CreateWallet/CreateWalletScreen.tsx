@@ -2,17 +2,19 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
 import { Input, RootLayout, Button, SectionTitle, GradientBackground, WalletCard, Icon } from '@components';
+import { useTheme, useThemedStyles } from '@hooks';
 import type { RootStackScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
-import { gradients, walletTextColors } from '@shared/constants';
 import { CATEGORY_COLOR_NAMES, CATEGORY_COLOR_ORDER } from '@shared/categoryColors';
 import useCreateWalletForm from './useCreateWalletForm';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props extends RootStackScreenProps<ScreenNames.ADD_WALLET_SCREEN> {}
 
 const CreateWalletScreen = ({ navigation, route }: Props) => {
+  const { wallets } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const { spaceCurrencyCode, isNewWallet, control, onSubmit, watch, isSubmitDisabled } = useCreateWalletForm({
     navigation,
     route,
@@ -100,13 +102,13 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
 
                           <View style={styles.designCircle}>
                             <GradientBackground
-                              colors={gradients[design]}
+                              colors={wallets[design].gradient}
                               style={styles.gradient}
                               start={{ x: 0, y: 0.0 }}
                               end={{ x: 1.0, y: 1.0 }}
                             />
 
-                            {isSelected && <Icon name="check" size={17} color={walletTextColors[design].fg} />}
+                            {isSelected && <Icon name="check" size={17} color={wallets[design].fg} />}
                           </View>
                         </View>
                       </TouchableOpacity>

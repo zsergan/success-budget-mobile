@@ -2,14 +2,14 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
 import { Button, Icon, Input, InputPicker, RootLayout, SectionTitle } from '@components';
+import { useTheme, useThemedStyles } from '@hooks';
 import type { IconType, RootStackScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
 import { SpaceType } from '@shared/enums';
-import { colors } from '@shared/theme';
 import InviteChips from './InviteChips';
 import useCreateSpaceForm from './useCreateSpaceForm';
 
-import styles from './style';
+import createStyles from './style';
 
 const SPACE_TYPES: { value: SpaceType; label: string; icon: IconType }[] = [
   { value: SpaceType.PERSONAL, label: 'Personal', icon: 'user' },
@@ -19,6 +19,8 @@ const SPACE_TYPES: { value: SpaceType; label: string; icon: IconType }[] = [
 interface Props extends RootStackScreenProps<ScreenNames.CREATE_SPACE_SCREEN> {}
 
 const CreateSpaceScreen = ({ navigation }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const { currencies, control, watch, onSubmit, isSubmitDisabled } = useCreateSpaceForm({ navigation });
 
   const selectedType = watch('type');

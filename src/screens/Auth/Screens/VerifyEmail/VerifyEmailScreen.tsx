@@ -7,16 +7,17 @@ import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { useAppSelector } from '@redux/hooks';
 import { selectAuth } from '@redux/state/auth/selectors';
-import { useAlert } from '@hooks';
+import { useAlert, useThemedStyles } from '@hooks';
 import { getErrorMessage } from '@shared/utils';
 import AuthLayout from '@screens/Auth/AuthLayout/AuthLayout';
 import useVerifyEmailForm from './useVerifyEmailForm';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props extends RootStackScreenProps<ScreenNames.VERIFY_EMAIL_SCREEN> {}
 
 const VerifyEmailScreen = ({ navigation }: Props) => {
+  const styles = useThemedStyles(createStyles);
   const { error } = useAppSelector(selectAuth);
   const { control, onSubmit, isSubmitting } = useVerifyEmailForm({ navigation });
   const { addAlert } = useAlert();

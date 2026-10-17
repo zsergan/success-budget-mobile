@@ -1,7 +1,8 @@
 import { Platform, StyleSheet } from 'react-native';
 
 import { LAUNCH_LOCKUP_RAISE, STACKED_LOCKUP_HEIGHT, STACKED_MARK_HEIGHT } from '@components/Brand/launchLayout';
-import theme, { colors } from '@shared/theme';
+import type { ColorTheme } from '@shared/theme';
+import theme from '@shared/theme';
 
 // From the bottom of the screen, as in the design; never less than the home indicator's area.
 export const PROGRESS_BOTTOM = 92;
@@ -17,58 +18,59 @@ const lockupTop = Platform.select({
   default: -LAUNCH_LOCKUP_RAISE - STACKED_LOCKUP_HEIGHT / 2,
 });
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  lockup: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    marginTop: lockupTop,
-  },
-  below: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    marginTop: lockupTop + STACKED_LOCKUP_HEIGHT + theme.spacing.xxl,
-  },
-  belowContent: {
-    flexGrow: 1,
-    justifyContent: 'flex-end',
-    paddingHorizontal: 44,
-  },
-  progress: {
-    alignItems: 'center',
-    rowGap: theme.spacing.md + 2,
-    // Wider than the design's 40 a side: RN measures the long-wait note a touch wider than the browser does, and the
-    // note is designed to fit on one line.
-    marginHorizontal: -theme.spacing.md,
-  },
-  status: {
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    rowGap: 5,
-  },
-  statusText: {
-    alignSelf: 'stretch',
-    fontFamily: theme.fonts.semiBold,
-    fontSize: 12.5,
-    textAlign: 'center',
-    color: colors.muted,
-  },
-  statusSub: {
-    alignSelf: 'stretch',
-    fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.caption,
-    lineHeight: 17,
-    textAlign: 'center',
-    color: colors.muted,
-  },
-});
+const createStyles = ({ colors }: ColorTheme) =>
+  StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    lockup: {
+      position: 'absolute',
+      top: '50%',
+      left: 0,
+      right: 0,
+      marginTop: lockupTop,
+    },
+    below: {
+      position: 'absolute',
+      top: '50%',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      marginTop: lockupTop + STACKED_LOCKUP_HEIGHT + theme.spacing.xxl,
+    },
+    belowContent: {
+      flexGrow: 1,
+      justifyContent: 'flex-end',
+      paddingHorizontal: 44,
+    },
+    progress: {
+      alignItems: 'center',
+      rowGap: theme.spacing.md + 2,
+      // Wider than the design's 40 a side: RN measures the long-wait note a touch wider than the browser does, and the
+      // note is designed to fit on one line.
+      marginHorizontal: -theme.spacing.md,
+    },
+    status: {
+      alignSelf: 'stretch',
+      alignItems: 'center',
+      rowGap: 5,
+    },
+    statusText: {
+      alignSelf: 'stretch',
+      fontFamily: theme.fonts.semiBold,
+      fontSize: 12.5,
+      textAlign: 'center',
+      color: colors.muted,
+    },
+    statusSub: {
+      alignSelf: 'stretch',
+      fontFamily: theme.fonts.medium,
+      fontSize: theme.fontSizes.caption,
+      lineHeight: 17,
+      textAlign: 'center',
+      color: colors.muted,
+    },
+  });
 
-export default styles;
+export default createStyles;

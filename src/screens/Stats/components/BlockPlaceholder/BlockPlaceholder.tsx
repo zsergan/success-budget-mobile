@@ -1,7 +1,9 @@
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View } from 'react-native';
 
-import styles from './style';
+import createStyles from './style';
+
+import { useThemedStyles } from '@hooks';
 
 interface Props {
   height?: number;
@@ -9,8 +11,10 @@ interface Props {
 }
 
 // Holds a block's place in the list until its own component replaces it.
-const BlockPlaceholder = ({ height, style }: Props) => (
-  <View testID="block-placeholder" style={[styles.block, height !== undefined && { height }, style]} />
-);
+const BlockPlaceholder = ({ height, style }: Props) => {
+  const styles = useThemedStyles(createStyles);
+
+  return <View testID="block-placeholder" style={[styles.block, height !== undefined && { height }, style]} />;
+};
 
 export default BlockPlaceholder;

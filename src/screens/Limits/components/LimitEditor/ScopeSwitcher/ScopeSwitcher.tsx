@@ -2,7 +2,9 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import type { LimitScope } from '../types';
 
-import styles from './style';
+import createStyles from './style';
+
+import { useThemedStyles } from '@hooks';
 
 const SCOPES: { value: LimitScope; label: string }[] = [
   { value: 'category', label: 'One category' },
@@ -15,23 +17,27 @@ interface Props {
   onScopeChange: (scope: LimitScope) => void;
 }
 
-const ScopeSwitcher = ({ scope, onScopeChange }: Props) => (
-  <View style={styles.scopeSwitch}>
-    {SCOPES.map((item) => {
-      const active = scope === item.value;
+const ScopeSwitcher = ({ scope, onScopeChange }: Props) => {
+  const styles = useThemedStyles(createStyles);
 
-      return (
-        <TouchableOpacity
-          key={item.value}
-          style={[styles.scopeTab, active && styles.scopeTabActive]}
-          onPress={() => onScopeChange(item.value)}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.scopeTabText, active && styles.scopeTabTextActive]}>{item.label}</Text>
-        </TouchableOpacity>
-      );
-    })}
-  </View>
-);
+  return (
+    <View style={styles.scopeSwitch}>
+      {SCOPES.map((item) => {
+        const active = scope === item.value;
+
+        return (
+          <TouchableOpacity
+            key={item.value}
+            style={[styles.scopeTab, active && styles.scopeTabActive]}
+            onPress={() => onScopeChange(item.value)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.scopeTabText, active && styles.scopeTabTextActive]}>{item.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+};
 
 export default ScopeSwitcher;

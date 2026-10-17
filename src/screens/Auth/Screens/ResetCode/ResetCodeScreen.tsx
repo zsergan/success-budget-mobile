@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 
 import { Button } from '@components';
+import { useThemedStyles } from '@hooks';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import AuthFormLayout from '@screens/Auth/AuthFormLayout/AuthFormLayout';
@@ -12,7 +13,7 @@ import SentToChip from './components/SentToChip/SentToChip';
 import type { CodeBlock } from './useResetCode';
 import useResetCode from './useResetCode';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props extends RootStackScreenProps<ScreenNames.RESET_CODE_SCREEN> {}
 
@@ -26,6 +27,7 @@ const BLOCK_FAILURES: Record<CodeBlock, PasswordResetFailure> = {
 const formatWait = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 
 const ResetCodeScreen = ({ navigation, route }: Props) => {
+  const styles = useThemedStyles(createStyles);
   const {
     hasChallenge,
     email,

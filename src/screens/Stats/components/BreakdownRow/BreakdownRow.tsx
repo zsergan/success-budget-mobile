@@ -1,13 +1,13 @@
 import { Pressable, Text, View } from 'react-native';
 
 import { Icon } from '@components';
-import { colors } from '@shared/theme';
+import { useTheme, useThemedStyles } from '@hooks';
 import type { IconType } from '@shared/types';
 import { getBreakdownAppearance } from '@screens/Stats/breakdownAppearance';
 import { formatMoney } from '@screens/Stats/format';
 import type { BreakdownGroup } from '@screens/Stats/statsItems';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   group: BreakdownGroup;
@@ -21,7 +21,10 @@ interface Props {
 }
 
 const BreakdownRow = ({ group, currency, isChild, isFirst, isOtherExpanded, isSelected, isDimmed, onPress }: Props) => {
-  const { name, icon, color, iconColor, iconBackground } = getBreakdownAppearance(group);
+  const colorTheme = useTheme().colorTheme;
+  const { colors } = colorTheme;
+  const styles = useThemedStyles(createStyles);
+  const { name, icon, color, iconColor, iconBackground } = getBreakdownAppearance(group, colorTheme);
   const isDeleted = group.kind === 'deleted_wallets';
   const percent = `${group.percent.toFixed(1)}%`;
   const chevronIcon: IconType =
