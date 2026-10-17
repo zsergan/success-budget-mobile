@@ -29,7 +29,7 @@ const MainNavigator = () => {
       <Tab.Navigator
         screenOptions={{
           sceneStyle: { backgroundColor: colors.bg },
-          tabBarStyle: { backgroundColor: colors.bg },
+          tabBarStyle: { backgroundColor: colors.tabBar },
           tabBarActiveTintColor: colors.text,
           tabBarInactiveTintColor: colors.muted,
         }}
