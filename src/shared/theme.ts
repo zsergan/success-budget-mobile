@@ -309,11 +309,6 @@ export const colorThemes: Record<ColorSchemeName, ColorTheme> = {
   },
 };
 
-// Fixed until there is a theme switcher; exported so paired token sets (e.g. wallet gradients) follow it.
-export const colorScheme: ColorSchemeName = 'light';
-
-export const colors = colorThemes[colorScheme].colors;
-
 const theme = {
   fonts: {
     regular: 'PlusJakartaSans-Regular',
@@ -366,9 +361,5 @@ const theme = {
     xxl: 24,
   },
 };
-
-export const shadow = colorThemes[colorScheme].elevation.card;
-
-export const shadowModal = colorThemes[colorScheme].elevation.modal;
 
 export default theme;

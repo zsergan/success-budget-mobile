@@ -1,5 +1,5 @@
 import { AppColor } from '@shared/enums';
-import theme, { colorScheme, colorThemes } from '@shared/theme';
+import theme from '@shared/theme';
 import { resolveApiBaseUrl } from '@shared/utils/apiBaseUrl';
 
 const API_BASE_URLS = {
@@ -29,14 +29,6 @@ export const INVITE_EXPIRY_DAYS = 7;
 
 // Fallback only: prefer the 429's `error.retryAfterMs` (see @api/errors).
 export const INVITE_RATE_LIMIT_COOLDOWN_MS = 60_000;
-
-const walletAppearance = colorThemes[colorScheme].wallets;
-
-export const gradients = Object.fromEntries(
-  Object.entries(walletAppearance).map(([color, { gradient }]) => [color, gradient]),
-) as Record<AppColor, [string, string]>;
-
-export const walletTextColors: Record<AppColor, { fg: string; dim: string; inner: string }> = walletAppearance;
 
 export const DEFAULT_WALLET_DESIGN = AppColor.SLATE;
 

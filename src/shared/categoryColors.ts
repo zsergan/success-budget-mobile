@@ -1,11 +1,4 @@
 import { AppColor } from '@shared/enums';
-import { colorScheme, colorThemes } from '@shared/theme';
-
-const categoryAppearance = colorThemes[colorScheme].categories;
-
-export const getCategoryStroke = (color: AppColor): string => categoryAppearance[color].stroke;
-
-export const getCategoryTint = (color: AppColor): string => categoryAppearance[color].tint;
 
 export const CATEGORY_COLOR_NAMES: Record<AppColor, string> = {
   [AppColor.SLATE]: 'Slate',
