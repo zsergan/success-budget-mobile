@@ -5,9 +5,11 @@ import { BottomSheetScrollView, BottomSheetTextInput, useBottomSheet } from '@go
 import Icon from '@components/Icon/Icon';
 import type { CategoryModel } from '@api/models';
 import { toBackendIcon } from '@api/models';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import { TransactionType } from '@shared/enums';
 import { CATEGORY_COLOR_NAMES } from '@shared/categoryColors';
-import theme, { colors } from '@shared/theme';
+import theme from '@shared/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useBoundedHeight from '@components/Modals/BottomSheetModal/useBoundedHeight';
 import CategoryIconBox from '../CategoryIconBox/CategoryIconBox';
@@ -15,7 +17,7 @@ import ColorPicker from './ColorPicker/ColorPicker';
 import IconPicker from './IconPicker/IconPicker';
 import useCategoryEditorForm, { NAME_MAX_LENGTH } from './useCategoryEditorForm';
 
-import styles from './style';
+import createStyles from './style';
 
 const TYPE_LABEL: Record<TransactionType, string> = {
   [TransactionType.EXPENSE]: 'Expense',
@@ -30,6 +32,9 @@ interface Props {
 }
 
 const CategoryEditorSheet = ({ category, defaultTransactionType, onRequestDelete, onSaved }: Props) => {
+  const { scheme, colorTheme } = useTheme();
+  const { colors } = colorTheme;
+  const styles = useThemedStyles(createStyles);
   const { height, keyboardHeight } = useBoundedHeight(0.94);
   const insets = useSafeAreaInsets();
   const { close } = useBottomSheet();
@@ -99,6 +104,7 @@ const CategoryEditorSheet = ({ category, defaultTransactionType, onRequestDelete
             render={({ field: { onChange, value, onBlur }, fieldState: { isTouched } }) => (
               <View style={[styles.nameField, isTouched && styles.nameFieldFocused]}>
                 <BottomSheetTextInput
+                  keyboardAppearance={scheme}
                   style={styles.nameInput}
                   value={value}
                   onChangeText={(text) => onChange(text.slice(0, NAME_MAX_LENGTH))}

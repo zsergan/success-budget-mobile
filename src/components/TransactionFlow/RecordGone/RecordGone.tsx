@@ -3,15 +3,19 @@ import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Icon from '@components/Icon/Icon';
-import theme, { colors } from '@shared/theme';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
+import theme from '@shared/theme';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   onClose: () => void;
 }
 
 const RecordGone = ({ onClose }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
 
   return (

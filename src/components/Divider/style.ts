@@ -1,13 +1,14 @@
 import { StyleSheet } from 'react-native';
 
-import { colors } from '@shared/theme';
+import type { ColorTheme } from '@shared/theme';
 
-const styles = StyleSheet.create({
-  root: {
-    width: '100%',
-    height: 1,
-    backgroundColor: colors.hairline,
-  },
-});
+const createStyles = ({ colors }: ColorTheme) =>
+  StyleSheet.create({
+    root: {
+      width: '100%',
+      height: 1,
+      backgroundColor: colors.hairline,
+    },
+  });
 
-export default styles;
+export default createStyles;

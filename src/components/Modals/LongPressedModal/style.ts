@@ -1,16 +1,18 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { shadow } from '@shared/theme';
+import type { ColorTheme } from '@shared/theme';
+import theme from '@shared/theme';
 
-const styles = StyleSheet.create({
-  content: {
-    paddingHorizontal: theme.spacing.xl,
-    alignSelf: 'flex-end',
-    ...shadow,
-  },
-  options: {
-    alignSelf: 'flex-end',
-  },
-});
+const createStyles = ({ elevation }: ColorTheme) =>
+  StyleSheet.create({
+    content: {
+      paddingHorizontal: theme.spacing.xl,
+      alignSelf: 'flex-end',
+      ...elevation.card,
+    },
+    options: {
+      alignSelf: 'flex-end',
+    },
+  });
 
-export default styles;
+export default createStyles;

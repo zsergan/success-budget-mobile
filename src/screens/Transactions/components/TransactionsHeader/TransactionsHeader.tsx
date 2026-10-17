@@ -13,9 +13,9 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Icon } from '@components';
-import { colors } from '@shared/theme';
+import { useTheme, useThemedStyles } from '@hooks';
 
-import styles, { BUTTON_SIZE, CANCEL_GAP, FIELD_BORDER, FIELD_ICON_LEFT, ICON_SIZE } from './style';
+import createStyles, { BUTTON_SIZE, CANCEL_GAP, FIELD_BORDER, FIELD_ICON_LEFT, ICON_SIZE } from './style';
 
 export const SEARCH_MOTION_MS = 220;
 
@@ -50,6 +50,9 @@ const TransactionsHeader = ({
   onSubmit,
   onClear,
 }: Props) => {
+  const { scheme, colorTheme } = useTheme();
+  const { colors } = colorTheme;
+  const styles = useThemedStyles(createStyles);
   const isReduced = useReducedMotion();
   const inputRef = useRef<TextInput>(null);
   const [rowWidth, setRowWidth] = useState(0);
@@ -129,6 +132,7 @@ const TransactionsHeader = ({
               {...hiddenWhen(!isSearching)}
             >
               <TextInput
+                keyboardAppearance={scheme}
                 ref={inputRef}
                 // The placeholder is set in Medium and typed text in SemiBold; a TextInput has one font for both.
                 style={[styles.input, query === '' && styles.inputEmpty]}

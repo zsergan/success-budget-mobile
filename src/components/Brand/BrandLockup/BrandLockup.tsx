@@ -1,10 +1,12 @@
 import { Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
+import useThemedStyles from '@hooks/useThemedStyles';
+
 import BrandMark from '../BrandMark/BrandMark';
 import { STACKED_MARK_HEIGHT } from '../launchLayout';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   layout: 'inline' | 'stacked';
@@ -22,6 +24,8 @@ const TEXT_FADE_MS = 240;
 const LOGO_TEXT = { maxFontSizeMultiplier: 1 } as const;
 
 const BrandLockup = ({ layout, fadeInText = false }: Props) => {
+  const styles = useThemedStyles(createStyles);
+
   if (layout === 'inline') {
     return (
       <View style={styles.inline} accessible accessibilityRole="header" accessibilityLabel={APP_NAME}>

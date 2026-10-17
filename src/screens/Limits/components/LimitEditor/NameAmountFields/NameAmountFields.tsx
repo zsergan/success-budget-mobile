@@ -2,10 +2,10 @@ import { Text, TextInput, View } from 'react-native';
 import { Controller, type Control } from 'react-hook-form';
 
 import { Icon } from '@components';
-import { colors } from '@shared/theme';
+import { useTheme, useThemedStyles } from '@hooks';
 import type { LimitFormValues } from '../limitSchema';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   control: Control<LimitFormValues>;
@@ -16,67 +16,79 @@ interface Props {
   spentHint?: string;
 }
 
-const NameAmountFields = ({ control, isGroup, isTotal, currencyCode, onNameChange, spentHint }: Props) => (
-  <>
-    {isGroup && (
-      <View style={styles.nameSection}>
-        <Text style={styles.sectionLabel}>Limit name</Text>
+const NameAmountFields = ({ control, isGroup, isTotal, currencyCode, onNameChange, spentHint }: Props) => {
+  const { scheme, colorTheme } = useTheme();
+  const { colors } = colorTheme;
+  const styles = useThemedStyles(createStyles);
 
-        <Controller
-          name="name"
-          control={control}
-          render={({ field: { value }, fieldState: { error } }) => (
-            <>
-              <View style={[styles.nameBox, !!error && styles.nameBoxWithError]}>
-                <TextInput style={styles.nameInput} value={value} onChangeText={onNameChange} />
+  return (
+    <>
+      {isGroup && (
+        <View style={styles.nameSection}>
+          <Text style={styles.sectionLabel}>Limit name</Text>
 
-                <Text style={styles.nameHint}>auto from categories</Text>
-              </View>
+          <Controller
+            name="name"
+            control={control}
+            render={({ field: { value }, fieldState: { error } }) => (
+              <>
+                <View style={[styles.nameBox, !!error && styles.nameBoxWithError]}>
+                  <TextInput
+                    keyboardAppearance={scheme}
+                    style={styles.nameInput}
+                    value={value}
+                    onChangeText={onNameChange}
+                  />
 
-              {error && <Text style={styles.nameError}>{error.message}</Text>}
-            </>
-          )}
-        />
-      </View>
-    )}
+                  <Text style={styles.nameHint}>auto from categories</Text>
+                </View>
 
-    <Controller
-      name="amount"
-      control={control}
-      render={({ field: { onChange, value }, fieldState: { error } }) => (
-        <View style={styles.hero}>
-          <Text style={styles.heroLabel}>{isTotal ? 'All expenses this month' : 'Monthly limit'}</Text>
-
-          <View style={styles.heroRow}>
-            <TextInput
-              value={value}
-              onChangeText={onChange}
-              placeholder="0"
-              placeholderTextColor={colors.muted}
-              inputMode="decimal"
-              style={styles.heroAmount}
-              returnKeyType="done"
-            />
-
-            {currencyCode && <Text style={styles.heroCurrency}>{currencyCode}</Text>}
-          </View>
-
-          <Text style={[styles.heroSub, !!error && styles.heroSubError]}>
-            {error?.message ??
-              (isTotal ? 'Cap for every expense across all wallets' : 'Counted across all wallets together')}
-          </Text>
+                {error && <Text style={styles.nameError}>{error.message}</Text>}
+              </>
+            )}
+          />
         </View>
       )}
-    />
 
-    {spentHint && (
-      <View style={styles.spentContext}>
-        <Icon name="info" size={16} color={colors.muted} strokeWidth={1.9} />
+      <Controller
+        name="amount"
+        control={control}
+        render={({ field: { onChange, value }, fieldState: { error } }) => (
+          <View style={styles.hero}>
+            <Text style={styles.heroLabel}>{isTotal ? 'All expenses this month' : 'Monthly limit'}</Text>
 
-        <Text style={styles.spentContextText}>{spentHint}</Text>
-      </View>
-    )}
-  </>
-);
+            <View style={styles.heroRow}>
+              <TextInput
+                keyboardAppearance={scheme}
+                value={value}
+                onChangeText={onChange}
+                placeholder="0"
+                placeholderTextColor={colors.muted}
+                inputMode="decimal"
+                style={styles.heroAmount}
+                returnKeyType="done"
+              />
+
+              {currencyCode && <Text style={styles.heroCurrency}>{currencyCode}</Text>}
+            </View>
+
+            <Text style={[styles.heroSub, !!error && styles.heroSubError]}>
+              {error?.message ??
+                (isTotal ? 'Cap for every expense across all wallets' : 'Counted across all wallets together')}
+            </Text>
+          </View>
+        )}
+      />
+
+      {spentHint && (
+        <View style={styles.spentContext}>
+          <Icon name="info" size={16} color={colors.muted} strokeWidth={1.9} />
+
+          <Text style={styles.spentContextText}>{spentHint}</Text>
+        </View>
+      )}
+    </>
+  );
+};
 
 export default NameAmountFields;

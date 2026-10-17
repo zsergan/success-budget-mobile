@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as SplashScreen from 'expo-splash-screen';
@@ -21,12 +21,11 @@ import {
   WelcomeScreen,
 } from '@screens';
 import type { RootStackParamList } from '@shared/types';
-import { usePendingWritesSync } from '@hooks';
+import { usePendingWritesSync, useTheme } from '@hooks';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectLaunch } from '@redux/state/launch/selectors';
 import { runLaunch } from '@redux/state/launch/thunks';
 import { ScreenNames } from '@shared/enums';
-import { colors } from '@shared/theme';
 import MainNavigator from './MainNavigator';
 import useSessionData from './useSessionData';
 
@@ -36,12 +35,11 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 // The screens that open a launch phase (launch, Welcome, the app) replace the whole stack, so they fade in.
 const phaseScreenOptions = { headerShown: false, animation: 'fade' } as const;
 
-const navigationTheme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: colors.bg } };
-
 const RootNavigator = () => {
   const dispatch = useAppDispatch();
   const { phase, stage } = useAppSelector(selectLaunch);
   const isSignedIn = useAppSelector((state) => state.auth.isSignedIn);
+  const { isReady: isThemeReady, scheme, colorTheme } = useTheme();
   const [hasDrawn, setHasDrawn] = useState(false);
   useSessionData();
   usePendingWritesSync();
@@ -57,9 +55,26 @@ const RootNavigator = () => {
 
   const isReady = phase === 'ready';
 
-  // The system launch screen stays up while the fonts load, so the first frame never swaps its typeface; once it is
-  // gone the app keeps drawing, a repeated attempt included.
-  if (!hasDrawn && phase === 'running' && stage === 'resources') return null;
+  const navigationTheme = useMemo(() => {
+    const { colors } = colorTheme;
+    const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
+
+    return {
+      ...base,
+      colors: {
+        primary: colors.accent,
+        background: colors.bg,
+        card: colors.bg,
+        text: colors.text,
+        border: colors.hairline,
+        notification: colors.danger,
+      },
+    };
+  }, [scheme, colorTheme]);
+
+  // The system launch screen stays up while the fonts and the theme preference load, so the first frame never swaps
+  // its typeface or colors; once it is gone the app keeps drawing, a repeated attempt included.
+  if (!hasDrawn && (!isThemeReady || (phase === 'running' && stage === 'resources'))) return null;
 
   return (
     <GestureHandlerRootView

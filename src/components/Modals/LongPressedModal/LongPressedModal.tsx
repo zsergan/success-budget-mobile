@@ -5,9 +5,10 @@ import { TouchableWithoutFeedback, Animated } from 'react-native';
 
 import type { ModalOptionsProps } from '../ModalOptions/ModalOptions';
 import ModalOptions from '../ModalOptions/ModalOptions';
+import useThemedStyles from '@hooks/useThemedStyles';
 import ModalContainer from '../ModalContainer/ModalContainer';
 
-import styles from './style';
+import createStyles from './style';
 
 type Props = ModalOptionsProps & {
   isVisible: boolean;
@@ -23,6 +24,7 @@ const LongPressedModal = ({
   longPressedItemStyle,
   ...modalOptionsProps
 }: Props) => {
+  const styles = useThemedStyles(createStyles);
   const containerScale = useRef(new Animated.Value(0.3)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 

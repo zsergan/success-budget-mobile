@@ -4,6 +4,8 @@ import type { BottomSheetScrollViewMethods } from '@gorhom/bottom-sheet';
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 
 import Icon from '@components/Icon/Icon';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import { useAlert } from '@hooks';
 import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
@@ -24,7 +26,6 @@ import { categoriesOpened, dateTimeOpened, draftChanged } from '@redux/state/tra
 import { loadLatestRecord } from '@redux/state/transactionFlow/thunks';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { TransactionType } from '@shared/enums';
-import { colors } from '@shared/theme';
 import DeleteButton from '../DeleteButton/DeleteButton';
 import { deleteFailureText } from '../deleteMessage';
 import Banner from '@components/Banner/Banner';
@@ -42,7 +43,7 @@ import useDefaultWallet from './useDefaultWallet';
 import useBoundedHeight from '@components/Modals/BottomSheetModal/useBoundedHeight';
 import WalletPicker from './WalletPicker/WalletPicker';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   flow: TransactionFlow & { draft: TransactionDraft };
@@ -65,6 +66,9 @@ const TransactionEditor = ({
   onDelete,
   onRetryDelete,
 }: Props) => {
+  const { scheme, colorTheme } = useTheme();
+  const { colors } = colorTheme;
+  const styles = useThemedStyles(createStyles);
   const dispatch = useAppDispatch();
   const { height, keyboardHeight } = useBoundedHeight();
   const scrollRef = useRef<BottomSheetScrollViewMethods>(null);
@@ -86,6 +90,7 @@ const TransactionEditor = ({
   const isDeleting = useAppSelector((state) => !!saved && selectIsDeleting(state, saved.id));
   const isIncome = draft.transactionType === TransactionType.INCOME;
   const typeColor = isIncome ? colors.ok : colors.danger;
+  const onTypeColor = isIncome ? colors.onOk : colors.onDanger;
   const now = new Date();
 
   const wallets = useMemo(() => walletsOverview?.wallets.map(({ wallet }) => wallet) ?? [], [walletsOverview]);
@@ -288,6 +293,7 @@ const TransactionEditor = ({
               </View>
 
               <BottomSheetTextInput
+                keyboardAppearance={scheme}
                 style={styles.note}
                 value={draft.description}
                 onChangeText={(description) => change({ description })}
@@ -312,6 +318,7 @@ const TransactionEditor = ({
         isSaving={isSaving && !isDeleting}
         isAboveKeyboard={keyboardHeight > 0}
         typeColor={typeColor}
+        onTypeColor={onTypeColor}
         banner={
           hasConflict ? (
             <Banner

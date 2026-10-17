@@ -2,15 +2,17 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetView, useBottomSheet } from '@gorhom/bottom-sheet';
 
 import { Icon } from '@components';
-import { colors } from '@shared/theme';
+import { useTheme, useThemedStyles } from '@hooks';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   onCreateWallet: () => void;
 }
 
 const CreateWalletSheet = ({ onCreateWallet }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const { close } = useBottomSheet();
 
   const handleCreate = () => {

@@ -2,12 +2,12 @@ import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 
 import type { LimitModel } from '@api/models';
 import { Icon, ModalContainer } from '@components';
+import { useTheme, useThemedStyles } from '@hooks';
 import type { ConfirmAction } from '@hooks';
 import { useDeleteLimitMutation } from '@redux/state/limit/api';
 import { formatCurrencyAmount } from '@shared/utils';
-import { colors } from '@shared/theme';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   deletion: ConfirmAction<LimitModel>;
@@ -15,6 +15,8 @@ interface Props {
 }
 
 const DeleteLimitDialog = ({ deletion, currencyCode }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const { target: limit, isPending, error, cancel, confirm } = deletion;
   const [deleteLimit] = useDeleteLimitMutation();
 
@@ -69,7 +71,7 @@ const DeleteLimitDialog = ({ deletion, currencyCode }: Props) => {
               disabled={isPending}
               activeOpacity={0.8}
             >
-              {isPending && <ActivityIndicator size="small" color="#FFFDFA" />}
+              {isPending && <ActivityIndicator size="small" color={colors.onDanger} />}
 
               <Text style={styles.deleteButtonText}>{isPending ? 'Deleting…' : 'Delete limit'}</Text>
             </TouchableOpacity>

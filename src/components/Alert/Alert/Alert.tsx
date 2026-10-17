@@ -2,8 +2,9 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { View, Text } from 'react-native';
 
 import TinyButton from '@components/Buttons/TinyButton/TinyButton';
+import useThemedStyles from '@hooks/useThemedStyles';
 
-import styles from './style';
+import createStyles from './style';
 
 export interface AlertAction {
   label: string;
@@ -23,24 +24,28 @@ interface Props {
   style?: StyleProp<ViewStyle>;
 }
 
-const Alert = ({ alertItem: { message, action }, dismissAlert, style }: Props) => (
-  <View style={[styles.root, style]}>
-    <View style={styles.container}>
-      <Text style={styles.text}>{message}</Text>
+const Alert = ({ alertItem: { message, action }, dismissAlert, style }: Props) => {
+  const styles = useThemedStyles(createStyles);
 
-      {action ? (
-        <TinyButton
-          title={action.label}
-          onPress={() => {
-            dismissAlert?.();
-            action.onPress();
-          }}
-        />
-      ) : (
-        dismissAlert && <TinyButton title="Dismiss" onPress={dismissAlert} />
-      )}
+  return (
+    <View style={[styles.root, style]}>
+      <View style={styles.container}>
+        <Text style={styles.text}>{message}</Text>
+
+        {action ? (
+          <TinyButton
+            title={action.label}
+            onPress={() => {
+              dismissAlert?.();
+              action.onPress();
+            }}
+          />
+        ) : (
+          dismissAlert && <TinyButton title="Dismiss" onPress={dismissAlert} />
+        )}
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 export default Alert;

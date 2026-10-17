@@ -2,6 +2,7 @@ import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
+import ThemeProvider from '@components/ThemeProvider/ThemeProvider';
 import RootNavigator from '@navigation/RootNavigator';
 import { createAppStore } from '@redux/Store';
 
@@ -74,11 +75,13 @@ export const openSignIn = async () => {
   const store = createAppStore();
 
   render(
-    <SafeAreaProvider initialMetrics={metrics}>
-      <Provider store={store}>
-        <RootNavigator />
-      </Provider>
-    </SafeAreaProvider>,
+    <ThemeProvider>
+      <SafeAreaProvider initialMetrics={metrics}>
+        <Provider store={store}>
+          <RootNavigator />
+        </Provider>
+      </SafeAreaProvider>
+    </ThemeProvider>,
   );
   await settle();
   fireEvent.press(screen.getByText('Sign In'));

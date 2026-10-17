@@ -1,10 +1,12 @@
 import { View, Text } from 'react-native';
 
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import WalletGradientBackground from '../WalletGradientBackground/WalletGradientBackground';
-import { resolveAppColor, walletTextColors } from '@shared/constants';
+import { resolveAppColor } from '@shared/constants';
 import { AppColor } from '@shared/enums';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   walletName: string;
@@ -14,8 +16,10 @@ interface Props {
 }
 
 const TinyWallet = ({ walletName, currencyCode, design = AppColor.SLATE, backgroundStyle = 'gradient' }: Props) => {
+  const { wallets } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const isGradient = backgroundStyle === 'gradient';
-  const fg = isGradient ? walletTextColors[resolveAppColor(design)].fg : undefined;
+  const fg = isGradient ? wallets[resolveAppColor(design)].fg : undefined;
 
   return (
     <View style={[styles.root, backgroundStyle === 'grey' && styles.grey]}>

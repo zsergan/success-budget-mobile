@@ -1,13 +1,13 @@
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import { EmptyState, SectionTitle, TinyButton, TransactionCard } from '@components';
+import { useTheme, useThemedStyles } from '@hooks';
 import type { TransactionFeedPageModel, TransactionModel } from '@api/models';
 import type { MainTabNavigationProp } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
-import { colors } from '@shared/theme';
 import { formatSignedAmount, groupRowsByDay, toCents } from '@shared/utils';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   navigation: MainTabNavigationProp<ScreenNames.HOME_TAB>;
@@ -33,6 +33,8 @@ const RecentActivity = ({
   onPressTransaction,
   onDeleteTransaction,
 }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const transactions = recent?.items ?? [];
   const groups = groupRowsByDay(transactions);
   const dayNets = Object.fromEntries((recent?.dayTotals ?? []).map(({ date, net }) => [date, net]));

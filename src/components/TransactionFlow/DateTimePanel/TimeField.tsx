@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Platform, Text, TouchableOpacity } from 'react-native';
 import Picker from '@react-native-community/datetimepicker';
 
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import { formatDateHHMM } from '@shared/utils';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   value: Date;
@@ -14,6 +16,8 @@ interface Props {
 
 // iOS shows the hour and minute wheel in place; Android opens its clock dialog from the shown time.
 const TimeField = ({ value, maximumDate, onChange }: Props) => {
+  const { scheme } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [isOpen, setOpen] = useState(false);
 
   if (Platform.OS === 'ios') {
@@ -21,6 +25,7 @@ const TimeField = ({ value, maximumDate, onChange }: Props) => {
       <Picker
         mode="time"
         display="spinner"
+        themeVariant={scheme}
         value={value}
         maximumDate={maximumDate}
         onValueChange={(_, time) => onChange(time)}
@@ -38,6 +43,7 @@ const TimeField = ({ value, maximumDate, onChange }: Props) => {
       {isOpen && (
         <Picker
           mode="time"
+          themeVariant={scheme}
           value={value}
           onValueChange={(_, time) => {
             setOpen(false);

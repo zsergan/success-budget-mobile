@@ -1,10 +1,10 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import { CircleIcon } from '@components';
+import { useTheme, useThemedStyles } from '@hooks';
 import type { IconType } from '@shared/types';
-import { colors } from '@shared/theme';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   icon: IconType;
@@ -18,28 +18,33 @@ interface Props {
   onPress?: () => void;
 }
 
-const SettingsRow = ({ icon, label, sub, value, chevron = true, danger, inertToggle, onPress }: Props) => (
-  <TouchableOpacity style={styles.row} onPress={onPress} disabled={!onPress} activeOpacity={0.7}>
-    <CircleIcon icon={icon} size="md" color={danger ? colors.danger : colors.text} circleColor={colors.track} />
+const SettingsRow = ({ icon, label, sub, value, chevron = true, danger, inertToggle, onPress }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
 
-    <View style={styles.rowText}>
-      <Text style={[styles.rowLabel, danger && styles.rowLabelDanger]}>{label}</Text>
+  return (
+    <TouchableOpacity style={styles.row} onPress={onPress} disabled={!onPress} activeOpacity={0.7}>
+      <CircleIcon icon={icon} size="md" color={danger ? colors.danger : colors.text} circleColor={colors.track} />
 
-      {sub && <Text style={styles.rowSub}>{sub}</Text>}
-    </View>
+      <View style={styles.rowText}>
+        <Text style={[styles.rowLabel, danger && styles.rowLabelDanger]}>{label}</Text>
 
-    {value && <Text style={styles.rowValue}>{value}</Text>}
-
-    {inertToggle && (
-      <View style={styles.toggleTrack}>
-        <View style={styles.toggleKnob} />
+        {sub && <Text style={styles.rowSub}>{sub}</Text>}
       </View>
-    )}
 
-    {!inertToggle && chevron && onPress && (
-      <CircleIcon icon="forward" size="sm" color={danger ? colors.danger : colors.muted} />
-    )}
-  </TouchableOpacity>
-);
+      {value && <Text style={styles.rowValue}>{value}</Text>}
+
+      {inertToggle && (
+        <View style={styles.toggleTrack}>
+          <View style={styles.toggleKnob} />
+        </View>
+      )}
+
+      {!inertToggle && chevron && onPress && (
+        <CircleIcon icon="forward" size="sm" color={danger ? colors.danger : colors.muted} />
+      )}
+    </TouchableOpacity>
+  );
+};
 
 export default SettingsRow;

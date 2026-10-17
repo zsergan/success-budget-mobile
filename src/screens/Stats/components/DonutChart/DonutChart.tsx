@@ -6,8 +6,8 @@ import Svg, { Circle, G } from 'react-native-svg';
 
 import type { Money } from '@api/dto';
 import { Icon } from '@components';
+import { useTheme, useThemedStyles } from '@hooks';
 import { TransactionType } from '@shared/enums';
-import { colors } from '@shared/theme';
 import { getBreakdownAppearance } from '@screens/Stats/breakdownAppearance';
 import { formatMoney } from '@screens/Stats/format';
 import useChartMotion from '@screens/Stats/hooks/useChartMotion';
@@ -23,7 +23,7 @@ import {
   hitTestDonut,
   toDonutSegments,
 } from './donutGeometry';
-import styles from './style';
+import createStyles from './style';
 
 const DIMMED_OPACITY = 0.28;
 const CENTER = DONUT_SIZE / 2;
@@ -32,6 +32,7 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 // A surface-colored ring that unwinds clockwise over the segments, drawn once per data set.
 const Reveal = ({ duration }: { duration: number }) => {
+  const { colors } = useTheme().colorTheme;
   const progress = useSharedValue(0);
 
   useEffect(() => {
@@ -55,8 +56,8 @@ const Reveal = ({ duration }: { duration: number }) => {
 };
 
 const TYPE_LOOK = {
-  [TransactionType.EXPENSE]: { label: 'Spent', subject: 'Expenses', icon: 'expense', color: colors.danger },
-  [TransactionType.INCOME]: { label: 'Income', subject: 'Income', icon: 'income', color: colors.ok },
+  [TransactionType.EXPENSE]: { label: 'Spent', subject: 'Expenses', icon: 'expense', tone: 'danger' },
+  [TransactionType.INCOME]: { label: 'Income', subject: 'Income', icon: 'income', tone: 'ok' },
 } as const;
 
 const countLabel = (count: number, mode: BreakdownMode) =>
@@ -88,6 +89,9 @@ const DonutChart = ({
   onSelect,
   onTouchInside,
 }: Props) => {
+  const colorTheme = useTheme().colorTheme;
+  const { colors } = colorTheme;
+  const styles = useThemedStyles(createStyles);
   const { isAnimated, duration } = useChartMotion();
   const segments = toDonutSegments(groups);
   const selected = groups.find((group) => group.key === selectedKey) ?? null;
@@ -103,7 +107,7 @@ const DonutChart = ({
   const center = !selected
     ? { label: look.label, amount: totalAmount, sub: countLabel(sourceCount, mode) }
     : {
-        label: getBreakdownAppearance(selected).name,
+        label: getBreakdownAppearance(selected, colorTheme).name,
         amount: selected.amount,
         sub: `${selected.percent.toFixed(1)}%`,
       };
@@ -147,7 +151,7 @@ const DonutChart = ({
                 cy={CENTER}
                 r={RADIUS}
                 fill="none"
-                stroke={getBreakdownAppearance(group).color}
+                stroke={getBreakdownAppearance(group, colorTheme).color}
                 strokeWidth={isSelected ? SELECTED_STROKE : STROKE}
                 strokeDasharray={[segment.visibleLength, CIRCUMFERENCE - segment.visibleLength]}
                 strokeDashoffset={-segment.start}
@@ -162,7 +166,7 @@ const DonutChart = ({
 
       <View style={styles.center} pointerEvents="none">
         <View style={styles.centerHead}>
-          <Icon name={look.icon} size={10} color={look.color} strokeWidth={2.6} />
+          <Icon name={look.icon} size={10} color={colors[look.tone]} strokeWidth={2.6} />
           <Text maxFontSizeMultiplier={CHART_MAX_FONT_SCALE} style={styles.centerLabel} numberOfLines={1}>
             {center.label}
           </Text>

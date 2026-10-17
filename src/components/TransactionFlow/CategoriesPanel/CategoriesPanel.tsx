@@ -3,18 +3,19 @@ import { Keyboard, Text, TouchableOpacity, View } from 'react-native';
 import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 
 import Icon from '@components/Icon/Icon';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import { useAppDispatch, useSpaceArg } from '@redux/hooks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
 import { getActiveCategories } from '@redux/state/category/selectors';
 import { categoryPicked } from '@redux/state/transactionFlow/slice';
 import { TransactionType } from '@shared/enums';
-import { colors } from '@shared/theme';
 import { hexToRgba } from '@shared/utils';
 import PanelHeader from '../PanelHeader/PanelHeader';
 import SectionLoad, { listLoad } from '../SectionLoad/SectionLoad';
 import useBoundedHeight from '@components/Modals/BottomSheetModal/useBoundedHeight';
 
-import styles from './style';
+import createStyles from './style';
 
 const SEARCH_THRESHOLD = 16;
 
@@ -27,6 +28,8 @@ interface Props {
 
 // Every active category of the draft's type; a tap picks it and goes back to the form, which kept the rest.
 const CategoriesPanel = ({ transactionType, selectedId, onBack, onClose }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const dispatch = useAppDispatch();
   const { height } = useBoundedHeight();
   const categoriesQuery = useGetCategoriesQuery(useSpaceArg());

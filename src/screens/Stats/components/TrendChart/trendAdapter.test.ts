@@ -1,4 +1,5 @@
 import type { StatisticsPeriodType, StatisticsTimeState, StatisticsTrend } from '@api/dto';
+import { colorThemes } from '@shared/theme';
 
 import {
   BAR_AREA_HEIGHT,
@@ -168,9 +169,13 @@ describe('toBarData', () => {
   it('draws both series upward on one scale, lifting tiny amounts and leaving zeroes flat', () => {
     const groups = toTrendGroups(trendOf('week', 'day', [['2026-09-28', '2026-09-28', 'past', '0.00', '1.00']]), now);
     const geometry = getTrendGeometry(groups, 300);
-    const [income, expense] = toBarData(groups, geometry, 1000);
+    const [income, expense] = toBarData(groups, geometry, 1000, colorThemes.dark.colors);
 
     expect(income.value).toBe(0);
     expect(expense.value).toBe((1000 * MIN_BAR_HEIGHT) / BAR_AREA_HEIGHT);
+    expect([income.frontColor, expense.frontColor]).toEqual([
+      colorThemes.dark.colors.ok,
+      colorThemes.dark.colors.danger,
+    ]);
   });
 });

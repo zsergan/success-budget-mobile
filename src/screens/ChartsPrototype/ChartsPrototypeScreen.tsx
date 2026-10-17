@@ -3,12 +3,13 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 
+import { useThemedStyles } from '@hooks';
 import { APP_FONTS } from '@shared/fonts';
 
 import DonutChart from './components/DonutChart/DonutChart';
 import TrendChart from './components/TrendChart/TrendChart';
 import { DONUT_SCENARIOS, TREND_SCENARIOS } from './fixtures';
-import styles from './style';
+import createStyles from './style';
 
 const formatUsd = (value: number) =>
   `$${Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -19,17 +20,22 @@ interface ChipsProps {
   onChange: (index: number) => void;
 }
 
-const Chips = ({ titles, active, onChange }: ChipsProps) => (
-  <View style={styles.chips}>
-    {titles.map((title, k) => (
-      <Pressable key={title} style={[styles.chip, k === active && styles.chipActive]} onPress={() => onChange(k)}>
-        <Text style={[styles.chipText, k === active && styles.chipTextActive]}>{title}</Text>
-      </Pressable>
-    ))}
-  </View>
-);
+const Chips = ({ titles, active, onChange }: ChipsProps) => {
+  const styles = useThemedStyles(createStyles);
+
+  return (
+    <View style={styles.chips}>
+      {titles.map((title, k) => (
+        <Pressable key={title} style={[styles.chip, k === active && styles.chipActive]} onPress={() => onChange(k)}>
+          <Text style={[styles.chipText, k === active && styles.chipTextActive]}>{title}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+};
 
 const ChartsPrototypeScreen = () => {
+  const styles = useThemedStyles(createStyles);
   useFonts(APP_FONTS);
   const [trendScenario, setTrendScenario] = useState(0);
   const [donutScenario, setDonutScenario] = useState(0);

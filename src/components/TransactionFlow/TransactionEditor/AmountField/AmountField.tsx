@@ -1,11 +1,11 @@
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import type { ComponentRef } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 
-import { colors } from '@shared/theme';
-
-import styles, { AMOUNT_FONT } from './style';
+import createStyles, { AMOUNT_FONT } from './style';
 
 // The digits shrink from 40 to 28 pt as they grow, so the largest amount still fits on one line.
 const fontSizeFor = (value: string) =>
@@ -24,6 +24,9 @@ interface Props {
 
 // The typed text stays exactly as entered, so the caret never jumps and nothing is cut; the sign comes from the type.
 const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currencyCode, error }: Props) => {
+  const { scheme, colorTheme } = useTheme();
+  const { colors } = colorTheme;
+  const styles = useThemedStyles(createStyles);
   const inputRef = useRef<ComponentRef<typeof BottomSheetTextInput>>(null);
   const [isFocused, setFocused] = useState(false);
 
@@ -46,6 +49,7 @@ const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currency
         )}
 
         <BottomSheetTextInput
+          keyboardAppearance={scheme}
           ref={inputRef}
           value={value}
           onChangeText={onChange}

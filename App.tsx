@@ -4,7 +4,7 @@ import { Provider } from 'react-redux';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { AlertProvider, ErrorBoundary } from '@components';
+import { AlertProvider, ErrorBoundary, ThemeProvider } from '@components';
 import store from '@redux/Store';
 import ChartsPrototypeScreen from '@screens/ChartsPrototype/ChartsPrototypeScreen';
 
@@ -13,14 +13,17 @@ const showChartsPrototype = __DEV__ && process.env.EXPO_PUBLIC_CHARTS_PROTOTYPE 
 // Hidden once the first screen is ready (RootNavigator) or on a crash (ErrorBoundary).
 if (!showChartsPrototype) SplashScreen.preventAutoHideAsync();
 
+// The theme sits above everything, the crash screen included, and outlives sessions and spaces.
 const App = () => (
-  <ErrorBoundary>
-    <SafeAreaProvider>
-      <Provider store={store}>
-        <AlertProvider>{showChartsPrototype ? <ChartsPrototypeScreen /> : <RootNavigator />}</AlertProvider>
-      </Provider>
-    </SafeAreaProvider>
-  </ErrorBoundary>
+  <ThemeProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <Provider store={store}>
+          <AlertProvider>{showChartsPrototype ? <ChartsPrototypeScreen /> : <RootNavigator />}</AlertProvider>
+        </Provider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
+  </ThemeProvider>
 );
 
 export default App;

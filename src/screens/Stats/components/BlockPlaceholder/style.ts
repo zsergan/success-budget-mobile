@@ -1,14 +1,15 @@
 import { StyleSheet } from 'react-native';
 
-import { colors } from '@shared/theme';
+import type { ColorTheme } from '@shared/theme';
 
-const styles = StyleSheet.create({
-  block: {
-    borderRadius: 18,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-  },
-});
+const createStyles = ({ colors }: ColorTheme) =>
+  StyleSheet.create({
+    block: {
+      borderRadius: 18,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+    },
+  });
 
-export default styles;
+export default createStyles;

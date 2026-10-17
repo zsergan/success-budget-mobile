@@ -1,12 +1,14 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { colors } from '@shared/theme';
+import type { ColorTheme } from '@shared/theme';
+import theme from '@shared/theme';
 
-const styles = StyleSheet.create({
-  emphasis: {
-    fontFamily: theme.fonts.semiBold,
-    color: colors.text,
-  },
-});
+const createStyles = ({ colors }: ColorTheme) =>
+  StyleSheet.create({
+    emphasis: {
+      fontFamily: theme.fonts.semiBold,
+      color: colors.text,
+    },
+  });
 
-export default styles;
+export default createStyles;

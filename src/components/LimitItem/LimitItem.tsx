@@ -1,12 +1,13 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import type { LimitModel } from '@api/models';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import { formatCurrencyAmount, getDailyPace, getDaysLeftInMonth, getLimitStatus, hexToRgba } from '@shared/utils';
 import Icon from '../Icon/Icon';
 import ProgressBar from '../ProgressBar/ProgressBar';
 
-import { colors } from '@shared/theme';
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   limit: LimitModel;
@@ -15,6 +16,8 @@ interface Props {
 }
 
 const LimitItem = ({ limit, currencyCode, onPress }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const { name, amount, spent, categories } = limit;
   const amountNumber = Number(amount);
   const status = getLimitStatus(spent, amountNumber);

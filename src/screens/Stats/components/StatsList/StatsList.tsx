@@ -3,8 +3,8 @@ import type { ListRenderItem } from 'react-native';
 import { FlatList, Text, View } from 'react-native';
 
 import { Icon } from '@components';
+import { useTheme, useThemedStyles } from '@hooks';
 import { TransactionType } from '@shared/enums';
-import { colors } from '@shared/theme';
 import type { StatisticsBreakdown, StatisticsSummary, StatisticsTrend } from '@api/dto';
 import type { StatsBlock } from '@screens/Stats/hooks/useStatsData';
 import type { BreakdownGroup, BreakdownMode, StatsItem } from '@screens/Stats/statsItems';
@@ -16,7 +16,7 @@ import DonutChart from '../DonutChart/DonutChart';
 import SummaryCards from '../SummaryCards/SummaryCards';
 import TrendBlock from '../TrendBlock/TrendBlock';
 
-import styles, { BREAKDOWN_PLACEHOLDER_HEIGHT } from './style';
+import createStyles, { BREAKDOWN_PLACEHOLDER_HEIGHT } from './style';
 
 type BreakdownEmptyItem = Extract<StatsItem, { kind: 'breakdownEmpty' }>;
 
@@ -84,6 +84,8 @@ const StatsList = ({
   onOpenHistory,
   bottomSpace,
 }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const rowPress = (group: BreakdownGroup) => {
     if (group.kind === 'other') return onToggleOther;
     if (group.kind === 'deleted_wallets') return undefined;

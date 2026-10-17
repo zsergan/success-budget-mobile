@@ -14,11 +14,13 @@ import { feedDto, transactionDto } from '@redux/state/transaction/fixtures';
 import { deleteTransaction } from '@redux/state/transactionFlow/thunks';
 import { mapTransaction } from '@api/models';
 import { ScreenNames, TransactionKind, TransactionType } from '@shared/enums';
-import { colors } from '@shared/theme';
+import { colorThemes } from '@shared/theme';
 import type { MainTabParamList } from '@shared/types';
 import { hexToRgba } from '@shared/utils';
 import { Fab } from '@components';
 import TransactionsScreen from './TransactionsScreen';
+
+const { colors } = colorThemes.light;
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => ({

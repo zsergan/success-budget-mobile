@@ -5,7 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheetScrollView, useBottomSheet } from '@gorhom/bottom-sheet';
 
 import Icon from '@components/Icon/Icon';
-import theme, { colors } from '@shared/theme';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
+import theme from '@shared/theme';
 import type { DateRange, Period, PeriodUnit } from '@shared/utils';
 import {
   addMonths,
@@ -24,7 +26,7 @@ import PeriodStepper from './PeriodStepper';
 import type { RangeField } from './pickDay';
 import { pickDay } from './pickDay';
 
-import styles from './style';
+import createStyles from './style';
 
 const QUICK_PRESETS: { value: PeriodUnit | 'custom'; label: string }[] = [
   { value: 'week', label: 'Week' },
@@ -43,6 +45,8 @@ interface Props {
 // The modal unmounts this on close, so every opening drafts from the applied period
 // and closing without Apply leaves it untouched.
 const RangePickerSheet = ({ period, onApply, renderRangeNote }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const { close } = useBottomSheet();
   const insets = useSafeAreaInsets();
 

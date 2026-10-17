@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
-import { getCategoryStroke, getCategoryTint } from '@shared/categoryColors';
+import useTheme from '@hooks/useTheme';
 import type { AppColor } from '@shared/enums';
 import type { IconType } from '@shared/types';
 
@@ -14,10 +14,14 @@ interface Props {
   opacity?: number;
 }
 
-const CategoryIconBox = ({ icon, color, size, opacity = 1 }: Props) => (
-  <View style={[styles.box, { width: size, height: size, backgroundColor: getCategoryTint(color), opacity }]}>
-    <Icon name={icon} size={Math.round(size * 0.5)} color={getCategoryStroke(color)} strokeWidth={1.9} />
-  </View>
-);
+const CategoryIconBox = ({ icon, color, size, opacity = 1 }: Props) => {
+  const { stroke, tint } = useTheme().colorTheme.categories[color];
+
+  return (
+    <View style={[styles.box, { width: size, height: size, backgroundColor: tint, opacity }]}>
+      <Icon name={icon} size={Math.round(size * 0.5)} color={stroke} strokeWidth={1.9} />
+    </View>
+  );
+};
 
 export default CategoryIconBox;

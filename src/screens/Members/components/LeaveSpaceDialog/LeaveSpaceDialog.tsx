@@ -1,8 +1,9 @@
 import { Text } from 'react-native';
 
 import { BottomModal } from '@components';
+import { useThemedStyles } from '@hooks';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   isVisible: boolean;
@@ -14,6 +15,7 @@ interface Props {
 }
 
 const LeaveSpaceDialog = ({ isVisible, isPending, isOwner, memberCount, onConfirm, onCancel }: Props) => {
+  const styles = useThemedStyles(createStyles);
   const message =
     isOwner && memberCount > 1
       ? "You're the owner -- leaving hands ownership to the next member. Continue?"

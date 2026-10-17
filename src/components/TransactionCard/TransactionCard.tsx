@@ -5,16 +5,16 @@ import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeabl
 
 import type { TransactionModel } from '@api/models';
 import { isInitialBalance } from '@api/models';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import { useAppSelector } from '@redux/hooks';
 import { selectIsDeleting } from '@redux/state/transactionFlow/selectors';
 import Icon from '../Icon/Icon';
 import { formatAmount, formatDateHHMM, formatMoneyAmount } from '@shared/utils';
 import { TransactionType } from '@shared/enums';
-import { colors } from '@shared/theme';
 
-import styles from './style';
+import createStyles from './style';
 
-const DELETE_ACTION_TEXT_COLOR = '#FFFDFA';
 const LARGE_FONT_SCALE = 1.3;
 
 // One swiped row at a time across every list: opening another closes it.
@@ -30,6 +30,8 @@ interface Props {
 }
 
 const TransactionCard = ({ transaction, currencyCode, isHighlighted = false, onPress, onDelete }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const swipeRef = useRef<SwipeableMethods>(null);
   const isDeleting = useAppSelector((state) => selectIsDeleting(state, transaction.id));
   const isLargeText = useWindowDimensions().fontScale >= LARGE_FONT_SCALE;
@@ -130,7 +132,7 @@ const TransactionCard = ({ transaction, currencyCode, isHighlighted = false, onP
           accessibilityRole="button"
           accessibilityLabel="Delete"
         >
-          <Icon name="trash" size={18} color={DELETE_ACTION_TEXT_COLOR} strokeWidth={2} />
+          <Icon name="trash" size={18} color={colors.onDanger} strokeWidth={2} />
           <Text style={styles.deleteActionText}>Delete</Text>
         </TouchableOpacity>
       )}

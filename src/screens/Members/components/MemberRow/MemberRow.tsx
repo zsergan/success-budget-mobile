@@ -2,9 +2,9 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import type { SpaceMember } from '@api/dto';
 import Icon from '@components/Icon/Icon';
-import { colors } from '@shared/theme';
+import { useTheme, useThemedStyles } from '@hooks';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   member: SpaceMember;
@@ -24,6 +24,8 @@ const getInitials = (name: string) =>
     .join('');
 
 const MemberRow = ({ member, isSelf, canAct, onActionPress }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const isInvite = member.type === 'invite';
   const tag = isInvite
     ? 'Invited'

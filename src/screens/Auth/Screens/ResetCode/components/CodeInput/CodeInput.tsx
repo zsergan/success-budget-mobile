@@ -4,9 +4,9 @@ import type { TextInput as TextInputType } from 'react-native';
 import { Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { Icon } from '@components';
-import { colors } from '@shared/theme';
+import { useTheme, useThemedStyles } from '@hooks';
 
-import styles from './style';
+import createStyles from './style';
 
 export const CODE_LENGTH = 6;
 
@@ -28,6 +28,9 @@ interface Props {
 
 // One real field under six drawn boxes: the keypad, paste, long-press and one-time-code autofill all fill it at once.
 const CodeInput = ({ ref, value, onChangeText, onPaste, error, hint, isLocked, isDisabled }: Props) => {
+  const { scheme, colorTheme } = useTheme();
+  const { colors } = colorTheme;
+  const styles = useThemedStyles(createStyles);
   const [isFocused, setIsFocused] = useState(false);
   const isEditable = !isLocked && !isDisabled;
   const activeIndex = isFocused && isEditable ? Math.min(value.length, CODE_LENGTH - 1) : -1;
@@ -82,6 +85,7 @@ const CodeInput = ({ ref, value, onChangeText, onPaste, error, hint, isLocked, i
         })}
 
         <TextInput
+          keyboardAppearance={scheme}
           ref={ref}
           style={styles.field}
           value={shownValue}

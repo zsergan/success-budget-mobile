@@ -1,7 +1,9 @@
 import type { DimensionValue } from 'react-native';
 import { Text, View } from 'react-native';
 
-import styles from './style';
+import useThemedStyles from '@hooks/useThemedStyles';
+
+import createStyles from './style';
 
 interface Props {
   percentage: number;
@@ -13,6 +15,7 @@ interface Props {
 }
 
 const ProgressBar = ({ percentage, positionInfo, leftInfo, rightInfo, color }: Props) => {
+  const styles = useThemedStyles(createStyles);
   const progressWidth: DimensionValue = percentage > 100 ? '100%' : `${percentage}%`;
   const progressColor =
     percentage > 90 ? styles.progressRed : percentage > 60 ? styles.progressYellow : styles.progressGreen;

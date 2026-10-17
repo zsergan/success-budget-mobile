@@ -2,11 +2,11 @@ import { ActivityIndicator, Text, View } from 'react-native';
 
 import type { Money } from '@api/dto';
 import { Icon, PeriodBar } from '@components';
-import { colors } from '@shared/theme';
+import { useTheme, useThemedStyles } from '@hooks';
 import type { Period, PeriodUnit } from '@shared/utils';
 import { formatMoneyAmount } from '@shared/utils';
 
-import styles from './style';
+import createStyles from './style';
 
 // What a search has found so far: still asking, its count, or a failed request (count unknown).
 export type SearchStatus = { state: 'searching' } | { state: 'found'; count: number } | { state: 'failed' };
@@ -37,6 +37,7 @@ const TotalValue = ({
   isLoading: boolean;
   currencyCode?: string;
 }) => {
+  const styles = useThemedStyles(createStyles);
   if (value !== null) return <Text style={styles.totalValue}>{formatMoneyAmount(value, currencyCode)}</Text>;
 
   return isLoading ? (
@@ -56,44 +57,49 @@ const FilterBar = ({
   onPresetPress,
   onOpenPicker,
   onReset,
-}: Props) => (
-  <View style={styles.root}>
-    <PeriodBar period={period} onPresetPress={onPresetPress} onOpenPicker={onOpenPicker} onReset={onReset} />
+}: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
 
-    {/* Always kept, at one height, so neither opening search nor its status shifts what is under it. */}
-    <View style={styles.searchRow} testID="search-status">
-      {search && (
-        <>
-          <View style={styles.searchLabelRow}>
-            {search.state === 'searching' && <ActivityIndicator size="small" color={colors.muted} />}
-            <Text style={styles.searchLabel}>{search.state === 'searching' ? 'Searching…' : 'Search results'}</Text>
+  return (
+    <View style={styles.root}>
+      <PeriodBar period={period} onPresetPress={onPresetPress} onOpenPicker={onOpenPicker} onReset={onReset} />
+
+      {/* Always kept, at one height, so neither opening search nor its status shifts what is under it. */}
+      <View style={styles.searchRow} testID="search-status">
+        {search && (
+          <>
+            <View style={styles.searchLabelRow}>
+              {search.state === 'searching' && <ActivityIndicator size="small" color={colors.muted} />}
+              <Text style={styles.searchLabel}>{search.state === 'searching' ? 'Searching…' : 'Search results'}</Text>
+            </View>
+
+            <Text style={styles.searchCount}>{search.state === 'found' ? matchCount(search.count) : UNKNOWN}</Text>
+          </>
+        )}
+      </View>
+
+      <View style={styles.totalsRow}>
+        <View style={styles.totalCard}>
+          <View style={styles.totalLabelRow}>
+            <Icon name="income" size={11} color={colors.ok} strokeWidth={2.4} />
+            <Text style={styles.totalLabel}>Income</Text>
           </View>
 
-          <Text style={styles.searchCount}>{search.state === 'found' ? matchCount(search.count) : UNKNOWN}</Text>
-        </>
-      )}
-    </View>
-
-    <View style={styles.totalsRow}>
-      <View style={styles.totalCard}>
-        <View style={styles.totalLabelRow}>
-          <Icon name="income" size={11} color={colors.ok} strokeWidth={2.4} />
-          <Text style={styles.totalLabel}>Income</Text>
+          <TotalValue value={income} isLoading={isLoading} currencyCode={currencyCode} />
         </View>
 
-        <TotalValue value={income} isLoading={isLoading} currencyCode={currencyCode} />
-      </View>
+        <View style={styles.totalCard}>
+          <View style={styles.totalLabelRow}>
+            <Icon name="expense" size={11} color={colors.danger} strokeWidth={2.4} />
+            <Text style={styles.totalLabel}>Expense</Text>
+          </View>
 
-      <View style={styles.totalCard}>
-        <View style={styles.totalLabelRow}>
-          <Icon name="expense" size={11} color={colors.danger} strokeWidth={2.4} />
-          <Text style={styles.totalLabel}>Expense</Text>
+          <TotalValue value={expense} isLoading={isLoading} currencyCode={currencyCode} />
         </View>
-
-        <TotalValue value={expense} isLoading={isLoading} currencyCode={currencyCode} />
       </View>
     </View>
-  </View>
-);
+  );
+};
 
 export default FilterBar;

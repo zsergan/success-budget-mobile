@@ -1,11 +1,12 @@
 import { Text, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
-import { colors } from '@shared/theme';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import { formatCurrencyAmount, hexToRgba } from '@shared/utils';
 import type { LimitForecast } from './limitForecast';
 
-import styles from './style';
+import createStyles from './style';
 
 const money = (cents: number, currencyCode?: string) => formatCurrencyAmount(cents / 100, currencyCode);
 
@@ -27,6 +28,8 @@ interface Props {
 
 // A warning only: Save stays available whatever it says.
 const LimitHint = ({ forecast, currencyCode }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const isOver = forecast.level === 'over';
   const tone = isOver ? colors.danger : colors.warn;
 

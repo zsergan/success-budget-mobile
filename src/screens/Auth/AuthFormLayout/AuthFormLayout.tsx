@@ -3,23 +3,25 @@ import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, RootLayout, TextLink, TinyButton } from '@components';
-import { useKeyboardHeight } from '@hooks';
-import { colors } from '@shared/theme';
+import { useKeyboardHeight, useTheme, useThemedStyles } from '@hooks';
+import type { ThemeColors } from '@shared/theme';
 import type { IconType } from '@shared/types';
 
-import styles, { BOTTOM_GAP } from './style';
+import createStyles, { BOTTOM_GAP } from './style';
 
-const ILLUSTRATION_TONES = {
+type IllustrationTone = 'neutral' | 'ok';
+
+const illustrationTones = (colors: ThemeColors): Record<IllustrationTone, { background: string; icon: string }> => ({
   neutral: { background: colors.track, icon: colors.text },
   ok: { background: colors.okSoft, icon: colors.ok },
-};
+});
 
 interface Props {
   title: string;
   // Left out where a small screen with the keyboard up needs the room.
   description?: string;
   // Hidden while the keyboard is up, so the form and its action keep the room.
-  illustration?: { icon: IconType; tone: keyof typeof ILLUSTRATION_TONES };
+  illustration?: { icon: IconType; tone: IllustrationTone };
   // Under the description, part of the header (e.g. the address a code went to).
   headerAccessory?: ReactNode;
   onBackButtonPress: () => void;
@@ -38,9 +40,11 @@ const AuthFormLayout = ({
   action,
   prompt,
 }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const { bottom } = useSafeAreaInsets();
   const isKeyboardUp = useKeyboardHeight() > 0;
-  const illustrationTone = illustration && ILLUSTRATION_TONES[illustration.tone];
+  const illustrationTone = illustration && illustrationTones(colors)[illustration.tone];
 
   const footer = (
     <View style={[styles.footer, isKeyboardUp && styles.footerPinned]}>

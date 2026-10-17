@@ -2,13 +2,13 @@ import { ActivityIndicator, Text, TouchableOpacity, TouchableWithoutFeedback, Vi
 
 import { Icon } from '@components';
 import ModalContainer from '@components/Modals/ModalContainer/ModalContainer';
+import { useTheme, useThemedStyles } from '@hooks';
 import type { CategoryModel } from '@api/models';
 import { useDeleteCategoryMutation } from '@redux/state/category/api';
 import { TransactionType } from '@shared/enums';
-import { colors } from '@shared/theme';
 import type { ConfirmAction } from '@hooks';
 
-import styles from './style';
+import createStyles from './style';
 
 const TYPE_LABEL: Record<TransactionType, string> = {
   [TransactionType.EXPENSE]: 'Expense',
@@ -20,6 +20,8 @@ interface Props {
 }
 
 const DeleteCategoryDialog = ({ deletion }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const { target: category, isPending, error, cancel, confirm } = deletion;
   const [deleteCategory] = useDeleteCategoryMutation();
 
@@ -29,7 +31,8 @@ const DeleteCategoryDialog = ({ deletion }: Props) => {
 
   const willDelete = category.transactionCount === 0;
 
-  const confirmColor = willDelete ? '#FFFDFA' : colors.onSecondary;
+  // Archive is inverted like a sheet's main action: `secondary` is the dialog's own colour in the dark theme.
+  const confirmColor = willDelete ? colors.onDanger : colors.bg;
   const confirmLabel = willDelete ? 'Delete category' : 'Archive category';
   const pendingLabel = willDelete ? 'Deleting…' : 'Archiving…';
 
@@ -111,7 +114,7 @@ const DeleteCategoryDialog = ({ deletion }: Props) => {
 
           <View style={styles.actions}>
             <TouchableOpacity
-              style={[styles.confirmButton, { backgroundColor: willDelete ? colors.danger : colors.secondary }]}
+              style={[styles.confirmButton, { backgroundColor: willDelete ? colors.danger : colors.text }]}
               onPress={handleConfirm}
               disabled={isPending}
               activeOpacity={0.8}

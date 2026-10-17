@@ -4,10 +4,10 @@ import type { LayoutChangeEvent } from 'react-native';
 import { BarChart } from 'react-native-gifted-charts';
 import type { barDataItem } from 'react-native-gifted-charts';
 
-import { colors } from '@shared/theme';
-
 import type { TrendGroup } from '../../fixtures';
-import styles, { BAR_AREA_HEIGHT, MIN_BAR_HEIGHT, PAIR_GAP, TOOLTIP_WIDTH } from './style';
+import createStyles, { BAR_AREA_HEIGHT, MIN_BAR_HEIGHT, PAIR_GAP, TOOLTIP_WIDTH } from './style';
+
+import { useTheme, useThemedStyles } from '@hooks';
 
 interface Props {
   groups: TrendGroup[];
@@ -26,6 +26,8 @@ const getGeometry = (count: number, width: number) => {
 };
 
 const TrendChart = ({ groups, selectedIndex, onSelect, formatAmount }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const [width, setWidth] = useState(0);
   const { barWidth, columnGap, columnWidth, inset } = getGeometry(groups.length, width);
 

@@ -1,4 +1,5 @@
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme, useThemedStyles } from '@hooks';
 import { skipToken } from '@reduxjs/toolkit/query';
 
 import { getLoadState } from '@redux/api/loadState';
@@ -6,10 +7,9 @@ import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { periodArg, useGetTransactionsCountQuery } from '@redux/state/transaction/api';
 import { isSearchTooLong } from '@screens/Transactions/search';
-import { colors } from '@shared/theme';
 import type { DateRange } from '@shared/utils';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   range: DateRange;
@@ -22,6 +22,8 @@ const countLabel = (count: number) =>
 
 // The records in a drafted range, counted by the server; currentData never shows the count of a previous range.
 const RangeCount = ({ range, q }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const text = q?.trim();
   const isTooLong = text !== undefined && isSearchTooLong(text);

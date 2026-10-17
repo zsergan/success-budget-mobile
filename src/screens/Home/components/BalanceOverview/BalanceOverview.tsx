@@ -1,10 +1,10 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
-import { colors } from '@shared/theme';
+import { useTheme, useThemedStyles } from '@hooks';
 import { formatNumber } from '@shared/utils';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   total: number;
@@ -16,6 +16,8 @@ interface Props {
 }
 
 const BalanceOverview = ({ total, currencyCode, walletsCount, deltaPercent, isHidden, onToggleVisibility }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const deltaPositive = deltaPercent > 0;
   const deltaNeutral = deltaPercent === 0;
   const deltaFg = deltaNeutral ? colors.muted : deltaPositive ? colors.ok : colors.danger;

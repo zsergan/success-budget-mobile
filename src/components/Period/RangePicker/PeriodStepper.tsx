@@ -1,11 +1,12 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
-import { colors } from '@shared/theme';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import type { Period, PeriodUnit } from '@shared/utils';
 import { formatMonthYear, formatRangeLabel, toDateRange } from '@shared/utils';
 
-import styles from './style';
+import createStyles from './style';
 
 const formatPeriodValue = (unit: PeriodUnit, range: { from: Date; to: Date }) => {
   if (unit === 'month') return formatMonthYear(range.from);
@@ -21,6 +22,8 @@ interface Props {
 
 // Steps a Week, Month or Year back and forth; the caption doubles as the way back to the current one.
 const PeriodStepper = ({ period, onStep, onSelectCurrent }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const { unit } = period;
   const isCurrent = period.kind === 'current';
 

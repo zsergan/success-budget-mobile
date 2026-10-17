@@ -3,9 +3,9 @@ import { Share, Text, View } from 'react-native';
 import type { InviteResponse } from '@api/dto';
 import { BottomModal } from '@components';
 import { getErrorMessage } from '@shared/utils';
-import { useAlert } from '@hooks';
+import { useAlert, useThemedStyles } from '@hooks';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   invite: InviteResponse | null;
@@ -14,6 +14,7 @@ interface Props {
 }
 
 const InviteCodeDialog = ({ invite, spaceName, onClose }: Props) => {
+  const styles = useThemedStyles(createStyles);
   const { addAlert } = useAlert();
 
   const handleShare = () => {

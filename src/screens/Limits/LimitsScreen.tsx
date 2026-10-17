@@ -2,13 +2,12 @@ import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
 
 import type { LimitModel } from '@api/models';
 import { BottomSheetModal as BottomModal, EmptyState, FrameScrollView, Icon, ScreenFrame } from '@components';
-import { useConfirmAction, useSpaceRefresh } from '@hooks';
+import { useConfirmAction, useSpaceRefresh, useTheme, useThemedStyles } from '@hooks';
 import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetLimitsQuery } from '@redux/state/limit/api';
 import { EMPTY_LIMITS } from '@redux/state/limit/selectors';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
-import { colors } from '@shared/theme';
 import LimitEditorSheet, { LIMIT_EDITOR_SNAP_POINT } from './components/LimitEditor/LimitEditorSheet';
 import DeleteLimitDialog from './components/DeleteLimitDialog/DeleteLimitDialog';
 import TotalLimitCard from './components/TotalLimitCard/TotalLimitCard';
@@ -18,9 +17,11 @@ import LimitsEmptyState from './components/LimitsEmptyState/LimitsEmptyState';
 import CategoryLimitsSection from './components/CategoryLimitsSection/CategoryLimitsSection';
 import useLimitEditor from './hooks/useLimitEditor';
 
-import styles from './style';
+import createStyles from './style';
 
 const LimitsScreen = () => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   useSpaceRefresh();
   const limitsQuery = useGetLimitsQuery(useSpaceArg());
   const { currentData, refetch } = limitsQuery;

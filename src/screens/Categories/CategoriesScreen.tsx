@@ -3,11 +3,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import DraggableFlatList from 'react-native-draggable-flatlist';
 
 import { BottomSheetModal as BottomModal, CategoryEditorSheet, EmptyState, Icon } from '@components';
-import { useConfirmAction, useSpaceRefresh } from '@hooks';
+import { useConfirmAction, useSpaceRefresh, useTheme, useThemedStyles } from '@hooks';
 import type { CategoryModel } from '@api/models';
 import type { RootStackScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
-import { colors } from '@shared/theme';
 import CategoriesEmptyState from './components/CategoriesEmptyState/CategoriesEmptyState';
 import DeleteCategoryDialog from './components/DeleteCategoryDialog/DeleteCategoryDialog';
 import CategoryRow from './components/CategoryRow/CategoryRow';
@@ -16,7 +15,7 @@ import useCategoryEditor from './hooks/useCategoryEditor';
 import type { CategorySegment } from './hooks/useCategoryList';
 import useCategoryList from './hooks/useCategoryList';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props extends RootStackScreenProps<ScreenNames.CATEGORIES_SCREEN> {}
 
@@ -24,6 +23,9 @@ const ARCHIVE_FOOTNOTE =
   'Restoring puts a category back into the picker. It does not re-join limits automatically — add it to a limit again if you want it counted.';
 
 const CategoriesScreen = ({ navigation }: Props) => {
+  const { scheme, colorTheme } = useTheme();
+  const { colors } = colorTheme;
+  const styles = useThemedStyles(createStyles);
   useSpaceRefresh();
   const categoryDeletion = useConfirmAction<CategoryModel>();
 
@@ -110,6 +112,7 @@ const CategoriesScreen = ({ navigation }: Props) => {
           <Icon name="search" size={16} color={isSearching ? colors.text : colors.muted} strokeWidth={2} />
 
           <TextInput
+            keyboardAppearance={scheme}
             style={styles.searchInput}
             value={searchQuery}
             onChangeText={setSearchQuery}

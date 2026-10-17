@@ -5,11 +5,10 @@ import type { pieDataItem } from 'react-native-gifted-charts';
 import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 
-import { colors } from '@shared/theme';
-import { getCategoryStroke } from '@shared/categoryColors';
-
 import type { BreakdownGroup } from '../../fixtures';
-import styles, { DONUT_SIZE, INNER_RADIUS, RADIUS, SEGMENT_GAP, SELECTED_GROWTH } from './style';
+import createStyles, { DONUT_SIZE, INNER_RADIUS, RADIUS, SEGMENT_GAP, SELECTED_GROWTH } from './style';
+
+import { useTheme, useThemedStyles } from '@hooks';
 
 interface Props {
   groups: BreakdownGroup[];
@@ -18,7 +17,6 @@ interface Props {
   formatAmount: (value: number) => string;
 }
 
-const OTHER_COLOR = '#8B95A3';
 const DIMMED_ALPHA = 0.28;
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -29,10 +27,13 @@ const withAlpha = (color: string, alpha: number) => {
   const rgb = color.startsWith('#')
     ? [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16)).join(',')
     : color.slice(4, -1);
+  // eslint-disable-next-line no-restricted-syntax -- adds alpha to a theme colour
   return `rgba(${rgb},${alpha})`;
 };
 
 const DonutChart = ({ groups, selectedIndex, onSelect, formatAmount }: Props) => {
+  const { colors, categories } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const total = groups.reduce((sum, g) => sum + g.amount, 0);
   const selected = selectedIndex === null ? null : groups[selectedIndex];
 
@@ -40,11 +41,11 @@ const DonutChart = ({ groups, selectedIndex, onSelect, formatAmount }: Props) =>
   const data = useMemo<pieDataItem[]>(
     () =>
       groups.map((g, k) => {
-        const color = g.color === 'other' ? OTHER_COLOR : getCategoryStroke(g.color);
+        const color = g.color === 'other' ? colors.chartOther : categories[g.color].stroke;
         const isDimmed = selectedIndex !== null && selectedIndex !== k;
         return { value: g.amount, color: isDimmed ? withAlpha(color, DIMMED_ALPHA) : color };
       }),
-    [groups, selectedIndex],
+    [groups, selectedIndex, colors, categories],
   );
 
   const reveal = useSharedValue(0);

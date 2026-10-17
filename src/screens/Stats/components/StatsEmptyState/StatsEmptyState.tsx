@@ -1,9 +1,10 @@
 import { Text } from 'react-native';
 
 import { EmptyState } from '@components';
+import { useThemedStyles } from '@hooks';
 import { formatDayMonth, formatMonthYearShort } from '@screens/Stats/format';
 
-import styles from './style';
+import createStyles from './style';
 
 type Props =
   | { variant: 'noHistory'; onAddTransaction: () => void }
@@ -18,6 +19,7 @@ type Props =
   | { variant: 'future'; rangeLabel: string; onReset: () => void };
 
 const StatsEmptyState = (props: Props) => {
+  const styles = useThemedStyles(createStyles);
   if (props.variant === 'noHistory') {
     return (
       <EmptyState

@@ -1,10 +1,11 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
+import { useThemedStyles } from '@hooks';
 import type { BreakdownMode } from '@screens/Stats/statsItems';
 import type { TransactionType } from '@shared/enums';
 import BreakdownTypeToggle from '../BreakdownTypeToggle/BreakdownTypeToggle';
 
-import styles from './style';
+import createStyles from './style';
 
 const MODES: { value: BreakdownMode; label: string }[] = [
   { value: 'category', label: 'By category' },
@@ -18,31 +19,35 @@ interface Props {
   onModeChange: (mode: BreakdownMode) => void;
 }
 
-const BreakdownHeader = ({ type, mode, onTypeChange, onModeChange }: Props) => (
-  <View style={styles.root}>
-    <Text style={styles.title}>Breakdown</Text>
+const BreakdownHeader = ({ type, mode, onTypeChange, onModeChange }: Props) => {
+  const styles = useThemedStyles(createStyles);
 
-    <BreakdownTypeToggle value={type} onChange={onTypeChange} />
+  return (
+    <View style={styles.root}>
+      <Text style={styles.title}>Breakdown</Text>
 
-    <View style={styles.modes}>
-      {MODES.map((option) => {
-        const active = option.value === mode;
+      <BreakdownTypeToggle value={type} onChange={onTypeChange} />
 
-        return (
-          <TouchableOpacity
-            key={option.value}
-            style={[styles.chip, active && styles.chipActive]}
-            onPress={() => !active && onModeChange(option.value)}
-            activeOpacity={0.7}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: active }}
-          >
-            <Text style={[styles.chipText, active && styles.chipTextActive]}>{option.label}</Text>
-          </TouchableOpacity>
-        );
-      })}
+      <View style={styles.modes}>
+        {MODES.map((option) => {
+          const active = option.value === mode;
+
+          return (
+            <TouchableOpacity
+              key={option.value}
+              style={[styles.chip, active && styles.chipActive]}
+              onPress={() => !active && onModeChange(option.value)}
+              activeOpacity={0.7}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+            >
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{option.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 export default BreakdownHeader;

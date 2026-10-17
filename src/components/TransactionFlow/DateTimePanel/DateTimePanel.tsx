@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
 import CalendarGrid from '@components/Period/RangePicker/CalendarGrid';
+import useThemedStyles from '@hooks/useThemedStyles';
 import { useAppDispatch } from '@redux/hooks';
 import { dateTimeApplied, pendingDateChanged } from '@redux/state/transactionFlow/slice';
 import theme from '@shared/theme';
@@ -18,7 +19,7 @@ import { pickDay, pickTime } from './pickDateTime';
 import TimeField from './TimeField';
 import useNow from './useNow';
 
-import styles from './style';
+import createStyles from './style';
 
 const MIN_DATE = new Date(MIN_TIMESTAMP);
 
@@ -32,6 +33,7 @@ interface Props {
 
 // Picks into the flow's pending value; only Apply moves it into the draft, Back and Cancel drop it.
 const DateTimePanel = ({ pending, original, onBack, onClose }: Props) => {
+  const styles = useThemedStyles(createStyles);
   const dispatch = useAppDispatch();
   useEffect(() => Keyboard.dismiss(), []);
   const insets = useSafeAreaInsets();

@@ -13,7 +13,8 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import theme, { colors } from '@shared/theme';
+import useTheme from '@hooks/useTheme';
+import theme from '@shared/theme';
 
 import styles from './style';
 
@@ -37,16 +38,13 @@ interface DotProps {
 }
 
 const Dot = ({ index, scrollX, snapInterval }: DotProps) => {
+  const { track, accent } = useTheme().colorTheme.colors;
   const style = useAnimatedStyle(() => {
     const position = scrollX.value / snapInterval;
 
     return {
       width: interpolate(position, [index - 1, index, index + 1], [5, 18, 5], Extrapolation.CLAMP),
-      backgroundColor: interpolateColor(
-        position,
-        [index - 1, index, index + 1],
-        [colors.track, colors.accent, colors.track],
-      ),
+      backgroundColor: interpolateColor(position, [index - 1, index, index + 1], [track, accent, track]),
     };
   });
 
@@ -60,6 +58,7 @@ const Carousel = <T,>({ items, renderItem, keyExtractor, onIndexChange }: Props<
   const snapInterval = itemWidth + GAP;
   const maxScroll = (items.length - 1) * snapInterval;
 
+  const { colors } = useTheme().colorTheme;
   const scrollX = useSharedValue(0);
 
   const onScroll = useAnimatedScrollHandler((event) => {

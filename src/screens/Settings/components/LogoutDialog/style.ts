@@ -1,22 +1,24 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { colors } from '@shared/theme';
+import type { ColorTheme } from '@shared/theme';
+import theme from '@shared/theme';
 
-const styles = StyleSheet.create({
-  confirmText: {
-    fontFamily: theme.fonts.semiBold,
-    fontSize: theme.fontSizes.bodyLg,
-    lineHeight: theme.lineHeights.bodyLg,
-    textAlign: 'center',
-    color: colors.text,
-  },
-  confirmSubtext: {
-    fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.caption,
-    lineHeight: theme.lineHeights.caption,
-    textAlign: 'center',
-    color: colors.muted,
-  },
-});
+const createStyles = ({ colors }: ColorTheme) =>
+  StyleSheet.create({
+    confirmText: {
+      fontFamily: theme.fonts.semiBold,
+      fontSize: theme.fontSizes.bodyLg,
+      lineHeight: theme.lineHeights.bodyLg,
+      textAlign: 'center',
+      color: colors.text,
+    },
+    confirmSubtext: {
+      fontFamily: theme.fonts.medium,
+      fontSize: theme.fontSizes.caption,
+      lineHeight: theme.lineHeights.caption,
+      textAlign: 'center',
+      color: colors.muted,
+    },
+  });
 
-export default styles;
+export default createStyles;

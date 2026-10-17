@@ -1,15 +1,17 @@
 import { StyleSheet } from 'react-native';
 
-import theme, { colors } from '@shared/theme';
+import type { ColorTheme } from '@shared/theme';
+import theme from '@shared/theme';
 
-const styles = StyleSheet.create({
-  confirmText: {
-    fontFamily: theme.fonts.semiBold,
-    fontSize: theme.fontSizes.bodyLg,
-    lineHeight: theme.lineHeights.bodyLg,
-    textAlign: 'center',
-    color: colors.text,
-  },
-});
+const createStyles = ({ colors }: ColorTheme) =>
+  StyleSheet.create({
+    confirmText: {
+      fontFamily: theme.fonts.semiBold,
+      fontSize: theme.fontSizes.bodyLg,
+      lineHeight: theme.lineHeights.bodyLg,
+      textAlign: 'center',
+      color: colors.text,
+    },
+  });
 
-export default styles;
+export default createStyles;

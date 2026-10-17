@@ -1,10 +1,11 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
-import { colors } from '@shared/theme';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import { formatMonthYear, getCalendarMonthGrid } from '@shared/utils';
 
-import styles from './style';
+import createStyles from './style';
 
 const DOW_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -21,6 +22,8 @@ interface Props {
 }
 
 const CalendarGrid = ({ month, range, onSelectDay, onNavigate, maxDate, minDate }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const days = getCalendarMonthGrid(month, range);
   const rows = Array.from({ length: 6 }, (_, i) => days.slice(i * 7, i * 7 + 7));
   const lastDay = maxDate && new Date(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate(), 23, 59, 59, 999);

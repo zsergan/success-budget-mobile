@@ -22,6 +22,7 @@ export { default as RootLayout } from './RootLayout/RootLayout';
 export * from './ScreenFrame';
 export { default as SpaceSwitcher } from './SpaceSwitcher/SpaceSwitcher';
 export { default as SpacesSheet } from './SpaceSwitcher/SpacesSheet';
+export { default as ThemeProvider } from './ThemeProvider/ThemeProvider';
 export { default as TransactionCard } from './TransactionCard/TransactionCard';
 export * from './TransactionFlow';
 export * from './Typography';

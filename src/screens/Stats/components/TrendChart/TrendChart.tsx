@@ -3,12 +3,12 @@ import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { BarChart } from 'react-native-gifted-charts';
 
-import { colors } from '@shared/theme';
+import { useTheme, useThemedStyles } from '@hooks';
 import { formatFlow } from '@screens/Stats/format';
 import useChartMotion from '@screens/Stats/hooks/useChartMotion';
 import { CHART_MAX_FONT_SCALE } from '@screens/Stats/chartText';
 
-import styles, { CHART_HEIGHT, TOOLTIP_WIDTH } from './style';
+import createStyles, { CHART_HEIGHT, TOOLTIP_WIDTH } from './style';
 import type { TrendGroup } from './trendAdapter';
 import { BAR_AREA_HEIGHT, PAIR_GAP, getColumnCenter, getTrendGeometry, getTrendMax, toBarData } from './trendAdapter';
 
@@ -24,6 +24,8 @@ interface Props {
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), Math.max(min, max));
 
 const TrendChart = ({ groups, currency, selectedKey, onSelect, onTouchInside }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const { isAnimated, duration } = useChartMotion();
   // The live offset of the axis it was read on; state follows it only while a tooltip needs it.
   const liveScrollRef = useRef<{ axis: string; x: number } | null>(null);
@@ -32,7 +34,7 @@ const TrendChart = ({ groups, currency, selectedKey, onSelect, onTouchInside }: 
 
   const geometry = getTrendGeometry(groups, width);
   const maxValue = getTrendMax(groups)?.value || 1;
-  const barData = toBarData(groups, geometry, maxValue);
+  const barData = toBarData(groups, geometry, maxValue, colors);
 
   const selectedIndex = groups.findIndex((group) => group.key === selectedKey && !group.isFuture);
   const selected = selectedIndex < 0 ? null : groups[selectedIndex];

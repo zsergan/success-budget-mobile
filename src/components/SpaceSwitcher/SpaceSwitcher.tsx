@@ -4,21 +4,24 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
 import Icon from '@components/Icon/Icon';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectCurrentSpace, selectCurrentSpaceId, selectSpaces } from '@redux/state/space/selectors';
 import { activateSpace } from '@redux/state/space/thunks';
 import { ScreenNames, SpaceType } from '@shared/enums';
 import type { MainTabNavigationProp } from '@shared/types';
-import { colors } from '@shared/theme';
 
 import SpacesSheet from './SpacesSheet';
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   navigation: MainTabNavigationProp<ScreenNames.HOME_TAB>;
 }
 
 const SpaceSwitcher = ({ navigation }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
   const sheetRef = useRef<BottomSheetModal>(null);
   const dispatch = useAppDispatch();
   const spaces = useAppSelector(selectSpaces);

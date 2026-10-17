@@ -1,8 +1,9 @@
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 
-import { colors } from '@shared/theme';
+import useTheme from '@hooks/useTheme';
+import useThemedStyles from '@hooks/useThemedStyles';
 
-import styles from './style';
+import createStyles from './style';
 
 export type ListLoad = 'loading' | 'failed' | 'ready';
 
@@ -17,27 +18,32 @@ interface Props {
   onRetry: () => void;
 }
 
-const SectionLoad = ({ load, name, onRetry }: Props) => (
-  <View style={styles.root}>
-    {load === 'loading' ? (
-      <ActivityIndicator size="small" color={colors.muted} accessibilityLabel={`Loading ${name}`} />
-    ) : (
-      <>
-        <Text style={styles.text}>Couldn’t load {name}</Text>
+const SectionLoad = ({ load, name, onRetry }: Props) => {
+  const { colors } = useTheme().colorTheme;
+  const styles = useThemedStyles(createStyles);
 
-        <TouchableOpacity
-          style={styles.retryButton}
-          onPress={onRetry}
-          activeOpacity={0.7}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={`Retry loading ${name}`}
-        >
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
-      </>
-    )}
-  </View>
-);
+  return (
+    <View style={styles.root}>
+      {load === 'loading' ? (
+        <ActivityIndicator size="small" color={colors.muted} accessibilityLabel={`Loading ${name}`} />
+      ) : (
+        <>
+          <Text style={styles.text}>Couldn’t load {name}</Text>
+
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={onRetry}
+            activeOpacity={0.7}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Retry loading ${name}`}
+          >
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  );
+};
 
 export default SectionLoad;
