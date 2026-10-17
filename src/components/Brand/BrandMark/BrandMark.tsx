@@ -20,6 +20,12 @@ interface Props {
 
 const viewBox = `${MARK_VIEWBOX.x} ${MARK_VIEWBOX.y} ${MARK_VIEWBOX.width} ${MARK_VIEWBOX.height}`;
 
+// Mask luminance, not drawn colours: white keeps the stroke under it, black cuts the knockout.
+/* eslint-disable no-restricted-syntax */
+const MASK_KEEP = '#fff';
+const MASK_CUT = '#000';
+/* eslint-enable no-restricted-syntax */
+
 const strokeProps = { fill: 'none', strokeLinecap: 'butt', strokeLinejoin: 'round' } as const;
 
 const BrandMark = ({ height, sColor, bColor }: Props) => {
@@ -29,8 +35,8 @@ const BrandMark = ({ height, sColor, bColor }: Props) => {
 
   const knockout = (maskId: string, d: string) => (
     <Mask id={maskId} maskUnits="userSpaceOnUse" {...MARK_MASK_BOUNDS}>
-      <Rect {...MARK_MASK_BOUNDS} fill="#fff" />
-      <Path d={d} stroke="#000" strokeWidth={MARK_KNOCKOUT_WIDTH} {...strokeProps} />
+      <Rect {...MARK_MASK_BOUNDS} fill={MASK_KEEP} />
+      <Path d={d} stroke={MASK_CUT} strokeWidth={MARK_KNOCKOUT_WIDTH} {...strokeProps} />
     </Mask>
   );
 

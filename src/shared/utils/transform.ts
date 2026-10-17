@@ -46,6 +46,7 @@ export const hexToRgba = (hex: string, alpha: number) => {
   const g = parseInt(value.substring(2, 4), 16);
   const b = parseInt(value.substring(4, 6), 16);
 
+  // eslint-disable-next-line no-restricted-syntax -- adds alpha to a theme colour
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 

@@ -27,6 +27,7 @@ const withAlpha = (color: string, alpha: number) => {
   const rgb = color.startsWith('#')
     ? [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16)).join(',')
     : color.slice(4, -1);
+  // eslint-disable-next-line no-restricted-syntax -- adds alpha to a theme colour
   return `rgba(${rgb},${alpha})`;
 };
 
