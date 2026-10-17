@@ -113,11 +113,12 @@ it('draws nothing while the theme preference is read, and stops waiting for it a
   }
 });
 
-it('stays on the screen it is on when the theme changes', async () => {
+it('stays on the screen it is on when the theme changes, without starting the launch again', async () => {
   jest.mocked(SecureStore.getItemAsync).mockResolvedValue(null);
+  const store = createAppStore();
   const { setTheme } = await renderWithTheme(
     <SafeAreaProvider initialMetrics={metrics}>
-      <Provider store={createAppStore()}>
+      <Provider store={store}>
         <RootNavigator />
       </Provider>
     </SafeAreaProvider>,
@@ -126,10 +127,15 @@ it('stays on the screen it is on when the theme changes', async () => {
   fireEvent.press(screen.getByText('Sign In'));
   await act(() => jest.advanceTimersByTimeAsync(1000));
   fireEvent.changeText(screen.getByLabelText('Email'), 'me@example.com');
+  const { attempt } = store.getState().launch;
+  const storedSessionReads = jest.mocked(SecureStore.getItemAsync).mock.calls.length;
 
   await setTheme('dark');
   await act(() => jest.advanceTimersByTimeAsync(1000));
 
   expect(screen.getByText('No account yet?')).toBeTruthy();
   expect(screen.getByLabelText('Email').props.value).toBe('me@example.com');
+  expect(store.getState().launch.attempt).toBe(attempt);
+  expect(SecureStore.getItemAsync).toHaveBeenCalledTimes(storedSessionReads);
+  expect(mockedRequest).not.toHaveBeenCalled();
 });

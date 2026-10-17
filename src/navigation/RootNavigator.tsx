@@ -56,9 +56,20 @@ const RootNavigator = () => {
   const isReady = phase === 'ready';
 
   const navigationTheme = useMemo(() => {
+    const { colors } = colorTheme;
     const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
 
-    return { ...base, colors: { ...base.colors, background: colorTheme.colors.bg } };
+    return {
+      ...base,
+      colors: {
+        primary: colors.accent,
+        background: colors.bg,
+        card: colors.bg,
+        text: colors.text,
+        border: colors.hairline,
+        notification: colors.danger,
+      },
+    };
   }, [scheme, colorTheme]);
 
   // The system launch screen stays up while the fonts and the theme preference load, so the first frame never swaps

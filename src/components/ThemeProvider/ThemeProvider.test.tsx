@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import type { ColorSchemeName as ReportedScheme } from 'react-native';
-import { Appearance, Text } from 'react-native';
+import type { AppStateStatus, ColorSchemeName as ReportedScheme } from 'react-native';
+import { Appearance, AppState, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, render, screen } from '@testing-library/react-native';
 
@@ -13,15 +13,33 @@ jest.mock('@components/Alert/AlertProvider/globalAlert', () => ({ showGlobalAler
 
 const KEY = 'sbm-THEME_PREFERENCE';
 
+// A stand-in for React Native's Appearance: it reports the override while one is set and the device's
+// appearance otherwise, and its native side announces a change only when what it reports changes.
 // Typed wider than the platform's own type: a device may report no appearance at all.
 let deviceScheme: ReportedScheme | null;
+let override: 'light' | 'dark' | null;
+let reported: ReportedScheme | null;
+// The native side still answers with the old override for a moment after it is cleared.
+let nativeLags: boolean;
 const appearanceListeners = new Set<Appearance.AppearanceListener>();
+const appStateListeners = new Set<(state: AppStateStatus) => void>();
 
-const setDeviceScheme = (next: ReportedScheme) =>
+const announceNativeChange = () => {
+  const next = override ?? deviceScheme;
+  if (next === reported) return;
+
+  reported = next;
+  appearanceListeners.forEach((listener) => listener({ colorScheme: next as ReportedScheme }));
+};
+
+// Under an override the device's own changes are not announced; `silently` is a change made while backgrounded.
+const setDeviceScheme = (next: ReportedScheme, { silently = false } = {}) =>
   act(() => {
     deviceScheme = next;
-    appearanceListeners.forEach((listener) => listener({ colorScheme: next }));
+    if (!silently && override === null) announceNativeChange();
   });
+
+const returnToForeground = () => act(() => appStateListeners.forEach((listener) => listener('active')));
 
 const deferred = <T,>() => {
   let resolve!: (value: T) => void;
@@ -64,8 +82,22 @@ beforeEach(async () => {
   jest.clearAllMocks();
   await AsyncStorage.clear();
   deviceScheme = 'light';
+  override = null;
+  reported = 'light';
+  nativeLags = false;
   appearanceListeners.clear();
-  jest.spyOn(Appearance, 'getColorScheme').mockImplementation(() => deviceScheme as ReportedScheme);
+  appStateListeners.clear();
+  jest.spyOn(Appearance, 'getColorScheme').mockImplementation(() => reported as ReportedScheme);
+  jest.spyOn(Appearance, 'setColorScheme').mockImplementation((next) => {
+    override = next === 'unspecified' ? null : next;
+    if (next !== 'unspecified') reported = next;
+    else if (!nativeLags) reported = deviceScheme;
+  });
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, listener) => {
+    appStateListeners.add(listener);
+
+    return { remove: () => appStateListeners.delete(listener) } as ReturnType<typeof AppState.addEventListener>;
+  });
   jest.spyOn(Appearance, 'addChangeListener').mockImplementation((listener) => {
     appearanceListeners.add(listener);
 
@@ -80,6 +112,7 @@ afterEach(() => {
 describe('restoring the preference', () => {
   it('follows the device when nothing is stored', async () => {
     deviceScheme = 'dark';
+    reported = 'dark';
 
     await renderTheme();
 
@@ -98,6 +131,7 @@ describe('restoring the preference', () => {
   it('treats an unknown stored value as System', async () => {
     await AsyncStorage.setItem(KEY, 'sepia');
     deviceScheme = 'dark';
+    reported = 'dark';
 
     await renderTheme();
 
@@ -171,6 +205,7 @@ describe('following the device', () => {
 
   it('reads an appearance the platform cannot report as light', async () => {
     deviceScheme = null;
+    reported = null;
     await renderTheme();
     expect(shown()).toBe('system:light:ready');
 
@@ -203,9 +238,90 @@ describe('following the device', () => {
   });
 });
 
+describe('native appearance', () => {
+  const nativeCalls = () => jest.mocked(Appearance.setColorScheme).mock.calls.map(([scheme]) => scheme);
+
+  it('sets nothing native until the stored preference is known, then applies it', async () => {
+    const read = deferred<string | null>();
+    jest.mocked(AsyncStorage.getItem).mockReturnValueOnce(read.promise);
+    await renderTheme();
+    expect(nativeCalls()).toEqual([]);
+
+    await act(async () => read.resolve('dark'));
+
+    expect(nativeCalls()).toEqual(['dark']);
+    expect(shown()).toBe('dark:dark:ready');
+  });
+
+  it('overrides native surfaces for a manual choice and hands them back to the device for System', async () => {
+    await renderTheme();
+    expect(nativeCalls()).toEqual(['unspecified']);
+
+    await choose('dark');
+    await choose('light');
+    await choose('system');
+
+    expect(nativeCalls()).toEqual(['unspecified', 'dark', 'light', 'unspecified']);
+  });
+
+  it('never makes the resolved System scheme an override', async () => {
+    await renderTheme();
+    await setDeviceScheme('dark');
+    await setDeviceScheme('light');
+
+    expect(nativeCalls()).toEqual(['unspecified']);
+  });
+
+  it.each(['light', 'dark'] as const)(
+    'returns from %s to System with the device’s current appearance',
+    async (manual) => {
+      await renderTheme();
+      await choose(manual);
+      await setDeviceScheme(manual === 'dark' ? 'light' : 'dark');
+      expect(shown()).toBe(`${manual}:${manual}:ready`);
+
+      await choose('system');
+
+      const device = manual === 'dark' ? 'light' : 'dark';
+      expect(shown()).toBe(`system:${device}:ready`);
+
+      await setDeviceScheme(manual);
+      expect(shown()).toBe(`system:${manual}:ready`);
+    },
+  );
+
+  it('takes the native correction when clearing an override first reads the old one', async () => {
+    await renderTheme();
+    await choose('dark');
+    nativeLags = true;
+
+    await choose('system');
+    expect(shown()).toBe('system:dark:ready');
+
+    await act(() => announceNativeChange());
+    expect(shown()).toBe('system:light:ready');
+  });
+
+  it('reads the device again on return from the background under System only', async () => {
+    await renderTheme();
+    await setDeviceScheme('dark', { silently: true });
+    expect(shown()).toBe('system:light:ready');
+
+    await returnToForeground();
+    expect(shown()).toBe('system:dark:ready');
+
+    await choose('light');
+    const calls = nativeCalls().length;
+    await returnToForeground();
+    expect(nativeCalls()).toHaveLength(calls);
+    expect(shown()).toBe('light:light:ready');
+  });
+});
+
 describe('saving the preference', () => {
   it('applies a choice at once and stores the preference, not the resolved scheme', async () => {
     deviceScheme = 'dark';
+    reported = 'dark';
     await renderTheme();
 
     await choose('light');

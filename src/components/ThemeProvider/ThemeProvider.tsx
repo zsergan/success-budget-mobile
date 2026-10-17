@@ -9,7 +9,7 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
-import { Appearance, StatusBar } from 'react-native';
+import { Appearance, AppState, StatusBar } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
@@ -36,13 +36,28 @@ export interface ThemeContextValue {
 
 export const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+// The appearance React Native reports: the device's under System, the override under a manual choice.
+const appearanceListeners = new Set<() => void>();
+
 const subscribeToAppearance = (onChange: () => void) => {
+  appearanceListeners.add(onChange);
   const subscription = Appearance.addChangeListener(onChange);
 
-  return () => subscription.remove();
+  return () => {
+    appearanceListeners.delete(onChange);
+    subscription.remove();
+  };
 };
 
 const getSystemScheme = () => toColorScheme(Appearance.getColorScheme());
+
+// Native surfaces (alerts, keyboards, pickers) take a manual choice; System hands them back to the device.
+// Clearing the override also re-reads the device's appearance; the native change event corrects it if that
+// read was still the old override.
+const applyNativeAppearance = (preference: ThemePreference) => {
+  Appearance.setColorScheme(preference === 'system' ? 'unspecified' : preference);
+  appearanceListeners.forEach((listener) => listener());
+};
 
 // One write at a time, always of the newest choice, so rapid taps leave the last one stored.
 const createPreferenceWriter = () => {
@@ -105,6 +120,22 @@ const ThemeProvider = ({ children }: Props) => {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Applied from the preference only, never from a resolved System scheme, so System keeps following the device.
+  useEffect(() => {
+    if (isReady) applyNativeAppearance(preference);
+  }, [isReady, preference]);
+
+  // A change made while the app was in the background is read again on return.
+  useEffect(() => {
+    if (preference !== 'system') return;
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') applyNativeAppearance('system');
+    });
+
+    return () => subscription.remove();
+  }, [preference]);
 
   const setPreference = useCallback(
     (next: ThemePreference) => {
