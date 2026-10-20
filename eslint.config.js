@@ -61,7 +61,7 @@ module.exports = defineConfig([
       ],
       // TODO: this codebase relies on the `useRef(...).current` lazy-init idiom (BottomSheetModal,
       // AlertProvider, LongPressedModal) in several places without React Compiler.
-      // Downgraded to `warn` pending a dedicated refactor; see .private/REFACTOR_PLAN.md.
+      // Downgraded to `warn` pending a dedicated refactor.
       'react-hooks/refs': 'warn',
     },
   },

@@ -68,3 +68,9 @@ To switch, copy [`.env.example`](./.env.example) to `.env.local`, set
 are inlined at bundle time). To point at some other backend, set
 `EXPO_PUBLIC_API_BASE_URL` instead -- it wins over `EXPO_PUBLIC_API_ENV`, and
 any non-local URL must use `https://` (enforced at startup).
+
+## License
+
+Source available for review only. Copyright (c) 2024-2026 Zakhar Sergan.
+All rights reserved: no permission is granted to use, copy, modify or
+distribute this code.
