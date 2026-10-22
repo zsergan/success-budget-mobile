@@ -62,10 +62,13 @@ const useTransactionDelete = () => {
     runRef.current = runDelete;
   }, [runDelete]);
 
-  // `onSettled` runs when the confirmation closes either way, e.g. to slide a row back.
+  // `onSettled` runs when the confirmation closes either way, or at once when there is nothing to delete.
   const requestDelete = useCallback(
     (transaction: TransactionModel, onSettled?: () => void) => {
-      if (isInitialBalance(transaction) || currentSpaceId === null) return;
+      if (isInitialBalance(transaction) || currentSpaceId === null) {
+        onSettled?.();
+        return;
+      }
       const sessionKey = store.getState().auth.sessionKey;
 
       Alert.alert(

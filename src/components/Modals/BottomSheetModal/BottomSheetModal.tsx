@@ -3,13 +3,14 @@ import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from '
 import type { LayoutChangeEvent } from 'react-native';
 import { useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
+import type { BottomSheetBackdropProps, BottomSheetModalProps } from '@gorhom/bottom-sheet';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 
 import useThemedStyles from '@hooks/useThemedStyles';
 import theme from '@shared/theme';
 
 import createStyles from './style';
+import useReturnToRest from './useReturnToRest';
 
 export type Ref = BottomSheetModal;
 export const FITTED_SHEET_HANDLE_HEIGHT = 24;
@@ -28,8 +29,14 @@ interface Props {
   snapPoint?: string;
   /** Replaces the backdrop's own close, for a sheet that decides itself whether it may close. */
   onBackdropPress?: () => void;
+  /** On a sheet already open: 'push' keeps that one in place beneath it. Defaults to the library's 'switch'. */
+  stackBehavior?: BottomSheetModalProps['stackBehavior'];
+  /** False while the sheet waits on its action: no swipe or backdrop press closes it, only its owner hiding it. */
+  isDismissible?: boolean;
   /** Asked when a swipe starts to close the sheet; true keeps it open, e.g. to confirm first. */
   shouldKeepOpen?: () => boolean;
+  /** Called once a sheet kept open is back at rest, so what it leads to never opens mid-animation. */
+  onKeptOpen?: () => void;
   onHandleTouch?: () => void;
 }
 
@@ -41,7 +48,10 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
     fitContent = false,
     snapPoint = '85%',
     onBackdropPress,
+    stackBehavior,
+    isDismissible = true,
     shouldKeepOpen,
+    onKeptOpen,
     onHandleTouch,
   },
   ref,
@@ -61,12 +71,22 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
     if (height > 0) setContentHeight(height);
   }, []);
 
+  const handleKeptOpen = useCallback(() => onKeptOpen?.(), [onKeptOpen]);
+  const { animatedIndex, watch: watchReturn, stop: stopWatchingReturn } = useReturnToRest(handleKeptOpen);
+
   const handleAnimate = useCallback(
     (_fromIndex: number, toIndex: number) => {
-      if (toIndex === -1 && shouldKeepOpen?.()) sheetRef.current?.snapToIndex(0);
+      if (toIndex !== -1 || !shouldKeepOpen?.()) return;
+      watchReturn();
+      sheetRef.current?.snapToIndex(0);
     },
-    [shouldKeepOpen],
+    [shouldKeepOpen, watchReturn],
   );
+
+  const handleDismiss = useCallback(() => {
+    stopWatchingReturn();
+    onDismiss?.();
+  }, [onDismiss, stopWatchingReturn]);
 
   const renderHandle = useCallback(
     () => (
@@ -83,17 +103,19 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
         {...backdropProps}
         appearsOnIndex={0}
         disappearsOnIndex={-1}
-        pressBehavior={onBackdropPress ? 'none' : 'close'}
-        onPress={onBackdropPress}
+        pressBehavior={onBackdropPress || !isDismissible ? 'none' : 'close'}
+        onPress={isDismissible ? onBackdropPress : undefined}
       />
     ),
-    [onBackdropPress],
+    [onBackdropPress, isDismissible],
   );
 
   return (
     <BottomSheetModal
       ref={sheetRef}
       index={0}
+      stackBehavior={stackBehavior}
+      animatedIndex={animatedIndex}
       snapPoints={
         dynamicSizing
           ? undefined
@@ -104,7 +126,8 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
       backgroundStyle={styles.background}
       handleComponent={fitContent ? renderHandle : null}
       enableContentPanningGesture={!fitContent}
-      onDismiss={onDismiss}
+      enablePanDownToClose={isDismissible}
+      onDismiss={handleDismiss}
       onAnimate={shouldKeepOpen ? handleAnimate : undefined}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"

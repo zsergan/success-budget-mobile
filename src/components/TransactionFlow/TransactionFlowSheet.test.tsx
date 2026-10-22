@@ -1,6 +1,7 @@
 import type { ReactNode, Ref } from 'react';
+import { useState } from 'react';
 import type { AppStateStatus } from 'react-native';
-import { AccessibilityInfo, Alert, AppState, PixelRatio } from 'react-native';
+import { AccessibilityInfo, Alert, AppState, BackHandler, PixelRatio, Text } from 'react-native';
 import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
@@ -20,6 +21,8 @@ import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { ScreenNames, AppColor, TransactionKind, TransactionType } from '@shared/enums';
 import { renderWithTheme } from '@components/ThemeProvider/themeTestUtils';
 import { colorThemes } from '@shared/theme';
+import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
+import { useBackPress, useSheetPresence } from '@hooks';
 import TransactionFlowSheet from './TransactionFlowSheet';
 
 interface SheetProps {
@@ -28,6 +31,7 @@ interface SheetProps {
   onDismiss?: () => void;
   backdropComponent?: (props: object) => ReactNode;
   handleComponent?: (() => ReactNode) | null;
+  enablePanDownToClose?: boolean;
 }
 
 const mockCategorySheet: { holdDismiss: boolean; finishDismiss?: () => void } = { holdDismiss: false };
@@ -37,12 +41,32 @@ const mockSheet: { props?: SheetProps; presents: number; keptOpen: number; swipe
   keptOpen: 0,
 };
 
-// A swipe starting to close the flow sheet; true when the sheet snapped back instead.
+// The flow sheet's way back into place runs on the UI thread; here a test says when it got there.
+const mockReturn: { finish?: () => void } = {};
+jest.mock('@components/Modals/BottomSheetModal/useReturnToRest', () => (onRest: () => void) => ({
+  animatedIndex: undefined,
+  watch: () => {
+    mockReturn.finish = onRest;
+  },
+  stop: () => {},
+}));
+
+const finishReturn = () => {
+  const finish = mockReturn.finish;
+  mockReturn.finish = undefined;
+  act(() => finish?.());
+};
+
+// A swipe starting to close the flow sheet; true when the sheet snapped back into place instead.
 const startSwipeClose = () => {
   const before = mockSheet.keptOpen;
   act(() => mockSheet.props?.onAnimate?.(0, -1));
+  finishReturn();
   return mockSheet.keptOpen > before;
 };
+
+const mockBack: { press?: () => boolean | null | undefined } = {};
+const pressBack = () => act(() => void mockBack.press?.());
 
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = jest.requireActual('react');
@@ -272,7 +296,7 @@ const fillExpense = () => {
 };
 
 const pressBackdrop = () =>
-  act(() => (mockSheet.props?.backdropComponent?.({}) as { props: { onPress: () => void } }).props.onPress());
+  act(() => (mockSheet.props?.backdropComponent?.({}) as { props: { onPress?: () => void } }).props.onPress?.());
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -289,6 +313,11 @@ beforeEach(() => {
   categoriesResponse = categories;
   limitsResponse = noLimits;
   mockSheet.presents = 0;
+  mockReturn.finish = undefined;
+  jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_event, handler) => {
+    mockBack.press = () => handler({} as never);
+    return { remove: () => {} };
+  });
   mockedRequest.mockImplementation(respond);
   jest.spyOn(Alert, 'alert');
   jest.spyOn(PixelRatio, 'getFontScale').mockReturnValue(1);
@@ -370,6 +399,104 @@ describe('TransactionFlowSheet', () => {
     expect(Alert.alert).toHaveBeenCalledWith('Discard transaction?', expect.any(String), expect.any(Array));
   });
 
+  it('asks before a swipe discards only once the sheet is back in place', async () => {
+    const { open, flow } = renderFlow();
+    open();
+    await settle();
+    fillExpense();
+
+    act(() => mockSheet.props?.onAnimate?.(0, -1));
+    expect(Alert.alert).not.toHaveBeenCalled();
+
+    finishReturn();
+
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
+    expect(flow()?.draft).toMatchObject({ amount: '12' });
+  });
+
+  it('opens one confirmation at a time, whichever way it is asked for', async () => {
+    const { open, flow } = renderFlow();
+    open();
+    await settle();
+    fillExpense();
+
+    fireEvent.press(screen.getByLabelText('Close'));
+    pressBack();
+    pressBackdrop();
+    expect(startSwipeClose()).toBe(true);
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
+
+    const [, , buttons] = (Alert.alert as jest.Mock).mock.calls[0];
+    act(() => buttons[1].onPress());
+    pressBack();
+
+    expect(Alert.alert).toHaveBeenCalledTimes(2);
+    expect(flow()?.draft).toMatchObject({ amount: '12' });
+  });
+
+  it('opens and closes a sheet pushed above the form, leaving the form as it was', async () => {
+    const store = createAppStore();
+    withProfile(store);
+    store.dispatch(activateSpace(1));
+    const stacked: { show?: (isShown: boolean) => void } = {};
+
+    const StackedSheet = () => {
+      const [isShown, setShown] = useState(false);
+      stacked.show = setShown;
+      const { ref, settleDismiss } = useSheetPresence(isShown);
+      useBackPress(isShown, () => setShown(false));
+
+      return (
+        <BottomModal ref={ref} fitContent stackBehavior="push" onDismiss={() => settleDismiss() && setShown(false)}>
+          <Text>Stacked above</Text>
+        </BottomModal>
+      );
+    };
+
+    render(
+      <>
+        {flowTree(store)}
+        <SafeAreaProvider
+          initialMetrics={{
+            frame: { x: 0, y: 0, width: 400, height: 800 },
+            insets: { top: 0, right: 0, bottom: 0, left: 0 },
+          }}
+        >
+          <StackedSheet />
+        </SafeAreaProvider>
+      </>,
+    );
+    act(() => {
+      store.dispatch(
+        createOpened({
+          spaceId: 1,
+          transactionType: TransactionType.EXPENSE,
+          walletId: 7,
+          now: new Date().toISOString(),
+        }),
+      );
+    });
+    await settle();
+    fillExpense();
+
+    act(() => stacked.show?.(true));
+    await settle();
+    expect(screen.getByText('Stacked above')).toBeTruthy();
+
+    pressBack();
+    await settle();
+
+    expect(screen.queryByText('Stacked above')).toBeNull();
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(mockSheet.presents).toBe(1);
+    expect(screen.getAllByText('New transaction')).toHaveLength(1);
+    expect(screen.getByLabelText('Amount').props.value).toBe('12');
+
+    pressBack();
+
+    expect(Alert.alert).toHaveBeenCalledWith('Discard transaction?', expect.any(String), expect.any(Array));
+  });
+
   it('confirms only after the API answers, locking the sheet meanwhile', async () => {
     const { open, flow } = renderFlow();
 
@@ -380,6 +507,7 @@ describe('TransactionFlowSheet', () => {
 
     expect(screen.getByText('Saving…')).toBeTruthy();
     expect(screen.queryByText('Transaction saved')).toBeNull();
+    expect(mockSheet.props?.enablePanDownToClose).toBe(false);
     expect(startSwipeClose()).toBe(true);
 
     fireEvent.press(screen.getByLabelText('Close'));
@@ -1069,6 +1197,26 @@ describe('TransactionFlowSheet', () => {
 
     expect(screen.getByText('This transaction no longer exists')).toBeTruthy();
     expect(mockAddAlert).not.toHaveBeenCalled();
+  });
+
+  it('keeps the details open under a delete confirmation, and asks again once it closed', async () => {
+    const { openDetails, flow } = renderFlow();
+    openDetails();
+    await settle();
+
+    fireEvent.press(screen.getByText('Delete transaction'));
+    pressBack();
+    fireEvent.press(screen.getByLabelText('Close'));
+    fireEvent.press(screen.getByText('Delete transaction'));
+
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
+    expect(flow()).toMatchObject({ view: { name: 'details' } });
+
+    const [, , buttons] = (Alert.alert as jest.Mock).mock.calls[0];
+    act(() => buttons[1].onPress());
+    fireEvent.press(screen.getByText('Delete transaction'));
+
+    expect(Alert.alert).toHaveBeenCalledTimes(2);
   });
 
   it('deletes the saved record, not the draft, and closes only after the server answers', async () => {

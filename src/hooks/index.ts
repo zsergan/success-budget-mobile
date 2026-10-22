@@ -1,4 +1,5 @@
 export { default as useAlert } from './useAlert';
+export { default as useBackPress } from './useBackPress';
 export { default as useBalanceVisibility } from './useBalanceVisibility';
 export { default as useConfirmAction } from './useConfirmAction';
 export type { ConfirmAction } from './useConfirmAction';
@@ -8,6 +9,7 @@ export { default as usePendingWrites } from './usePendingWrites';
 export { default as usePendingWritesSync } from './usePendingWritesSync';
 export { default as usePeriod } from './usePeriod';
 export { default as useRefreshOnReturn } from './useRefreshOnReturn';
+export { default as useSheetPresence } from './useSheetPresence';
 export { default as useSingleSubmit } from './useSingleSubmit';
 export { default as useSpaceRefresh } from './useSpaceRefresh';
 export { default as useSwipe } from './useSwipe';
