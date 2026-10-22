@@ -91,10 +91,10 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
   const renderHandle = useCallback(
     () => (
       <View style={styles.handle} onTouchStart={onHandleTouch} testID="bottom-sheet-handle">
-        <View style={styles.handleIndicator} />
+        <View style={[styles.handleIndicator, !isDismissible && styles.handleIndicatorLocked]} />
       </View>
     ),
-    [onHandleTouch, styles],
+    [onHandleTouch, styles, isDismissible],
   );
 
   const renderBackdrop = useCallback(

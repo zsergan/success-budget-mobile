@@ -30,6 +30,14 @@ export interface ThemeColors {
   hairline: string;
   danger: string;
   onDanger: string;
+  // A confirmation's actions, as in Overlays and Feedback.dc.html: the destructive one, with a label that passes AA,
+  // and the inverted neutral one, which stays visible on the sheet in the dark theme.
+  destructive: string;
+  onDestructive: string;
+  neutral: string;
+  onNeutral: string;
+  // The outline of a confirmation's secondary action; the dark hairline does not show on the sheet.
+  line: string;
   ok: string;
   onOk: string;
   warn: string;
@@ -109,6 +117,11 @@ const lightColors: ThemeColors = {
   hairline: '#E3E7EC',
   danger: '#E04F3D',
   onDanger: '#FFFDFA',
+  destructive: '#C3392A',
+  onDestructive: '#FFFFFF',
+  neutral: '#1D2430',
+  onNeutral: '#FCFDFE',
+  line: '#E3E7EC',
   ok: '#3FAE6A',
   onOk: '#FFFDFA',
   warn: '#F0A92A',
@@ -153,6 +166,11 @@ const darkColors: ThemeColors = {
   hairline: '#222A35',
   danger: '#F2695A',
   onDanger: '#FFFDFA',
+  destructive: '#F2695A',
+  onDestructive: '#1C0F0D',
+  neutral: '#F2F4F8',
+  onNeutral: '#0E1218',
+  line: '#252E3B',
   ok: '#4DC07B',
   onOk: '#0C1A11',
   warn: '#F7BD4D',
