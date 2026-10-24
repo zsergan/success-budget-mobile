@@ -1,14 +1,21 @@
 import { Provider } from 'react-redux';
+import { BackHandler } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { MainTabNavigationProp } from '@shared/types';
-import type { ScreenNames } from '@shared/enums';
 import { createAppStore } from '@redux/Store';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { activateSpace } from '@redux/state/space/thunks';
 import { walletApi } from '@redux/state/wallet/api';
-import { AppColor } from '@shared/enums';
-import { pressSheetBackdrop, resetSheets, swipeDownSheet, withSheetHost } from '@components/ConfirmationSheet/testing';
+import { AppColor, ScreenNames } from '@shared/enums';
+import {
+  finishDismissals,
+  holdDismissals,
+  pressSheetBackdrop,
+  resetSheets,
+  swipeDownSheet,
+  withSheetHost,
+} from '@components/ConfirmationSheet/testing';
 import WalletsSection from './WalletsSection';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
@@ -74,7 +81,8 @@ const renderSection = () => {
     ]),
   );
 
-  const navigation = { navigate: jest.fn() } as unknown as MainTabNavigationProp<ScreenNames.HOME_TAB>;
+  const navigate = jest.fn();
+  const navigation = { navigate } as unknown as MainTabNavigationProp<ScreenNames.HOME_TAB>;
 
   render(
     <Provider store={store}>
@@ -82,12 +90,13 @@ const renderSection = () => {
     </Provider>,
   );
 
+  const openMenu = () => fireEvent.press(screen.getByRole('button', { name: 'Cash options' }));
   const openConfirm = () => {
-    fireEvent.press(screen.getByRole('button', { name: 'Cash options' }));
-    fireEvent.press(screen.getByText('Delete'));
+    openMenu();
+    fireEvent.press(screen.getByRole('button', { name: 'Delete wallet' }));
   };
 
-  return { store, openConfirm };
+  return { store, navigate, openMenu, openConfirm };
 };
 
 const press = (label: string) => fireEvent.press(screen.getByRole('button', { name: label }));
@@ -188,4 +197,106 @@ it('says the wallet goes but its transactions stay, without calling it permanent
     ),
   ).toBeTruthy();
   expect(screen.queryByText(/permanently/)).toBeNull();
+});
+
+describe('the wallet menu', () => {
+  const MENU_ACTIONS = ['Edit wallet', 'Delete wallet'];
+  const menuShown = () => MENU_ACTIONS.every((label) => screen.queryByRole('button', { name: label }) !== null);
+
+  let pressBack: () => void = () => {};
+  beforeEach(() => {
+    jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_event, handler) => {
+      pressBack = () => handler({} as never);
+      return { remove: () => {} };
+    });
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('shows the wallet it is about with its actions', () => {
+    const { openMenu } = renderSection();
+
+    openMenu();
+
+    expect(menuShown()).toBe(true);
+    expect(screen.getAllByText('Cash')).toHaveLength(2);
+  });
+
+  it('opens the deletion question only once it has closed', async () => {
+    const { openMenu } = renderSection();
+    holdDismissals();
+
+    openMenu();
+    press('Delete wallet');
+
+    expect(screen.queryByText(QUESTION)).toBeNull();
+
+    await finishDismissals();
+
+    expect(menuShown()).toBe(false);
+    expect(screen.getByText(QUESTION)).toBeTruthy();
+  });
+
+  it('opens the wallet for editing only once it has closed', async () => {
+    const { openMenu, navigate } = renderSection();
+    holdDismissals();
+
+    openMenu();
+    press('Edit wallet');
+
+    expect(navigate).not.toHaveBeenCalled();
+
+    await finishDismissals();
+
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(ScreenNames.ADD_WALLET_SCREEN, {
+      id: 3,
+      walletName: 'Cash',
+      balance: '50',
+      design: AppColor.SLATE,
+    });
+  });
+
+  it.each([
+    ['the backdrop', pressSheetBackdrop],
+    ['a swipe', swipeDownSheet],
+    ['Android Back', () => act(() => pressBack())],
+  ])('closes on %s without editing or deleting', (_way, close) => {
+    const { openMenu, navigate } = renderSection();
+
+    openMenu();
+    close();
+
+    expect(menuShown()).toBe(false);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(screen.queryByText(QUESTION)).toBeNull();
+
+    openMenu();
+
+    expect(menuShown()).toBe(true);
+  });
+
+  it('leads nowhere once the space changes while it closes', async () => {
+    const { store, openMenu } = renderSection();
+    holdDismissals();
+
+    openMenu();
+    press('Delete wallet');
+    act(() => {
+      store.dispatch(activateSpace(2));
+    });
+    await finishDismissals();
+
+    expect(screen.queryByText(QUESTION)).toBeNull();
+  });
+
+  it('closes on a space switch', () => {
+    const { store, openMenu } = renderSection();
+
+    openMenu();
+    act(() => {
+      store.dispatch(activateSpace(2));
+    });
+
+    expect(menuShown()).toBe(false);
+  });
 });

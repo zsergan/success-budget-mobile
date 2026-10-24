@@ -8,9 +8,6 @@ const createStyles = () =>
     section: {
       marginTop: 14,
     },
-    longPressedItem: {
-      width: '100%',
-    },
     loadingContainer: {
       height: 140,
       alignItems: 'center',
