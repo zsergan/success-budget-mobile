@@ -1,20 +1,18 @@
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 import type { WalletCardProps } from '@components';
 import {
-  BottomModal,
   Carousel,
+  ConfirmationSheet,
   EmptyState,
   LongPressedModal,
   SectionTitle,
   TinyButton,
-  TinyWallet,
   WalletCard,
 } from '@components';
 import { useTheme, useThemedStyles } from '@hooks';
 import type { GetWalletsResponse } from '@api/dto';
-import type { AppColor } from '@shared/enums';
 import type { MainTabNavigationProp } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { useAppSelector } from '@redux/hooks';
@@ -22,22 +20,6 @@ import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import useWalletActions from './useWalletActions';
 
 import createStyles from './style';
-
-const renderBottomModalContent = (
-  styles: ReturnType<typeof createStyles>,
-  walletName: string,
-  currencyCode: string,
-  design: AppColor | undefined,
-  error: string | null,
-) => (
-  <View style={styles.confirmContainer}>
-    <TinyWallet walletName={walletName} currencyCode={currencyCode} design={design} />
-
-    <Text style={styles.confirmText}>{`Delete a ${walletName} permanently?`}</Text>
-
-    {error && <Text style={styles.confirmError}>{error}</Text>}
-  </View>
-);
 
 const toWalletCardProps = (
   item: GetWalletsResponse,
@@ -116,18 +98,19 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
           onDelete={onDeletePress}
         />
 
-        <BottomModal
-          isVisible={!!walletToDelete}
-          onClose={onConfirmCancel}
-          disabled={isDeleting}
-          content={renderBottomModalContent(
-            styles,
-            walletToDelete?.wallet.wallet_name || '',
-            currencyCode,
-            walletToDelete?.wallet.design,
-            deleteError,
-          )}
-          actions={[{ title: isDeleting ? 'Deleting…' : 'Delete', onPress: onConfirm }]}
+        <ConfirmationSheet
+          confirmation={
+            walletToDelete && {
+              title: `Delete “${walletToDelete.wallet.wallet_name}”?`,
+              // A wallet is deleted softly: its records stay, under "Deleted wallet".
+              description:
+                'It leaves your wallets. Its transactions stay in your history and totals, marked “Deleted wallet”.',
+              primaryAction: { label: 'Delete wallet', tone: 'danger', busyLabel: 'Deleting…', onPress: onConfirm },
+              onCancel: onConfirmCancel,
+              isPending: isDeleting,
+              message: deleteError ? { text: deleteError } : undefined,
+            }
+          }
         />
 
         {isLoading && (

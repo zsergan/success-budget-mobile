@@ -31,9 +31,7 @@ const useWalletActions = () => {
     setIsModalVisible(false);
   };
 
-  const onConfirm = () => {
-    deletion.confirm((wallet, spaceId) => deleteWallet({ spaceId, walletId: wallet.wallet.id }));
-  };
+  const onConfirm = () => deletion.confirm((wallet, spaceId) => deleteWallet({ spaceId, walletId: wallet.wallet.id }));
 
   return {
     wallets,

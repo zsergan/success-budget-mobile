@@ -1,6 +1,5 @@
-import { Modal } from 'react-native';
 import { Provider } from 'react-redux';
-import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { MainTabNavigationProp } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
@@ -9,6 +8,7 @@ import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { activateSpace } from '@redux/state/space/thunks';
 import { walletApi } from '@redux/state/wallet/api';
 import { AppColor } from '@shared/enums';
+import { pressSheetBackdrop, resetSheets, swipeDownSheet, withSheetHost } from '@components/ConfirmationSheet/testing';
 import WalletsSection from './WalletsSection';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
@@ -20,11 +20,16 @@ jest.mock('@api/instance', () => ({
   createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
 }));
 jest.mock('expo-secure-store');
+jest.mock('@gorhom/bottom-sheet', () => jest.requireActual('@components/ConfirmationSheet/testing').bottomSheetMock);
+jest.mock(
+  '@components/Modals/BottomSheetModal/useReturnToRest',
+  () => jest.requireActual('@components/ConfirmationSheet/testing').useReturnToRestMock,
+);
 
 // RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
 jest.useFakeTimers();
 
-const QUESTION = 'Delete a Cash permanently?';
+const QUESTION = 'Delete “Cash”?';
 
 const deleteRequests = () =>
   mockedRequest.mock.calls.filter(([config]: [{ method?: string }]) => config.method === 'DELETE');
@@ -73,7 +78,7 @@ const renderSection = () => {
 
   render(
     <Provider store={store}>
-      <WalletsSection navigation={navigation} onFocusedWalletChange={jest.fn()} />
+      {withSheetHost(<WalletsSection navigation={navigation} onFocusedWalletChange={jest.fn()} />)}
     </Provider>,
   );
 
@@ -85,26 +90,27 @@ const renderSection = () => {
   return { store, openConfirm };
 };
 
-const confirmModal = () => within(screen.UNSAFE_getAllByType(Modal).find((modal) => modal.props.visible)!);
+const press = (label: string) => fireEvent.press(screen.getByRole('button', { name: label }));
 
-// The backdrop and Android back both go through ModalContainer's onClose.
 const dismissAll = () => {
-  const modal = screen.UNSAFE_getAllByType(Modal).find(({ props }) => props.visible)!;
-
-  fireEvent.press(confirmModal().getByText('Cancel'));
-  fireEvent.press(screen.UNSAFE_getAllByProps({ onPress: modal.props.onRequestClose })[0]);
-  act(() => modal.props.onRequestClose());
+  press('Cancel');
+  pressSheetBackdrop();
+  swipeDownSheet();
 };
 
-beforeEach(() => mockedRequest.mockReset());
+beforeEach(() => {
+  mockedRequest.mockReset();
+  resetSheets();
+});
 
 it('sends one request for a double tap and stays open and locked until the server answers', async () => {
   const response = deferredDelete();
   const { openConfirm } = renderSection();
 
   openConfirm();
-  fireEvent.press(confirmModal().getByText('Delete'));
-  fireEvent.press(confirmModal().getByText('Deleting…'));
+  press('Delete wallet');
+  press('Deleting…');
+  expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
   dismissAll();
 
   expect(deleteRequests()).toHaveLength(1);
@@ -121,7 +127,7 @@ it('shows a failure inside the dialog, allows a retry, and forgets it on reopeni
   const { openConfirm } = renderSection();
 
   openConfirm();
-  fireEvent.press(confirmModal().getByText('Delete'));
+  press('Delete wallet');
   await failure.reject('Wallet has transactions');
 
   expect(screen.getByText(QUESTION)).toBeTruthy();
@@ -129,13 +135,13 @@ it('shows a failure inside the dialog, allows a retry, and forgets it on reopeni
 
   const retry = deferredDelete();
 
-  fireEvent.press(confirmModal().getByText('Delete'));
+  press('Delete wallet');
 
   expect(deleteRequests()).toHaveLength(2);
   expect(screen.queryByText('Wallet has transactions')).toBeNull();
 
   await retry.reject('Still has transactions');
-  fireEvent.press(confirmModal().getByText('Cancel'));
+  press('Cancel');
 
   expect(screen.queryByText(QUESTION)).toBeNull();
 
@@ -160,7 +166,7 @@ it.each([
   const { store, openConfirm } = renderSection();
 
   openConfirm();
-  fireEvent.press(confirmModal().getByText('Delete'));
+  press('Delete wallet');
   await act(async () => {
     await change(store);
   });
@@ -170,4 +176,16 @@ it.each([
   await response.reject('Wallet has transactions');
 
   expect(screen.queryByText('Wallet has transactions')).toBeNull();
+});
+
+it('says the wallet goes but its transactions stay, without calling it permanent', () => {
+  const { openConfirm } = renderSection();
+  openConfirm();
+
+  expect(
+    screen.getByText(
+      'It leaves your wallets. Its transactions stay in your history and totals, marked “Deleted wallet”.',
+    ),
+  ).toBeTruthy();
+  expect(screen.queryByText(/permanently/)).toBeNull();
 });
