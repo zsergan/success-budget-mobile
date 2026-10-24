@@ -51,17 +51,14 @@ export interface ThemeColors {
   okSoft: string;
   okBorder: string;
   okText: string;
-  // Tints laid over whatever surface is below (destructive buttons, the archive notice), as in Categories.dc.html.
+  // A tint laid over whatever surface is below a destructive button, as in Categories.dc.html.
   dangerTint: string;
-  warnTint: string;
-  warnTintBorder: string;
   focusRing: string;
   focusRingError: string;
   // The check drawn on a solid category swatch.
   onSwatch: string;
   chartOther: string;
   chartDeleted: string;
-  scrim: string;
   shadow: string;
 }
 
@@ -135,14 +132,11 @@ const lightColors: ThemeColors = {
   okBorder: '#C2E5CF',
   okText: '#276B45',
   dangerTint: 'rgba(224,79,61,0.09)',
-  warnTint: '#FFF6E4',
-  warnTintBorder: '#F6E3BD',
   focusRing: 'rgba(255,176,32,0.28)',
   focusRingError: 'rgba(224,79,61,0.16)',
   onSwatch: '#FFFFFF',
   chartOther: '#8B95A3',
   chartDeleted: '#C3C9D2',
-  scrim: 'rgba(29,36,48,0.75)',
   shadow: '#1D2430',
 };
 
@@ -184,14 +178,11 @@ const darkColors: ThemeColors = {
   okBorder: '#26492F',
   okText: '#8FD8AB',
   dangerTint: 'rgba(242,105,90,0.14)',
-  warnTint: 'rgba(247,189,77,0.12)',
-  warnTintBorder: 'rgba(247,189,77,0.28)',
   focusRing: 'rgba(255,176,32,0.28)',
   focusRingError: 'rgba(224,79,61,0.16)',
   onSwatch: '#0E1218',
   chartOther: '#6B7688',
   chartDeleted: '#3B4452',
-  scrim: 'rgba(4,6,10,0.66)',
   shadow: '#000000',
 };
 
