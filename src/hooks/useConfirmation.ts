@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Keyboard } from 'react-native';
 
 import type { Confirmation } from '@components/ConfirmationSheet/ConfirmationSheet';
 import { useAppSelector, useAppStore } from '@redux/hooks';
 import type { RootState } from '@redux/Store';
+import { afterKeyboardHides } from '@shared/utils';
 
 export interface ConfirmLock {
   isLocked: () => boolean;
@@ -16,8 +16,6 @@ interface Asked {
   scope: string;
   confirmation: Confirmation;
 }
-
-const KEYBOARD_WAIT_MS = 600;
 
 const selectSessionSpace = ({ auth, space }: RootState) =>
   space.currentSpaceId === null ? null : `${auth.sessionKey}:${space.currentSpaceId}`;
@@ -57,23 +55,8 @@ const useConfirmation = (selectScope: (state: RootState) => string | null = sele
       const show = () => {
         if (askedRef.current === asked) setAsked(asked);
       };
-      if (!Keyboard.isVisible()) {
-        show();
-        return true;
-      }
-
-      // A sheet that rose with the keyboard stays risen if its owner renders as the keyboard starts to go (a race
-      // in the sheet, on main too), so a question asked over the keyboard renders once the keyboard has gone.
-      const subscription = Keyboard.addListener('keyboardDidHide', () => {
-        subscription.remove();
-        clearTimeout(timeout);
-        show();
-      });
-      const timeout = setTimeout(() => {
-        subscription.remove();
-        show();
-      }, KEYBOARD_WAIT_MS);
-      Keyboard.dismiss();
+      // The flow sheet below rose with the keyboard; a question asked over it renders once the keyboard has gone.
+      afterKeyboardHides(show);
       return true;
     },
     [store, selectScope, isLocked],
