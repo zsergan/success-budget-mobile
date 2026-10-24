@@ -23,6 +23,8 @@ interface OpenSheet {
 
 // The sheets on screen, the newest last.
 const openSheets: OpenSheet[] = [];
+// While held, a dismissed sheet stays on screen, as during its animation, until finishDismissals().
+let heldDismissals: (() => void)[] | null = null;
 
 // Shows its content only between present() and dismiss(), as the real modal does.
 const BottomSheetModal = forwardRef(function BottomSheetModal(props: SheetProps, ref: Ref<unknown>) {
@@ -34,8 +36,12 @@ const BottomSheetModal = forwardRef(function BottomSheetModal(props: SheetProps,
     if (index === -1) return;
 
     openSheets.splice(index, 1);
-    setOpen(false);
-    entryRef.current.props.onDismiss?.();
+    const finish = () => {
+      setOpen(false);
+      entryRef.current.props.onDismiss?.();
+    };
+    if (heldDismissals) heldDismissals.push(finish);
+    else finish();
   };
 
   useLayoutEffect(() => {
@@ -77,13 +83,31 @@ export const swipeDownSheet = () =>
     if (sheet && sheet.props.enablePanDownToClose !== false) sheet.dismiss();
   });
 
+// As the library's backdrop: its onPress, then a close when its press behaviour says so.
 export const pressSheetBackdrop = () =>
   act(() => {
-    const backdrop = topSheet()?.props.backdropComponent?.({}) as { props: { onPress?: () => void } } | undefined;
+    const sheet = topSheet();
+    const backdrop = sheet?.props.backdropComponent?.({}) as
+      { props: { onPress?: () => void; pressBehavior?: string } } | undefined;
     backdrop?.props.onPress?.();
+    if (backdrop?.props.pressBehavior === 'close') sheet?.dismiss();
   });
 
-export const resetSheets = () => openSheets.splice(0);
+export const holdDismissals = () => {
+  heldDismissals = [];
+};
+
+export const finishDismissals = () =>
+  act(() => {
+    const finishes = heldDismissals ?? [];
+    heldDismissals = null;
+    finishes.forEach((finish) => finish());
+  });
+
+export const resetSheets = () => {
+  openSheets.splice(0);
+  heldDismissals = null;
+};
 
 // Sheets read safe area insets, which a bare render does not provide.
 export const withSheetHost = (ui: ReactElement) => (

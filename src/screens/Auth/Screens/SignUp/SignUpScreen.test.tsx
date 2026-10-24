@@ -1,6 +1,6 @@
 import { Children, isValidElement } from 'react';
 import { Provider } from 'react-redux';
-import { Modal, TextInput } from 'react-native';
+import { TextInput } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Picker } from '@react-native-picker/picker';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
@@ -15,6 +15,11 @@ import SignUpScreen from './SignUpScreen';
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => jest.requireActual('react-native-reanimated/mock'));
 jest.mock('expo-secure-store');
+jest.mock('@gorhom/bottom-sheet', () => jest.requireActual('@components/ConfirmationSheet/testing').bottomSheetMock);
+jest.mock(
+  '@components/Modals/BottomSheetModal/useReturnToRest',
+  () => jest.requireActual('@components/ConfirmationSheet/testing').useReturnToRestMock,
+);
 
 const mockedRequest = jest.fn();
 
@@ -247,7 +252,7 @@ describe('validation', () => {
     expect(rows.find((row) => row.props.value === list.props.selectedValue)?.props.label).toBe('Pick a currency');
 
     await act(async () => {
-      fireEvent(screen.UNSAFE_getByType(Modal), 'requestClose');
+      fireEvent.press(screen.getByRole('button', { name: 'Done' }));
     });
 
     expect(screen.getByText('Pick a currency.')).toBeTruthy();
@@ -262,7 +267,7 @@ describe('validation', () => {
     const [emptyRow] = Children.toArray(list.props.children).filter(isValidElement<{ value: unknown }>);
     await act(async () => list.props.onValueChange(emptyRow.props.value, 0));
     await act(async () => {
-      fireEvent(screen.UNSAFE_getByType(Modal), 'requestClose');
+      fireEvent.press(screen.getByRole('button', { name: 'Done' }));
     });
 
     expect(screen.getByText('Pick a currency.')).toBeTruthy();

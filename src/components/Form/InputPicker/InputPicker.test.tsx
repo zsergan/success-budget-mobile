@@ -1,9 +1,34 @@
+import type { ReactElement } from 'react';
 import { Children, isValidElement, useState } from 'react';
 import { Picker } from '@react-native-picker/picker';
-import { Modal } from 'react-native';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { BackHandler, Keyboard } from 'react-native';
+import { act, fireEvent, render as renderBare, screen } from '@testing-library/react-native';
 
+import { pressSheetBackdrop, resetSheets, swipeDownSheet, withSheetHost } from '@components/ConfirmationSheet/testing';
 import InputPicker from './InputPicker';
+
+jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
+jest.mock('react-native-reanimated', () => jest.requireActual('react-native-reanimated/mock'));
+jest.mock('@gorhom/bottom-sheet', () => jest.requireActual('@components/ConfirmationSheet/testing').bottomSheetMock);
+jest.mock(
+  '@components/Modals/BottomSheetModal/useReturnToRest',
+  () => jest.requireActual('@components/ConfirmationSheet/testing').useReturnToRestMock,
+);
+
+const render = (ui: ReactElement) => {
+  const result = renderBare(withSheetHost(ui));
+  return { ...result, rerender: (next: ReactElement) => result.rerender(withSheetHost(next)) };
+};
+
+let pressBack: () => void = () => {};
+beforeEach(() => {
+  resetSheets();
+  jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_event, handler) => {
+    pressBack = () => handler({} as never);
+    return { remove: () => {} };
+  });
+});
+afterEach(() => jest.restoreAllMocks());
 
 const ITEMS = [
   { label: 'USD · US dollar', value: 7 },
@@ -20,7 +45,7 @@ const chosenRow = () => items().find((item) => item.props.value === list().props
 
 const open = () => fireEvent.press(screen.getByRole('button', { name: 'Currency' }));
 
-const close = () => act(() => screen.UNSAFE_getByType(Modal).props.onRequestClose());
+const close = () => fireEvent.press(screen.getByRole('button', { name: 'Done' }));
 
 // What the native wheel reports when it settles on a row.
 const turnTo = (row: number) => act(() => list().props.onValueChange(items()[row].props.value, row));
@@ -129,7 +154,7 @@ describe.each(['outlined', 'filled'] as const)('a %s picker, to a screen reader'
 
     expect(field().props.accessibilityState).toMatchObject({ expanded: true });
 
-    act(() => screen.UNSAFE_getByType(Modal).props.onRequestClose());
+    close();
 
     expect(field().props.accessibilityState).toMatchObject({ expanded: false });
   });
@@ -270,5 +295,64 @@ describe('the picked item', () => {
     open();
 
     expect(chosenRow()).toBe('USD · US dollar');
+  });
+});
+
+describe('the list', () => {
+  const renderPicker = () => {
+    const onBlur = jest.fn();
+    render(
+      <InputPicker
+        variant="outlined"
+        label="Currency"
+        placeholder="Pick a currency"
+        items={ITEMS}
+        selectedValue={undefined}
+        onValueChange={jest.fn()}
+        onBlur={onBlur}
+      />,
+    );
+
+    return { onBlur };
+  };
+
+  it.each([
+    ['Done', close],
+    ['the backdrop', pressSheetBackdrop],
+    ['a swipe', swipeDownSheet],
+    ['Android Back', () => act(() => pressBack())],
+  ])('closes on %s, reported once as a blur, and opens again', (_way, closeList) => {
+    const { onBlur } = renderPicker();
+
+    open();
+    expect(screen.getByRole('header', { name: 'Currency' })).toBeTruthy();
+    closeList();
+
+    expect(screen.UNSAFE_queryByType(Picker)).toBeNull();
+    expect(onBlur).toHaveBeenCalledTimes(1);
+
+    open();
+
+    expect(screen.UNSAFE_queryByType(Picker)).not.toBeNull();
+  });
+
+  it('opens once the keyboard has gone, not over it', () => {
+    let hideKeyboard: () => void = () => {};
+    jest.spyOn(Keyboard, 'isVisible').mockReturnValue(true);
+    const dismiss = jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => {});
+    jest.spyOn(Keyboard, 'addListener').mockImplementation((_event, listener) => {
+      hideKeyboard = () => listener({} as never);
+      return { remove: () => {} } as never;
+    });
+    renderPicker();
+
+    open();
+
+    expect(dismiss).toHaveBeenCalled();
+    expect(screen.UNSAFE_queryByType(Picker)).toBeNull();
+
+    act(() => hideKeyboard());
+
+    expect(screen.UNSAFE_queryByType(Picker)).not.toBeNull();
   });
 });

@@ -1,13 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { ActivityIndicator, Keyboard, TouchableOpacity, TouchableWithoutFeedback, View, Text } from 'react-native';
+import { ActivityIndicator, TouchableOpacity, View, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Picker } from '@react-native-picker/picker';
 
+import ConfirmationAction from '@components/ConfirmationSheet/ConfirmationAction/ConfirmationAction';
 import Icon from '@components/Icon/Icon';
-import ModalContainer from '@components/Modals/ModalContainer/ModalContainer';
+import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
+import useBackPress from '@hooks/useBackPress';
+import useSheetPresence from '@hooks/useSheetPresence';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import type { IconType } from '@shared/types';
+import { afterKeyboardHides } from '@shared/utils/keyboard';
 
 import OutlinedField from '../OutlinedField/OutlinedField';
 import createOutlinedStyles from '../OutlinedField/style';
@@ -56,7 +61,11 @@ const InputPicker = ({
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const outlinedStyles = useThemedStyles(createOutlinedStyles);
+  const { bottom } = useSafeAreaInsets();
   const [isPickerVisible, setIsPickerVisible] = useState(false);
+  const { ref: sheetRef, settleDismiss } = useSheetPresence(isPickerVisible);
+  const cancelOpeningRef = useRef<(() => void) | null>(null);
+  useEffect(() => () => cancelOpeningRef.current?.(), []);
 
   const selectedItem = items.find((item) => item.value === selectedValue);
   const shownText = selectedItem ? selectedItem.label : placeholder;
@@ -70,8 +79,12 @@ const InputPicker = ({
   };
 
   const openPicker = () => {
-    Keyboard.dismiss();
-    setIsPickerVisible(true);
+    if (isPickerVisible || cancelOpeningRef.current) return;
+
+    cancelOpeningRef.current = afterKeyboardHides(() => {
+      cancelOpeningRef.current = null;
+      setIsPickerVisible(true);
+    });
   };
 
   const closePicker = () => {
@@ -79,23 +92,34 @@ const InputPicker = ({
     onBlur?.();
   };
 
+  useBackPress(isPickerVisible, closePicker);
+
+  // A swipe or the backdrop; Done and Back close it themselves.
+  const handleDismiss = () => {
+    if (settleDismiss()) closePicker();
+  };
+
   return (
     <>
-      <ModalContainer isVisible={isPickerVisible} animationType="fade" onClose={closePicker}>
-        <View style={styles.container}>
-          <TouchableWithoutFeedback>
-            <View style={styles.contentContainer}>
-              <Picker selectedValue={pickerValue} onValueChange={changeValue} itemStyle={styles.pickerItem}>
-                {hasEmptyRow && <Picker.Item label={placeholder} value={EMPTY_VALUE} color={colors.placeholder} />}
+      <BottomModal ref={sheetRef} fitContent onDismiss={handleDismiss}>
+        <View style={[styles.sheet, { paddingBottom: Math.max(bottom, 16) }]} accessibilityViewIsModal>
+          {label && (
+            <Text style={styles.sheetTitle} accessibilityRole="header">
+              {label}
+            </Text>
+          )}
 
-                {items.map((item) => (
-                  <Picker.Item key={item.value} label={item.label} value={item.value} />
-                ))}
-              </Picker>
-            </View>
-          </TouchableWithoutFeedback>
+          <Picker selectedValue={pickerValue} onValueChange={changeValue} itemStyle={styles.pickerItem}>
+            {hasEmptyRow && <Picker.Item label={placeholder} value={EMPTY_VALUE} color={colors.placeholder} />}
+
+            {items.map((item) => (
+              <Picker.Item key={item.value} label={item.label} value={item.value} />
+            ))}
+          </Picker>
+
+          <ConfirmationAction label="Done" isFilled onPress={closePicker} disabled={!isPickerVisible} />
         </View>
-      </ModalContainer>
+      </BottomModal>
 
       {variant === 'outlined' ? (
         <OutlinedField
