@@ -44,7 +44,7 @@ interface Props {
   context?: ReactNode;
   // Only confirmed consequences, up to four: warn when related data changes, danger when data goes.
   consequences?: { tone: 'warn' | 'danger'; title: string; items: string[] };
-  // Further content under the consequences, such as a field.
+  // Further content under the consequences, such as a field: a BottomSheetTextInput, so the sheet rises above the keyboard.
   children?: ReactNode;
   primaryAction: ConfirmationPrimarySpec;
   // Cancel by default; null for a message with nothing to decide, whose primary action closes it.
