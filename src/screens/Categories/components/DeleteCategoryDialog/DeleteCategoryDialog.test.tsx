@@ -1,4 +1,3 @@
-import { Modal } from 'react-native';
 import { Provider } from 'react-redux';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
@@ -9,6 +8,7 @@ import { createAppStore } from '@redux/Store';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { activateSpace } from '@redux/state/space/thunks';
 import { AppColor, TransactionType } from '@shared/enums';
+import { pressSheetBackdrop, resetSheets, swipeDownSheet, withSheetHost } from '@components/ConfirmationSheet/testing';
 import DeleteCategoryDialog from './DeleteCategoryDialog';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
@@ -20,6 +20,11 @@ jest.mock('@api/instance', () => ({
   createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
 }));
 jest.mock('expo-secure-store');
+jest.mock('@gorhom/bottom-sheet', () => jest.requireActual('@components/ConfirmationSheet/testing').bottomSheetMock);
+jest.mock(
+  '@components/Modals/BottomSheetModal/useReturnToRest',
+  () => jest.requireActual('@components/ConfirmationSheet/testing').useReturnToRestMock,
+);
 
 // RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
 jest.useFakeTimers();
@@ -40,14 +45,14 @@ const CATEGORY: CategoryModel = {
 const MODES = {
   delete: {
     category: CATEGORY,
-    title: 'Delete «Food»?',
+    title: 'Delete “Food”?',
     confirm: 'Delete category',
     pending: 'Deleting…',
     archived: false,
   },
   archive: {
     category: { ...CATEGORY, transactionCount: 3 },
-    title: '«Food» will be archived, not deleted',
+    title: 'Archive “Food”?',
     confirm: 'Archive category',
     pending: 'Archiving…',
     archived: true,
@@ -80,27 +85,23 @@ const renderDialog = (category: CategoryModel) => {
     return <DeleteCategoryDialog deletion={deletion.current} />;
   };
 
-  render(
-    <Provider store={store}>
-      <Harness />
-    </Provider>,
-  );
+  render(<Provider store={store}>{withSheetHost(<Harness />)}</Provider>);
 
   const open = () => act(() => deletion.current.open(category));
 
   return { store, open };
 };
 
-// The backdrop and Android back both go through ModalContainer's onClose.
 const dismissAll = () => {
-  const { onRequestClose } = screen.UNSAFE_getByType(Modal).props;
-
-  fireEvent.press(screen.getByText('Cancel'));
-  fireEvent.press(screen.UNSAFE_getAllByProps({ onPress: onRequestClose })[0]);
-  act(() => onRequestClose());
+  fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
+  pressSheetBackdrop();
+  swipeDownSheet();
 };
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  resetSheets();
+});
 
 describe.each(Object.entries(MODES))('%s', (_mode, { category, title, confirm, pending, archived }) => {
   it('sends one request for a double tap and stays open and locked until the server answers', async () => {
@@ -110,6 +111,7 @@ describe.each(Object.entries(MODES))('%s', (_mode, { category, title, confirm, p
     open();
     fireEvent.press(screen.getByText(confirm));
     fireEvent.press(screen.getByText(pending));
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
     dismissAll();
 
     expect(mockedRequest).toHaveBeenCalledTimes(1);
@@ -188,8 +190,9 @@ describe('the limit notice', () => {
 
     open();
 
-    expect(screen.getByText('Removed from the «Fun» limit')).toBeTruthy();
-    expect(screen.getByText(/stops counting this category and keeps its others/)).toBeTruthy();
+    expect(screen.getByText('Excluded from the “Fun” limit')).toBeTruthy();
+    expect(screen.getByText(/removed from the categories this limit tracks; the limit keeps its others/)).toBeTruthy();
+    expect(screen.getByText('If it was the limit’s last category, the limit is deleted.')).toBeTruthy();
   });
 
   it.each([
@@ -201,5 +204,31 @@ describe('the limit notice', () => {
     open();
 
     expect(screen.getByText('Its limit is deleted too')).toBeTruthy();
+  });
+});
+
+describe('the copy', () => {
+  it('deletes a category without history without showing it as an object', () => {
+    const { open } = renderDialog(MODES.delete.category);
+    open();
+
+    expect(screen.getByText('Nothing is filed under this category yet, so it is removed completely.')).toBeTruthy();
+    expect(screen.queryByText('Expense category · no transactions')).toBeNull();
+  });
+
+  it('archives one with history, naming its count and where it stays, and that its spending still counts', () => {
+    const { open } = renderDialog({ ...MODES.archive.category, limit: { id: 9, name: 'Fun' } });
+    open();
+
+    expect(screen.getByText('Expense category · 3 transactions')).toBeTruthy();
+    expect(screen.getByText(/It stays in Categories under Archived\.$/)).toBeTruthy();
+    expect(screen.getByText('Spending already logged here stays in this month’s total.')).toBeTruthy();
+  });
+
+  it('does not say deleted spending stays counted', () => {
+    const { open } = renderDialog({ ...MODES.delete.category, limit: { id: 9, name: 'Fun' } });
+    open();
+
+    expect(screen.queryByText('Spending already logged here stays in this month’s total.')).toBeNull();
   });
 });
