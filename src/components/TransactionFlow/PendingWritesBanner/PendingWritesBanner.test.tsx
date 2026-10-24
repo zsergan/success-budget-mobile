@@ -1,10 +1,11 @@
-import { Alert } from 'react-native';
+import type { ReactNode, Ref } from 'react';
 import { Provider } from 'react-redux';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { createAppStore } from '@redux/Store';
 import type { PendingWrite } from '@redux/state/pendingWrite/slice';
-import { writesRestored } from '@redux/state/pendingWrite/slice';
+import { writeSettled, writesRestored } from '@redux/state/pendingWrite/slice';
 import { withProfile } from '@redux/state/profile/fixtures';
 import { activateSpace } from '@redux/state/space/thunks';
 import { createTransactionResponseDto } from '@redux/state/transaction/fixtures';
@@ -19,6 +20,40 @@ jest.mock('@api/instance', () => ({
 
 const mockAddAlert = jest.fn();
 jest.mock('@hooks/useAlert', () => () => ({ addAlert: mockAddAlert }));
+
+jest.mock('@components/Modals/BottomSheetModal/useReturnToRest', () => () => ({
+  animatedIndex: undefined,
+  watch: () => {},
+  stop: () => {},
+}));
+
+jest.mock('@gorhom/bottom-sheet', () => {
+  const React = jest.requireActual('react');
+  const { ScrollView, View } = jest.requireActual('react-native');
+
+  const BottomSheetModal = React.forwardRef(function BottomSheetModal(
+    props: { children: ReactNode; onDismiss?: () => void },
+    ref: Ref<unknown>,
+  ) {
+    const [isOpen, setOpen] = React.useState(false);
+    React.useImperativeHandle(ref, () => ({
+      present: () => setOpen(true),
+      dismiss: () => {
+        setOpen(false);
+        props.onDismiss?.();
+      },
+      snapToIndex: () => {},
+    }));
+    return isOpen ? props.children : null;
+  });
+
+  return {
+    BottomSheetModal,
+    BottomSheetBackdrop: () => null,
+    BottomSheetView: View,
+    BottomSheetScrollView: ScrollView,
+  };
+});
 
 jest.useFakeTimers();
 
@@ -49,11 +84,24 @@ const renderBanner = (writes: PendingWrite[]) => {
 
   render(
     <Provider store={store}>
-      <PendingWritesBanner />
+      <SafeAreaProvider
+        initialMetrics={{
+          frame: { x: 0, y: 0, width: 393, height: 852 },
+          insets: { top: 54, right: 0, bottom: 34, left: 0 },
+        }}
+      >
+        <PendingWritesBanner />
+      </SafeAreaProvider>
     </Provider>,
   );
 
   return store;
+};
+
+// What shows inside the safe area provider the sheet needs.
+const shown = () => {
+  const tree = screen.toJSON();
+  return tree && !Array.isArray(tree) ? tree.children : tree;
 };
 
 const posts = () => mockedRequest.mock.calls.filter(([{ method }]) => method === 'POST');
@@ -61,7 +109,6 @@ const posts = () => mockedRequest.mock.calls.filter(([{ method }]) => method ===
 beforeEach(() => {
   jest.clearAllMocks();
   jest.setSystemTime(new Date(2026, 0, 6, 12, 0));
-  jest.spyOn(Alert, 'alert');
   mockedRequest.mockResolvedValue({ data: createTransactionResponseDto() });
 });
 
@@ -69,7 +116,7 @@ describe('PendingWritesBanner', () => {
   it('shows nothing while every write of this space is settled', () => {
     renderBanner([write('other-space', 'unknown', 2)]);
 
-    expect(screen.toJSON()).toBeNull();
+    expect(shown()).toBeNull();
   });
 
   it('offers to retry unanswered saves, which sends each with its own key', async () => {
@@ -81,7 +128,7 @@ describe('PendingWritesBanner', () => {
 
     expect(posts().map(([{ headers }]) => headers['Idempotency-Key'])).toEqual(['key-1', 'key-2']);
     expect(store.getState().pendingWrite.writes).toEqual([]);
-    expect(screen.toJSON()).toBeNull();
+    expect(shown()).toBeNull();
     expect(mockAddAlert).toHaveBeenCalledWith('2 earlier saves went through');
   });
 
@@ -93,7 +140,14 @@ describe('PendingWritesBanner', () => {
     expect(posts()).toEqual([]);
 
     fireEvent.press(screen.getByText('Review'));
-    await act(async () => (Alert.alert as jest.Mock).mock.calls[0][2][1].onPress());
+    expect(screen.getByRole('header', { name: 'Send this transaction now?' })).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByText('Send this transaction now?')).toBeNull();
+    expect(store.getState().pendingWrite.writes).toHaveLength(2);
+    expect(posts()).toEqual([]);
+
+    fireEvent.press(screen.getByText('Review'));
+    await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Send' })));
 
     expect(posts()).toHaveLength(1);
     expect(posts()[0][0]).toMatchObject({
@@ -103,9 +157,24 @@ describe('PendingWritesBanner', () => {
     expect(mockAddAlert).toHaveBeenCalledWith('Transaction saved');
 
     fireEvent.press(screen.getByText('Review'));
-    act(() => (Alert.alert as jest.Mock).mock.calls[1][2][0].onPress());
+    fireEvent.press(screen.getByRole('button', { name: 'Discard' }));
 
     expect(store.getState().pendingWrite.writes).toEqual([]);
     expect(posts()).toHaveLength(1);
+    expect(shown()).toBeNull();
+  });
+
+  it('does nothing for a review whose write was settled meanwhile', () => {
+    const store = renderBanner([write('key-1', 'expired'), write('key-2', 'expired')]);
+
+    fireEvent.press(screen.getByText('Review'));
+    const discard = screen.getByRole('button', { name: 'Discard' });
+    act(() => {
+      store.dispatch(writeSettled({ key: 'key-1', status: null }));
+    });
+
+    expect(screen.queryByText('Send this transaction now?')).toBeNull();
+    fireEvent.press(discard);
+    expect(store.getState().pendingWrite.writes).toHaveLength(1);
   });
 });

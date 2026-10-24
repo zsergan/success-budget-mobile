@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import {
   Banner,
+  ConfirmationSheet,
   Fab,
   PendingWritesBanner,
   RootLayout,
@@ -16,7 +17,7 @@ import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { EMPTY_WALLETS, getTotalBalance } from '@redux/state/wallet/selectors';
 import { useGetRecentTransactionsQuery } from '@redux/state/transaction/api';
 import { rangeSelection } from '@redux/state/transactionFlow/selection';
-import { useBalanceVisibility, useSpaceRefresh } from '@hooks';
+import { useBalanceVisibility, useConfirmation, useSpaceRefresh } from '@hooks';
 import type { ScreenNames } from '@shared/enums';
 import { TransactionType } from '@shared/enums';
 import type { MainTabScreenProps } from '@shared/types';
@@ -33,7 +34,8 @@ interface Props extends MainTabScreenProps<ScreenNames.HOME_TAB> {}
 const HomeScreen = ({ navigation }: Props) => {
   useSpaceRefresh();
   const [focusedWalletId, setFocusedWalletId] = useState<number | undefined>(undefined);
-  const { requestDelete } = useTransactionDelete();
+  const { lock: deleteLock, confirmation: deleteConfirmation } = useConfirmation();
+  const { requestDelete } = useTransactionDelete(deleteLock);
 
   const spaceArg = useSpaceArg();
   const walletsQuery = useGetWalletsQuery(spaceArg);
@@ -110,6 +112,8 @@ const HomeScreen = ({ navigation }: Props) => {
         onExpense={() => openCreate(TransactionType.EXPENSE, composerWalletId)}
         onIncome={() => openCreate(TransactionType.INCOME, composerWalletId)}
       />
+
+      <ConfirmationSheet confirmation={deleteConfirmation} />
     </>
   );
 };

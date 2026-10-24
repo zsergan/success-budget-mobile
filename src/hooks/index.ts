@@ -3,6 +3,8 @@ export { default as useBackPress } from './useBackPress';
 export { default as useBalanceVisibility } from './useBalanceVisibility';
 export { default as useConfirmAction } from './useConfirmAction';
 export type { ConfirmAction } from './useConfirmAction';
+export { default as useConfirmation } from './useConfirmation';
+export type { ConfirmLock } from './useConfirmation';
 export { default as useFormSubmitHandler } from './useFormSubmitHandler';
 export { default as useKeyboardHeight } from './useKeyboardHeight';
 export { default as usePendingWrites } from './usePendingWrites';

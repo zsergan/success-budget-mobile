@@ -1,9 +1,11 @@
 import type { StyleProp, ViewStyle } from 'react-native';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import Banner from '@components/Banner/Banner';
-import { useAlert, usePendingWrites } from '@hooks';
+import ConfirmationSheet from '@components/ConfirmationSheet/ConfirmationSheet';
+import { useAlert, useConfirmation, usePendingWrites } from '@hooks';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
+import type { RootState } from '@redux/Store';
 import { selectSpacePendingWrites } from '@redux/state/pendingWrite/selectors';
 import { forgetPendingWrite } from '@redux/state/pendingWrite/storage';
 import { sendPendingWriteAgain } from '@redux/state/pendingWrite/thunks';
@@ -14,6 +16,19 @@ import { formatDateTime } from '../format';
 
 const describe = ({ data }: Extract<StoredOperation, { type: 'create' }>, currencyCode?: string) =>
   `${formatAmount(data.amount, data.transaction_type, currencyCode)} · ${formatDateTime(data.timestamp)}`;
+
+// Only a create can run out: its key is all that keeps it from applying twice.
+const findExpired = (writes: ReturnType<typeof selectSpacePendingWrites>) => {
+  const operation = writes.find(({ status }) => status === 'expired')?.operation;
+  return operation?.type === 'create' ? operation : null;
+};
+
+// A review answers for the write it was opened on, in that session; once the write is settled it is gone.
+const selectReviewScope = (state: RootState) => {
+  const spaceId = selectCurrentSpaceId(state);
+  const expired = findExpired(selectSpacePendingWrites(state, spaceId));
+  return expired ? `${state.auth.sessionKey}:${spaceId}:${expired.idempotencyKey}` : null;
+};
 
 // Writes of this space that got no answer, or that the server never got in time. They outlive the form that made
 // them, so they are offered here until settled.
@@ -28,14 +43,13 @@ const PendingWritesBanner = ({ style }: Props) => {
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
   const writes = useAppSelector((state) => selectSpacePendingWrites(state, spaceId));
   const { resume, isResuming } = usePendingWrites();
+  const { lock, confirmation } = useConfirmation(selectReviewScope);
 
-  // Only a create can run out: its key is all that keeps it from applying twice.
-  const expired = writes.find(({ status }) => status === 'expired')?.operation;
+  const expired = findExpired(writes);
   const unknown = writes.filter(({ status }) => status === 'unknown');
 
-  if (expired?.type === 'create') {
-    const key = expired.idempotencyKey;
-    const what = describe(expired, currencyCode);
+  const review = (operation: Extract<StoredOperation, { type: 'create' }>, what: string) => {
+    const key = operation.idempotencyKey;
 
     const sendAgain = async () => {
       const result = await dispatch(sendPendingWriteAgain(key));
@@ -44,29 +58,44 @@ const PendingWritesBanner = ({ style }: Props) => {
       else if (result?.kind === 'refused') addAlert(`Couldn’t save it: ${getErrorMessage(result.error)}`);
     };
 
-    return (
-      <View style={style}>
+    lock.ask((settle) => ({
+      title: 'Send this transaction now?',
+      description: `${what}. It will be added as new.`,
+      primaryAction: {
+        label: 'Send',
+        onPress: () => {
+          if (settle()) void sendAgain();
+        },
+      },
+      additionalAction: {
+        label: 'Discard',
+        tone: 'danger',
+        onPress: () => {
+          if (settle()) dispatch(forgetPendingWrite(key));
+        },
+      },
+      onCancel: settle,
+    }));
+  };
+
+  const renderBanner = () => {
+    if (expired) {
+      const what = describe(expired, currencyCode);
+
+      return (
         <Banner
           tone="danger"
           title="A transaction wasn’t saved"
           text={`${what}. The server never got it, and it’s too old to send on its own.`}
           actionLabel="Review"
-          onAction={() =>
-            Alert.alert('Send this transaction now?', `${what}. It will be added as new.`, [
-              { text: 'Discard', style: 'destructive', onPress: () => dispatch(forgetPendingWrite(key)) },
-              { text: 'Send', onPress: () => void sendAgain() },
-              { text: 'Cancel', style: 'cancel', isPreferred: true },
-            ])
-          }
+          onAction={() => review(expired, what)}
         />
-      </View>
-    );
-  }
+      );
+    }
 
-  if (unknown.length === 0) return null;
+    if (unknown.length === 0) return null;
 
-  return (
-    <View style={style}>
+    return (
       <Banner
         tone="warn"
         title={unknown.length === 1 ? 'A save isn’t confirmed yet' : `${unknown.length} saves aren’t confirmed yet`}
@@ -75,7 +104,16 @@ const PendingWritesBanner = ({ style }: Props) => {
         isBusy={isResuming}
         onAction={() => void resume()}
       />
-    </View>
+    );
+  };
+
+  const banner = renderBanner();
+
+  return (
+    <>
+      {banner && <View style={style}>{banner}</View>}
+      <ConfirmationSheet confirmation={confirmation} />
+    </>
   );
 };
 

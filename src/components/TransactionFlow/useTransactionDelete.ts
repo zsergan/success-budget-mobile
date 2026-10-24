@@ -1,18 +1,19 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Alert } from 'react-native';
 
 import type { TransactionModel } from '@api/models';
 import { isInitialBalance } from '@api/models';
 import { useAlert } from '@hooks';
+import type { ConfirmLock } from '@hooks/useConfirmation';
 import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import { deleteTransaction, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { deleteMessage } from './deleteMessage';
 
-// One delete for a list row, the details and the form: the same confirmation, then a write the row or the sheet
-// waits for. The sheet explains its own failures in place; a row's come as a toast with the next step.
-const useTransactionDelete = () => {
+// One delete for a list row, the details and the form: the same confirmation, asked through its owner's lock, then a
+// write the row or the sheet waits for. The sheet explains its own failures in place; a row's come as a toast with
+// the next step.
+const useTransactionDelete = (confirmLock: ConfirmLock) => {
   const dispatch = useAppDispatch();
   const store = useAppStore();
   const { addAlert } = useAlert();
@@ -62,36 +63,44 @@ const useTransactionDelete = () => {
     runRef.current = runDelete;
   }, [runDelete]);
 
-  // `onSettled` runs when the confirmation closes either way, or at once when there is nothing to delete.
+  // `onSettled` runs when the confirmation closes either way, or at once when there is nothing to delete or another
+  // confirmation is open.
   const requestDelete = useCallback(
     (transaction: TransactionModel, onSettled?: () => void) => {
-      if (isInitialBalance(transaction) || currentSpaceId === null) {
+      const spaceId = currentSpaceId;
+      if (isInitialBalance(transaction) || spaceId === null) {
         onSettled?.();
         return;
       }
       const sessionKey = store.getState().auth.sessionKey;
 
-      Alert.alert(
-        'Delete transaction?',
-        deleteMessage(transaction, currencyCode),
-        [
-          {
-            text: 'Delete',
-            style: 'destructive',
+      const isAsked = confirmLock.ask((settle) => {
+        const close = () => {
+          const isCurrent = settle();
+          onSettled?.();
+          return isCurrent;
+        };
+
+        return {
+          title: 'Delete transaction?',
+          description: deleteMessage(transaction, currencyCode),
+          primaryAction: {
+            label: 'Delete transaction',
+            tone: 'danger',
             onPress: () => {
-              onSettled?.();
+              if (!close()) return;
               const { auth, space } = store.getState();
-              if (auth.sessionKey === sessionKey && space.currentSpaceId === currentSpaceId) {
-                void runDelete(transaction, currentSpaceId);
+              if (auth.sessionKey === sessionKey && space.currentSpaceId === spaceId) {
+                void runDelete(transaction, spaceId);
               }
             },
           },
-          { text: 'Cancel', style: 'cancel', isPreferred: true, onPress: onSettled },
-        ],
-        { onDismiss: onSettled },
-      );
+          onCancel: close,
+        };
+      });
+      if (!isAsked) onSettled?.();
     },
-    [currencyCode, runDelete, currentSpaceId, store],
+    [confirmLock, currencyCode, runDelete, currentSpaceId, store],
   );
 
   const retryDelete = useCallback((transaction: TransactionModel) => runDelete(transaction), [runDelete]);
