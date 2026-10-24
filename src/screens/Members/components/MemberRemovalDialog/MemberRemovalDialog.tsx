@@ -1,38 +1,37 @@
-import { Text } from 'react-native';
-
-import { BottomModal } from '@components';
-import { useThemedStyles } from '@hooks';
+import { ConfirmationSheet } from '@components';
 import type { MemberActionTarget } from '../../types';
-
-import createStyles from './style';
 
 interface Props {
   target: Extract<MemberActionTarget, { kind: 'remove' | 'revoke' }> | null;
+  spaceName: string;
   isPending: boolean;
-  onConfirm: () => void;
+  error: string | null;
+  onConfirm: () => Promise<void>;
   onCancel: () => void;
 }
 
-const MemberRemovalDialog = ({ target, isPending, onConfirm, onCancel }: Props) => {
-  const styles = useThemedStyles(createStyles);
+const MemberRemovalDialog = ({ target, spaceName, isPending, error, onConfirm, onCancel }: Props) => {
   const isRevoke = target?.kind === 'revoke';
 
   return (
-    <BottomModal
-      isVisible={!!target}
-      onClose={onCancel}
-      disabled={isPending}
-      content={
-        <Text style={styles.confirmText}>
-          {isRevoke ? 'Revoke this invite?' : `Remove ${target?.label} from this space?`}
-        </Text>
+    <ConfirmationSheet
+      confirmation={
+        target && {
+          title: isRevoke ? 'Revoke this invite?' : `Remove ${target.label}?`,
+          description: isRevoke
+            ? `The invite sent to ${target.label} stops working.`
+            : `${target.label} loses access to “${spaceName}”.`,
+          primaryAction: {
+            label: isRevoke ? 'Revoke invite' : 'Remove member',
+            tone: 'danger',
+            busyLabel: isRevoke ? 'Revoking…' : 'Removing…',
+            onPress: onConfirm,
+          },
+          onCancel,
+          isPending,
+          message: error ? { text: error } : undefined,
+        }
       }
-      actions={[
-        {
-          title: isPending ? (isRevoke ? 'Revoking…' : 'Removing…') : isRevoke ? 'Revoke invite' : 'Remove member',
-          onPress: onConfirm,
-        },
-      ]}
     />
   );
 };
