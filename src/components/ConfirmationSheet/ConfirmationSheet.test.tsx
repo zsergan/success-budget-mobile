@@ -3,6 +3,7 @@ import { BackHandler } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
+import type { Confirmation } from './ConfirmationSheet';
 import ConfirmationSheet from './ConfirmationSheet';
 
 const mockSheet: { props?: { onDismiss?: () => void; enablePanDownToClose?: boolean } } = {};
@@ -51,11 +52,10 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
-const renderSheet = (props: Partial<Parameters<typeof ConfirmationSheet>[0]> = {}) => {
+const renderSheet = (props: Partial<Confirmation> = {}) => {
   const onCancel = jest.fn();
   const onConfirm = jest.fn();
   const all = {
-    isVisible: true,
     title: 'Delete transaction?',
     description: '−$50.00 · Grocery · Cash.',
     primaryAction: { label: 'Delete transaction', tone: 'danger' as const, busyLabel: 'Deleting…', onPress: onConfirm },
@@ -69,7 +69,7 @@ const renderSheet = (props: Partial<Parameters<typeof ConfirmationSheet>[0]> = {
         insets: { top: 54, right: 0, bottom: 34, left: 0 },
       }}
     >
-      <ConfirmationSheet {...all} />
+      <ConfirmationSheet confirmation={all} />
     </SafeAreaProvider>,
   );
   return { ...view, onCancel, onConfirm, all };
@@ -142,7 +142,7 @@ it('runs a confirmation once until its promise settles', async () => {
 });
 
 it('cancels on a swipe, but not when its owner hides it, keeping its content meanwhile', () => {
-  const { onCancel, rerender, all } = renderSheet();
+  const { onCancel, rerender } = renderSheet();
   act(() => mockSheet.props?.onDismiss?.());
   expect(onCancel).toHaveBeenCalledTimes(1);
 
@@ -153,7 +153,7 @@ it('cancels on a swipe, but not when its owner hides it, keeping its content mea
         insets: { top: 54, right: 0, bottom: 34, left: 0 },
       }}
     >
-      <ConfirmationSheet {...all} isVisible={false} />
+      <ConfirmationSheet confirmation={null} />
     </SafeAreaProvider>,
   );
   expect(onCancel).toHaveBeenCalledTimes(1);

@@ -7,6 +7,7 @@ export { default as CategoryIconBox } from './CategoryIconBox/CategoryIconBox';
 export { default as CircleIcon } from './CircleIcon/CircleIcon';
 export { default as ConfirmationSheet } from './ConfirmationSheet/ConfirmationSheet';
 export type {
+  Confirmation,
   ConfirmationActionSpec,
   ConfirmationPrimarySpec,
   ConfirmationTone,
