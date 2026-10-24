@@ -108,6 +108,8 @@ relying on or changing them.
   a new role is a token in `src/shared/theme.ts`. Details: `docs/theming.md`.
 - Known layout pitfalls (Plus Jakarta Sans clipping, nested safe areas):
   `docs/ui-pitfalls.md`.
+- Bottom sheets and confirmations (presence, keyboard, stacking, stale
+  confirmations): `docs/sheets.md`.
 
 ## Tests
 
