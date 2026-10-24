@@ -22,6 +22,8 @@ export interface ConfirmationActionSpec {
   // A returned promise keeps every action from running again until it settles.
   onPress: () => unknown;
   tone?: ConfirmationTone;
+  // Shown but not available, e.g. a step that cannot be taken yet.
+  isDisabled?: boolean;
 }
 
 export interface ConfirmationPrimarySpec extends ConfirmationActionSpec {
@@ -180,7 +182,7 @@ const ConfirmationContent = ({
           tone={primaryAction.tone}
           isFilled
           isBusy={isPending}
-          disabled={isRunning}
+          disabled={isRunning || primaryAction.isDisabled}
           onPress={() => onAction(primaryAction.onPress)}
         />
 
@@ -188,7 +190,7 @@ const ConfirmationContent = ({
           <ConfirmationAction
             label={additionalAction.label}
             tone={additionalAction.tone}
-            disabled={isRunning || isPending}
+            disabled={isRunning || isPending || additionalAction.isDisabled}
             onPress={() => onAction(additionalAction.onPress)}
           />
         )}
@@ -197,7 +199,7 @@ const ConfirmationContent = ({
           <ConfirmationAction
             label={secondaryAction.label}
             tone={secondaryAction.tone}
-            disabled={!canDismiss}
+            disabled={!canDismiss || secondaryAction.isDisabled}
             onPress={() => onAction(secondaryAction.onPress)}
           />
         )}

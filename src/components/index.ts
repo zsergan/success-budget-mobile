@@ -5,6 +5,7 @@ export { default as Carousel } from './Carousel/Carousel';
 export { default as CategoryEditorSheet } from './CategoryEditor/CategoryEditorSheet';
 export { default as CategoryIconBox } from './CategoryIconBox/CategoryIconBox';
 export { default as CircleIcon } from './CircleIcon/CircleIcon';
+export { default as ConfirmationObject } from './ConfirmationSheet/ConfirmationObject/ConfirmationObject';
 export { default as ConfirmationSheet } from './ConfirmationSheet/ConfirmationSheet';
 export type {
   Confirmation,
