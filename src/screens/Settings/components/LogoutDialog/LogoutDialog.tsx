@@ -1,9 +1,4 @@
-import { Text } from 'react-native';
-
-import { BottomModal } from '@components';
-import { useThemedStyles } from '@hooks';
-
-import createStyles from './style';
+import { ConfirmationSheet } from '@components';
 
 interface Props {
   isVisible: boolean;
@@ -11,24 +6,19 @@ interface Props {
   onConfirm: () => void;
 }
 
-const LogoutDialog = ({ isVisible, onClose, onConfirm }: Props) => {
-  const styles = useThemedStyles(createStyles);
-
-  return (
-    <BottomModal
-      isVisible={isVisible}
-      onClose={onClose}
-      content={
-        <>
-          <Text style={styles.confirmText}>Log out of your account?</Text>
-          <Text style={styles.confirmSubtext}>
-            Your data stays on the server. Sign back in with the same email and password.
-          </Text>
-        </>
-      }
-      actions={[{ title: 'Log out', onPress: onConfirm }]}
-    />
-  );
-};
+const LogoutDialog = ({ isVisible, onClose, onConfirm }: Props) => (
+  <ConfirmationSheet
+    confirmation={
+      isVisible
+        ? {
+            title: 'Log out of your account?',
+            description: 'Your data stays on the server. Sign back in with the same email and password.',
+            primaryAction: { label: 'Log out', onPress: onConfirm },
+            onCancel: onClose,
+          }
+        : null
+    }
+  />
+);
 
 export default LogoutDialog;
