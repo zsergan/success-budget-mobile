@@ -30,6 +30,14 @@ export interface ThemeColors {
   hairline: string;
   danger: string;
   onDanger: string;
+  // A confirmation's actions, as in Overlays and Feedback.dc.html: the destructive one, with a label that passes AA,
+  // and the inverted neutral one, which stays visible on the sheet in the dark theme.
+  destructive: string;
+  onDestructive: string;
+  neutral: string;
+  onNeutral: string;
+  // The outline of a confirmation's secondary action; the dark hairline does not show on the sheet.
+  line: string;
   ok: string;
   onOk: string;
   warn: string;
@@ -43,17 +51,14 @@ export interface ThemeColors {
   okSoft: string;
   okBorder: string;
   okText: string;
-  // Tints laid over whatever surface is below (destructive buttons, the archive notice), as in Categories.dc.html.
+  // A tint laid over whatever surface is below a destructive button, as in Categories.dc.html.
   dangerTint: string;
-  warnTint: string;
-  warnTintBorder: string;
   focusRing: string;
   focusRingError: string;
   // The check drawn on a solid category swatch.
   onSwatch: string;
   chartOther: string;
   chartDeleted: string;
-  scrim: string;
   shadow: string;
 }
 
@@ -109,6 +114,11 @@ const lightColors: ThemeColors = {
   hairline: '#E3E7EC',
   danger: '#E04F3D',
   onDanger: '#FFFDFA',
+  destructive: '#C3392A',
+  onDestructive: '#FFFFFF',
+  neutral: '#1D2430',
+  onNeutral: '#FCFDFE',
+  line: '#E3E7EC',
   ok: '#3FAE6A',
   onOk: '#FFFDFA',
   warn: '#F0A92A',
@@ -122,14 +132,11 @@ const lightColors: ThemeColors = {
   okBorder: '#C2E5CF',
   okText: '#276B45',
   dangerTint: 'rgba(224,79,61,0.09)',
-  warnTint: '#FFF6E4',
-  warnTintBorder: '#F6E3BD',
   focusRing: 'rgba(255,176,32,0.28)',
   focusRingError: 'rgba(224,79,61,0.16)',
   onSwatch: '#FFFFFF',
   chartOther: '#8B95A3',
   chartDeleted: '#C3C9D2',
-  scrim: 'rgba(29,36,48,0.75)',
   shadow: '#1D2430',
 };
 
@@ -153,6 +160,11 @@ const darkColors: ThemeColors = {
   hairline: '#222A35',
   danger: '#F2695A',
   onDanger: '#FFFDFA',
+  destructive: '#F2695A',
+  onDestructive: '#1C0F0D',
+  neutral: '#F2F4F8',
+  onNeutral: '#0E1218',
+  line: '#252E3B',
   ok: '#4DC07B',
   onOk: '#0C1A11',
   warn: '#F7BD4D',
@@ -166,14 +178,11 @@ const darkColors: ThemeColors = {
   okBorder: '#26492F',
   okText: '#8FD8AB',
   dangerTint: 'rgba(242,105,90,0.14)',
-  warnTint: 'rgba(247,189,77,0.12)',
-  warnTintBorder: 'rgba(247,189,77,0.28)',
   focusRing: 'rgba(255,176,32,0.28)',
   focusRingError: 'rgba(224,79,61,0.16)',
   onSwatch: '#0E1218',
   chartOther: '#6B7688',
   chartDeleted: '#3B4452',
-  scrim: 'rgba(4,6,10,0.66)',
   shadow: '#000000',
 };
 

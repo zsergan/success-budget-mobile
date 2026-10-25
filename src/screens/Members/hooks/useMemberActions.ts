@@ -6,7 +6,6 @@ import { useRemoveMemberMutation, useRevokeInviteMutation } from '@redux/state/m
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { leaveCurrentSpace } from '@redux/state/space/thunks';
 import { getErrorMessage } from '@shared/utils';
-import { useAlert } from '@hooks';
 import type { MemberActionTarget } from '../types';
 
 interface UseMemberActionsProps {
@@ -15,15 +14,17 @@ interface UseMemberActionsProps {
 
 const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
   const dispatch = useAppDispatch();
-  const { addAlert } = useAlert();
   const captureSession = useSessionGuard();
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
+  const sessionKey = useAppSelector((state) => state.auth.sessionKey);
   const [revokeInvite] = useRevokeInviteMutation();
   const [removeMember] = useRemoveMemberMutation();
 
   const [target, setTarget] = useState<MemberActionTarget | null>(null);
   const [isPending, setIsPending] = useState(false);
-  const [seenSpaceId, setSeenSpaceId] = useState(currentSpaceId);
+  // Shown in the dialog that failed, until it is retried or closed.
+  const [error, setError] = useState<string | null>(null);
+  const [seen, setSeen] = useState({ spaceId: currentSpaceId, sessionKey });
 
   // `isPending` isn't visible until the next render, so a double tap needs a synchronous guard.
   const isPendingRef = useRef(false);
@@ -33,22 +34,25 @@ const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
     currentSpaceIdRef.current = currentSpaceId;
   }, [currentSpaceId]);
 
-  // A space switch invalidates whatever this dialog was about to confirm.
-  if (currentSpaceId !== seenSpaceId) {
-    setSeenSpaceId(currentSpaceId);
+  // A space switch or another session invalidates whatever this dialog was about to confirm.
+  if (currentSpaceId !== seen.spaceId || sessionKey !== seen.sessionKey) {
+    setSeen({ spaceId: currentSpaceId, sessionKey });
     setTarget(null);
+    setError(null);
   }
 
   const requestAction = (nextTarget: MemberActionTarget) => {
     if (isPendingRef.current) return;
 
     setTarget(nextTarget);
+    setError(null);
   };
 
   const cancel = () => {
     if (isPendingRef.current) return;
 
     setTarget(null);
+    setError(null);
   };
 
   const confirm = async () => {
@@ -59,6 +63,7 @@ const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
 
     isPendingRef.current = true;
     setIsPending(true);
+    setError(null);
 
     try {
       if (target.kind === 'leave') {
@@ -83,7 +88,7 @@ const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
       setTarget(null);
     } catch (error: unknown) {
       if (isSessionCurrent() && currentSpaceIdRef.current === originSpaceId) {
-        addAlert(getErrorMessage(error));
+        setError(getErrorMessage(error));
       }
     } finally {
       isPendingRef.current = false;
@@ -91,7 +96,7 @@ const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
     }
   };
 
-  return { target, isPending, requestAction, cancel, confirm };
+  return { target, isPending, error, requestAction, cancel, confirm };
 };
 
 export default useMemberActions;

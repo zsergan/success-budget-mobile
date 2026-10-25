@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
-import { AppState, BackHandler } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { CategoryModel } from '@api/models';
 import CategoryEditorSheet from '@components/CategoryEditor/CategoryEditorSheet';
+import ConfirmationSheet from '@components/ConfirmationSheet/ConfirmationSheet';
 import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
-import { useAlert } from '@hooks';
+import { useAlert, useBackPress, useSheetPresence } from '@hooks';
 import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
 import { hasOpenSave, hasUnsavedChanges, selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import type { FlowAway, TransactionFlow } from '@redux/state/transactionFlow/slice';
@@ -25,8 +26,8 @@ import CategoriesPanel from './CategoriesPanel/CategoriesPanel';
 import CreatedConfirmation from './CreatedConfirmation/CreatedConfirmation';
 import DateTimePanel from './DateTimePanel/DateTimePanel';
 import useFlowClose from './hooks/useFlowClose';
+import useFlowConfirmation from './hooks/useFlowConfirmation';
 import useFlowSave from './hooks/useFlowSave';
-import useSheetPresence from './hooks/useSheetPresence';
 import useTransactionDelete from './useTransactionDelete';
 import RecordGone from './RecordGone/RecordGone';
 import TransactionDetails from './TransactionDetails/TransactionDetails';
@@ -40,8 +41,9 @@ const TransactionFlowSheet = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const flow = useAppSelector(selectTransactionFlow);
   const save = useFlowSave();
-  const { requestClose, back } = useFlowClose();
-  const { requestDelete, retryDelete } = useTransactionDelete();
+  const { lock: confirmLock, confirmation } = useFlowConfirmation();
+  const { requestClose, back } = useFlowClose(confirmLock);
+  const { requestDelete, retryDelete } = useTransactionDelete(confirmLock);
   const { addAlert } = useAlert();
 
   // The content stays on screen while the sheet animates away after the flow ended.
@@ -53,17 +55,9 @@ const TransactionFlowSheet = () => {
   const isCreatingCategory = flow?.away === 'category';
   const { ref: sheetRef, settleDismiss, isDismissing } = useSheetPresence(isVisible);
   const { ref: categorySheetRef, settleDismiss: settleCategoryDismiss } = useSheetPresence(isCreatingCategory);
+  const asksOnReturnRef = useRef(false);
 
-  useEffect(() => {
-    if (!isVisible) return;
-
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      back();
-      return true;
-    });
-
-    return () => subscription.remove();
-  }, [isVisible, back]);
+  useBackPress(isVisible, back);
 
   // Open details may have changed elsewhere while the app was away; a form keeps its draft and meets a conflict on save.
   useEffect(() => {
@@ -85,22 +79,31 @@ const TransactionFlowSheet = () => {
 
   // Only a swipe closes the sheet on its own; one we dismissed ourselves is not a close request.
   const handleDismiss = useCallback(() => {
+    asksOnReturnRef.current = false;
     if (!settleDismiss()) return;
 
     const current = selectTransactionFlow(store.getState());
     if (current && !current.away) dispatch(closed());
   }, [dispatch, store, settleDismiss]);
 
-  // A swipe follows the same rules as ✕ and the backdrop: it waits for a running write and asks before discarding.
+  // A swipe follows the same rules as ✕ and the backdrop: it waits for a running write and asks before discarding,
+  // once the sheet is back in place.
   const keepOpen = useCallback(() => {
     const current = selectTransactionFlow(store.getState());
     if (isDismissing() || !current || current.away) return false;
-    if (current.isSaving) return true;
+    if (current.isSaving || confirmLock.isLocked()) return true;
     if (!hasUnsavedChanges(current) && !hasOpenSave(current)) return false;
 
-    requestClose();
+    asksOnReturnRef.current = true;
     return true;
-  }, [store, isDismissing, requestClose]);
+  }, [store, isDismissing, confirmLock]);
+
+  const handleKeptOpen = useCallback(() => {
+    if (!asksOnReturnRef.current) return;
+
+    asksOnReturnRef.current = false;
+    requestClose();
+  }, [requestClose]);
 
   // Creating a wallet or a category hides the sheet; the draft waits in the flow and comes back with the new pick.
   const leaveFor = (target: FlowAway) => {
@@ -228,7 +231,9 @@ const TransactionFlowSheet = () => {
         onHandleTouch={() => {
           if (flow?.view.name === 'created') dispatch(autoCloseStopped({ draftId: flow.draftId }));
         }}
+        isDismissible={!flow?.isSaving}
         shouldKeepOpen={keepOpen}
+        onKeptOpen={handleKeptOpen}
         onBackdropPress={requestClose}
         onDismiss={handleDismiss}
       >
@@ -240,6 +245,8 @@ const TransactionFlowSheet = () => {
           <CategoryEditorSheet defaultTransactionType={shown.draft.transactionType} onSaved={handleCategorySaved} />
         )}
       </BottomModal>
+
+      <ConfirmationSheet confirmation={confirmation} />
     </>
   );
 };

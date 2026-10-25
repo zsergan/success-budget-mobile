@@ -10,6 +10,10 @@ const useSheetPresence = (isVisible: boolean) => {
   const wantsVisibleRef = useRef(isVisible);
   useLayoutEffect(() => {
     wantsVisibleRef.current = isVisible;
+    // An owner gone mid-dismissal wants nothing shown again.
+    return () => {
+      wantsVisibleRef.current = false;
+    };
   }, [isVisible]);
 
   useEffect(() => {

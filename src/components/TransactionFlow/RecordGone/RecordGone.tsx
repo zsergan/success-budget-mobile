@@ -1,39 +1,17 @@
-import { Text, TouchableOpacity, View } from 'react-native';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import Icon from '@components/Icon/Icon';
-import useTheme from '@hooks/useTheme';
-import useThemedStyles from '@hooks/useThemedStyles';
-import theme from '@shared/theme';
-
-import createStyles from './style';
+import ConfirmationContent from '@components/ConfirmationSheet/ConfirmationContent/ConfirmationContent';
 
 interface Props {
   onClose: () => void;
 }
 
-const RecordGone = ({ onClose }: Props) => {
-  const { colors } = useTheme().colorTheme;
-  const styles = useThemedStyles(createStyles);
-  const insets = useSafeAreaInsets();
-
-  return (
-    <View style={[styles.root, { paddingBottom: theme.spacing.xl + insets.bottom }]}>
-      <BottomSheetScrollView style={styles.scroll} contentContainerStyle={styles.body}>
-        <View style={styles.iconBox}>
-          <Icon name="trash" size={26} color={colors.muted} strokeWidth={1.8} />
-        </View>
-
-        <Text style={styles.title}>This transaction no longer exists</Text>
-        <Text style={styles.text}>It was deleted on another device or by another member of this space.</Text>
-      </BottomSheetScrollView>
-
-      <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.8}>
-        <Text style={styles.closeButtonText}>Close</Text>
-      </TouchableOpacity>
-    </View>
-  );
-};
+// A message the flow's own sheet turns into, so nothing opens over it.
+const RecordGone = ({ onClose }: Props) => (
+  <ConfirmationContent
+    title="This transaction no longer exists"
+    description="It was deleted on another device or by another member of this space."
+    primaryAction={{ label: 'Close', onPress: onClose }}
+    secondaryAction={null}
+  />
+);
 
 export default RecordGone;

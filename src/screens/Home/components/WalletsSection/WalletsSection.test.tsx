@@ -1,14 +1,21 @@
-import { Modal } from 'react-native';
 import { Provider } from 'react-redux';
-import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
+import { BackHandler } from 'react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { MainTabNavigationProp } from '@shared/types';
-import type { ScreenNames } from '@shared/enums';
 import { createAppStore } from '@redux/Store';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { activateSpace } from '@redux/state/space/thunks';
 import { walletApi } from '@redux/state/wallet/api';
-import { AppColor } from '@shared/enums';
+import { AppColor, ScreenNames } from '@shared/enums';
+import {
+  finishDismissals,
+  holdDismissals,
+  pressSheetBackdrop,
+  resetSheets,
+  swipeDownSheet,
+  withSheetHost,
+} from '@components/ConfirmationSheet/testing';
 import WalletsSection from './WalletsSection';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
@@ -20,11 +27,16 @@ jest.mock('@api/instance', () => ({
   createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
 }));
 jest.mock('expo-secure-store');
+jest.mock('@gorhom/bottom-sheet', () => jest.requireActual('@components/ConfirmationSheet/testing').bottomSheetMock);
+jest.mock(
+  '@components/Modals/BottomSheetModal/useReturnToRest',
+  () => jest.requireActual('@components/ConfirmationSheet/testing').useReturnToRestMock,
+);
 
 // RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
 jest.useFakeTimers();
 
-const QUESTION = 'Delete a Cash permanently?';
+const QUESTION = 'Delete “Cash”?';
 
 const deleteRequests = () =>
   mockedRequest.mock.calls.filter(([config]: [{ method?: string }]) => config.method === 'DELETE');
@@ -69,42 +81,45 @@ const renderSection = () => {
     ]),
   );
 
-  const navigation = { navigate: jest.fn() } as unknown as MainTabNavigationProp<ScreenNames.HOME_TAB>;
+  const navigate = jest.fn();
+  const navigation = { navigate } as unknown as MainTabNavigationProp<ScreenNames.HOME_TAB>;
 
   render(
     <Provider store={store}>
-      <WalletsSection navigation={navigation} onFocusedWalletChange={jest.fn()} />
+      {withSheetHost(<WalletsSection navigation={navigation} onFocusedWalletChange={jest.fn()} />)}
     </Provider>,
   );
 
+  const openMenu = () => fireEvent.press(screen.getByRole('button', { name: 'Cash options' }));
   const openConfirm = () => {
-    fireEvent.press(screen.getByRole('button', { name: 'Cash options' }));
-    fireEvent.press(screen.getByText('Delete'));
+    openMenu();
+    fireEvent.press(screen.getByRole('button', { name: 'Delete wallet' }));
   };
 
-  return { store, openConfirm };
+  return { store, navigate, openMenu, openConfirm };
 };
 
-const confirmModal = () => within(screen.UNSAFE_getAllByType(Modal).find((modal) => modal.props.visible)!);
+const press = (label: string) => fireEvent.press(screen.getByRole('button', { name: label }));
 
-// The backdrop and Android back both go through ModalContainer's onClose.
 const dismissAll = () => {
-  const modal = screen.UNSAFE_getAllByType(Modal).find(({ props }) => props.visible)!;
-
-  fireEvent.press(confirmModal().getByText('Cancel'));
-  fireEvent.press(screen.UNSAFE_getAllByProps({ onPress: modal.props.onRequestClose })[0]);
-  act(() => modal.props.onRequestClose());
+  press('Cancel');
+  pressSheetBackdrop();
+  swipeDownSheet();
 };
 
-beforeEach(() => mockedRequest.mockReset());
+beforeEach(() => {
+  mockedRequest.mockReset();
+  resetSheets();
+});
 
 it('sends one request for a double tap and stays open and locked until the server answers', async () => {
   const response = deferredDelete();
   const { openConfirm } = renderSection();
 
   openConfirm();
-  fireEvent.press(confirmModal().getByText('Delete'));
-  fireEvent.press(confirmModal().getByText('Deleting…'));
+  press('Delete wallet');
+  press('Deleting…');
+  expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
   dismissAll();
 
   expect(deleteRequests()).toHaveLength(1);
@@ -121,7 +136,7 @@ it('shows a failure inside the dialog, allows a retry, and forgets it on reopeni
   const { openConfirm } = renderSection();
 
   openConfirm();
-  fireEvent.press(confirmModal().getByText('Delete'));
+  press('Delete wallet');
   await failure.reject('Wallet has transactions');
 
   expect(screen.getByText(QUESTION)).toBeTruthy();
@@ -129,13 +144,13 @@ it('shows a failure inside the dialog, allows a retry, and forgets it on reopeni
 
   const retry = deferredDelete();
 
-  fireEvent.press(confirmModal().getByText('Delete'));
+  press('Delete wallet');
 
   expect(deleteRequests()).toHaveLength(2);
   expect(screen.queryByText('Wallet has transactions')).toBeNull();
 
   await retry.reject('Still has transactions');
-  fireEvent.press(confirmModal().getByText('Cancel'));
+  press('Cancel');
 
   expect(screen.queryByText(QUESTION)).toBeNull();
 
@@ -160,7 +175,7 @@ it.each([
   const { store, openConfirm } = renderSection();
 
   openConfirm();
-  fireEvent.press(confirmModal().getByText('Delete'));
+  press('Delete wallet');
   await act(async () => {
     await change(store);
   });
@@ -170,4 +185,118 @@ it.each([
   await response.reject('Wallet has transactions');
 
   expect(screen.queryByText('Wallet has transactions')).toBeNull();
+});
+
+it('says the wallet goes but its transactions stay, without calling it permanent', () => {
+  const { openConfirm } = renderSection();
+  openConfirm();
+
+  expect(
+    screen.getByText(
+      'It leaves your wallets. Its transactions stay in your history and totals, marked “Deleted wallet”.',
+    ),
+  ).toBeTruthy();
+  expect(screen.queryByText(/permanently/)).toBeNull();
+});
+
+describe('the wallet menu', () => {
+  const MENU_ACTIONS = ['Edit wallet', 'Delete wallet'];
+  const menuShown = () => MENU_ACTIONS.every((label) => screen.queryByRole('button', { name: label }) !== null);
+
+  let pressBack: () => void = () => {};
+  beforeEach(() => {
+    jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_event, handler) => {
+      pressBack = () => handler({} as never);
+      return { remove: () => {} };
+    });
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('shows the wallet it is about with its actions', () => {
+    const { openMenu } = renderSection();
+
+    openMenu();
+
+    expect(menuShown()).toBe(true);
+    expect(screen.getAllByText('Cash')).toHaveLength(2);
+  });
+
+  it('opens the deletion question only once it has closed', async () => {
+    const { openMenu } = renderSection();
+    holdDismissals();
+
+    openMenu();
+    press('Delete wallet');
+
+    expect(screen.queryByText(QUESTION)).toBeNull();
+
+    await finishDismissals();
+
+    expect(menuShown()).toBe(false);
+    expect(screen.getByText(QUESTION)).toBeTruthy();
+  });
+
+  it('opens the wallet for editing only once it has closed', async () => {
+    const { openMenu, navigate } = renderSection();
+    holdDismissals();
+
+    openMenu();
+    press('Edit wallet');
+
+    expect(navigate).not.toHaveBeenCalled();
+
+    await finishDismissals();
+
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(ScreenNames.ADD_WALLET_SCREEN, {
+      id: 3,
+      walletName: 'Cash',
+      balance: '50',
+      design: AppColor.SLATE,
+    });
+  });
+
+  it.each([
+    ['the backdrop', pressSheetBackdrop],
+    ['a swipe', swipeDownSheet],
+    ['Android Back', () => act(() => pressBack())],
+  ])('closes on %s without editing or deleting', (_way, close) => {
+    const { openMenu, navigate } = renderSection();
+
+    openMenu();
+    close();
+
+    expect(menuShown()).toBe(false);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(screen.queryByText(QUESTION)).toBeNull();
+
+    openMenu();
+
+    expect(menuShown()).toBe(true);
+  });
+
+  it('leads nowhere once the space changes while it closes', async () => {
+    const { store, openMenu } = renderSection();
+    holdDismissals();
+
+    openMenu();
+    press('Delete wallet');
+    act(() => {
+      store.dispatch(activateSpace(2));
+    });
+    await finishDismissals();
+
+    expect(screen.queryByText(QUESTION)).toBeNull();
+  });
+
+  it('closes on a space switch', () => {
+    const { store, openMenu } = renderSection();
+
+    openMenu();
+    act(() => {
+      store.dispatch(activateSpace(2));
+    });
+
+    expect(menuShown()).toBe(false);
+  });
 });

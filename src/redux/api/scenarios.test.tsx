@@ -24,6 +24,7 @@ jest.mock('@api/instance', () => ({
   createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
 }));
 jest.mock('expo-secure-store');
+jest.mock('expo-font', () => ({ loadAsync: jest.fn().mockResolvedValue(undefined) }));
 
 // RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
 jest.useFakeTimers({ now: new Date('2026-01-15T12:00:00') });

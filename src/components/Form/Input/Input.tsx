@@ -26,6 +26,8 @@ export interface InputProps extends TextInputProps {
   variant?: 'filled' | 'outlined';
   hint?: string;
   isValid?: boolean;
+  // In a bottom sheet its BottomSheetTextInput, so the sheet rises above the keyboard.
+  textInputComponent?: typeof TextInput;
 }
 
 const Input = ({
@@ -41,6 +43,7 @@ const Input = ({
   variant = 'filled',
   hint,
   isValid,
+  textInputComponent: Field = TextInput,
   onFocus,
   onBlur,
   editable = true,
@@ -86,7 +89,7 @@ const Input = ({
           )
         }
       >
-        <TextInput
+        <Field
           ref={ref}
           placeholderTextColor={colors.placeholder}
           keyboardAppearance={scheme}
@@ -113,7 +116,7 @@ const Input = ({
           </View>
         )}
 
-        <TextInput
+        <Field
           ref={ref}
           placeholderTextColor={colors.muted}
           keyboardAppearance={scheme}

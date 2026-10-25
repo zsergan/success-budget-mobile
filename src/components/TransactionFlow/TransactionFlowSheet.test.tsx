@@ -1,9 +1,10 @@
 import type { ReactNode, Ref } from 'react';
+import { useState } from 'react';
 import type { AppStateStatus } from 'react-native';
-import { AccessibilityInfo, Alert, AppState, PixelRatio } from 'react-native';
+import { AccessibilityInfo, AppState, BackHandler, PixelRatio, Text } from 'react-native';
 import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 
 import type { Category, GetCategoriesResponse, GetLimitsResponse, WalletsOverviewResponse } from '@api/dto';
 import { createAppStore } from '@redux/Store';
@@ -20,14 +21,18 @@ import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { ScreenNames, AppColor, TransactionKind, TransactionType } from '@shared/enums';
 import { renderWithTheme } from '@components/ThemeProvider/themeTestUtils';
 import { colorThemes } from '@shared/theme';
+import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
+import { useBackPress, useSheetPresence } from '@hooks';
 import TransactionFlowSheet from './TransactionFlowSheet';
 
 interface SheetProps {
   children: ReactNode;
+  stackBehavior?: string;
   onAnimate?: (fromIndex: number, toIndex: number) => void;
   onDismiss?: () => void;
   backdropComponent?: (props: object) => ReactNode;
   handleComponent?: (() => ReactNode) | null;
+  enablePanDownToClose?: boolean;
 }
 
 const mockCategorySheet: { holdDismiss: boolean; finishDismiss?: () => void } = { holdDismiss: false };
@@ -37,12 +42,35 @@ const mockSheet: { props?: SheetProps; presents: number; keptOpen: number; swipe
   keptOpen: 0,
 };
 
-// A swipe starting to close the flow sheet; true when the sheet snapped back instead.
+// The confirmation sheet the flow pushes above itself.
+const mockConfirmation: { props?: SheetProps; swipeDown?: () => void } = {};
+
+// The flow sheet's way back into place runs on the UI thread; here a test says when it got there.
+const mockReturn: { finish?: () => void } = {};
+jest.mock('@components/Modals/BottomSheetModal/useReturnToRest', () => (onRest: () => void) => ({
+  animatedIndex: undefined,
+  watch: () => {
+    mockReturn.finish = onRest;
+  },
+  stop: () => {},
+}));
+
+const finishReturn = () => {
+  const finish = mockReturn.finish;
+  mockReturn.finish = undefined;
+  act(() => finish?.());
+};
+
+// A swipe starting to close the flow sheet; true when the sheet snapped back into place instead.
 const startSwipeClose = () => {
   const before = mockSheet.keptOpen;
   act(() => mockSheet.props?.onAnimate?.(0, -1));
+  finishReturn();
   return mockSheet.keptOpen > before;
 };
+
+const mockBack: { press?: () => boolean | null | undefined } = {};
+const pressBack = () => act(() => void mockBack.press?.());
 
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = jest.requireActual('react');
@@ -73,6 +101,8 @@ jest.mock('@gorhom/bottom-sheet', () => {
     };
 
     if (isFlowSheet) mockSheet.swipeDown = dismiss;
+    const isConfirmation = props.stackBehavior === 'push';
+    if (isConfirmation) Object.assign(mockConfirmation, { props, swipeDown: dismiss });
 
     React.useImperativeHandle(ref, () => ({
       present: () => {
@@ -90,7 +120,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
     return isOpen ? (
       <SheetContext.Provider value={{ close: dismiss }}>
         {props.handleComponent?.()}
-        {props.children}
+        {isConfirmation ? <View testID="confirmation">{props.children}</View> : props.children}
       </SheetContext.Provider>
     ) : null;
   });
@@ -271,8 +301,20 @@ const fillExpense = () => {
   fireEvent.press(screen.getByText('Food'));
 };
 
-const pressBackdrop = () =>
-  act(() => (mockSheet.props?.backdropComponent?.({}) as { props: { onPress: () => void } }).props.onPress());
+const backdropOf = (props?: SheetProps) => () =>
+  act(() => (props?.backdropComponent?.({}) as { props: { onPress?: () => void } }).props.onPress?.());
+
+const pressBackdrop = () => backdropOf(mockSheet.props)();
+
+const CONFIRMATION_TITLES =
+  /^(Discard (transaction|changes)|Close without (confirmation|sending)|Delete transaction)\?$/;
+
+// The confirmations open above the flow; there is never more than one.
+const asked = () => screen.queryAllByRole('header', { name: CONFIRMATION_TITLES }).map(({ props }) => props.children);
+const confirmation = () => within(screen.getByTestId('confirmation'));
+const answer = (label: string) => fireEvent.press(confirmation().getByRole('button', { name: label }));
+// The flow's own Delete, under the confirmation's button of the same name.
+const pressFlowDelete = () => fireEvent.press(screen.getAllByText('Delete transaction')[0]);
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -289,8 +331,12 @@ beforeEach(() => {
   categoriesResponse = categories;
   limitsResponse = noLimits;
   mockSheet.presents = 0;
+  mockReturn.finish = undefined;
+  jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_event, handler) => {
+    mockBack.press = () => handler({} as never);
+    return { remove: () => {} };
+  });
   mockedRequest.mockImplementation(respond);
-  jest.spyOn(Alert, 'alert');
   jest.spyOn(PixelRatio, 'getFontScale').mockReturnValue(1);
 });
 
@@ -367,7 +413,170 @@ describe('TransactionFlowSheet', () => {
     fillExpense();
 
     expect(startSwipeClose()).toBe(true);
-    expect(Alert.alert).toHaveBeenCalledWith('Discard transaction?', expect.any(String), expect.any(Array));
+    expect(asked()).toEqual(['Discard transaction?']);
+  });
+
+  it('asks before a swipe discards only once the sheet is back in place', async () => {
+    const { open, flow } = renderFlow();
+    open();
+    await settle();
+    fillExpense();
+
+    act(() => mockSheet.props?.onAnimate?.(0, -1));
+    expect(asked()).toEqual([]);
+
+    finishReturn();
+
+    expect(asked()).toEqual(['Discard transaction?']);
+    expect(flow()?.draft).toMatchObject({ amount: '12' });
+  });
+
+  it('opens one confirmation at a time, whichever way it is asked for', async () => {
+    const { open, flow } = renderFlow();
+    open();
+    await settle();
+    fillExpense();
+
+    fireEvent.press(screen.getByLabelText('Close'));
+    pressBackdrop();
+    expect(startSwipeClose()).toBe(true);
+    fireEvent.press(screen.getByLabelText('Close'));
+    expect(asked()).toEqual(['Discard transaction?']);
+
+    // Back answers the confirmation first, then asks again from the form.
+    pressBack();
+    expect(asked()).toEqual([]);
+    pressBack();
+
+    expect(asked()).toEqual(['Discard transaction?']);
+    expect(flow()?.draft).toMatchObject({ amount: '12' });
+  });
+
+  it('keeps every draft field when a close is cancelled, however it was asked and answered', async () => {
+    const { open, flow } = renderFlow();
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.changeText(screen.getByLabelText('Note'), 'Lunch with Sam');
+    fireEvent.press(screen.getByText(/, \d{2}:\d{2}$/));
+    fireEvent.press(screen.getByText('Yesterday'));
+    fireEvent.press(screen.getByText('Apply'));
+    const before = flow();
+
+    const requests = [
+      () => fireEvent.press(screen.getByLabelText('Close')),
+      pressBackdrop,
+      () => expect(startSwipeClose()).toBe(true),
+      pressBack,
+    ];
+    const cancels = [
+      () => answer('Keep editing'),
+      () => backdropOf(mockConfirmation.props)(),
+      () => act(() => mockConfirmation.swipeDown?.()),
+      pressBack,
+    ];
+
+    requests.forEach((request) =>
+      cancels.forEach((cancel) => {
+        request();
+        expect(asked()).toEqual(['Discard transaction?']);
+
+        cancel();
+        expect(asked()).toEqual([]);
+        expect(flow()).toEqual(before);
+      }),
+    );
+    expect(screen.getByLabelText('Amount').props.value).toBe('12');
+    expect(screen.getByLabelText('Note').props.value).toBe('Lunch with Sam');
+  });
+
+  it('asks over the category and date panels, and returns to the panel on Keep editing', async () => {
+    const { open, flow } = renderFlow();
+    open();
+    await settle();
+    fillExpense();
+
+    fireEvent.press(screen.getByText('More'));
+    fireEvent.press(screen.getByLabelText('Close'));
+    expect(asked()).toEqual(['Discard transaction?']);
+    answer('Keep editing');
+    expect(screen.getByLabelText('Back to the form')).toBeTruthy();
+    expect(flow()).toMatchObject({ view: { name: 'categories' }, draft: { amount: '12', categoryId: 1 } });
+
+    pressBack();
+    fireEvent.press(screen.getByText(/, \d{2}:\d{2}$/));
+    fireEvent.press(screen.getByText('Yesterday'));
+    pressBackdrop();
+    expect(asked()).toEqual(['Discard transaction?']);
+    pressBack();
+    expect(flow()).toMatchObject({ view: { name: 'dateTime' }, draft: { amount: '12' } });
+
+    fireEvent.press(screen.getByLabelText('Close'));
+    answer('Discard transaction');
+    expect(flow()).toBeNull();
+  });
+
+  it('opens and closes a sheet pushed above the form, leaving the form as it was', async () => {
+    const store = createAppStore();
+    withProfile(store);
+    store.dispatch(activateSpace(1));
+    const stacked: { show?: (isShown: boolean) => void } = {};
+
+    const StackedSheet = () => {
+      const [isShown, setShown] = useState(false);
+      stacked.show = setShown;
+      const { ref, settleDismiss } = useSheetPresence(isShown);
+      useBackPress(isShown, () => setShown(false));
+
+      return (
+        <BottomModal ref={ref} fitContent stackBehavior="push" onDismiss={() => settleDismiss() && setShown(false)}>
+          <Text>Stacked above</Text>
+        </BottomModal>
+      );
+    };
+
+    render(
+      <>
+        {flowTree(store)}
+        <SafeAreaProvider
+          initialMetrics={{
+            frame: { x: 0, y: 0, width: 400, height: 800 },
+            insets: { top: 0, right: 0, bottom: 0, left: 0 },
+          }}
+        >
+          <StackedSheet />
+        </SafeAreaProvider>
+      </>,
+    );
+    act(() => {
+      store.dispatch(
+        createOpened({
+          spaceId: 1,
+          transactionType: TransactionType.EXPENSE,
+          walletId: 7,
+          now: new Date().toISOString(),
+        }),
+      );
+    });
+    await settle();
+    fillExpense();
+
+    act(() => stacked.show?.(true));
+    await settle();
+    expect(screen.getByText('Stacked above')).toBeTruthy();
+
+    pressBack();
+    await settle();
+
+    expect(screen.queryByText('Stacked above')).toBeNull();
+    expect(asked()).toEqual([]);
+    expect(mockSheet.presents).toBe(1);
+    expect(screen.getAllByText('New transaction')).toHaveLength(1);
+    expect(screen.getByLabelText('Amount').props.value).toBe('12');
+
+    pressBack();
+
+    expect(asked()).toEqual(['Discard transaction?']);
   });
 
   it('confirms only after the API answers, locking the sheet meanwhile', async () => {
@@ -380,11 +589,12 @@ describe('TransactionFlowSheet', () => {
 
     expect(screen.getByText('Saving…')).toBeTruthy();
     expect(screen.queryByText('Transaction saved')).toBeNull();
+    expect(mockSheet.props?.enablePanDownToClose).toBe(false);
     expect(startSwipeClose()).toBe(true);
 
     fireEvent.press(screen.getByLabelText('Close'));
     pressBackdrop();
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(asked()).toEqual([]);
     expect(flow()?.isSaving).toBe(true);
 
     await act(async () => answerWrite({ data: createTransactionResponseDto() }));
@@ -463,10 +673,9 @@ describe('TransactionFlowSheet', () => {
     await settle();
 
     expect(startSwipeClose()).toBe(true);
-    const [title, , buttons] = (Alert.alert as jest.Mock).mock.calls[0];
-    expect(title).toBe('Close without confirmation?');
+    expect(asked()).toEqual(['Close without confirmation?']);
 
-    act(() => buttons[0].onPress());
+    answer('Close');
 
     expect(flow()).toBeNull();
     expect(store.getState().pendingWrite.writes).toMatchObject([
@@ -736,7 +945,7 @@ describe('TransactionFlowSheet', () => {
     open();
     await settle();
     fireEvent.press(screen.getByLabelText('Close'));
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(asked()).toEqual([]);
     expect(flow()).toBeNull();
 
     open();
@@ -744,11 +953,11 @@ describe('TransactionFlowSheet', () => {
     fillExpense();
     pressBackdrop();
 
-    expect(Alert.alert).toHaveBeenCalledWith('Discard transaction?', expect.any(String), expect.any(Array));
+    expect(asked()).toEqual(['Discard transaction?']);
+    expect(confirmation().getByText('The amount and details you entered will be lost.')).toBeTruthy();
     expect(flow()).not.toBeNull();
 
-    const [discard] = (Alert.alert as jest.Mock).mock.calls[0][2];
-    act(() => discard.onPress());
+    answer('Discard transaction');
     expect(flow()).toBeNull();
   });
 
@@ -878,10 +1087,9 @@ describe('TransactionFlowSheet', () => {
 
     fireEvent.changeText(screen.getByLabelText('Amount'), '70');
     fireEvent.press(screen.getByLabelText('Back to details'));
-    expect(Alert.alert).toHaveBeenCalledWith('Discard changes?', expect.any(String), expect.any(Array));
+    expect(asked()).toEqual(['Discard changes?']);
 
-    const [discard] = (Alert.alert as jest.Mock).mock.calls[0][2];
-    act(() => discard.onPress());
+    answer('Discard changes');
     expect(flow()).toMatchObject({ view: { name: 'details' }, draft: null });
   });
 
@@ -1071,6 +1279,27 @@ describe('TransactionFlowSheet', () => {
     expect(mockAddAlert).not.toHaveBeenCalled();
   });
 
+  it('keeps the details open under a delete confirmation, and asks again once it closed', async () => {
+    const { openDetails, flow } = renderFlow();
+    openDetails();
+    await settle();
+
+    pressFlowDelete();
+    fireEvent.press(screen.getByLabelText('Close'));
+    pressBackdrop();
+    pressFlowDelete();
+
+    expect(asked()).toEqual(['Delete transaction?']);
+    expect(flow()).toMatchObject({ view: { name: 'details' } });
+
+    pressBack();
+    expect(asked()).toEqual([]);
+    expect(flow()).toMatchObject({ view: { name: 'details' } });
+    pressFlowDelete();
+
+    expect(asked()).toEqual(['Delete transaction?']);
+  });
+
   it('deletes the saved record, not the draft, and closes only after the server answers', async () => {
     const { openDetails, flow } = renderFlow();
 
@@ -1078,18 +1307,20 @@ describe('TransactionFlowSheet', () => {
     await settle();
     fireEvent.press(screen.getByText('Edit'));
     fireEvent.changeText(screen.getByLabelText('Amount'), '70');
-    fireEvent.press(screen.getByText('Delete transaction'));
+    pressFlowDelete();
 
-    const [title, message, buttons] = (Alert.alert as jest.Mock).mock.calls[0];
-    expect(title).toBe('Delete transaction?');
-    expect(message).toBe('-50.00 · Food · Cash. The wallet balance will be adjusted.');
+    expect(asked()).toEqual(['Delete transaction?']);
+    expect(confirmation().getByText('-50.00 · Food · Cash. The wallet balance will be adjusted.')).toBeTruthy();
 
-    act(() => buttons[1].onPress?.());
+    answer('Cancel');
     expect(flow()).toMatchObject({ view: { name: 'edit' }, draft: { amount: '70' } });
 
-    fireEvent.press(screen.getByText('Delete transaction'));
-    act(() => (Alert.alert as jest.Mock).mock.calls[1][2][0].onPress());
+    pressFlowDelete();
+    const confirm = confirmation().getByRole('button', { name: 'Delete transaction' });
+    fireEvent.press(confirm);
+    fireEvent.press(confirm);
 
+    expect(asked()).toEqual([]);
     expect(screen.getByText('Deleting…')).toBeTruthy();
     expect(screen.getByLabelText('Close')).toBeDisabled();
     expect(flow()?.isSaving).toBe(true);
@@ -1097,13 +1328,14 @@ describe('TransactionFlowSheet', () => {
     await act(async () => answerWrite({ data: true }));
     await settle();
 
-    expect(mockedRequest).toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: 'DELETE',
-        url: '/spaces/1/transactions/tx-1',
-        headers: expect.objectContaining({ 'If-Match': '"2"' }),
-      }),
-    );
+    expect(mockedRequest.mock.calls.filter(([{ method }]) => method === 'DELETE')).toEqual([
+      [
+        expect.objectContaining({
+          url: '/spaces/1/transactions/tx-1',
+          headers: expect.objectContaining({ 'If-Match': '"2"' }),
+        }),
+      ],
+    ]);
     expect(flow()).toBeNull();
     expect(mockAddAlert).toHaveBeenCalledWith('Transaction deleted');
   });
@@ -1113,8 +1345,8 @@ describe('TransactionFlowSheet', () => {
 
     openDetails();
     await settle();
-    fireEvent.press(screen.getByText('Delete transaction'));
-    act(() => (Alert.alert as jest.Mock).mock.calls[0][2][0].onPress());
+    pressFlowDelete();
+    answer('Delete transaction');
     await act(async () => failWrite(new Error('Network Error')));
     await settle();
 
@@ -1135,8 +1367,8 @@ describe('TransactionFlowSheet', () => {
 
     openDetails();
     await settle();
-    fireEvent.press(screen.getByText('Delete transaction'));
-    act(() => (Alert.alert as jest.Mock).mock.calls[0][2][0].onPress());
+    pressFlowDelete();
+    answer('Delete transaction');
     await act(async () => failWrite(refusal(409, 'TRANSACTION_VERSION_CONFLICT')));
     await settle();
 
@@ -1157,11 +1389,49 @@ describe('TransactionFlowSheet', () => {
 
     openDetails();
     await settle();
-    fireEvent.press(screen.getByText('Delete transaction'));
+    pressFlowDelete();
 
-    expect((Alert.alert as jest.Mock).mock.calls[0][1]).toBe(
-      '-2.75 · Food · Deleted wallet. It will be removed from history and period totals. No wallet balance will change.',
-    );
+    expect(
+      confirmation().getByText(
+        '-2.75 · Food · Deleted wallet. It will be removed from history and period totals. No wallet balance will change.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('drops a delete confirmation whose record was found deleted meanwhile, and closes at once', async () => {
+    const { store, openDetails, flow } = renderFlow();
+    openDetails();
+    await settle();
+    pressFlowDelete();
+    const confirm = confirmation().getByRole('button', { name: 'Delete transaction' });
+
+    answerRead = () => Promise.reject(refusal(404, 'TRANSACTION_NOT_FOUND'));
+    await act(async () => void (await store.dispatch(checkFlowRecord())));
+
+    expect(asked()).toEqual([]);
+    expect(screen.getByText('This transaction no longer exists')).toBeTruthy();
+    fireEvent.press(confirm);
+    expect(mockedRequest.mock.calls.filter(([{ method }]) => method === 'DELETE')).toEqual([]);
+
+    fireEvent.press(screen.getByRole('button', { name: 'Close' }));
+    expect(flow()).toBeNull();
+  });
+
+  it('drops a delete confirmation of a space the user left', async () => {
+    const { store, openDetails } = renderFlow();
+    openDetails();
+    await settle();
+    pressFlowDelete();
+    const confirm = confirmation().getByRole('button', { name: 'Delete transaction' });
+
+    act(() => {
+      store.dispatch(activateSpace(2));
+    });
+    await settle();
+    fireEvent.press(confirm);
+
+    expect(asked()).toEqual([]);
+    expect(mockedRequest.mock.calls.filter(([{ method }]) => method === 'DELETE')).toEqual([]);
   });
 
   it('keeps a deleted wallet unless another one is picked', async () => {
@@ -1366,7 +1636,7 @@ describe('TransactionFlowSheet', () => {
 
     expect(flow()?.draft?.walletId).toBe(7);
     fireEvent.press(screen.getByLabelText('Close'));
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(asked()).toEqual([]);
     expect(flow()).toBeNull();
   });
 

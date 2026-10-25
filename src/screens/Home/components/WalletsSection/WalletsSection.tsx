@@ -1,43 +1,19 @@
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { useMemo } from 'react';
+import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 import type { WalletCardProps } from '@components';
-import {
-  BottomModal,
-  Carousel,
-  EmptyState,
-  LongPressedModal,
-  SectionTitle,
-  TinyButton,
-  TinyWallet,
-  WalletCard,
-} from '@components';
+import { Carousel, ConfirmationSheet, EmptyState, SectionTitle, TinyButton, WalletCard } from '@components';
 import { useTheme, useThemedStyles } from '@hooks';
 import type { GetWalletsResponse } from '@api/dto';
-import type { AppColor } from '@shared/enums';
 import type { MainTabNavigationProp } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import useWalletActions from './useWalletActions';
+import WalletActionsSheet from './WalletActionsSheet/WalletActionsSheet';
 
 import createStyles from './style';
-
-const renderBottomModalContent = (
-  styles: ReturnType<typeof createStyles>,
-  walletName: string,
-  currencyCode: string,
-  design: AppColor | undefined,
-  error: string | null,
-) => (
-  <View style={styles.confirmContainer}>
-    <TinyWallet walletName={walletName} currencyCode={currencyCode} design={design} />
-
-    <Text style={styles.confirmText}>{`Delete a ${walletName} permanently?`}</Text>
-
-    {error && <Text style={styles.confirmError}>{error}</Text>}
-  </View>
-);
 
 const toWalletCardProps = (
   item: GetWalletsResponse,
@@ -65,19 +41,29 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
     isLoading,
     hasError,
     retry,
-    selectedWallet,
-    isModalVisible,
+    menuWallet,
+    openMenu,
+    closeMenu,
+    onEditPress,
+    onDeletePress,
+    onMenuDismissed,
     walletToDelete,
     isDeleting,
     deleteError,
-    onWalletLongPress,
-    onDeletePress,
-    onDeleteCancel,
     onConfirm,
     onConfirmCancel,
-  } = useWalletActions();
+  } = useWalletActions({
+    onEdit: ({ wallet }) =>
+      navigation.navigate(ScreenNames.ADD_WALLET_SCREEN, {
+        id: wallet.id,
+        walletName: wallet.wallet_name,
+        balance: String(wallet.balance),
+        design: wallet.design,
+      }),
+  });
 
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode) || '';
+  const menuCard = useMemo(() => menuWallet && toWalletCardProps(menuWallet, currencyCode), [menuWallet, currencyCode]);
 
   return (
     <>
@@ -96,38 +82,27 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
       />
 
       <View style={styles.section}>
-        <LongPressedModal
-          longPressedItemStyle={styles.longPressedItem}
-          isVisible={isModalVisible}
-          onClose={onDeleteCancel}
-          onEdit={() => {
-            if (selectedWallet) {
-              navigation.navigate(ScreenNames.ADD_WALLET_SCREEN, {
-                id: selectedWallet.wallet.id,
-                walletName: selectedWallet.wallet.wallet_name,
-                balance: String(selectedWallet.wallet.balance),
-                design: selectedWallet.wallet.design,
-              });
-            }
-
-            onDeleteCancel();
-          }}
-          longPressedItem={selectedWallet ? <WalletCard {...toWalletCardProps(selectedWallet, currencyCode)} /> : <></>}
+        <WalletActionsSheet
+          wallet={menuCard}
+          onEdit={onEditPress}
           onDelete={onDeletePress}
+          onCancel={closeMenu}
+          onDismissed={onMenuDismissed}
         />
 
-        <BottomModal
-          isVisible={!!walletToDelete}
-          onClose={onConfirmCancel}
-          disabled={isDeleting}
-          content={renderBottomModalContent(
-            styles,
-            walletToDelete?.wallet.wallet_name || '',
-            currencyCode,
-            walletToDelete?.wallet.design,
-            deleteError,
-          )}
-          actions={[{ title: isDeleting ? 'Deleting…' : 'Delete', onPress: onConfirm }]}
+        <ConfirmationSheet
+          confirmation={
+            walletToDelete && {
+              title: `Delete “${walletToDelete.wallet.wallet_name}”?`,
+              // A wallet is deleted softly: its records stay, under "Deleted wallet".
+              description:
+                'It leaves your wallets. Its transactions stay in your history and totals, marked “Deleted wallet”.',
+              primaryAction: { label: 'Delete wallet', tone: 'danger', busyLabel: 'Deleting…', onPress: onConfirm },
+              onCancel: onConfirmCancel,
+              isPending: isDeleting,
+              message: deleteError ? { text: deleteError } : undefined,
+            }
+          }
         />
 
         {isLoading && (
@@ -158,10 +133,7 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
         )}
 
         {wallets.length === 1 && (
-          <WalletCard
-            {...toWalletCardProps(wallets[0], currencyCode)}
-            onMorePress={() => onWalletLongPress(wallets[0])}
-          />
+          <WalletCard {...toWalletCardProps(wallets[0], currencyCode)} onMorePress={() => openMenu(wallets[0])} />
         )}
 
         {wallets.length > 1 && (
@@ -177,13 +149,13 @@ const WalletsSection = ({ navigation, onFocusedWalletChange }: Props) => {
             }}
             renderItem={(item, walletWidth) => (
               <TouchableOpacity
-                onLongPress={() => Haptics.impactAsync().then(() => onWalletLongPress(item))}
+                onLongPress={() => Haptics.impactAsync().then(() => openMenu(item))}
                 activeOpacity={0.7}
               >
                 <WalletCard
                   {...toWalletCardProps(item, currencyCode)}
                   style={{ width: walletWidth }}
-                  onMorePress={() => onWalletLongPress(item)}
+                  onMorePress={() => openMenu(item)}
                 />
               </TouchableOpacity>
             )}

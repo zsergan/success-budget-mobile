@@ -44,7 +44,14 @@ const MembersScreen = ({ navigation }: Props) => {
     canInvite,
     cooldownRemaining: remainingSeconds,
   });
-  const { target, isPending, requestAction, cancel, confirm } = useMemberActions({
+  const {
+    target,
+    isPending,
+    error: actionError,
+    requestAction,
+    cancel,
+    confirm,
+  } = useMemberActions({
     onLeft: () => navigation.goBack(),
   });
 
@@ -105,11 +112,20 @@ const MembersScreen = ({ navigation }: Props) => {
         )}
       </View>
 
-      <MemberRemovalDialog target={removalTarget} isPending={isPending} onConfirm={confirm} onCancel={cancel} />
+      <MemberRemovalDialog
+        target={removalTarget}
+        spaceName={currentSpace.name}
+        isPending={isPending}
+        error={actionError}
+        onConfirm={confirm}
+        onCancel={cancel}
+      />
 
       <LeaveSpaceDialog
         isVisible={target?.kind === 'leave'}
+        spaceName={currentSpace.name}
         isPending={isPending}
+        error={actionError}
         isOwner={isOwner}
         memberCount={memberCount}
         onConfirm={confirm}

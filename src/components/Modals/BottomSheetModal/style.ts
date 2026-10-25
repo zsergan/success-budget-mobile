@@ -23,6 +23,10 @@ const createStyles = ({ colors }: ColorTheme) =>
       borderRadius: 3,
       backgroundColor: colors.track,
     },
+    // The sheet waits on its action and cannot be swiped away.
+    handleIndicatorLocked: {
+      opacity: 0.4,
+    },
   });
 
 export default createStyles;

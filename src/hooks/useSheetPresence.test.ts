@@ -45,3 +45,25 @@ it('reports a user dismissal and never dismisses an already closed sheet', () =>
   rerender({ visible: false });
   expect(sheet.dismiss).not.toHaveBeenCalled();
 });
+
+it('presents once however often it is asked to show', () => {
+  const { rerender, sheet } = setUp();
+  rerender({ visible: true });
+  rerender({ visible: true });
+  rerender({ visible: true });
+
+  expect(sheet.present).toHaveBeenCalledTimes(1);
+});
+
+it('shows nothing again once its owner is gone mid-dismissal', () => {
+  const { result, rerender, unmount, sheet } = setUp();
+  rerender({ visible: true });
+  rerender({ visible: false });
+  rerender({ visible: true });
+  const { settleDismiss } = result.current;
+
+  unmount();
+
+  expect(settleDismiss()).toBe(false);
+  expect(sheet.present).toHaveBeenCalledTimes(1);
+});

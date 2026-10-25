@@ -15,6 +15,18 @@ jest.mock('@api/instance', () => ({
 jest.mock('expo-secure-store');
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => jest.requireActual('react-native-reanimated/mock'));
+// Native swipe animations do not run in Jest; expose the opened row's actions.
+jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
+  const React = jest.requireActual('react');
+  const { View } = jest.requireActual('react-native');
+  return React.forwardRef(function OpenSwipeable(
+    { children, renderRightActions }: { children: React.ReactNode; renderRightActions: () => React.ReactNode },
+    ref: React.ForwardedRef<unknown>,
+  ) {
+    React.useImperativeHandle(ref, () => ({ close: jest.fn() }));
+    return React.createElement(View, null, children, renderRightActions());
+  });
+});
 
 const renderCard = (overrides = {}) => {
   const store = createAppStore();

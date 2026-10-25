@@ -33,7 +33,7 @@ const announceNativeChange = () => {
 };
 
 // Under an override the device's own changes are not announced; `silently` is a change made while backgrounded.
-const setDeviceScheme = (next: ReportedScheme, { silently = false } = {}) =>
+const setDeviceScheme = (next: ReportedScheme | null, { silently = false } = {}) =>
   act(() => {
     deviceScheme = next;
     if (!silently && override === null) announceNativeChange();
@@ -89,8 +89,8 @@ beforeEach(async () => {
   appStateListeners.clear();
   jest.spyOn(Appearance, 'getColorScheme').mockImplementation(() => reported as ReportedScheme);
   jest.spyOn(Appearance, 'setColorScheme').mockImplementation((next) => {
-    override = next === 'unspecified' ? null : next;
-    if (next !== 'unspecified') reported = next;
+    override = next === 'auto' || next === 'unspecified' ? null : next;
+    if (next !== 'auto' && next !== 'unspecified') reported = next;
     else if (!nativeLags) reported = deviceScheme;
   });
   jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, listener) => {
@@ -209,7 +209,8 @@ describe('following the device', () => {
     await renderTheme();
     expect(shown()).toBe('system:light:ready');
 
-    await setDeviceScheme('unspecified');
+    await setDeviceScheme('dark');
+    await setDeviceScheme(null);
     expect(shown()).toBe('system:light:ready');
   });
 
@@ -255,13 +256,13 @@ describe('native appearance', () => {
 
   it('overrides native surfaces for a manual choice and hands them back to the device for System', async () => {
     await renderTheme();
-    expect(nativeCalls()).toEqual(['unspecified']);
+    expect(nativeCalls()).toEqual(['auto']);
 
     await choose('dark');
     await choose('light');
     await choose('system');
 
-    expect(nativeCalls()).toEqual(['unspecified', 'dark', 'light', 'unspecified']);
+    expect(nativeCalls()).toEqual(['auto', 'dark', 'light', 'auto']);
   });
 
   it('never makes the resolved System scheme an override', async () => {
@@ -269,7 +270,7 @@ describe('native appearance', () => {
     await setDeviceScheme('dark');
     await setDeviceScheme('light');
 
-    expect(nativeCalls()).toEqual(['unspecified']);
+    expect(nativeCalls()).toEqual(['auto']);
   });
 
   it.each(['light', 'dark'] as const)(

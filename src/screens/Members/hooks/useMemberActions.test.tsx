@@ -19,12 +19,6 @@ jest.mock('expo-secure-store');
 // RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
 jest.useFakeTimers();
 
-const mockedAddAlert = jest.fn();
-
-jest.mock('@hooks', () => ({
-  useAlert: () => ({ addAlert: mockedAddAlert }),
-}));
-
 const createTestStore = () => {
   const store = createAppStore();
 
@@ -121,7 +115,7 @@ describe('useMemberActions confirm()', () => {
     expect(store.getState().space.currentSpaceId).not.toBe(10);
   });
 
-  it('alerts a failed removal of the current session', async () => {
+  it('keeps a failed removal of the current session open with its error, until it is retried or closed', async () => {
     const store = createTestStore();
 
     mockedRequest.mockRejectedValue({ response: { status: 403, data: { message: 'Not allowed', statusCode: 403 } } });
@@ -134,7 +128,41 @@ describe('useMemberActions confirm()', () => {
 
     await act(() => result.current.confirm());
 
-    expect(mockedAddAlert).toHaveBeenCalledWith('Not allowed');
+    expect(result.current.target).toMatchObject({ kind: 'remove', userId: 42 });
+    expect(result.current.error).toBe('Not allowed');
+
+    mockedRequest.mockReturnValue(new Promise(() => {}));
+    act(() => void result.current.confirm());
+    expect(result.current.error).toBeNull();
+  });
+
+  it('forgets a failure once the dialog is closed', async () => {
+    const store = createTestStore();
+
+    mockedRequest.mockRejectedValue({ response: { status: 403, data: { message: 'Not allowed', statusCode: 403 } } });
+
+    const { result } = renderHook(() => useMemberActions({ onLeft: jest.fn() }), { wrapper: wrapperFor(store) });
+
+    act(() => result.current.requestAction({ kind: 'revoke', inviteId: 5, label: 'sam@example.com' }));
+    await act(() => result.current.confirm());
+    act(() => result.current.cancel());
+    act(() => result.current.requestAction({ kind: 'revoke', inviteId: 5, label: 'sam@example.com' }));
+
+    expect(result.current.error).toBeNull();
+  });
+
+  it('drops an open confirmation on a logout and a new login', () => {
+    const store = createTestStore();
+    const { result } = renderHook(() => useMemberActions({ onLeft: jest.fn() }), { wrapper: wrapperFor(store) });
+
+    act(() => result.current.requestAction({ kind: 'remove', userId: 42, label: 'Alex' }));
+    act(() => {
+      store.dispatch(logoutMe.fulfilled(undefined, 'logout', undefined));
+      store.dispatch(loginMe.fulfilled('token-2', 'req-login-2', { email: 'a@b.com', password: 'password1' }));
+      store.dispatch(activateSpace(10));
+    });
+
+    expect(result.current.target).toBeNull();
   });
 
   it('stays silent when a logout aborts a removal', async () => {
@@ -155,7 +183,7 @@ describe('useMemberActions confirm()', () => {
       await confirming;
     });
 
-    expect(mockedAddAlert).not.toHaveBeenCalled();
+    expect(result.current.error).toBeNull();
   });
 
   it.each([
@@ -190,6 +218,6 @@ describe('useMemberActions confirm()', () => {
 
     expect(store.getState().space.currentSpaceId).toBe(99);
     expect(onLeft).not.toHaveBeenCalled();
-    expect(mockedAddAlert).not.toHaveBeenCalled();
+    expect(result.current.error).toBeNull();
   });
 });

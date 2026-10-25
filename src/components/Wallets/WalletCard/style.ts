@@ -5,8 +5,10 @@ import theme from '@shared/theme';
 
 const createStyles = ({ elevation }: ColorTheme) =>
   StyleSheet.create({
+    // Grows with large system text instead of spilling its totals out of the card.
     root: {
-      height: 176,
+      minHeight: 176,
+      rowGap: theme.spacing.md,
       padding: theme.spacing.xl,
       borderRadius: theme.radius.lg,
       justifyContent: 'space-between',
