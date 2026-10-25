@@ -1,7 +1,7 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Confirmation } from '@components/ConfirmationSheet/ConfirmationSheet';
-import { useAppSelector, useAppStore } from '@redux/hooks';
+import { useAppStore } from '@redux/hooks';
 import type { RootState } from '@redux/Store';
 import { afterKeyboardHides } from '@shared/utils';
 
@@ -15,56 +15,83 @@ export interface ConfirmLock {
 interface Asked {
   scope: string;
   confirmation: Confirmation;
+  // Stops watching the scope and waiting for the keyboard.
+  release: () => void;
 }
 
 const selectSessionSpace = ({ auth, space }: RootState) =>
   space.currentSpaceId === null ? null : `${auth.sessionKey}:${space.currentSpaceId}`;
 
 // One confirmation at a time for its owner, which renders `confirmation` in a ConfirmationSheet. It belongs to the
-// scope it was asked in (by default the session and space): once that changes it is gone and the next one free.
+// scope it was asked in (by default the session and space): once that changes it is gone for good, even if the scope
+// comes back, and the next one is free.
 const useConfirmation = (selectScope: (state: RootState) => string | null = selectSessionSpace) => {
   const store = useAppStore();
-  const scope = useAppSelector(selectScope);
-  const [asked, setAsked] = useState<Asked | null>(null);
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const askedRef = useRef<Asked | null>(null);
 
-  const isLocked = useCallback(() => {
-    const current = askedRef.current;
-    return !!current && current.scope === selectScope(store.getState());
-  }, [store, selectScope]);
+  const drop = useCallback((asked: Asked) => {
+    if (askedRef.current !== asked) return false;
+
+    askedRef.current = null;
+    asked.release();
+    setConfirmation(null);
+    return true;
+  }, []);
+
+  // The open confirmation, unless its scope has changed since, which drops it.
+  const current = useCallback(() => {
+    const asked = askedRef.current;
+    if (asked && asked.scope !== selectScope(store.getState())) drop(asked);
+    return askedRef.current;
+  }, [store, selectScope, drop]);
+
+  useEffect(
+    () => () => {
+      if (askedRef.current) drop(askedRef.current);
+    },
+    [drop],
+  );
+
+  const isLocked = useCallback(() => current() !== null, [current]);
 
   const ask = useCallback(
     (build: (settle: () => boolean) => Confirmation | null) => {
-      const askedIn = selectScope(store.getState());
-      if (askedIn === null || isLocked()) return false;
+      const scope = selectScope(store.getState());
+      if (scope === null || current()) return false;
 
       const entry: { current: Asked | null } = { current: null };
-      const settle = () => {
-        if (!entry.current || askedRef.current !== entry.current) return false;
+      const settle = () => !!entry.current && current() === entry.current && drop(entry.current);
+      const built = build(settle);
+      if (!built) return false;
 
-        askedRef.current = null;
-        setAsked(null);
-        return entry.current.scope === selectScope(store.getState());
+      let cancelWait: (() => void) | null = null;
+      // Every change is seen as it is dispatched, so a scope that changes and comes back before a render still drops it.
+      const unsubscribe = store.subscribe(() => {
+        if (selectScope(store.getState()) !== scope) drop(asked);
+      });
+      const asked: Asked = {
+        scope,
+        confirmation: built,
+        release: () => {
+          unsubscribe();
+          cancelWait?.();
+        },
       };
-      const confirmation = build(settle);
-      if (!confirmation) return false;
-
-      const asked = { scope: askedIn, confirmation };
       entry.current = asked;
       askedRef.current = asked;
-      const show = () => {
-        if (askedRef.current === asked) setAsked(asked);
-      };
       // The flow sheet below rose with the keyboard; a question asked over it renders once the keyboard has gone.
-      afterKeyboardHides(show);
+      cancelWait = afterKeyboardHides(() => {
+        if (askedRef.current === asked) setConfirmation(built);
+      });
       return true;
     },
-    [store, selectScope, isLocked],
+    [store, selectScope, current, drop],
   );
 
   const lock = useMemo<ConfirmLock>(() => ({ isLocked, ask }), [isLocked, ask]);
 
-  return { lock, confirmation: asked && asked.scope === scope ? asked.confirmation : null };
+  return { lock, confirmation };
 };
 
 export default useConfirmation;

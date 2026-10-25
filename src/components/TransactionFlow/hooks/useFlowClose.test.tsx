@@ -9,10 +9,13 @@ import { activateSpace } from '@redux/state/space/thunks';
 import { transactionDto } from '@redux/state/transaction/fixtures';
 import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import {
+  categoriesOpened,
+  closed,
   createOpened,
   detailsOpened,
   draftChanged,
   editStarted,
+  panelClosed,
   recordChecked,
 } from '@redux/state/transactionFlow/slice';
 import { TransactionType } from '@shared/enums';
@@ -86,6 +89,54 @@ it('does not leave a replacement edit when an older Back confirmation is accepte
   });
   openEdit(store, 2);
   const replacement = selectTransactionFlow(store.getState());
+
+  act(() => void discard());
+  expect(selectTransactionFlow(store.getState())).toBe(replacement);
+});
+
+it.each([
+  [
+    'across renders',
+    (store: ReturnType<typeof createAppStore>) => {
+      act(() => void store.dispatch(categoriesOpened()));
+      act(() => void store.dispatch(panelClosed()));
+    },
+  ],
+  [
+    'within one update',
+    (store: ReturnType<typeof createAppStore>) =>
+      act(() => {
+        store.dispatch(categoriesOpened());
+        store.dispatch(panelClosed());
+      }),
+  ],
+])('keeps the draft when a view it left and came back to %s answers an older confirmation', (_when, roundTrip) => {
+  const { store, result } = setUp();
+  openDraft(store);
+  act(() => result.current.requestClose());
+  const discard = result.current.confirmation!.primaryAction.onPress;
+  const { draftId, draft } = selectTransactionFlow(store.getState())!;
+
+  roundTrip(store);
+  expect(result.current.confirmation).toBeNull();
+
+  act(() => void discard());
+  expect(selectTransactionFlow(store.getState())).toMatchObject({ draftId, draft, view: { name: 'create' } });
+
+  act(() => result.current.requestClose());
+  expect(result.current.confirmation).toMatchObject({ title: 'Discard transaction?' });
+});
+
+it('does not close a new draft of the same space when an older confirmation is accepted', () => {
+  const { store, result } = setUp();
+  openDraft(store);
+  act(() => result.current.requestClose());
+  const discard = result.current.confirmation!.primaryAction.onPress;
+
+  act(() => void store.dispatch(closed()));
+  openDraft(store);
+  const replacement = selectTransactionFlow(store.getState());
+  expect(result.current.confirmation).toBeNull();
 
   act(() => void discard());
   expect(selectTransactionFlow(store.getState())).toBe(replacement);

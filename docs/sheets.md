@@ -48,8 +48,8 @@ do: it dismisses the keyboard and shows the sheet once it has gone.
   runs (`isPending`) the primary action shows it and the same things are
   blocked, unless `isDismissible` allows closing meanwhile. The owner
   hiding the sheet always closes it.
-- A confirmation belongs to the scope it was asked in, and is dropped once
-  that changes: the session and space for `useConfirmAction` and
+- A confirmation belongs to the scope it was asked in, and is dropped for
+  good once that changes, even if the scope comes back: the session and space for `useConfirmAction` and
   `useConfirmation`, the draft and view for the transaction flow
   (`useFlowConfirmation`). Its `settle()` returns false when the choice no
   longer applies, and the caller must then do nothing.
