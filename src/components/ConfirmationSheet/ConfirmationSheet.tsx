@@ -31,6 +31,10 @@ interface Props {
   confirmation: Confirmation | null;
 }
 
+interface RunningAction {
+  opening: number;
+}
+
 const isThenable = (value: unknown): value is PromiseLike<unknown> =>
   typeof (value as PromiseLike<unknown> | null)?.then === 'function';
 
@@ -50,9 +54,11 @@ const ConfirmationSheet = ({ confirmation }: Props) => {
   const current = confirmation ?? shown;
 
   const { ref, settleDismiss } = useSheetPresence(isVisible);
-  // The ref stops a second press in the same frame; the state disables the actions once it renders.
-  const runningRef = useRef(false);
-  const [isRunning, setRunning] = useState(false);
+  // The running action and its opening: the ref stops a second press in the same frame, the state disables the actions
+  // once it renders. An action an earlier opening left running neither locks a later one nor, settling, unlocks it.
+  const runningRef = useRef<RunningAction | null>(null);
+  const [running, setRunning] = useState<RunningAction | null>(null);
+  const isRunning = running?.opening === opening;
   const isPending = current?.isPending ?? false;
   const canDismiss = !isRunning && (current?.isDismissible ?? !isPending);
   const secondaryAction = !current
@@ -62,16 +68,18 @@ const ConfirmationSheet = ({ confirmation }: Props) => {
       : current.secondaryAction;
 
   const run = (onPress: () => unknown) => {
-    if (!isVisible || runningRef.current) return;
+    if (!isVisible || runningRef.current?.opening === opening) return;
 
     const result = onPress();
     if (!isThenable(result)) return;
 
-    runningRef.current = true;
-    setRunning(true);
+    const action = { opening };
+    runningRef.current = action;
+    setRunning(action);
     const release = () => {
-      runningRef.current = false;
-      setRunning(false);
+      if (runningRef.current !== action) return;
+      runningRef.current = null;
+      setRunning(null);
     };
     result.then(release, release);
   };

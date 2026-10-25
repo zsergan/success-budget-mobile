@@ -52,6 +52,17 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
+const host = (confirmation: Confirmation | null) => (
+  <SafeAreaProvider
+    initialMetrics={{
+      frame: { x: 0, y: 0, width: 393, height: 852 },
+      insets: { top: 54, right: 0, bottom: 34, left: 0 },
+    }}
+  >
+    <ConfirmationSheet confirmation={confirmation} />
+  </SafeAreaProvider>
+);
+
 const renderSheet = (props: Partial<Confirmation> = {}) => {
   const onCancel = jest.fn();
   const onConfirm = jest.fn();
@@ -62,16 +73,7 @@ const renderSheet = (props: Partial<Confirmation> = {}) => {
     onCancel,
     ...props,
   };
-  const view = render(
-    <SafeAreaProvider
-      initialMetrics={{
-        frame: { x: 0, y: 0, width: 393, height: 852 },
-        insets: { top: 54, right: 0, bottom: 34, left: 0 },
-      }}
-    >
-      <ConfirmationSheet confirmation={all} />
-    </SafeAreaProvider>,
-  );
+  const view = render(host(all));
   return { ...view, onCancel, onConfirm, all };
 };
 
@@ -146,15 +148,82 @@ it('cancels on a swipe, but not when its owner hides it, keeping its content mea
   act(() => mockSheet.props?.onDismiss?.());
   expect(onCancel).toHaveBeenCalledTimes(1);
 
-  rerender(
-    <SafeAreaProvider
-      initialMetrics={{
-        frame: { x: 0, y: 0, width: 393, height: 852 },
-        insets: { top: 54, right: 0, bottom: 34, left: 0 },
-      }}
-    >
-      <ConfirmationSheet confirmation={null} />
-    </SafeAreaProvider>,
-  );
+  rerender(host(null));
   expect(onCancel).toHaveBeenCalledTimes(1);
+});
+
+const deferredPress = () => {
+  const settle = { resolve: () => {}, reject: () => {} };
+  const onPress = jest.fn(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        settle.resolve = resolve;
+        settle.reject = () => reject(new Error('Network error'));
+      }),
+  );
+  return { onPress, settle };
+};
+
+it.each(['resolves', 'rejects'] as const)(
+  'frees a new opening from an action an earlier one left running, which %s later without unlocking it',
+  async (outcome) => {
+    const first = deferredPress();
+    const second = deferredPress();
+    const onCancelSecond = jest.fn();
+    const { all, rerender } = renderSheet({ primaryAction: { label: 'Leave space', onPress: first.onPress } });
+    fireEvent.press(screen.getByRole('button', { name: 'Leave space' }));
+
+    rerender(host(null));
+    const reopened = { ...all, primaryAction: { label: 'Leave space', onPress: second.onPress } };
+    rerender(host({ ...reopened, onCancel: onCancelSecond }));
+
+    expect(screen.getByRole('button', { name: 'Leave space' })).toBeEnabled();
+    expect(mockSheet.props?.enablePanDownToClose).not.toBe(false);
+    fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onCancelSecond).toHaveBeenCalledTimes(1);
+
+    rerender(host(null));
+    rerender(host(reopened));
+    fireEvent.press(screen.getByRole('button', { name: 'Leave space' }));
+    expect(second.onPress).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      if (outcome === 'resolves') first.settle.resolve();
+      else first.settle.reject();
+    });
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    expect(mockSheet.props?.enablePanDownToClose).toBe(false);
+    fireEvent.press(screen.getByRole('button', { name: 'Leave space' }));
+    expect(second.onPress).toHaveBeenCalledTimes(1);
+
+    await act(async () => second.settle.resolve());
+    fireEvent.press(screen.getByRole('button', { name: 'Leave space' }));
+    expect(second.onPress).toHaveBeenCalledTimes(2);
+  },
+);
+
+it('keeps its action locked while its owner updates the content of the same opening', async () => {
+  const action = deferredPress();
+  const { all, rerender } = renderSheet({ primaryAction: { label: 'Leave space', onPress: action.onPress } });
+  fireEvent.press(screen.getByRole('button', { name: 'Leave space' }));
+
+  rerender(host({ ...all, message: { text: 'Still working on it.' } }));
+
+  expect(screen.getByText('Still working on it.')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+  fireEvent.press(screen.getByRole('button', { name: 'Leave space' }));
+  expect(action.onPress).toHaveBeenCalledTimes(1);
+
+  await act(async () => action.settle.resolve());
+  expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
+});
+
+it('does not cancel when its owner hides it while an action runs', () => {
+  const action = deferredPress();
+  const { onCancel, rerender } = renderSheet({ primaryAction: { label: 'Leave space', onPress: action.onPress } });
+  fireEvent.press(screen.getByRole('button', { name: 'Leave space' }));
+
+  rerender(host(null));
+
+  expect(onCancel).not.toHaveBeenCalled();
 });

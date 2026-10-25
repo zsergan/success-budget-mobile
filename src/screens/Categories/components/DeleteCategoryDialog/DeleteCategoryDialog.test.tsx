@@ -8,7 +8,14 @@ import { createAppStore } from '@redux/Store';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { activateSpace } from '@redux/state/space/thunks';
 import { AppColor, TransactionType } from '@shared/enums';
-import { pressSheetBackdrop, resetSheets, swipeDownSheet, withSheetHost } from '@components/ConfirmationSheet/testing';
+import {
+  finishDismissals,
+  holdDismissals,
+  pressSheetBackdrop,
+  resetSheets,
+  swipeDownSheet,
+  withSheetHost,
+} from '@components/ConfirmationSheet/testing';
 import DeleteCategoryDialog from './DeleteCategoryDialog';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
@@ -180,6 +187,45 @@ it.each([
 
   expect(screen.queryByText('Category is in use')).toBeNull();
 });
+
+it.each(['succeeds', 'fails'] as const)(
+  'runs a dialog opened in the next space on its own while the old request is out, which then %s',
+  async (outcome) => {
+    const { title, confirm, pending } = MODES.delete;
+    const first = deferredResponse();
+    const { store, open } = renderDialog(MODES.delete.category);
+    open();
+    fireEvent.press(screen.getByText(confirm));
+
+    holdDismissals();
+    act(() => {
+      store.dispatch(activateSpace(2));
+    });
+    const second = deferredResponse();
+    open();
+    finishDismissals();
+
+    expect(screen.getByText(title)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
+    fireEvent.press(screen.getByText(confirm));
+    expect(mockedRequest).toHaveBeenCalledTimes(2);
+    expect(mockedRequest).toHaveBeenLastCalledWith(
+      expect.objectContaining({ url: '/spaces/2/categories/5', method: 'DELETE' }),
+    );
+
+    if (outcome === 'succeeds') await first.resolve();
+    else await first.reject('Category is in use');
+
+    expect(screen.getByText(pending)).toBeTruthy();
+    expect(screen.queryByText('Category is in use')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    dismissAll();
+    expect(screen.getByText(title)).toBeTruthy();
+
+    await second.resolve();
+    expect(screen.queryByText(title)).toBeNull();
+  },
+);
 
 describe('the limit notice', () => {
   it.each([

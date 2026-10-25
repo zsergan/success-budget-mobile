@@ -42,7 +42,9 @@ do: it dismisses the keyboard and shows the sheet once it has gone.
 ## Pending actions and stale confirmations
 
 - An action whose `onPress` returns a promise locks every action, the
-  swipe, the backdrop and Back until it settles. While the owner's request
+  swipe, the backdrop and Back until it settles, for that opening only: an
+  action an earlier opening left running neither holds a later one nor,
+  settling, unlocks it. While the owner's request
   runs (`isPending`) the primary action shows it and the same things are
   blocked, unless `isDismissible` allows closing meanwhile. The owner
   hiding the sheet always closes it.
