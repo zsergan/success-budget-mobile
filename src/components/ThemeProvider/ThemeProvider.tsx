@@ -55,7 +55,7 @@ const getSystemScheme = () => toColorScheme(Appearance.getColorScheme());
 // Clearing the override also re-reads the device's appearance; the native change event corrects it if that
 // read was still the old override.
 const applyNativeAppearance = (preference: ThemePreference) => {
-  Appearance.setColorScheme(preference === 'system' ? 'unspecified' : preference);
+  Appearance.setColorScheme(preference === 'system' ? 'auto' : preference);
   appearanceListeners.forEach((listener) => listener());
 };
 

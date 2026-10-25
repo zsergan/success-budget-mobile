@@ -5,7 +5,7 @@ categories, spending limits, shared spaces with one currency each.
 
 ## Stack
 
-- Expo SDK 57, React 19, React Native 0.86, TypeScript
+- Expo SDK 58, React 19, React Native 0.88, TypeScript
 - Redux Toolkit for state
 - React Navigation (stack + bottom tabs)
 - react-hook-form + yup for forms
@@ -34,6 +34,13 @@ npm start
 
 Then follow the Expo CLI prompts to open the app on a simulator, a device
 via Expo Go, or in a web browser (`npm run web`).
+
+SDK 58 needs a compatible Expo Go or a newly built native app. The install
+script patches the existing Draggable FlatList 4.0.3 to use
+`requestIdleCallback` in place of React Native's removed `InteractionManager`.
+Recheck that patch when updating the library. TypeScript temporarily uses
+React Native's supported legacy API condition to keep this SDK upgrade small;
+migrate to the strict API before that compatibility option is removed.
 
 ## Scripts
 

@@ -6,8 +6,8 @@ conversation is in.
 
 ## Project
 
-`success-budget-mobile`: a React Native personal-finance app (Expo SDK 57,
-React 19, RN 0.86, TypeScript strict) with wallets, transactions,
+`success-budget-mobile`: a React Native personal-finance app (Expo SDK 58,
+React 19, RN 0.88, TypeScript strict) with wallets, transactions,
 categories, spending limits and shared spaces with members. Each space has
 one currency (picked at sign-up for the personal space, or when a space is
 created); wallets and transactions use it, and nothing converts between

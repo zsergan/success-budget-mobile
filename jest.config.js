@@ -1,6 +1,6 @@
 module.exports = {
   preset: 'jest-expo',
-  setupFiles: ['<rootDir>/jest.setup.js'],
+  setupFiles: ['react-native-gesture-handler/jestSetup.js', '<rootDir>/jest.setup.js'],
   moduleNameMapper: {
     '^@(api|components|hooks|navigation|redux|screens|shared)/(.*)$': '<rootDir>/src/$1/$2',
     // The bare form (e.g. `@components`, importing a barrel's index.ts

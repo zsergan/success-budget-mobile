@@ -1,4 +1,4 @@
-import type { Swipeable } from 'react-native-gesture-handler';
+import type { SwipeableMethods as Swipeable } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useRef } from 'react';
 
 const useSwipe = () => {
