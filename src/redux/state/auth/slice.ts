@@ -1,7 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-import { isApiError } from '@shared/utils/error';
-
 import { attemptFailed, attemptStarted } from '../launch/actions';
 import { registrationAbandoned } from './actions';
 import initialState from './initialState';
@@ -15,7 +13,6 @@ const login = (state: typeof initialState, action: string) => {
   state.userToken = action;
   state.userEmail = null;
   state.registrationRequestId = null;
-  state.error = undefined;
 };
 
 const logout = (state: typeof initialState) => {
@@ -44,7 +41,6 @@ const authSlice = createSlice({
 
       state.registrationRequestId = null;
       state.userEmail = action.payload.email;
-      state.error = undefined;
     });
 
     builder.addCase(registerMe.rejected, (state, action) => {
@@ -96,12 +92,6 @@ const authSlice = createSlice({
 
       state.storedSession = 'failed';
       state.storedSessionRead = null;
-    });
-
-    // Only the verify screen reads this: Sign In and Sign Up show their own failures from the request's result.
-    builder.addCase(verifyEmailMe.rejected, (state, action) => {
-      // The verify screen sends an already verified account to sign in instead of showing this as an error.
-      state.error = isApiError(action.payload, 409) ? undefined : action.payload;
     });
   },
 });

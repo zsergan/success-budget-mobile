@@ -53,7 +53,7 @@ describe('loginMe', () => {
     expect(store.getState().auth.userToken).toBe('a-token');
   });
 
-  it('rejects with the server error body, keeping it out of the shared auth error', async () => {
+  it('rejects with the server error body', async () => {
     mockedLogin.mockRejectedValue(axiosErrorFor(errorResponse));
 
     const store = createTestStore();
@@ -63,7 +63,6 @@ describe('loginMe', () => {
     expect(action.payload).toEqual(errorResponse);
     expect(mockedSetItemAsync).not.toHaveBeenCalled();
     expect(store.getState().auth.isSignedIn).toBe(false);
-    expect(store.getState().auth.error).toBeUndefined();
   });
 });
 
@@ -82,7 +81,7 @@ describe('registerMe', () => {
     expect(store.getState().auth.isSignedIn).toBe(false);
   });
 
-  it('rejects with the server error body, e.g. a duplicate email, keeping it out of the shared auth error', async () => {
+  it('rejects with the server error body, e.g. a duplicate email', async () => {
     const duplicateEmailError = {
       message: 'Email already registered',
       statusCode: 409,
@@ -97,7 +96,6 @@ describe('registerMe', () => {
 
     expect(action.type).toBe('auth/registerMe/rejected');
     expect(action.payload).toEqual(duplicateEmailError);
-    expect(store.getState().auth.error).toBeUndefined();
   });
 
   it('continues to verification when a parallel sign-up for the email is already sending the code', async () => {
@@ -116,7 +114,6 @@ describe('registerMe', () => {
 
     expect(action.type).toBe('auth/registerMe/fulfilled');
     expect(store.getState().auth.userEmail).toBe('a@b.com');
-    expect(store.getState().auth.error).toBeUndefined();
   });
 
   // Each call to register waits until the test answers it.
@@ -219,10 +216,9 @@ describe('verifyEmailMe', () => {
     expect(action.type).toBe('auth/verifyEmailMe/rejected');
     expect(action.payload).toEqual(invalidCodeError);
     expect(store.getState().auth.isSignedIn).toBe(false);
-    expect(store.getState().auth.error).toEqual(invalidCodeError);
   });
 
-  it('keeps an already verified account out of the auth error, so no screen alerts it as a failure', async () => {
+  it('does not sign in an already verified account', async () => {
     mockedVerifyEmail.mockRejectedValue(
       axiosErrorFor({
         message: 'Email is already verified',
@@ -238,7 +234,6 @@ describe('verifyEmailMe', () => {
     expect(action.type).toBe('auth/verifyEmailMe/rejected');
     expect(mockedSetItemAsync).not.toHaveBeenCalled();
     expect(store.getState().auth.isSignedIn).toBe(false);
-    expect(store.getState().auth.error).toBeUndefined();
   });
 });
 

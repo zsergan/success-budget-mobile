@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { TextInput } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 
+import { useToast } from '@hooks';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { passwordResetApi } from '@redux/state/passwordReset/api';
 import { selectPasswordReset } from '@redux/state/passwordReset/selectors';
@@ -25,6 +26,7 @@ type UseResetCodeProps = Pick<RootStackScreenProps<ScreenNames.RESET_CODE_SCREEN
 
 const useResetCode = ({ navigation, route }: UseResetCodeProps) => {
   const dispatch = useAppDispatch();
+  const toast = useToast();
   const { start, isLatest } = useLatestRequest();
   const { email, resendAvailableAt, challenge } = useAppSelector(selectPasswordReset);
   const inputRef = useRef<TextInput>(null);
@@ -135,6 +137,7 @@ const useResetCode = ({ navigation, route }: UseResetCodeProps) => {
     isBusy.current = true;
     setRunning('resend');
     setFailure(null);
+    const ticket = toast.begin();
 
     const request = start(
       dispatch(passwordResetApi.endpoints.requestPasswordReset.initiate({ email }, { track: false })),
@@ -155,6 +158,8 @@ const useResetCode = ({ navigation, route }: UseResetCodeProps) => {
 
     clearAfterNewCode();
     setIsJustSent(true);
+    // Accepted is all the server says: it never tells whether the address has an account.
+    ticket.show({ tone: 'info', text: 'If this address has a verified account, a code will be sent.' });
     inputRef.current?.focus();
   };
 

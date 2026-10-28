@@ -31,13 +31,6 @@ jest.mock('@api/auth.api', () => ({
   ...jest.requireActual('@api/auth.api'),
   register: jest.fn(),
 }));
-const mockedAddAlert = jest.fn();
-
-jest.mock('@hooks', () => ({
-  ...jest.requireActual('@hooks'),
-  useAlert: () => ({ addAlert: mockedAddAlert }),
-}));
-
 const mockedRegister = jest.mocked(register);
 
 const CURRENCIES = [
@@ -502,7 +495,7 @@ describe('a failed registration', () => {
 
     await renderSignUp(store);
 
-    expect(mockedAddAlert).not.toHaveBeenCalled();
+    expect(screen.queryByText('Couldn’t create your account')).toBeNull();
   });
 
   it('tells its own failure once, and not again when Sign Up is opened anew', async () => {
@@ -512,14 +505,16 @@ describe('a failed registration', () => {
 
     await sendForm();
 
-    expect(mockedAddAlert).toHaveBeenCalledTimes(1);
-    expect(mockedAddAlert).toHaveBeenCalledWith('Email already registered');
+    // In the form, which keeps what was typed.
+    expect(screen.getByText('Couldn’t create your account')).toBeTruthy();
+    expect(screen.getAllByText('Email already registered')).toHaveLength(1);
+    expect(screen.getByDisplayValue('anna@kovalenko.co')).toBeTruthy();
     expect(navigation.navigate).not.toHaveBeenCalled();
 
     unmount();
     await renderSignUp(store);
 
-    expect(mockedAddAlert).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Couldn’t create your account')).toBeNull();
   });
 
   it('keeps quiet about a failure that answers after the user left', async () => {
@@ -533,6 +528,6 @@ describe('a failed registration', () => {
     unmount();
     await act(async () => answer({ response: { status: 409, data: {}, headers: {} }, config: {} }));
 
-    expect(mockedAddAlert).not.toHaveBeenCalled();
+    expect(navigation.navigate).not.toHaveBeenCalled();
   });
 });

@@ -1,14 +1,10 @@
-import { useEffect } from 'react';
 import { Text, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
 import { Button, H, Input } from '@components';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
-import { useAppSelector } from '@redux/hooks';
-import { selectAuth } from '@redux/state/auth/selectors';
-import { useAlert, useThemedStyles } from '@hooks';
-import { getErrorMessage } from '@shared/utils';
+import { useThemedStyles } from '@hooks';
 import AuthLayout from '@screens/Auth/AuthLayout/AuthLayout';
 import useVerifyEmailForm from './useVerifyEmailForm';
 
@@ -18,15 +14,7 @@ interface Props extends RootStackScreenProps<ScreenNames.VERIFY_EMAIL_SCREEN> {}
 
 const VerifyEmailScreen = ({ navigation }: Props) => {
   const styles = useThemedStyles(createStyles);
-  const { error } = useAppSelector(selectAuth);
   const { control, onSubmit, isSubmitting } = useVerifyEmailForm({ navigation });
-  const { addAlert } = useAlert();
-
-  useEffect(() => {
-    if (error) {
-      addAlert(getErrorMessage(error));
-    }
-  }, [error, addAlert]);
 
   return (
     <AuthLayout>

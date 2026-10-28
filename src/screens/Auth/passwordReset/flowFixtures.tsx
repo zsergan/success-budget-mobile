@@ -3,6 +3,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import ThemeProvider from '@components/ThemeProvider/ThemeProvider';
+import ToastProvider from '@components/Toast/ToastProvider';
 import RootNavigator from '@navigation/RootNavigator';
 import { createAppStore } from '@redux/Store';
 
@@ -78,7 +79,9 @@ export const openSignIn = async () => {
     <ThemeProvider>
       <SafeAreaProvider initialMetrics={metrics}>
         <Provider store={store}>
-          <RootNavigator />
+          <ToastProvider>
+            <RootNavigator />
+          </ToastProvider>
         </Provider>
       </SafeAreaProvider>
     </ThemeProvider>,

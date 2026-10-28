@@ -348,7 +348,6 @@ describe('passwordReset slice', () => {
     store.dispatch(passwordResetEnded());
 
     expect(store.getState().auth.userEmail).toBe('signup@example.com');
-    expect(store.getState().auth.error).toBeUndefined();
   });
 });
 
