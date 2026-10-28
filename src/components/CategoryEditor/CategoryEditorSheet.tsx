@@ -2,6 +2,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 import { BottomSheetScrollView, BottomSheetTextInput, useBottomSheet } from '@gorhom/bottom-sheet';
 
+import Banner from '@components/Banner/Banner';
 import Icon from '@components/Icon/Icon';
 import type { CategoryModel } from '@api/models';
 import { toBackendIcon } from '@api/models';
@@ -38,7 +39,7 @@ const CategoryEditorSheet = ({ category, defaultTransactionType, onRequestDelete
   const { height, keyboardHeight } = useBoundedHeight(0.94);
   const insets = useSafeAreaInsets();
   const { close } = useBottomSheet();
-  const { isNewCategory, control, watch, onSubmit, isSubmitDisabled } = useCategoryEditorForm({
+  const { isNewCategory, control, watch, onSubmit, isSubmitDisabled, submitError } = useCategoryEditorForm({
     category,
     defaultTransactionType,
     onSaved,
@@ -101,24 +102,30 @@ const CategoryEditorSheet = ({ category, defaultTransactionType, onRequestDelete
           <Controller
             name="name"
             control={control}
-            render={({ field: { onChange, value, onBlur }, fieldState: { isTouched } }) => (
-              <View style={[styles.nameField, isTouched && styles.nameFieldFocused]}>
-                <BottomSheetTextInput
-                  keyboardAppearance={scheme}
-                  style={styles.nameInput}
-                  value={value}
-                  onChangeText={(text) => onChange(text.slice(0, NAME_MAX_LENGTH))}
-                  onBlur={onBlur}
-                  placeholder="My category"
-                  placeholderTextColor={colors.muted}
-                  maxLength={NAME_MAX_LENGTH}
-                  returnKeyType="done"
-                />
+            render={({ field: { onChange, value, onBlur }, fieldState: { isTouched, error } }) => (
+              <>
+                <View
+                  style={[styles.nameField, isTouched && styles.nameFieldFocused, !!error && styles.nameFieldError]}
+                >
+                  <BottomSheetTextInput
+                    keyboardAppearance={scheme}
+                    style={styles.nameInput}
+                    value={value}
+                    onChangeText={(text) => onChange(text.slice(0, NAME_MAX_LENGTH))}
+                    onBlur={onBlur}
+                    placeholder="My category"
+                    placeholderTextColor={colors.muted}
+                    maxLength={NAME_MAX_LENGTH}
+                    returnKeyType="done"
+                  />
 
-                <Text style={styles.nameCount}>
-                  {value.length}/{NAME_MAX_LENGTH}
-                </Text>
-              </View>
+                  <Text style={styles.nameCount}>
+                    {value.length}/{NAME_MAX_LENGTH}
+                  </Text>
+                </View>
+
+                {error && <Text style={styles.nameError}>{error.message}</Text>}
+              </>
             )}
           />
         </View>
@@ -228,6 +235,8 @@ const CategoryEditorSheet = ({ category, defaultTransactionType, onRequestDelete
       </BottomSheetScrollView>
 
       <View style={[styles.footer, { marginBottom: theme.spacing.md + (keyboardHeight > 0 ? 0 : insets.bottom) }]}>
+        {submitError && <Banner tone="danger" text={submitError} />}
+
         <TouchableOpacity
           style={[styles.saveButton, isSubmitDisabled && styles.saveButtonDisabled]}
           onPress={onSubmit}

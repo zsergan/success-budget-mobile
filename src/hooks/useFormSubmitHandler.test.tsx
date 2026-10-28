@@ -1,7 +1,12 @@
 import type { ReactNode } from 'react';
+import { useState } from 'react';
+import { Text, TouchableOpacity } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { Provider } from 'react-redux';
-import { act, renderHook } from '@testing-library/react-native';
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react-native';
+
+import { withSheetHost } from '@components/ConfirmationSheet/testing';
+import { toastCount, withToasts } from '@components/Toast/testing';
 
 import { createAppStore } from '@redux/Store';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
@@ -21,10 +26,6 @@ jest.mock('expo-secure-store');
 // RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
 jest.useFakeTimers();
 
-const mockedAddAlert = jest.fn();
-
-jest.mock('./useAlert', () => () => ({ addAlert: mockedAddAlert }));
-
 type AppStore = ReturnType<typeof createAppStore>;
 
 const createSpace = (store: AppStore) =>
@@ -36,7 +37,9 @@ const renderSubmitHandler = (onSubmit: (store: AppStore) => Promise<unknown> = c
   const store = createAppStore();
   const onSuccess = jest.fn();
   const reset = jest.fn();
-  const Wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
+  const Wrapper = ({ children }: { children: ReactNode }) => (
+    <Provider store={store}>{withSheetHost(withToasts(children))}</Provider>
+  );
 
   const { result } = renderHook(
     () => {
@@ -49,7 +52,6 @@ const renderSubmitHandler = (onSubmit: (store: AppStore) => Promise<unknown> = c
           formState,
           onSubmit: () => onSubmit(store),
           onSuccess,
-          getInvalidMessage: () => 'invalid',
           reset,
         }),
       };
@@ -62,16 +64,21 @@ const renderSubmitHandler = (onSubmit: (store: AppStore) => Promise<unknown> = c
 
 beforeEach(() => jest.clearAllMocks());
 
-it('alerts a failure of the current session and leaves the form unsubmitted', async () => {
+it('keeps a failure of the current session in the form, not a toast, and leaves the form unsubmitted', async () => {
   mockedRequest.mockRejectedValue({ response: { status: 409, data: { message: 'Name taken', statusCode: 409 } } });
 
   const { result, onSuccess } = renderSubmitHandler();
 
   await act(() => result.current.onSubmit());
 
-  expect(mockedAddAlert).toHaveBeenCalledWith('Name taken');
+  expect(result.current.submitError).toBe('Name taken');
+  expect(toastCount()).toBe(0);
   expect(onSuccess).not.toHaveBeenCalled();
   expect(result.current.formState.isSubmitSuccessful).toBe(false);
+
+  mockedRequest.mockReturnValue(new Promise(() => {}));
+  await act(async () => void result.current.onSubmit());
+  expect(result.current.submitError).toBeNull();
 });
 
 it('stays silent when a logout aborts the submit', async () => {
@@ -86,7 +93,8 @@ it('stays silent when a logout aborts the submit', async () => {
     await submitting;
   });
 
-  expect(mockedAddAlert).not.toHaveBeenCalled();
+  expect(result.current.submitError).toBeNull();
+  expect(toastCount()).toBe(0);
   expect(onSuccess).not.toHaveBeenCalled();
   expect(reset).not.toHaveBeenCalled();
   expect(result.current.formState.isSubmitSuccessful).toBe(false);
@@ -107,7 +115,8 @@ it('does not count a submit that resolves after the session ended as a save', as
     await submitting;
   });
 
-  expect(mockedAddAlert).not.toHaveBeenCalled();
+  expect(result.current.submitError).toBeNull();
+  expect(toastCount()).toBe(0);
   expect(onSuccess).not.toHaveBeenCalled();
   expect(reset).not.toHaveBeenCalled();
   expect(result.current.formState.isSubmitSuccessful).toBe(false);
@@ -128,7 +137,7 @@ describe('a space form submitted before a logout and a new login', () => {
     Object.entries(oldResponses).map(([outcome, respond]) => [form, outcome, submit, respond] as const),
   );
 
-  it.each(cases)('%s (%s): no space switch, navigation or alert', async (_form, _outcome, submit, respond) => {
+  it.each(cases)('%s (%s): no space switch, navigation or message', async (_form, _outcome, submit, respond) => {
     let settle!: () => void;
 
     mockedRequest.mockReturnValue(new Promise((resolve, reject) => (settle = () => respond(resolve, reject))));
@@ -148,6 +157,49 @@ describe('a space form submitted before a logout and a new login', () => {
     expect(store.getState().space.currentSpaceId).toBe(99);
     expect(onSuccess).not.toHaveBeenCalled();
     expect(reset).not.toHaveBeenCalled();
-    expect(mockedAddAlert).not.toHaveBeenCalled();
+    expect(result.current.submitError).toBeNull();
+    expect(toastCount()).toBe(0);
   });
+});
+
+it('reports a failure in a toast once the form has gone, as a closed sheet leaves it', async () => {
+  const store = createAppStore();
+  let fail: (reason: unknown) => void = () => {};
+  mockedRequest.mockReturnValue(new Promise((_, reject) => (fail = reject)));
+
+  const Form = () => {
+    const { handleSubmit, formState } = useForm();
+    const { onSubmit } = useFormSubmitHandler({
+      handleSubmit,
+      formState,
+      onSubmit: () => createSpace(store),
+      onSuccess: () => {},
+    });
+    return (
+      <TouchableOpacity onPress={onSubmit}>
+        <Text>Save</Text>
+      </TouchableOpacity>
+    );
+  };
+  const Sheet = () => {
+    const [isOpen, setOpen] = useState(true);
+    return (
+      <>
+        {isOpen && <Form />}
+        <TouchableOpacity onPress={() => setOpen(false)}>
+          <Text>Close sheet</Text>
+        </TouchableOpacity>
+      </>
+    );
+  };
+
+  render(<Provider store={store}>{withSheetHost(withToasts(<Sheet />))}</Provider>);
+  await act(async () => {
+    fireEvent.press(screen.getByText('Save'));
+  });
+  fireEvent.press(screen.getByText('Close sheet'));
+  await act(async () => fail({ response: { status: 409, data: { message: 'Name taken', statusCode: 409 } } }));
+
+  expect(screen.getByText('Name taken')).toBeTruthy();
+  expect(toastCount()).toBe(1);
 });

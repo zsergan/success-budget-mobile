@@ -41,12 +41,22 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
   const { total, categoryLimits } = useGetLimitsQuery(spaceArg).currentData ?? EMPTY_LIMITS;
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
 
-  const { control, watch, setScope, toggleCategory, onNameChange, onSubmit, canSubmit, errors, closeBottomSheet } =
-    useLimitEditorForm({
-      limit,
-      initialScope,
-      activeCategoryIds: categories && expenses.map((category) => category.id),
-    });
+  const {
+    control,
+    watch,
+    setScope,
+    toggleCategory,
+    onNameChange,
+    onSubmit,
+    canSubmit,
+    errors,
+    submitError,
+    closeBottomSheet,
+  } = useLimitEditorForm({
+    limit,
+    initialScope,
+    activeCategoryIds: categories && expenses.map((category) => category.id),
+  });
 
   const scope = watch('scope');
   const categoryIds = watch('categoryIds');
@@ -156,6 +166,7 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
         canSubmit={canSubmit}
         saveLabel={isEdit ? 'Save changes' : isTotal ? 'Set monthly total' : 'Create limit'}
         onSubmit={onSubmit}
+        error={submitError}
       />
     </View>
   );

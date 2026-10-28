@@ -21,7 +21,7 @@ interface CreateWalletFormData {
 }
 
 const schema = yup.object().shape({
-  walletName: yup.string().required(),
+  walletName: yup.string().trim().required('Enter a wallet name'),
   initialBalance: amountSchema,
   design: yup.mixed<AppColor>().oneOf(Object.values(AppColor)).required(),
 });
@@ -73,7 +73,10 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
     return true;
   };
 
-  const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<CreateWalletFormData, CreateWalletResponse | void>({
+  const { onSubmit, isSubmitDisabled, submitError } = useFormSubmitHandler<
+    CreateWalletFormData,
+    CreateWalletResponse | void
+  >({
     handleSubmit,
     formState: { isSubmitting, isSubmitSuccessful },
     onSubmit: async (formData) =>
@@ -95,10 +98,6 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
       if (result && forDraft !== undefined) dispatch(walletCreated({ draftId: forDraft, walletId: result.wallet.id }));
       if (!result || !continueToTransaction(result.wallet.id)) navigation.goBack();
     },
-    getInvalidMessage: (errors) =>
-      [errors.walletName && 'Enter a wallet name', errors.initialBalance && 'Enter an initial balance']
-        .filter(Boolean)
-        .join('\n'),
   });
 
   return {
@@ -108,6 +107,7 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
     onSubmit,
     watch,
     isSubmitDisabled,
+    submitError,
   };
 };
 

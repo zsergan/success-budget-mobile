@@ -20,7 +20,6 @@ jest.mock('@api/instance', () => ({
   createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
 }));
 jest.mock('expo-secure-store');
-jest.mock('@hooks/useAlert', () => () => ({ addAlert: jest.fn() }));
 
 // RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
 jest.useFakeTimers();
@@ -116,5 +115,35 @@ describe('creating a wallet for Add transaction', () => {
 
     expect(routeNames()).toEqual([ScreenNames.HOME_SCREEN]);
     expect(statsParams()).toBeNull();
+  });
+});
+
+describe('a failed create', () => {
+  it('names a missing field beside it and sends nothing', async () => {
+    renderFromStats();
+
+    await act(async () => fireEvent.press(screen.getByText('Create')));
+
+    expect(screen.getByText('Enter a wallet name')).toBeTruthy();
+    expect(screen.getByText('Enter an amount')).toBeTruthy();
+    expect(mockedRequest.mock.calls.filter(([{ method }]) => method === 'POST')).toEqual([]);
+  });
+
+  it('says why in the form, keeping what was typed, and lets the user try again', async () => {
+    renderFromStats();
+    mockedRequest.mockImplementationOnce(() =>
+      Promise.reject({ response: { status: 409, data: { message: 'Wallet name already used', statusCode: 409 } } }),
+    );
+
+    await createWallet();
+
+    expect(screen.getByText('Wallet name already used')).toBeTruthy();
+    expect(screen.getByPlaceholderText('My Wallet').props.value).toBe('Cash');
+    expect(routeNames()).toEqual([ScreenNames.HOME_SCREEN, ScreenNames.ADD_WALLET_SCREEN]);
+
+    await act(async () => fireEvent.press(screen.getByText('Create')));
+
+    expect(screen.queryByText('Wallet name already used')).toBeNull();
+    expect(routeNames()).toEqual([ScreenNames.HOME_SCREEN]);
   });
 });

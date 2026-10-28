@@ -19,8 +19,8 @@ interface CreateSpaceFormData {
 
 const schema = yup.object().shape({
   type: yup.mixed<SpaceType>().oneOf(Object.values(SpaceType)).required(),
-  name: yup.string().required(),
-  currency: yup.number().required(),
+  name: yup.string().trim().required('Enter a space name'),
+  currency: yup.number().typeError('Choose a currency').required('Choose a currency'),
   invites: yup.array().of(yup.string().required()).required(),
 });
 
@@ -45,7 +45,7 @@ const useCreateSpaceForm = ({ navigation }: UseCreateSpaceFormProps) => {
     },
   });
 
-  const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<CreateSpaceFormData>({
+  const { onSubmit, isSubmitDisabled, submitError } = useFormSubmitHandler<CreateSpaceFormData>({
     handleSubmit,
     formState: { isSubmitting, isSubmitSuccessful },
     onSubmit: (formData) =>
@@ -58,8 +58,6 @@ const useCreateSpaceForm = ({ navigation }: UseCreateSpaceFormProps) => {
         }),
       ),
     onSuccess: () => navigation.goBack(),
-    getInvalidMessage: (errors) =>
-      [errors.name && 'Enter a space name', errors.currency && 'Choose a currency'].filter(Boolean).join('\n'),
   });
 
   return {
@@ -68,6 +66,7 @@ const useCreateSpaceForm = ({ navigation }: UseCreateSpaceFormProps) => {
     watch,
     onSubmit,
     isSubmitDisabled,
+    submitError,
   };
 };
 

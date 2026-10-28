@@ -105,6 +105,16 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       color: colors.text,
       padding: 0,
     },
+    nameFieldError: {
+      borderColor: colors.danger,
+    },
+    nameError: {
+      marginTop: theme.spacing.xs + 2,
+      fontFamily: theme.fonts.medium,
+      fontSize: theme.fontSizes.caption,
+      lineHeight: theme.lineHeights.caption,
+      color: colors.danger,
+    },
     nameCount: {
       fontFamily: theme.fonts.semiBold,
       fontSize: theme.fontSizes.micro,
@@ -208,6 +218,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       marginTop: theme.spacing.md,
       marginHorizontal: theme.spacing.xl,
       marginBottom: theme.spacing.xl,
+      rowGap: theme.spacing.sm,
     },
     saveButton: {
       height: 52,

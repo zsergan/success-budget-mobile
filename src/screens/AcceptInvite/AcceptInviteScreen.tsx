@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import { Button, Input, RootLayout, SectionTitle } from '@components';
+import { Banner, Button, Input, RootLayout, SectionTitle } from '@components';
 import { useThemedStyles } from '@hooks';
 import type { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
@@ -13,7 +13,7 @@ interface Props extends RootStackScreenProps<ScreenNames.ACCEPT_INVITE_SCREEN> {
 
 const AcceptInviteScreen = ({ navigation }: Props) => {
   const styles = useThemedStyles(createStyles);
-  const { control, onSubmit, isSubmitDisabled } = useAcceptInviteForm({ navigation });
+  const { control, onSubmit, isSubmitDisabled, submitError } = useAcceptInviteForm({ navigation });
 
   return (
     <RootLayout style={styles.root}>
@@ -25,9 +25,10 @@ const AcceptInviteScreen = ({ navigation }: Props) => {
         <Controller
           name="code"
           control={control}
-          render={({ field: { onChange, value } }) => (
+          render={({ field: { onChange, value }, fieldState: { error } }) => (
             <Input
               label="Invite code"
+              error={error?.message}
               placeholder="ABC123"
               value={value}
               onChangeText={(text) => onChange(text.toUpperCase())}
@@ -38,6 +39,8 @@ const AcceptInviteScreen = ({ navigation }: Props) => {
             />
           )}
         />
+
+        {submitError && <Banner tone="danger" text={submitError} />}
       </View>
 
       <Button title="Join space" onPress={onSubmit} disabled={isSubmitDisabled} />

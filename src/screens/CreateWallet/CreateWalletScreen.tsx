@@ -1,7 +1,7 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import { Input, RootLayout, Button, SectionTitle, GradientBackground, WalletCard, Icon } from '@components';
+import { Banner, Input, RootLayout, Button, SectionTitle, GradientBackground, WalletCard, Icon } from '@components';
 import { useTheme, useThemedStyles } from '@hooks';
 import type { RootStackScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
@@ -15,10 +15,11 @@ interface Props extends RootStackScreenProps<ScreenNames.ADD_WALLET_SCREEN> {}
 const CreateWalletScreen = ({ navigation, route }: Props) => {
   const { wallets } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
-  const { spaceCurrencyCode, isNewWallet, control, onSubmit, watch, isSubmitDisabled } = useCreateWalletForm({
-    navigation,
-    route,
-  });
+  const { spaceCurrencyCode, isNewWallet, control, onSubmit, watch, isSubmitDisabled, submitError } =
+    useCreateWalletForm({
+      navigation,
+      route,
+    });
 
   const selectedWalletName = watch('walletName');
   const selectedBalance = watch('initialBalance');
@@ -47,8 +48,15 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
             <Controller
               name="walletName"
               control={control}
-              render={({ field: { onChange, value } }) => (
-                <Input label="Wallet Name" placeholder="My Wallet" value={value} onChangeText={onChange} withShadow />
+              render={({ field: { onChange, value }, fieldState: { error } }) => (
+                <Input
+                  label="Wallet Name"
+                  placeholder="My Wallet"
+                  value={value}
+                  onChangeText={onChange}
+                  error={error?.message}
+                  withShadow
+                />
               )}
             />
 
@@ -56,9 +64,10 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
               <Controller
                 name="initialBalance"
                 control={control}
-                render={({ field: { onChange, value } }) => (
+                render={({ field: { onChange, value }, fieldState: { error } }) => (
                   <Input
                     label="Starting balance"
+                    error={error?.message}
                     placeholder="0"
                     value={value}
                     onChangeText={onChange}
@@ -118,6 +127,7 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
               )}
             />
           </View>
+          {submitError && <Banner tone="danger" text={submitError} />}
         </View>
 
         <Button title={isNewWallet ? 'Create' : 'Save changes'} onPress={onSubmit} disabled={isSubmitDisabled} />

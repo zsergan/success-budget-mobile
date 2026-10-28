@@ -25,7 +25,7 @@ interface CategoryEditorFormData {
 }
 
 const schema = yup.object().shape({
-  name: yup.string().trim().required().max(NAME_MAX_LENGTH),
+  name: yup.string().trim().required('Enter a category name').max(NAME_MAX_LENGTH),
   transactionType: yup.mixed<TransactionType>().oneOf(Object.values(TransactionType)).required(),
   icon: yup.mixed<IconType>().oneOf(CATEGORY_ICON_LIST).required(),
   color: yup.mixed<AppColor>().oneOf(Object.values(AppColor)).required(),
@@ -60,7 +60,7 @@ const useCategoryEditorForm = ({ category, defaultTransactionType, onSaved }: Us
     },
   });
 
-  const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<CategoryEditorFormData, CategoryModel>({
+  const { onSubmit, isSubmitDisabled, submitError } = useFormSubmitHandler<CategoryEditorFormData, CategoryModel>({
     handleSubmit,
     formState: { isSubmitting, isSubmitSuccessful },
     onSubmit: async (formData) => {
@@ -87,7 +87,6 @@ const useCategoryEditorForm = ({ category, defaultTransactionType, onSaved }: Us
       onSaved?.(saved);
       close();
     },
-    getInvalidMessage: (errors) => [errors.name && 'Enter a category name'].filter(Boolean).join('\n'),
     reset,
   });
 
@@ -97,6 +96,7 @@ const useCategoryEditorForm = ({ category, defaultTransactionType, onSaved }: Us
     watch,
     onSubmit,
     isSubmitDisabled,
+    submitError,
   };
 };
 
