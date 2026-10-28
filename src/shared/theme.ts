@@ -36,11 +36,15 @@ export interface ThemeColors {
   onDestructive: string;
   neutral: string;
   onNeutral: string;
-  // The outline of a confirmation's secondary action; the dark hairline does not show on the sheet.
+  // The outline of a confirmation's secondary action and of a toast; the dark hairline does not show on elevated.
   line: string;
   ok: string;
   onOk: string;
   warn: string;
+  // A toast's type mark, as in Overlays and Feedback.dc.html: success and warning fills, and the sign drawn on any fill.
+  toastOk: string;
+  toastWarn: string;
+  onToastMark: string;
   // Tinted message surfaces, as in Auth & Settings.dc.html.
   dangerSoft: string;
   dangerBorder: string;
@@ -71,6 +75,8 @@ export interface ThemeElevation {
   fab: ViewStyle;
   // The large primary button's glow; the dark theme drops it.
   accentGlow: ViewStyle;
+  // Lighter than `modal`, which suits a sheet rather than a small floating surface.
+  toast: ViewStyle;
 }
 
 export interface WalletAppearance {
@@ -122,6 +128,9 @@ const lightColors: ThemeColors = {
   ok: '#3FAE6A',
   onOk: '#FFFDFA',
   warn: '#F0A92A',
+  toastOk: '#23724A',
+  toastWarn: '#8A5806',
+  onToastMark: '#FFFFFF',
   dangerSoft: '#FDECEA',
   dangerBorder: '#F3C8C1',
   dangerText: '#8D3428',
@@ -168,6 +177,9 @@ const darkColors: ThemeColors = {
   ok: '#4DC07B',
   onOk: '#0C1A11',
   warn: '#F7BD4D',
+  toastOk: '#4DC07B',
+  toastWarn: '#F7BD4D',
+  onToastMark: '#0E1218',
   dangerSoft: '#2A1A18',
   dangerBorder: '#4C2B26',
   dangerText: '#F0A79C',
@@ -214,6 +226,7 @@ const lightElevation: ThemeElevation = {
   },
   fab: fabElevation,
   accentGlow: { boxShadow: '0 12px 26px -12px rgba(255, 176, 32, 0.7)' },
+  toast: { boxShadow: '0 6px 20px -6px rgba(29, 36, 48, 0.18), 0 1px 2px rgba(29, 36, 48, 0.06)' },
 };
 
 // A shadow barely reads on a dark background, so surfaces there separate by tone and hairlines instead.
@@ -238,6 +251,7 @@ const darkElevation: ThemeElevation = {
   },
   fab: fabElevation,
   accentGlow: {},
+  toast: { boxShadow: '0 8px 24px -6px rgba(0, 0, 0, 0.6)' },
 };
 
 // Wallet-card presets, per Home Page and Wallets.dc.html (angle/stops in WalletGradientBackground.tsx).
