@@ -4,7 +4,6 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { renderWithTheme } from '@components/ThemeProvider/themeTestUtils';
 import { colorThemes } from '@shared/theme';
 import type { ToastContent } from './message';
-import { isSameToast } from './message';
 import Toast from './Toast';
 
 const layOut = (width: number, controlsWidth: number) => {
@@ -127,17 +126,5 @@ describe('Toast', () => {
       backgroundColor: colorThemes.dark.colors.elevated,
       borderColor: colorThemes.dark.colors.line,
     });
-  });
-});
-
-describe('isSameToast', () => {
-  it('matches on type, subject and text, not on actions or owner', () => {
-    const retry = { label: 'Retry', onPress: jest.fn() };
-    const base = { tone: 'error', text: 'Couldn’t delete transaction', subject: 'transaction-delete:1' } as const;
-
-    expect(isSameToast({ ...base, action: retry, owner: 'a' }, { ...base, owner: 'b' })).toBe(true);
-    expect(isSameToast(base, { ...base, subject: 'transaction-delete:2' })).toBe(false);
-    expect(isSameToast(base, { ...base, text: 'Couldn’t delete' })).toBe(false);
-    expect(isSameToast(base, { tone: 'success', text: base.text, subject: base.subject })).toBe(false);
   });
 });

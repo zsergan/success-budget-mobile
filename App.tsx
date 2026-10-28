@@ -4,7 +4,7 @@ import { Provider } from 'react-redux';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { AlertProvider, ErrorBoundary, ThemeProvider } from '@components';
+import { AlertProvider, ErrorBoundary, ThemeProvider, ToastProvider } from '@components';
 import store from '@redux/Store';
 import ChartsPrototypeScreen from '@screens/ChartsPrototype/ChartsPrototypeScreen';
 
@@ -19,7 +19,9 @@ const App = () => (
     <ErrorBoundary>
       <SafeAreaProvider>
         <Provider store={store}>
-          <AlertProvider>{showChartsPrototype ? <ChartsPrototypeScreen /> : <RootNavigator />}</AlertProvider>
+          <ToastProvider>
+            <AlertProvider>{showChartsPrototype ? <ChartsPrototypeScreen /> : <RootNavigator />}</AlertProvider>
+          </ToastProvider>
         </Provider>
       </SafeAreaProvider>
     </ErrorBoundary>

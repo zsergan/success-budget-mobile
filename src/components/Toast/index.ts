@@ -1,3 +1,5 @@
 export { default as Toast } from './Toast';
-export type { ShownToast, ToastAction, ToastContent, ToastMessage, ToastTone } from './message';
-export { isSameToast } from './message';
+export { default as ToastHost } from './ToastHost/ToastHost';
+export { default as ToastProvider, ToastSheetPresence, useToastControl } from './ToastProvider';
+export type { ShownToast, ToastAction, ToastContent, ToastMessage, ToastTicket, ToastTone } from './message';
+export { beginToast } from './globalToast';

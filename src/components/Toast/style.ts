@@ -16,13 +16,7 @@ const CONTROL_SIZE = 44;
 
 const createStyles = ({ colors, elevation }: ColorTheme) =>
   StyleSheet.create({
-    frame: {
-      paddingHorizontal: theme.spacing.lg,
-      alignItems: 'center',
-    },
     surface: {
-      width: '100%',
-      maxWidth: 560,
       minHeight: 52,
       justifyContent: 'center',
       borderRadius: 16,

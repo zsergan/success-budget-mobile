@@ -15,12 +15,35 @@ export type ToastContent =
 export type ToastMessage = ToastContent & {
   // What it reports on, e.g. `transaction-delete:42`; a later outcome of the same subject replaces or resolves it.
   subject?: string;
-  // The screen occurrence (route key) it belongs to; leaving that screen takes it away.
-  owner?: string;
 };
 
-// One showing of a message. Showing the same message again keeps the toast and its id.
-export type ShownToast = ToastMessage & { id: number };
+export type ShownToast = ToastMessage & {
+  // One showing: showing the same message again keeps the toast and its id.
+  id: number;
+  // The screen occurrence, session, space and foreground period it was asked in; any change ends it.
+  owner: number;
+};
 
-export const isSameToast = (a: ToastMessage, b: ToastMessage) =>
-  a.tone === b.tone && a.subject === b.subject && a.text === b.text;
+export const isSameToast = (a: ShownToast, b: ShownToast) =>
+  a.tone === b.tone && a.subject === b.subject && a.text === b.text && a.owner === b.owner;
+
+// Feedback for work captured when it started: it reaches the screen only while that screen occurrence, session, space
+// and foreground period last, and is dropped for good once any of them ends.
+export interface ToastTicket {
+  isCurrent(): boolean;
+  show(message: ToastMessage): void;
+  // For a result that closes sheets: shown once every sheet has finished closing.
+  showAfterSheetsClose(message: ToastMessage): void;
+  // For a result that navigates: shown on the screen it leads to, if that navigation follows at once.
+  showAfterNavigation(message: ToastMessage): void;
+  // Takes away this subject's toast, e.g. an error its retry has since settled.
+  resolve(subject: string): void;
+}
+
+export const INACTIVE_TICKET: ToastTicket = {
+  isCurrent: () => false,
+  show: () => {},
+  showAfterSheetsClose: () => {},
+  showAfterNavigation: () => {},
+  resolve: () => {},
+};

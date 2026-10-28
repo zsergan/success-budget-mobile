@@ -120,38 +120,36 @@ const Toast = ({ content: { tone, text, action }, onClose }: Props) => {
   );
 
   return (
-    <View style={styles.frame}>
-      <View
-        testID="toast"
-        style={[
-          styles.surface,
-          hasControls ? styles.surfaceWithActions : styles.surfacePlain,
-          isStacked && styles.surfaceStacked,
-        ]}
-        onLayout={(event) => setSurfaceWidth(event.nativeEvent.layout.width)}
-      >
-        <View style={styles.row}>
-          <ToastMark tone={tone} />
-          <Text style={styles.message}>{text}</Text>
-          {!isStacked && controls}
-        </View>
-
-        {isStacked && controls}
-
-        {/* The message laid out beside the controls, to count its lines there whichever layout is shown. */}
-        {sideBySideWidth !== undefined && sideBySideWidth > 0 && (
-          <Text
-            testID="toast-measure"
-            style={[styles.message, styles.measure, { width: sideBySideWidth }]}
-            onTextLayout={(event) => setSideBySideLines(event.nativeEvent.lines.length)}
-            pointerEvents="none"
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-          >
-            {text}
-          </Text>
-        )}
+    <View
+      testID="toast"
+      style={[
+        styles.surface,
+        hasControls ? styles.surfaceWithActions : styles.surfacePlain,
+        isStacked && styles.surfaceStacked,
+      ]}
+      onLayout={(event) => setSurfaceWidth(event.nativeEvent.layout.width)}
+    >
+      <View style={styles.row}>
+        <ToastMark tone={tone} />
+        <Text style={styles.message}>{text}</Text>
+        {!isStacked && controls}
       </View>
+
+      {isStacked && controls}
+
+      {/* The message laid out beside the controls, to count its lines there whichever layout is shown. */}
+      {sideBySideWidth !== undefined && sideBySideWidth > 0 && (
+        <Text
+          testID="toast-measure"
+          style={[styles.message, styles.measure, { width: sideBySideWidth }]}
+          onTextLayout={(event) => setSideBySideLines(event.nativeEvent.lines.length)}
+          pointerEvents="none"
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          {text}
+        </Text>
+      )}
     </View>
   );
 };

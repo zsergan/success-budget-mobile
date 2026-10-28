@@ -1,7 +1,9 @@
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { View } from 'react-native';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { BottomTabBar, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { HomeScreen, LimitsScreen, SettingsScreen, StatsScreen, TransactionsScreen } from '@screens';
-import { Icon, TransactionFlowSheet } from '@components';
+import { Icon, TransactionFlowSheet, useToastControl } from '@components';
 import { useTheme } from '@hooks';
 import { ScreenNames } from '@shared/enums';
 import type { MainTabParamList } from '@shared/types';
@@ -19,6 +21,19 @@ const TransactionsIcon = ({ color, size }: IconProps) => <Icon name="list" size=
 const StatsIcon = ({ color, size }: IconProps) => <Icon name="chart" size={size} color={color} />;
 const SettingsIcon = ({ color, size }: IconProps) => <Icon name="settings" size={size} color={color} />;
 
+// Measured so a toast sits above it.
+const MeasuredTabBar = (props: BottomTabBarProps) => {
+  const { reportTabBarHeight } = useToastControl();
+
+  return (
+    <View onLayout={(event) => reportTabBarHeight(event.nativeEvent.layout.height)}>
+      <BottomTabBar {...props} />
+    </View>
+  );
+};
+
+const renderTabBar = (props: BottomTabBarProps) => <MeasuredTabBar {...props} />;
+
 const MainNavigator = () => {
   const { colors } = useTheme().colorTheme;
 
@@ -27,6 +42,7 @@ const MainNavigator = () => {
       <TransactionFlowSheet />
 
       <Tab.Navigator
+        tabBar={renderTabBar}
         screenOptions={{
           sceneStyle: { backgroundColor: colors.bg },
           tabBarStyle: { backgroundColor: colors.tabBar },
