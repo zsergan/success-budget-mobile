@@ -199,7 +199,7 @@ describe('submitTransactionRequest', () => {
     ]);
   });
 
-  it('counts a delete of a record that is already gone as done', async () => {
+  it('counts a delete of a record that is already gone as done, and says it was gone', async () => {
     const { submit } = setUp();
 
     mockedRequest.mockImplementationOnce(fails(404, 'TRANSACTION_NOT_FOUND'));
@@ -207,6 +207,7 @@ describe('submitTransactionRequest', () => {
     expect(await submit({ type: 'delete', spaceId: 1, transactionId: 'tx-1', version: 1 })).toEqual({
       status: 'succeeded',
       result: null,
+      wasGone: true,
     });
   });
 

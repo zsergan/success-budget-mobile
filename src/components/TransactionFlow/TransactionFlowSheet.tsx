@@ -7,7 +7,7 @@ import type { CategoryModel } from '@api/models';
 import CategoryEditorSheet from '@components/CategoryEditor/CategoryEditorSheet';
 import ConfirmationSheet from '@components/ConfirmationSheet/ConfirmationSheet';
 import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
-import { useAlert, useBackPress, useSheetPresence } from '@hooks';
+import { useBackPress, useSheetPresence } from '@hooks';
 import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
 import { hasOpenSave, hasUnsavedChanges, selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import type { FlowAway, TransactionFlow } from '@redux/state/transactionFlow/slice';
@@ -19,7 +19,7 @@ import {
   categoryCreated,
   closed,
 } from '@redux/state/transactionFlow/slice';
-import { checkFlowRecord, deleteTransaction, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
+import { checkFlowRecord, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackParamList } from '@shared/types';
 import CategoriesPanel from './CategoriesPanel/CategoriesPanel';
@@ -43,8 +43,7 @@ const TransactionFlowSheet = () => {
   const save = useFlowSave();
   const { lock: confirmLock, confirmation } = useFlowConfirmation();
   const { requestClose, back } = useFlowClose(confirmLock);
-  const { requestDelete, retryDelete } = useTransactionDelete(confirmLock);
-  const { addAlert } = useAlert();
+  const { requestDelete, retryDelete, undoCreate: deleteCreated } = useTransactionDelete(confirmLock);
 
   // The content stays on screen while the sheet animates away after the flow ended.
   const [lastFlow, setLastFlow] = useState<TransactionFlow | null>(flow);
@@ -131,14 +130,11 @@ const TransactionFlowSheet = () => {
   };
 
   // Undo deletes the record the create made, at the version it came back with.
-  const undoCreate = async () => {
+  const undoCreate = () => {
     const current = selectTransactionFlow(store.getState());
     if (!current?.created || current.isSaving) return;
 
-    const result = await dispatch(
-      deleteTransaction({ spaceId: current.spaceId, transaction: current.created.transaction }),
-    );
-    if (result === 'deleted') addAlert('Transaction removed');
+    void deleteCreated(current.created.transaction);
   };
 
   // Leaves the confirmation for the record: Show for its row in Transactions, Open for its latest version.

@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react';
 import { Provider } from 'react-redux';
-import { act, renderHook } from '@testing-library/react-native';
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react-native';
+
+import ConfirmationSheet from '@components/ConfirmationSheet/ConfirmationSheet';
+import { finishDismissals, holdDismissals, resetSheets, withSheetHost } from '@components/ConfirmationSheet/testing';
+import { toastCount, withToasts } from '@components/Toast/testing';
 
 import { mapTransaction } from '@api/models';
 import { createAppStore } from '@redux/Store';
@@ -13,15 +17,20 @@ import { TransactionKind } from '@shared/enums';
 import useConfirmation from '@hooks/useConfirmation';
 import useTransactionDelete from './useTransactionDelete';
 
-const mockAddAlert = jest.fn();
-jest.mock('@hooks/useAlert', () => () => ({ addAlert: mockAddAlert }));
-jest.mock('expo-crypto', () => ({ randomUUID: () => 'key-1' }));
+let mockKeys = 0;
+jest.mock('expo-crypto', () => ({ randomUUID: () => `key-${(mockKeys += 1)}` }));
 jest.mock('expo-secure-store');
 const mockedRequest = jest.fn();
 jest.mock('@api/instance', () => ({
   ApiClient: () => ({}),
   createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
 }));
+
+jest.mock('@gorhom/bottom-sheet', () => jest.requireActual('@components/ConfirmationSheet/testing').bottomSheetMock);
+jest.mock(
+  '@components/Modals/BottomSheetModal/useReturnToRest',
+  () => jest.requireActual('@components/ConfirmationSheet/testing').useReturnToRestMock,
+);
 
 jest.useFakeTimers();
 
@@ -32,7 +41,9 @@ const setUp = () => {
   withProfile(store);
 
   store.dispatch(activateSpace(1));
-  const wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <Provider store={store}>{withSheetHost(withToasts(children))}</Provider>
+  );
 
   const { result } = renderHook(
     () => {
@@ -44,16 +55,28 @@ const setUp = () => {
 
   const confirm = async (press = result.current.confirmation!.primaryAction.onPress) => {
     await act(async () => void press());
-    await act(async () => jest.runOnlyPendingTimersAsync());
+    // Settles the delete without running the timer of the toast it shows.
+    await act(() => jest.advanceTimersByTimeAsync(0));
   };
 
   return { result, store, confirm };
 };
 
 const deletes = () => mockedRequest.mock.calls.filter(([{ method }]) => method === 'DELETE');
+const deleteKeys = () => deletes().map(([{ headers }]) => headers['Idempotency-Key']);
+const refusal = (status: number, code: string) => ({
+  response: { status, data: { statusCode: status, code, message: code } },
+});
+
+// Settles what the press started, without running the next toast's own timer.
+const pressToastAction = async (label: string) => {
+  fireEvent.press(screen.getByRole('button', { name: label }));
+  await act(() => jest.advanceTimersByTimeAsync(0));
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
+  resetSheets();
   mockedRequest.mockImplementation(() => new Promise(() => {}));
 });
 
@@ -124,59 +147,149 @@ describe('useTransactionDelete from a list row', () => {
     expect(onSettled).toHaveBeenCalled();
   });
 
-  it('offers Retry after a failure, which deletes again without asking', async () => {
+  it('confirms a delete with one success toast', async () => {
     const { result, confirm } = setUp();
+
+    mockedRequest.mockResolvedValueOnce({ data: true });
+    act(() => result.current.requestDelete(lunch));
+    await confirm();
+
+    expect(screen.getByText('Transaction deleted')).toBeTruthy();
+    expect(toastCount()).toBe(1);
+  });
+
+  it('says a record already gone is no longer available, not that it was deleted', async () => {
+    const { result, confirm } = setUp();
+
+    mockedRequest.mockRejectedValueOnce(refusal(404, 'TRANSACTION_NOT_FOUND'));
+    act(() => result.current.requestDelete(lunch));
+    await confirm();
+
+    expect(screen.getByText('This transaction is no longer available')).toBeTruthy();
+    expect(screen.queryByText('Transaction deleted')).toBeNull();
+  });
+
+  it('offers Retry after a definite failure, which deletes again without asking', async () => {
+    const { result, confirm } = setUp();
+
+    mockedRequest.mockRejectedValueOnce(refusal(400, 'TRANSACTION_IS_SYSTEM'));
+    act(() => result.current.requestDelete(lunch));
+    await confirm();
+    expect(screen.getByText('Couldn’t delete transaction')).toBeTruthy();
+
+    mockedRequest.mockResolvedValueOnce({ data: true });
+    await pressToastAction('Retry');
+
+    expect(result.current.confirmation).toBeNull();
+    expect(deletes()).toHaveLength(2);
+    expect(screen.getByText('Transaction deleted')).toBeTruthy();
+    expect(toastCount()).toBe(1);
+  });
+
+  it('checks an unanswered delete with the same stored key, and keeps it on offer while still unanswered', async () => {
+    const { result, store, confirm } = setUp();
 
     mockedRequest.mockRejectedValueOnce(new Error('Network Error'));
     act(() => result.current.requestDelete(lunch));
     await confirm();
+    expect(screen.getByText('Couldn’t confirm the delete')).toBeTruthy();
 
-    const [message, action] = mockAddAlert.mock.calls[0];
-    expect(message).toBe('Couldn’t confirm the delete');
+    mockedRequest.mockRejectedValueOnce(new Error('Network Error'));
+    await pressToastAction('Check status');
+    expect(screen.getByText('Couldn’t confirm the delete')).toBeTruthy();
+    expect(store.getState().pendingWrite.writes).toMatchObject([{ status: 'unknown' }]);
+
+    // Closing the toast leaves the stored write, which the pending-writes banner keeps offering.
+    fireEvent.press(screen.getByRole('button', { name: 'Close' }));
+    await act(async () => jest.runOnlyPendingTimersAsync());
+    expect(toastCount()).toBe(0);
+    expect(store.getState().pendingWrite.writes).toHaveLength(1);
 
     mockedRequest.mockResolvedValueOnce({ data: true });
-    await act(async () => action.onPress());
-    await act(async () => jest.runOnlyPendingTimersAsync());
+    await act(async () => result.current.retryDelete(lunch));
 
-    expect(result.current.confirmation).toBeNull();
-    expect(deletes()).toHaveLength(2);
-    expect(mockAddAlert).toHaveBeenLastCalledWith('Transaction deleted');
+    expect(new Set(deleteKeys()).size).toBe(1);
+    expect(screen.getByText('Transaction deleted')).toBeTruthy();
+    expect(store.getState().pendingWrite.writes).toEqual([]);
   });
 
-  it('offers to open the details when someone changed the record meanwhile', async () => {
-    const { result, confirm } = setUp();
-
-    mockedRequest.mockRejectedValueOnce({
-      response: { status: 409, data: { statusCode: 409, code: 'TRANSACTION_VERSION_CONFLICT', message: 'Conflict' } },
-    });
-    act(() => result.current.requestDelete(lunch));
-    await confirm();
-
-    expect(mockAddAlert).toHaveBeenCalledWith('This transaction was changed by someone else', {
-      label: 'Open',
-      onPress: expect.any(Function),
-    });
-  });
-
-  it('lets Retry and Open act only in the space and session the delete ran in', async () => {
+  it('warns when someone changed the record meanwhile, with View opening its details', async () => {
     const { result, store, confirm } = setUp();
 
-    mockedRequest.mockRejectedValueOnce(new Error('Network Error')).mockRejectedValueOnce({
-      response: { status: 409, data: { statusCode: 409, code: 'TRANSACTION_VERSION_CONFLICT', message: 'Conflict' } },
-    });
-    act(() => result.current.requestDelete(lunch));
-    await confirm();
+    mockedRequest.mockRejectedValueOnce(refusal(409, 'TRANSACTION_VERSION_CONFLICT'));
     act(() => result.current.requestDelete(lunch));
     await confirm();
 
-    const [[, retry], [, open]] = mockAddAlert.mock.calls;
+    expect(screen.getByText('Not deleted — this transaction changed')).toBeTruthy();
+    await pressToastAction('View');
+
+    expect(selectTransactionFlow(store.getState())).toMatchObject({
+      view: { name: 'details' },
+      saved: { id: lunch.id },
+    });
+  });
+
+  it('takes the toast and its action away once the space or session the delete ran in is left', async () => {
+    const { result, store, confirm } = setUp();
+
+    mockedRequest.mockRejectedValueOnce(refusal(400, 'TRANSACTION_IS_SYSTEM'));
+    act(() => result.current.requestDelete(lunch));
+    await confirm();
+    expect(screen.getByText('Couldn’t delete transaction')).toBeTruthy();
+
     act(() => {
       store.dispatch(activateSpace(2));
     });
-    await act(async () => retry.onPress());
-    act(() => open.onPress());
+    act(() => {
+      store.dispatch(activateSpace(1));
+    });
+    await act(async () => jest.advanceTimersByTimeAsync(500));
 
-    expect(deletes()).toHaveLength(2);
-    expect(selectTransactionFlow(store.getState())).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+    expect(deletes()).toHaveLength(1);
   });
+
+  it('shows nothing for a delete answered after the space was left', async () => {
+    const { result, store, confirm } = setUp();
+    let fail: (reason: unknown) => void = () => {};
+
+    mockedRequest.mockImplementationOnce(() => new Promise((_, reject) => (fail = reject)));
+    act(() => result.current.requestDelete(lunch));
+    await confirm();
+    act(() => {
+      store.dispatch(activateSpace(2));
+    });
+    await act(async () => fail(refusal(400, 'TRANSACTION_IS_SYSTEM')));
+
+    expect(toastCount()).toBe(0);
+  });
+});
+
+it('shows what the delete did only once its confirmation sheet has finished closing', async () => {
+  const store = createAppStore();
+  withProfile(store);
+  store.dispatch(activateSpace(1));
+  let requestDelete: (transaction: typeof lunch) => void = () => {};
+
+  const Row = () => {
+    const { lock, confirmation } = useConfirmation();
+    const remove = useTransactionDelete(lock).requestDelete;
+    requestDelete = remove;
+    return <ConfirmationSheet confirmation={confirmation} />;
+  };
+
+  render(<Provider store={store}>{withSheetHost(withToasts(<Row />))}</Provider>);
+
+  mockedRequest.mockResolvedValueOnce({ data: true });
+  act(() => requestDelete(lunch));
+  holdDismissals();
+  fireEvent.press(screen.getByRole('button', { name: 'Delete transaction' }));
+  await act(() => jest.advanceTimersByTimeAsync(0));
+
+  expect(deletes()).toHaveLength(1);
+  expect(toastCount()).toBe(0);
+
+  finishDismissals();
+  expect(screen.getByText('Transaction deleted')).toBeTruthy();
+  expect(toastCount()).toBe(1);
 });

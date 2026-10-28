@@ -47,11 +47,12 @@ export interface TransactionFailure {
 }
 
 // `stale`: the session or the space changed meanwhile, so nothing may surface in the current one.
+// `wasGone`: a delete that found the record already gone, by an earlier attempt or another member.
 // `found`: an earlier attempt of the create applied; the record is null when it was deleted since.
 // `recovered`: an unconfirmed earlier attempt turned out to have made this record, so the changed request, whose
 // meaning that changes, was not sent.
 export type OperationOutcome<T extends RequestType = RequestType> =
-  | { status: 'succeeded'; result: OperationResults[T] }
+  | { status: 'succeeded'; result: OperationResults[T]; wasGone?: true }
   | { status: 'found'; transaction: TransactionModel | null }
   | { status: 'recovered'; transaction: TransactionModel }
   | { status: 'failed'; failure: TransactionFailure; operation: TransactionOperation }
@@ -259,7 +260,9 @@ export const runTransactionOperation =
         const failure = { kind: classifyTransactionError(result.error), error: result.error };
 
         // Gone already, by an earlier attempt or another member: what the delete asked for is true.
-        if (operation.type === 'delete' && failure.kind === 'notFound') return { status: 'succeeded', result: null };
+        if (operation.type === 'delete' && failure.kind === 'notFound') {
+          return { status: 'succeeded', result: null, wasGone: true };
+        }
 
         return fail(failure);
       }

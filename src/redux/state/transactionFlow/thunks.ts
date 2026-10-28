@@ -2,10 +2,13 @@ import type { ErrorResponse } from '@api/dto';
 import type { TransactionModel } from '@api/models';
 import { spaceTags } from '@redux/api/baseApi';
 import type { AppThunk } from '@redux/Store';
+import { selectUnconfirmedDelete } from '../pendingWrite/selectors';
+import { inSession } from '../pendingWrite/thunks';
 import { loseSpaceAccess } from '../space/thunks';
 import { transactionApi } from '../transaction/api';
+import type { OperationMemory } from '../transaction/operations';
 import { classifyTransactionError, submitTransactionRequest } from '../transaction/operations';
-import { selectIsDeleting, selectTransactionFlow } from './selectors';
+import { selectIsDeleting, selectIsFlowDeleting, selectTransactionFlow } from './selectors';
 import type { DeleteResult } from './slice';
 import {
   checkFailed,
@@ -116,22 +119,57 @@ const dropFromLists =
       );
   };
 
-// The one delete behind a list row and the sheet. Every attempt may use a new key: a delete that already applied
-// answers 404 on a retry, which counts as done.
+export interface DeleteOutcome {
+  result: DeleteResult;
+  // Whether the open sheet still waited on it when the answer came, and so explains it in place.
+  isShownInFlow: boolean;
+}
+
+// The one delete behind a list row and the sheet. One that got no answer is asked about again with its own key,
+// through the stored write, before anything new is sent; a delete that already applied answers 404, so the record is
+// gone either way.
 export const deleteTransaction =
-  ({ spaceId, transaction }: { spaceId: number; transaction: TransactionModel }): AppThunk<Promise<DeleteResult>> =>
+  ({ spaceId, transaction }: { spaceId: number; transaction: TransactionModel }): AppThunk<Promise<DeleteOutcome>> =>
   async (dispatch, getState) => {
     const transactionId = transaction.id;
-    if (selectIsDeleting(getState(), transactionId)) return 'stale';
+    if (selectIsDeleting(getState(), transactionId)) return { result: 'stale', isShownInFlow: false };
+
+    const { sessionKey } = getState().auth;
+    const unconfirmed = selectUnconfirmedDelete(getState(), transactionId);
+    const memory: OperationMemory | null =
+      unconfirmed && unconfirmed.operation.spaceId === spaceId
+        ? {
+            sessionKey,
+            spaceId,
+            unresolved: {
+              operation: inSession(unconfirmed.operation, sessionKey),
+              failure: { kind: 'uncertain', error: null },
+            },
+          }
+        : null;
 
     dispatch(deleteStarted({ transactionId }));
-    const { outcome } = await dispatch(
-      submitTransactionRequest({ type: 'delete', spaceId, transactionId, version: transaction.version }, null),
-    );
+    const request = { type: 'delete', spaceId, transactionId, version: transaction.version } as const;
+    let { outcome } = await dispatch(submitTransactionRequest(request, memory));
+
+    // An earlier delete of an older version refused for its version never applied, so this one, of the version now
+    // shown, still goes out.
+    const earlier = memory?.unresolved?.operation;
+    if (
+      earlier?.type === 'delete' &&
+      earlier.version !== transaction.version &&
+      outcome.status === 'failed' &&
+      outcome.failure.kind === 'conflict' &&
+      outcome.operation.idempotencyKey === earlier.idempotencyKey
+    ) {
+      ({ outcome } = await dispatch(submitTransactionRequest(request, null)));
+    }
 
     const result: DeleteResult =
       outcome.status === 'succeeded'
-        ? 'deleted'
+        ? outcome.wasGone
+          ? 'gone'
+          : 'deleted'
         : outcome.status !== 'failed' || outcome.failure.kind === 'accessLost'
           ? 'stale'
           : outcome.failure.kind === 'conflict'
@@ -140,8 +178,9 @@ export const deleteTransaction =
               ? 'uncertain'
               : 'failed';
 
-    if (result === 'deleted') dispatch(dropFromLists(spaceId, transactionId));
+    const isShownInFlow = selectIsFlowDeleting(getState(), transactionId);
+    if (result === 'deleted' || result === 'gone') dispatch(dropFromLists(spaceId, transactionId));
     dispatch(deleteSettled({ transactionId, result }));
 
-    return result;
+    return { result, isShownInFlow };
   };

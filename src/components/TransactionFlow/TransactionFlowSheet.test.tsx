@@ -20,6 +20,7 @@ import { checkFlowRecord, openTransactionDetails } from '@redux/state/transactio
 import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { ScreenNames, AppColor, TransactionKind, TransactionType } from '@shared/enums';
 import { renderWithTheme } from '@components/ThemeProvider/themeTestUtils';
+import { createToastRecorder } from '@components/Toast/testing';
 import { colorThemes } from '@shared/theme';
 import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
 import { useBackPress, useSheetPresence } from '@hooks';
@@ -143,8 +144,8 @@ jest.mock('@react-navigation/native', () => ({
 
 jest.mock('@react-native-community/datetimepicker', () => () => null);
 
-const mockAddAlert = jest.fn();
-jest.mock('@hooks/useAlert', () => () => ({ addAlert: mockAddAlert }));
+const mockToasts = createToastRecorder();
+jest.mock('@hooks/useToast', () => () => mockToasts.toast);
 jest.mock('expo-crypto', () => ({ randomUUID: () => 'key-1' }));
 
 const mockedRequest = jest.fn();
@@ -318,6 +319,7 @@ const pressFlowDelete = () => fireEvent.press(screen.getAllByText('Delete transa
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockToasts.clear();
   mockCategorySheet.holdDismiss = false;
   mockCategorySheet.finishDismiss = undefined;
   writeAnswers = [];
@@ -616,7 +618,7 @@ describe('TransactionFlowSheet', () => {
     await settle();
 
     expect(screen.getByText('Not confirmed yet')).toBeTruthy();
-    expect(mockAddAlert).not.toHaveBeenCalled();
+    expect(mockToasts.shown).toEqual([]);
     expect(flow()).toMatchObject({ view: { name: 'create' }, notice: 'saveUnknown' });
 
     fireEvent.press(screen.getByText('Try again'));
@@ -717,7 +719,9 @@ describe('TransactionFlowSheet', () => {
     await settle();
 
     expect(flow()).toMatchObject({ view: { name: 'details' }, saved: { id: 'tx-1' }, draft: null });
-    expect(mockAddAlert).toHaveBeenCalledWith('This transaction was already saved');
+    // The sheet shows the record and says why; no toast repeats it.
+    expect(screen.getByText('Already saved')).toBeTruthy();
+    expect(mockToasts.shown).toEqual([]);
     expect(mockedRequest.mock.calls.filter(([config]) => config.method === 'POST')).toHaveLength(1);
   });
 
@@ -752,7 +756,7 @@ describe('TransactionFlowSheet', () => {
     expect(mockedRequest).toHaveBeenCalledWith(expect.objectContaining({ method: 'GET', url: '/spaces/1/wallets' }));
     expect(screen.getByText('Transaction saved')).toBeTruthy();
     expect(flow()?.view.name).toBe('created');
-    expect(mockAddAlert).not.toHaveBeenCalled();
+    expect(mockToasts.shown).toEqual([]);
   });
 
   it('shows what was saved and closes by itself, unless touched', async () => {
@@ -857,7 +861,12 @@ describe('TransactionFlowSheet', () => {
       }),
     );
     expect(flow()).toBeNull();
-    expect(mockAddAlert).toHaveBeenCalledWith('Transaction removed');
+    expect(mockToasts.shown).toEqual([
+      {
+        when: 'afterSheetsClose',
+        message: { tone: 'success', text: 'Transaction removed', subject: 'transaction-delete:tx-9' },
+      },
+    ]);
   });
 
   it('claims nothing about an undo that got no answer, and repeats it safely', async () => {
@@ -874,16 +883,29 @@ describe('TransactionFlowSheet', () => {
     await settle();
 
     expect(
-      screen.getByText('Couldn’t confirm the undo. Check your connection and try again; repeating it is safe.'),
+      screen.getByText(
+        'Couldn’t confirm the undo. It may already have gone through; checking its status never applies it twice.',
+      ),
     ).toBeTruthy();
     expect(flow()?.view.name).toBe('created');
+    expect(mockToasts.shown).toEqual([]);
 
-    fireEvent.press(screen.getByText('Try again'));
+    fireEvent.press(screen.getByText('Check status'));
     await act(async () => failWrite(refusal(404, 'TRANSACTION_NOT_FOUND')));
     await settle();
 
+    const deleteKeys = mockedRequest.mock.calls
+      .filter(([{ method }]) => method === 'DELETE')
+      .map(([{ headers }]) => headers['Idempotency-Key']);
+    expect(deleteKeys).toHaveLength(2);
+    expect(new Set(deleteKeys).size).toBe(1);
     expect(flow()).toBeNull();
-    expect(mockAddAlert).toHaveBeenCalledWith('Transaction removed');
+    expect(mockToasts.shown).toEqual([
+      {
+        when: 'afterSheetsClose',
+        message: { tone: 'info', text: 'This transaction is no longer available', subject: 'transaction-delete:tx-1' },
+      },
+    ]);
   });
 
   it('offers the latest version when the created record changed before Undo', async () => {
@@ -976,7 +998,7 @@ describe('TransactionFlowSheet', () => {
 
     expect(flow()).toBeNull();
     expect(screen.queryByText('Transaction saved')).toBeNull();
-    expect(mockAddAlert).not.toHaveBeenCalled();
+    expect(mockToasts.shown).toEqual([]);
   });
 
   it('starts another transaction on the same type and wallet', async () => {
@@ -1117,7 +1139,8 @@ describe('TransactionFlowSheet', () => {
       }),
     );
     expect(flow()).toMatchObject({ view: { name: 'details' }, saved: { amount: '70.00', version: 3 } });
-    expect(mockAddAlert).toHaveBeenCalledWith('Changes saved');
+    // The details show the new values, so no toast says they were saved.
+    expect(mockToasts.shown).toEqual([]);
   });
 
   it('shows the record the list had, and offers Edit only once it is read again', async () => {
@@ -1223,7 +1246,12 @@ describe('TransactionFlowSheet', () => {
 
     expect(flow()).toMatchObject({ view: { name: 'edit' }, notice: 'conflict', draft: { amount: '70' } });
     expect(screen.getByText('This transaction was changed')).toBeTruthy();
-    expect(mockAddAlert).toHaveBeenCalledWith('Couldn’t load the latest version. Check your connection and try again.');
+    expect(
+      screen.getByText(
+        'Couldn’t load the latest version. Check your connection and try again; your edits are still here.',
+      ),
+    ).toBeTruthy();
+    expect(mockToasts.shown).toEqual([]);
   });
 
   it('keeps the edits after a conflict and replaces them only when the latest version is loaded', async () => {
@@ -1276,7 +1304,7 @@ describe('TransactionFlowSheet', () => {
     await settle();
 
     expect(screen.getByText('This transaction no longer exists')).toBeTruthy();
-    expect(mockAddAlert).not.toHaveBeenCalled();
+    expect(mockToasts.shown).toEqual([]);
   });
 
   it('keeps the details open under a delete confirmation, and asks again once it closed', async () => {
@@ -1337,7 +1365,12 @@ describe('TransactionFlowSheet', () => {
       ],
     ]);
     expect(flow()).toBeNull();
-    expect(mockAddAlert).toHaveBeenCalledWith('Transaction deleted');
+    expect(mockToasts.shown).toEqual([
+      {
+        when: 'afterSheetsClose',
+        message: { tone: 'success', text: 'Transaction deleted', subject: 'transaction-delete:tx-1' },
+      },
+    ]);
   });
 
   it('keeps the record and offers to try again when a delete fails', async () => {
@@ -1352,14 +1385,24 @@ describe('TransactionFlowSheet', () => {
 
     expect(flow()).toMatchObject({ view: { name: 'details' }, isSaving: false, notice: 'deleteUncertain' });
     expect(
-      screen.getByText('Couldn’t confirm the delete. Check your connection and try again; repeating it is safe.'),
+      screen.getByText(
+        'Couldn’t confirm the delete. It may already have gone through; checking its status never applies it twice.',
+      ),
     ).toBeTruthy();
+    // The sheet explains it in place, so no toast does.
+    expect(mockToasts.shown).toEqual([]);
 
-    fireEvent.press(screen.getByText('Try again'));
+    fireEvent.press(screen.getByText('Check status'));
     await act(async () => answerWrite({ data: true }));
     await settle();
 
+    const deleteKeys = mockedRequest.mock.calls
+      .filter(([{ method }]) => method === 'DELETE')
+      .map(([{ headers }]) => headers['Idempotency-Key']);
+    expect(deleteKeys).toHaveLength(2);
+    expect(new Set(deleteKeys).size).toBe(1);
     expect(flow()).toBeNull();
+    expect(mockToasts.shown).toHaveLength(1);
   });
 
   it('asks to load the latest version when a delete finds the record changed', async () => {
@@ -1483,7 +1526,7 @@ describe('TransactionFlowSheet', () => {
     expect(flow()).toMatchObject({ view: { name: 'edit' }, saved: { wallet: { id: 7 } }, draft: { walletId: null } });
     expect(screen.getByText('The deleted wallet can’t be picked again. Choose a wallet')).toBeTruthy();
     expect(screen.getByText('Save changes')).toBeDisabled();
-    expect(mockAddAlert).not.toHaveBeenCalledWith('Changes saved');
+    expect(mockToasts.shown).toEqual([]);
     expect(mockedRequest.mock.calls.filter(([config]) => config.method === 'PATCH')).toHaveLength(2);
   });
 

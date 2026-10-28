@@ -17,7 +17,7 @@ import { TransactionType } from '@shared/enums';
 import theme from '@shared/theme';
 import { formatAmount, formatMoneyAmount, hexToRgba } from '@shared/utils';
 import DeleteButton from '../DeleteButton/DeleteButton';
-import { deleteFailureText } from '../deleteMessage';
+import { deleteFailureAction, deleteFailureText } from '../deleteMessage';
 import Banner from '@components/Banner/Banner';
 import { formatDateTime } from '../format';
 
@@ -143,12 +143,18 @@ const TransactionDetails = ({
               isBusy={isLoadingLatest}
               onAction={loadLatest}
             />
+          ) : notice === 'saveFound' ? (
+            <Banner
+              tone="success"
+              title="Already saved"
+              text="An earlier attempt saved this transaction, so it wasn’t added twice."
+            />
           ) : (
             (notice === 'deleteFailed' || notice === 'deleteUncertain') && (
               <Banner
                 tone="danger"
                 text={deleteFailureText(notice, 'delete')}
-                actionLabel="Try again"
+                actionLabel={deleteFailureAction(notice)}
                 onAction={onRetryDelete}
               />
             )
