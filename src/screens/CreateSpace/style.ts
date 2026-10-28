@@ -54,6 +54,15 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       lineHeight: theme.lineHeights.caption,
       color: colors.muted,
     },
+    inviteInputRowError: {
+      borderColor: colors.danger,
+    },
+    inviteError: {
+      fontFamily: theme.fonts.medium,
+      fontSize: theme.fontSizes.caption,
+      lineHeight: theme.lineHeights.caption,
+      color: colors.danger,
+    },
     invitesContainer: {
       rowGap: theme.spacing.sm,
     },

@@ -14,6 +14,8 @@ interface Props {
   cooldownRemaining: number;
   isSubmitting: boolean;
   failedEmail: string | null;
+  // The last attempt's failure, under the field until the address is edited.
+  error: { message: string } | null;
   onSubmit: (email: string) => Promise<boolean>;
 }
 
@@ -24,6 +26,7 @@ const InviteMemberSection = ({
   cooldownRemaining,
   isSubmitting,
   failedEmail,
+  error,
   onSubmit,
 }: Props) => {
   const { scheme, colorTheme } = useTheme();
@@ -38,6 +41,18 @@ const InviteMemberSection = ({
     setSeenFailedEmail(failedEmail);
     if (failedEmail !== null) setEmail(failedEmail);
   }
+
+  const [seenError, setSeenError] = useState(error);
+  const [shownError, setShownError] = useState(error);
+  if (error !== seenError) {
+    setSeenError(error);
+    setShownError(error);
+  }
+
+  const changeEmail = (text: string) => {
+    setEmail(text);
+    setShownError(null);
+  };
 
   const handleSubmit = async () => {
     if (await onSubmit(email)) setEmail('');
@@ -58,14 +73,14 @@ const InviteMemberSection = ({
         </Text>
       ) : (
         <>
-          <View style={styles.inviteRow}>
+          <View style={[styles.inviteRow, !!shownError && styles.inviteRowError]}>
             <Icon name="mail" size={18} color={colors.muted} strokeWidth={1.9} />
 
             <TextInput
               keyboardAppearance={scheme}
               style={styles.inviteInput}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={changeEmail}
               placeholder="name@email.com"
               placeholderTextColor={colors.muted}
               keyboardType="email-address"
@@ -85,6 +100,8 @@ const InviteMemberSection = ({
               </Text>
             </TouchableOpacity>
           </View>
+
+          {shownError && <Text style={styles.error}>{shownError.message}</Text>}
 
           <Text style={styles.hint}>
             {cooldownRemaining > 0
