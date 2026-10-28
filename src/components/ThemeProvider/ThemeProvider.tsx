@@ -12,7 +12,8 @@ import {
 import { Appearance, AppState, StatusBar } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
+import { beginToast } from '@components/Toast/globalToast';
+import type { ToastTicket } from '@components/Toast/message';
 import { THEME_PREFERENCE_KEY } from '@shared/constants';
 import type { ColorSchemeName, ColorTheme } from '@shared/theme';
 import { colorThemes } from '@shared/theme';
@@ -63,6 +64,8 @@ const applyNativeAppearance = (preference: ThemePreference) => {
 const createPreferenceWriter = () => {
   let pending: ThemePreference | null = null;
   let isWriting = false;
+  // Taken with the newest choice, so a failure is reported only where that choice was made.
+  let ticket: ToastTicket | null = null;
 
   const drain = () => {
     const value = pending;
@@ -74,13 +77,14 @@ const createPreferenceWriter = () => {
     pending = null;
     AsyncStorage.setItem(THEME_PREFERENCE_KEY, value)
       .catch(() => {
-        if (!pending) showGlobalAlert(THEME_SAVE_FAILED_MESSAGE);
+        if (!pending) ticket?.show({ tone: 'error', text: THEME_SAVE_FAILED_MESSAGE, subject: 'theme-save' });
       })
       .finally(drain);
   };
 
   return (value: ThemePreference) => {
     pending = value;
+    ticket = beginToast();
     if (isWriting) return;
 
     isWriting = true;

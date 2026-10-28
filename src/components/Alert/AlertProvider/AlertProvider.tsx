@@ -6,7 +6,6 @@ import { useAppSelector } from '@redux/hooks';
 
 import type { AlertAction, AlertItem } from '../Alert/Alert';
 import Alert from '../Alert/Alert';
-import { registerGlobalAlertHandler } from './globalAlert';
 
 import styles from './style';
 
@@ -88,12 +87,6 @@ const AlertProvider = ({ children }: AlertProviderProps) => {
     scopeRef.current = scope;
     if (alert?.action) dismissAlert();
   }, [scope, alert, dismissAlert]);
-
-  useEffect(() => {
-    registerGlobalAlertHandler(addAlert);
-
-    return () => registerGlobalAlertHandler(null);
-  }, [addAlert]);
 
   return (
     <AlertContext.Provider value={{ addAlert, dismissAlert }}>

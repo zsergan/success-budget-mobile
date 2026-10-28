@@ -1,19 +1,27 @@
 import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
 import { createAppStore } from '@redux/Store';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import type { ErrorResponse } from './dto';
 import { getRejectValue } from './errors';
 import { createHttpClient, REQUEST_TIMEOUT_MS } from './instance';
 import { bindHttpSession } from './session';
+import { RATE_LIMITED_MESSAGE } from '@shared/utils/error';
 
 jest.mock('expo-secure-store');
-jest.mock('@components/Alert/AlertProvider/globalAlert', () => ({ showGlobalAlert: jest.fn() }));
+const mockShowToast = jest.fn();
+jest.mock('@components/Toast/globalToast', () => ({
+  beginToast: () => ({
+    isCurrent: () => true,
+    show: mockShowToast,
+    showAfterSheetsClose: jest.fn(),
+    showAfterNavigation: jest.fn(),
+    resolve: jest.fn(),
+  }),
+}));
 
 const mockedGetItemAsync = jest.mocked(SecureStore.getItemAsync);
-const mockedShowGlobalAlert = jest.mocked(showGlobalAlert);
 const endSession = jest.fn();
 let sessionKey = 0;
 let isLaunching = false;
@@ -109,23 +117,24 @@ describe('401 handling', () => {
 });
 
 describe('429 handling', () => {
-  it('alerts for a request of the current session', async () => {
+  it('reports it, on the ticket the request took when it started, for a request of the current session', async () => {
     await sendAndFail(429);
 
-    expect(mockedShowGlobalAlert).toHaveBeenCalledTimes(1);
+    expect(mockShowToast).toHaveBeenCalledTimes(1);
+    expect(mockShowToast).toHaveBeenCalledWith({ tone: 'error', text: RATE_LIMITED_MESSAGE, subject: 'rate-limit' });
   });
 
   it('leaves a 429 during the launch to the launch screen', async () => {
     isLaunching = true;
     await sendAndFail(429);
 
-    expect(mockedShowGlobalAlert).not.toHaveBeenCalled();
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 
   it('stays silent for a request whose session has ended', async () => {
     await sendAndFail(429, { beforeResponse: () => (sessionKey += 1) });
 
-    expect(mockedShowGlobalAlert).not.toHaveBeenCalled();
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 
   it('leaves a 429 the caller handles to the caller, and alerts for any other', async () => {
@@ -140,12 +149,12 @@ describe('429 handling', () => {
 
     await sendAndFail(429, { body: apiError('CODE_ALREADY_SENT'), isHandledRateLimit });
 
-    expect(mockedShowGlobalAlert).not.toHaveBeenCalled();
+    expect(mockShowToast).not.toHaveBeenCalled();
 
     await sendAndFail(429, { body: apiError('TOO_MANY_REQUESTS'), isHandledRateLimit });
     await sendAndFail(429, { body: '<html>429 Too Many Requests</html>', isHandledRateLimit });
 
-    expect(mockedShowGlobalAlert).toHaveBeenCalledTimes(2);
+    expect(mockShowToast).toHaveBeenCalledTimes(2);
     // The caller judges the normalized error: the status comes from the response, whatever the body.
     expect(isHandledRateLimit).toHaveBeenLastCalledWith(expect.objectContaining({ statusCode: 429 }));
   });
@@ -155,7 +164,7 @@ it('passes other errors through without side effects', async () => {
   await sendAndFail(500);
 
   expect(endSession).not.toHaveBeenCalled();
-  expect(mockedShowGlobalAlert).not.toHaveBeenCalled();
+  expect(mockShowToast).not.toHaveBeenCalled();
 });
 
 it('neither ends the session nor alerts for a request with no response', async () => {
@@ -165,7 +174,7 @@ it('neither ends the session nor alerts for a request with no response', async (
 
   await expect(rejected(error)).rejects.toBe(error);
   expect(endSession).not.toHaveBeenCalled();
-  expect(mockedShowGlobalAlert).not.toHaveBeenCalled();
+  expect(mockShowToast).not.toHaveBeenCalled();
 });
 
 describe('a late response after a logout and a new login', () => {
@@ -187,7 +196,7 @@ describe('a late response after a logout and a new login', () => {
     });
 
     expect(end).not.toHaveBeenCalled();
-    expect(mockedShowGlobalAlert).not.toHaveBeenCalled();
+    expect(mockShowToast).not.toHaveBeenCalled();
     expect(store.getState().auth.isSignedIn).toBe(true);
   });
 });
