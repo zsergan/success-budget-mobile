@@ -76,6 +76,27 @@ are inlined at bundle time). To point at some other backend, set
 `EXPO_PUBLIC_API_BASE_URL` instead -- it wins over `EXPO_PUBLIC_API_ENV`, and
 any non-local URL must use `https://` (enforced at startup).
 
+## TestFlight
+
+The `testflight` profile in `eas.json` builds a standalone iOS app against
+the hosted dev backend and submits it to the existing App Store Connect app.
+EAS manages the build number remotely and increments it for each build.
+
+After signing in with `npx eas-cli@latest login`, build and upload the
+current checkout:
+
+```sh
+npx eas-cli@latest build --platform ios --profile testflight --auto-submit
+```
+
+The first submission requires configuring an App Store Connect API key.
+After Apple processes the upload, make the build available to the intended
+TestFlight group. External testing may require Beta App Review. Testers can
+install the new build from TestFlight, or receive it through TestFlight's
+automatic updates if enabled. Uploading does not publish the app on the App Store.
+
+GitHub currently runs checks only; pushes do not trigger EAS builds or submissions.
+
 ## License
 
 Source available for review only. Copyright (c) 2024-2026 Zakhar Sergan.
