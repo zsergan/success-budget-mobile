@@ -44,18 +44,22 @@ afterEach(() => jest.restoreAllMocks());
 
 let control: ReturnType<typeof useToastControl>;
 let openSheet: (confirmation: Confirmation | null) => void;
+let openSecondSheet: (confirmation: Confirmation | null) => void;
 
 const Harness = () => {
   const toastControl = useToastControl();
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
+  const [second, setSecond] = useState<Confirmation | null>(null);
   useEffect(() => {
     control = toastControl;
     openSheet = setConfirmation;
+    openSecondSheet = setSecond;
   }, [toastControl]);
 
   return (
     <>
       <ConfirmationSheet confirmation={confirmation} />
+      <ConfirmationSheet confirmation={second} />
       <ToastHost />
     </>
   );
@@ -427,6 +431,71 @@ describe('handoff', () => {
     act(() => control.reportRoute(['root', 'screen-c'], false));
     await elapse(300);
     expect(isShown(success.text)).toBe(false);
+  });
+
+  describe('from a sheet still closing', () => {
+    // The result is asked for as the sheet starts closing, and its navigation follows at once.
+    const closeAndNavigate = (route = 'screen-b') => {
+      holdDismissals();
+      act(() => {
+        openSheet(null);
+        control.begin().showAfterNavigation(success);
+      });
+      act(() => control.reportRoute(['root', route], false));
+    };
+
+    it('waits for the close, however long it takes, then shows it once at the bottom', async () => {
+      renderToasts();
+      act(() => openSheet(confirmation));
+
+      closeAndNavigate();
+      await elapse(1500);
+      expect(isShown(success.text)).toBe(false);
+
+      finishDismissals();
+      await elapse(300);
+      expect(screen.getAllByText(success.text)).toHaveLength(1);
+      expect(placement()).toMatchObject({ bottom: 34 + 12 });
+    });
+
+    it('waits for every sheet in a stack', async () => {
+      renderToasts();
+      act(() => openSheet(confirmation));
+      act(() => openSecondSheet({ ...confirmation, title: 'Second' }));
+
+      holdDismissals();
+      act(() => {
+        openSecondSheet(null);
+        control.begin().showAfterNavigation(success);
+      });
+      act(() => control.reportRoute(['root', 'screen-b'], false));
+      finishDismissals();
+      await elapse(300);
+      expect(isShown(success.text)).toBe(false);
+
+      act(() => openSheet(null));
+      await elapse(300);
+      expect(isShown(success.text)).toBe(true);
+    });
+
+    it('drops it when the destination is left, or the space changes, before the close ends', async () => {
+      const store = renderToasts();
+      act(() => openSheet(confirmation));
+      closeAndNavigate();
+      act(() => control.reportRoute(['root', 'screen-c'], false));
+      finishDismissals();
+      await elapse(300);
+      expect(isShown(success.text)).toBe(false);
+
+      act(() => openSheet(confirmation));
+      closeAndNavigate('screen-d');
+      act(() => {
+        store.dispatch(activateSpace(4));
+      });
+      finishDismissals();
+      await elapse(300);
+      expect(isShown(success.text)).toBe(false);
+    });
   });
 
   it('carries a result across the space switch its own work expected, then its navigation', async () => {

@@ -16,7 +16,9 @@ no queue: a message either shows now or is dropped.
 - A result that closes sheets uses `showAfterSheetsClose`, so it appears
   once every sheet has finished closing. A result that navigates uses
   `showAfterNavigation` right before navigating; it is dropped unless that
-  navigation follows within a second.
+  navigation follows within a second. Once accepted, it belongs to the
+  destination and waits for any sheet still closing, so it never appears
+  over the sheet it came from.
 - Give a message a `subject` (e.g. `transaction-delete:42`) when a later
   result may replace it, and `resolve(subject)` to take away an error the
   result has settled before showing what came of it.
