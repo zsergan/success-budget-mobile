@@ -12,11 +12,14 @@ export interface HttpRequest {
   body?: unknown;
   params?: Record<string, unknown>;
   headers?: Record<string, string>;
-  // A 429 the caller explains itself keeps the generic alert quiet.
+  // A 429 the caller explains itself keeps the generic toast quiet; a mutation's caller always does.
   isHandledRateLimit?: AxiosRequestConfig['isHandledRateLimit'];
 }
 
 const http = createHttpClient();
+
+// Every write reports its own failure where it was asked: a form, a sheet, the transaction flow or a cooldown.
+const isWriteRateLimitHandled = () => true;
 
 const sessionEndedError = (url: string): ErrorResponse => ({
   message: 'The session this request belonged to has ended.',
@@ -30,9 +33,10 @@ const sessionEndedError = (url: string): ErrorResponse => ({
 // or an onQueryStarted side effect as a success, even if logout could not abort it.
 export const httpBaseQuery: BaseQueryFn<HttpRequest, unknown, ErrorResponse> = async (
   { url, method = 'GET', body, params, headers, isHandledRateLimit },
-  { signal, getState },
+  { signal, getState, type },
 ) => {
   const sessionKey = (getState() as RootState).auth.sessionKey;
+  const handlesRateLimit = isHandledRateLimit ?? (type === 'mutation' ? isWriteRateLimitHandled : undefined);
   const isSessionCurrent = () => (getState() as RootState).auth.sessionKey === sessionKey;
 
   try {
@@ -44,7 +48,7 @@ export const httpBaseQuery: BaseQueryFn<HttpRequest, unknown, ErrorResponse> = a
       headers,
       signal,
       sessionKey,
-      ...(isHandledRateLimit && { isHandledRateLimit }),
+      ...(handlesRateLimit && { isHandledRateLimit: handlesRateLimit }),
     });
 
     // RTK Query treats `data: undefined` as a malformed result; empty bodies (void handlers) become null.
