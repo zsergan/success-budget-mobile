@@ -54,6 +54,8 @@ it('restores the stored preference on the next start', async () => {
 });
 
 describe('a failed save', () => {
+  afterEach(() => jest.useRealTimers());
+
   const renderWithToasts = () => {
     const store = createAppStore();
     const rendered = renderWithTheme(<Provider store={store}>{withSheetHost(withToasts(<Probe />))}</Provider>);
@@ -72,6 +74,49 @@ describe('a failed save', () => {
     expect(StyleSheet.flatten(screen.getByTestId('toast').props.style).backgroundColor).toBe(
       colorThemes.dark.colors.elevated,
     );
+  });
+
+  it('takes the error away once a later choice is stored', async () => {
+    jest.useFakeTimers();
+    const { rendered } = renderWithToasts();
+    const { setTheme } = await rendered;
+    jest.mocked(AsyncStorage.setItem).mockRejectedValueOnce(new Error('disk full'));
+    await setTheme('dark');
+    expect(screen.getByText(THEME_SAVE_FAILED_MESSAGE)).toBeTruthy();
+
+    await setTheme('light');
+
+    // Stepped, so the toast's exit animation runs as it would.
+    for (let step = 0; step < 10; step += 1) act(() => jest.advanceTimersByTime(100));
+
+    expect(await AsyncStorage.getItem(THEME_PREFERENCE_KEY)).toBe('light');
+    expect(screen.queryByText(THEME_SAVE_FAILED_MESSAGE)).toBeNull();
+  });
+
+  it('keeps the error while a newer choice is still being stored, and when that one fails', async () => {
+    jest.useFakeTimers();
+    const { rendered } = renderWithToasts();
+    const { setTheme } = await rendered;
+    let storeSystem!: () => void;
+    let failLight!: () => void;
+    jest
+      .mocked(AsyncStorage.setItem)
+      .mockRejectedValueOnce(new Error('disk full'))
+      .mockReturnValueOnce(new Promise((resolve) => (storeSystem = () => resolve())))
+      .mockReturnValueOnce(new Promise((_, reject) => (failLight = () => reject(new Error('disk full')))));
+    await setTheme('dark');
+    await setTheme('system');
+    await setTheme('light');
+
+    await act(async () => storeSystem());
+    for (let step = 0; step < 10; step += 1) act(() => jest.advanceTimersByTime(100));
+
+    expect(screen.getByText(THEME_SAVE_FAILED_MESSAGE)).toBeTruthy();
+
+    await act(async () => failLight());
+
+    expect(jest.mocked(AsyncStorage.setItem)).toHaveBeenLastCalledWith(THEME_PREFERENCE_KEY, 'light');
+    expect(screen.getByText(THEME_SAVE_FAILED_MESSAGE)).toBeTruthy();
   });
 
   it('says nothing once the space it was chosen in has changed', async () => {

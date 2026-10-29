@@ -10,6 +10,9 @@ import { classifyTransactionError } from '@redux/state/transaction/operations';
 import { getErrorMessage } from '@shared/utils';
 import useToast from './useToast';
 
+// What a toast about one pending write reports on, so the check that settles it takes that toast away.
+export const pendingWriteSubject = (key: string) => `pending-write:${key}`;
+
 const NOUNS: Record<StoredOperation['type'], string> = { create: 'save', update: 'edit', delete: 'delete' };
 
 // Names what the writes were: one kind by its name, a mix of kinds as changes.
@@ -42,10 +45,9 @@ const usePendingWrites = () => {
     setResuming(false);
 
     const here = resumed.filter(({ operation }) => operation.spaceId === spaceId);
-    here.forEach((write) => {
-      if (write.operation.type === 'delete' && isSettled(write)) {
-        ticket.resolve(deleteSubject(write.operation.transactionId));
-      }
+    here.filter(isSettled).forEach(({ operation }) => {
+      ticket.resolve(pendingWriteSubject(operation.idempotencyKey));
+      if (operation.type === 'delete') ticket.resolve(deleteSubject(operation.transactionId));
     });
 
     const refused = here.filter((write) => write.result.kind === 'refused' && !wentThrough(write));

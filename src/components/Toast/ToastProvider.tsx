@@ -176,7 +176,9 @@ const ToastProvider = ({ children }: { children: ReactNode }) => {
         pending.owner === ended &&
         Date.now() <= pending.expiresAt
       ) {
-        present(pending.message, ownerRef.current);
+        // Accepted for the destination; a sheet still closing (the one the result came from) is waited out.
+        if (sheetCountRef.current === 0) present(pending.message, ownerRef.current);
+        else pendingRef.current = { ...pending, owner: ownerRef.current, trigger: 'sheets', expiresAt: Infinity };
       }
     };
 

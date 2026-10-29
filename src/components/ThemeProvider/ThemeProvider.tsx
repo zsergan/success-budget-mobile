@@ -60,6 +60,8 @@ const applyNativeAppearance = (preference: ThemePreference) => {
   appearanceListeners.forEach((listener) => listener());
 };
 
+const SAVE_FAILED_SUBJECT = 'theme-save';
+
 // One write at a time, always of the newest choice, so rapid taps leave the last one stored.
 const createPreferenceWriter = () => {
   let pending: ThemePreference | null = null;
@@ -75,10 +77,16 @@ const createPreferenceWriter = () => {
     }
 
     pending = null;
+    // Only the newest choice's outcome is reported: with another still to write, this one says nothing either way.
     AsyncStorage.setItem(THEME_PREFERENCE_KEY, value)
-      .catch(() => {
-        if (!pending) ticket?.show({ tone: 'error', text: THEME_SAVE_FAILED_MESSAGE, subject: 'theme-save' });
-      })
+      .then(
+        () => {
+          if (!pending) ticket?.resolve(SAVE_FAILED_SUBJECT);
+        },
+        () => {
+          if (!pending) ticket?.show({ tone: 'error', text: THEME_SAVE_FAILED_MESSAGE, subject: SAVE_FAILED_SUBJECT });
+        },
+      )
       .finally(drain);
   };
 
