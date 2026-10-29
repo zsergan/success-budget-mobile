@@ -9,9 +9,13 @@ and is stored under `THEME_PREFERENCE_KEY`. Startup and native surfaces:
 
 - `src/shared/theme.ts` is the only palette. Both schemes implement one
   `ColorTheme`: semantic `colors`, `elevation` presets (card, modal, segment,
-  fab, accentGlow), and the `wallets` and `categories` appearance of each
+  fab, accentGlow, toast), and the `wallets` and `categories` appearance of each
   `AppColor`. Add a token there when a role needs its own value in either
   scheme; never a literal in a screen.
+- The toast is the `elevated` surface with a `line` outline and the light
+  `toast` shadow, so it stays apart from a sheet in both schemes; its type
+  marks use `toastOk`, `toastWarn`, `destructive` and `text`, with the sign
+  in `onToastMark`.
 - The default `theme` export (fonts, sizes, spacing, radii) is the same in
   both schemes and stays static.
 - `ThemeProvider` resolves the preference and the device appearance into the

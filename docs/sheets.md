@@ -39,6 +39,15 @@ do: it dismisses the keyboard and shows the sheet once it has gone.
   sheet has gone: close it, then act from its `onDismiss`
   (see `useWalletActions`).
 
+## Results and errors
+
+- An error of the open sheet stays in the sheet, never a toast.
+- A result that closes the sheet (a delete, a removal) is a toast shown
+  once every sheet has finished closing: `confirm(action, completed)` in
+  `useConfirmAction`, or a ticket's `showAfterSheetsClose`.
+- A toast already on screen for other work moves to the top while a sheet
+  is up. Details: `docs/toasts.md`.
+
 ## Pending actions and stale confirmations
 
 - An action whose `onPress` returns a promise locks every action, the

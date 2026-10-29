@@ -47,6 +47,35 @@ no queue: a message either shows now or is dropped.
   their callers report failures in place); any other request that
   explains its own passes `isHandledRateLimit`.
 
+## Where a problem shows
+
+- A field's error under the field; an error of an open sheet or a form
+  screen inside it, where its Retry is (`submitError`). A form that closed
+  before its answer reports the failure as a toast on the screen it was
+  sent from (`useFormSubmitHandler`).
+- A failure of work started from a screen with no place of its own for
+  it (a transaction delete outside its sheet, a wallet check, a restore)
+  is an error toast.
+- A problem that outlives the toast is a banner: stale figures, writes
+  whose outcome is unknown (`PendingWritesBanner`).
+- What nothing on screen owns (a rate-limited read, a theme that could not
+  be saved) goes through `beginToast()`.
+
+## Actions and Retry
+
+- An action belongs to its ticket: it acts only on the screen occurrence,
+  session, space and operation it was shown for, and goes when they do.
+- Retry only for a failure known to have happened, whose repeat is safe
+  (a read, a delete the server refused).
+- A write with no answer may have gone through: it offers Check status,
+  which settles it through the existing reconciliation (a delete runs
+  again and reports what it finds; pending writes resume). It stays
+  recoverable from `PendingWritesBanner` once the toast is closed.
+- A conflict names what happened in neutral words and offers View
+  ("Not deleted — this transaction changed").
+- No Undo in a toast. A new transaction's Undo stays on
+  `CreatedConfirmation`, which is not a toast.
+
 ## Lifecycle
 
 - Types: success (optional action), info (no action), warning (required

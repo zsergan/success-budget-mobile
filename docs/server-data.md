@@ -220,8 +220,9 @@ something to drop on purpose.
   (`fetchWallets`), Limits (`fetchLimits`), Categories (`fetchCategories`),
   Transactions period and latest (separate `rangeError` / `latestError`
   states with their own retry), Members (`fetchMembers`). When a refresh
-  fails while data is present, the old data stays and the error is not
-  shown.
+  fails while data is present, the old data stays; Home, Transactions and
+  Stats say so in a banner with Retry, and Stats also shows an error toast
+  once per failed attempt (`docs/toasts.md`).
 - **No retry at all** for `fetchSpaces` or `fetchProfile`. If the initial
   `fetchSpaces` fails, no space is ever activated and nothing space-scoped
   loads until the next sign-in. If `fetchProfile` fails, leaving a space
@@ -234,7 +235,9 @@ something to drop on purpose.
   message of the app's own.
 - **401** from the axios instance dispatches `logoutMe`, but only if the
   request carried the token that is still stored.
-- **429** shows a global alert; `inviteMember` additionally starts a
+- **429** shows the generic rate-limit toast only for a request nothing
+  on screen explains: mutations and requests passing `isHandledRateLimit`
+  report it where they were made. `inviteMember` additionally starts a
   cooldown from `Retry-After` that outlives space switches.
 
 ### Space switch
