@@ -1,9 +1,11 @@
 import type { ReactNode, Ref } from 'react';
+import { useEffect } from 'react';
 import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { toastCount, withToasts } from '@components/Toast/testing';
+import useToast from '@hooks/useToast';
 import { createAppStore } from '@redux/Store';
 import type { PendingWrite } from '@redux/state/pendingWrite/slice';
 import { writeSettled, writesRestored } from '@redux/state/pendingWrite/slice';
@@ -86,7 +88,15 @@ const deleteWrite = (key: string): PendingWrite => ({
   },
 });
 
-const renderBanner = (writes: PendingWrite[]) => {
+const UNRELATED_ERROR = 'Couldn’t restore “Cafe”';
+
+const UnrelatedError = () => {
+  const toast = useToast();
+  useEffect(() => toast.show({ tone: 'error', text: UNRELATED_ERROR, subject: 'category-restore:7' }), [toast]);
+  return null;
+};
+
+const renderBanner = (writes: PendingWrite[], extra?: ReactNode) => {
   const store = createAppStore();
   withProfile(store);
   store.dispatch(activateSpace(1));
@@ -100,7 +110,12 @@ const renderBanner = (writes: PendingWrite[]) => {
           insets: { top: 54, right: 0, bottom: 34, left: 0 },
         }}
       >
-        {withToasts(<PendingWritesBanner />)}
+        {withToasts(
+          <>
+            <PendingWritesBanner />
+            {extra}
+          </>,
+        )}
       </SafeAreaProvider>
     </Provider>,
   );
@@ -227,6 +242,77 @@ describe('PendingWritesBanner', () => {
     expect(posts().map(([{ headers }]) => headers['Idempotency-Key'])).toEqual(['key-1', 'key-1']);
     expect(store.getState().pendingWrite.writes).toEqual([]);
     expect(screen.getByText('An earlier save went through')).toBeTruthy();
+  });
+
+  describe('a save sent again without an answer', () => {
+    const sendAgainUnanswered = async () => {
+      mockedRequest.mockRejectedValueOnce(new Error('Network Error'));
+      fireEvent.press(screen.getByText('Review'));
+      await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Send' })));
+      expect(screen.getByText('Couldn’t confirm the save')).toBeTruthy();
+    };
+
+    const checkFromBanner = () =>
+      act(async () => fireEvent.press(screen.getAllByRole('button', { name: 'Check status' })[0]));
+
+    it('takes its error away once the banner’s check confirms it, and says it went through', async () => {
+      const store = renderBanner([write('key-1', 'expired')]);
+      await sendAgainUnanswered();
+
+      await checkFromBanner();
+
+      expect(store.getState().pendingWrite.writes).toEqual([]);
+      expect(screen.queryByText('Couldn’t confirm the save')).toBeNull();
+      expect(screen.getByText('An earlier save went through')).toBeTruthy();
+      expect(toastCount()).toBe(1);
+    });
+
+    it('keeps its error and the banner while it is still unanswered, whatever else the check settles', async () => {
+      const store = renderBanner([write('key-1', 'expired'), write('key-2', 'unknown')]);
+      await sendAgainUnanswered();
+      mockedRequest.mockImplementation(({ headers }: { headers: Record<string, string> }) =>
+        headers['Idempotency-Key'] === 'key-1'
+          ? Promise.reject(new Error('Network Error'))
+          : Promise.resolve({ data: createTransactionResponseDto() }),
+      );
+
+      await checkFromBanner();
+
+      expect(store.getState().pendingWrite.writes.map(({ operation }) => operation.idempotencyKey)).toEqual(['key-1']);
+      expect(screen.getByText('Couldn’t confirm the save')).toBeTruthy();
+      expect(screen.getByText('A save isn’t confirmed yet')).toBeTruthy();
+    });
+
+    it('leaves another operation’s error alone when the check settles a write', async () => {
+      const store = renderBanner([write('key-1', 'unknown')], <UnrelatedError />);
+      expect(screen.getByText(UNRELATED_ERROR)).toBeTruthy();
+
+      await checkFromBanner();
+
+      expect(store.getState().pendingWrite.writes).toEqual([]);
+      expect(screen.getByText(UNRELATED_ERROR)).toBeTruthy();
+    });
+
+    it('says nothing about a check that settles after the space changed', async () => {
+      const store = renderBanner([write('key-1', 'expired')]);
+      await sendAgainUnanswered();
+      let answer!: () => void;
+      mockedRequest.mockReturnValue(
+        new Promise((resolve) => (answer = () => resolve({ data: createTransactionResponseDto() }))),
+      );
+
+      await checkFromBanner();
+      act(() => {
+        store.dispatch(activateSpace(2));
+      });
+      await act(async () => answer());
+      // Stepped, so the switch's exit animation runs as it would.
+      for (let step = 0; step < 10; step += 1) act(() => jest.advanceTimersByTime(100));
+
+      expect(store.getState().pendingWrite.writes).toEqual([]);
+      expect(screen.queryByText('An earlier save went through')).toBeNull();
+      expect(toastCount()).toBe(0);
+    });
   });
 
   it('does nothing for a review whose write was settled meanwhile', () => {

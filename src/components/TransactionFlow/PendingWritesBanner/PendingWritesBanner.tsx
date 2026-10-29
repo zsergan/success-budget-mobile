@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import Banner from '@components/Banner/Banner';
 import ConfirmationSheet from '@components/ConfirmationSheet/ConfirmationSheet';
 import { useConfirmation, usePendingWrites, useToast } from '@hooks';
-import { pendingWriteNoun } from '@hooks/usePendingWrites';
+import { pendingWriteNoun, pendingWriteSubject } from '@hooks/usePendingWrites';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import type { RootState } from '@redux/Store';
 import { selectSpacePendingWrites } from '@redux/state/pendingWrite/selectors';
@@ -55,7 +55,7 @@ const PendingWritesBanner = ({ style }: Props) => {
     const sendAgain = async () => {
       const ticket = toast.begin();
       const result = await dispatch(sendPendingWriteAgain(key));
-      const subject = `pending-write:${key}`;
+      const subject = pendingWriteSubject(key);
 
       if (result?.kind === 'done' || result?.kind === 'applied') {
         ticket.showAfterSheetsClose({ tone: 'success', text: 'Transaction saved', subject });
