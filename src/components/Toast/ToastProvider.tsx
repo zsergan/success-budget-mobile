@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { AppState } from 'react-native';
 
 import { useAppStore } from '@redux/hooks';
+import type { RootState } from '@redux/Store';
 
 import { registerToastBridge } from './globalToast';
 import type { ShownToast, ToastMessage, ToastTicket } from './message';
@@ -67,6 +68,22 @@ interface Pending {
   expiresAt: number;
 }
 
+interface Scope {
+  sessionKey: number;
+  spaceId: number | null;
+}
+
+interface ExpectedSwitch extends Scope {
+  owner: number;
+  // The owner the expected switch started, once it has happened.
+  next: number | null;
+}
+
+const scopeOf = ({ auth, space }: RootState): Scope => ({
+  sessionKey: auth.sessionKey,
+  spaceId: space.currentSpaceId,
+});
+
 // The one toast of the app: what it shows, for how long, and whose it is. A message belongs to the screen occurrence,
 // session, space and foreground period it was asked in, and nothing of it outlives them.
 const ToastProvider = ({ children }: { children: ReactNode }) => {
@@ -76,6 +93,7 @@ const ToastProvider = ({ children }: { children: ReactNode }) => {
   const toastRef = useRef<ShownToast | null>(null);
   const timerRef = useRef<Timer | null>(null);
   const pendingRef = useRef<Pending | null>(null);
+  const expectedSwitchRef = useRef<ExpectedSwitch | null>(null);
   const sheetCountRef = useRef(0);
   const nextIdRef = useRef(1);
   const [toast, setToastState] = useState<ShownToast | null>(null);
@@ -169,23 +187,50 @@ const ToastProvider = ({ children }: { children: ReactNode }) => {
       if (pendingRef.current?.message.subject === subject) pendingRef.current = null;
     };
 
-    const begin = (routeKey?: string): ToastTicket => {
-      const owner = routeKey === undefined || routePathRef.current.includes(routeKey) ? ownerRef.current : -1;
-      const isCurrent = () => owner === ownerRef.current;
+    const ticketFor = (ownerOf: () => number): ToastTicket => {
+      const isCurrent = () => ownerOf() === ownerRef.current;
 
       return {
         isCurrent,
-        show: (message) => present(message, owner),
+        show: (message) => present(message, ownerOf()),
         showAfterSheetsClose: (message) => {
           if (!isCurrent()) return;
-          if (sheetCountRef.current === 0) present(message, owner);
-          else hold({ message, owner, trigger: 'sheets', expiresAt: Infinity });
+          if (sheetCountRef.current === 0) present(message, ownerOf());
+          else hold({ message, owner: ownerOf(), trigger: 'sheets', expiresAt: Infinity });
         },
         showAfterNavigation: (message) => {
-          if (isCurrent()) hold({ message, owner, trigger: 'navigation', expiresAt: Date.now() + HANDOFF_MS });
+          if (isCurrent()) {
+            hold({ message, owner: ownerOf(), trigger: 'navigation', expiresAt: Date.now() + HANDOFF_MS });
+          }
         },
-        resolve: (subject) => resolve(subject, owner),
+        resolve: (subject) => resolve(subject, ownerOf()),
+        expectSpaceSwitch: () => {
+          if (!isCurrent()) return INACTIVE_TICKET;
+
+          const expected: ExpectedSwitch = { ...scopeOf(store.getState()), owner: ownerOf(), next: null };
+          expectedSwitchRef.current = expected;
+          return ticketFor(() => expected.next ?? -1);
+        },
       };
+    };
+
+    const begin = (routeKey?: string): ToastTicket => {
+      const owner = routeKey === undefined || routePathRef.current.includes(routeKey) ? ownerRef.current : -1;
+      return ticketFor(() => owner);
+    };
+
+    // Any change of session or space ends the owner; only the one switch a ticket expected carries it on.
+    const changeScope = (from: Scope, to: Scope) => {
+      const expected = expectedSwitchRef.current;
+      expectedSwitchRef.current = null;
+      const isExpected =
+        expected?.owner === ownerRef.current &&
+        expected.sessionKey === from.sessionKey &&
+        expected.spaceId === from.spaceId &&
+        to.sessionKey === from.sessionKey;
+
+      endOwner(false);
+      if (isExpected) expected.next = ownerRef.current;
     };
 
     const reportRoute = (path: string[], isTabBarShown: boolean) => {
@@ -238,22 +283,19 @@ const ToastProvider = ({ children }: { children: ReactNode }) => {
       current.action.onPress();
     };
 
-    return { begin, reportRoute, trackSheet, endOwner, hide, pause, resume, act, stopTimer };
+    return { begin, reportRoute, trackSheet, changeScope, endOwner, hide, pause, resume, act, stopTimer };
   });
 
   useEffect(() => {
-    const scopeOf = () => {
-      const { auth, space } = store.getState();
-      return `${auth.sessionKey}:${space.currentSpaceId}`;
-    };
-    let scope = scopeOf();
+    let scope = scopeOf(store.getState());
 
     return store.subscribe(() => {
-      const next = scopeOf();
-      if (next === scope) return;
+      const next = scopeOf(store.getState());
+      if (next.sessionKey === scope.sessionKey && next.spaceId === scope.spaceId) return;
 
+      const previous = scope;
       scope = next;
-      lifecycle.endOwner(false);
+      lifecycle.changeScope(previous, next);
     });
   }, [store, lifecycle]);
 

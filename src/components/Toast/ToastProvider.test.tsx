@@ -428,6 +428,70 @@ describe('handoff', () => {
     await elapse(300);
     expect(isShown(success.text)).toBe(false);
   });
+
+  it('carries a result across the space switch its own work expected, then its navigation', async () => {
+    const store = renderToasts();
+    act(() => {
+      store.dispatch(activateSpace(1));
+    });
+    const ticket = control.begin();
+    const afterSwitch = ticket.expectSpaceSwitch();
+    expect(afterSwitch.isCurrent()).toBe(false);
+
+    act(() => {
+      store.dispatch(activateSpace(2));
+    });
+    expect(ticket.isCurrent()).toBe(false);
+    expect(afterSwitch.isCurrent()).toBe(true);
+
+    act(() => afterSwitch.showAfterNavigation(success));
+    act(() => control.reportRoute(['root', 'screen-b'], false));
+    await elapse(300);
+    expect(isShown(success.text)).toBe(true);
+  });
+
+  it('carries nothing across any other change of scope', async () => {
+    const store = renderToasts();
+    act(() => {
+      store.dispatch(activateSpace(1));
+    });
+
+    // Another switch came first: the one the work makes later is not the expected one.
+    const first = control.begin().expectSpaceSwitch();
+    act(() => {
+      store.dispatch(activateSpace(2));
+    });
+    act(() => {
+      store.dispatch(activateSpace(1));
+    });
+    act(() => {
+      store.dispatch(activateSpace(3));
+    });
+    expect(first.isCurrent()).toBe(false);
+
+    // The session ended instead.
+    const second = control.begin().expectSpaceSwitch();
+    act(() => {
+      store.dispatch({ type: logoutMe.fulfilled.type });
+    });
+    expect(second.isCurrent()).toBe(false);
+
+    // The screen was left before the switch.
+    act(() => {
+      store.dispatch(activateSpace(1));
+    });
+    const third = control.begin().expectSpaceSwitch();
+    act(() => control.reportRoute(['root', 'screen-b'], false));
+    act(() => {
+      store.dispatch(activateSpace(2));
+    });
+    expect(third.isCurrent()).toBe(false);
+
+    act(() => third.showAfterNavigation(success));
+    act(() => control.reportRoute(['root', 'screen-c'], false));
+    await elapse(300);
+    expect(isShown(success.text)).toBe(false);
+  });
 });
 
 describe('placement', () => {

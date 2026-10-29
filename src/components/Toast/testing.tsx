@@ -18,6 +18,8 @@ export const toastCount = () => screen.queryAllByTestId('toast').length;
 export interface RecordedToast {
   message: ToastMessage;
   when: 'now' | 'afterSheetsClose' | 'afterNavigation';
+  // Asked through the ticket expectSpaceSwitch() gave.
+  afterSpaceSwitch?: true;
 }
 
 // A stand-in for useToast that records each message and when it was asked to show. In a test file:
@@ -26,13 +28,15 @@ export interface RecordedToast {
 export const createToastRecorder = () => {
   const shown: RecordedToast[] = [];
   const resolved: string[] = [];
-  const ticket: ToastTicket = {
+  const ticketFor = (extra: Partial<RecordedToast>): ToastTicket => ({
     isCurrent: () => true,
-    show: (message) => void shown.push({ message, when: 'now' }),
-    showAfterSheetsClose: (message) => void shown.push({ message, when: 'afterSheetsClose' }),
-    showAfterNavigation: (message) => void shown.push({ message, when: 'afterNavigation' }),
+    show: (message) => void shown.push({ message, when: 'now', ...extra }),
+    showAfterSheetsClose: (message) => void shown.push({ message, when: 'afterSheetsClose', ...extra }),
+    showAfterNavigation: (message) => void shown.push({ message, when: 'afterNavigation', ...extra }),
     resolve: (subject) => void resolved.push(subject),
-  };
+    expectSpaceSwitch: () => ticketFor({ afterSpaceSwitch: true }),
+  });
+  const ticket = ticketFor({});
 
   return {
     shown,

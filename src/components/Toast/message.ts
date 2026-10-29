@@ -38,6 +38,9 @@ export interface ToastTicket {
   showAfterNavigation(message: ToastMessage): void;
   // Takes away this subject's toast, e.g. an error its retry has since settled.
   resolve(subject: string): void;
+  // For work that itself switches away from the current space: a ticket for the space it switches to, valid only if
+  // the next space change is that one, in the same session, while this ticket is still current.
+  expectSpaceSwitch(): ToastTicket;
 }
 
 export const INACTIVE_TICKET: ToastTicket = {
@@ -46,4 +49,5 @@ export const INACTIVE_TICKET: ToastTicket = {
   showAfterSheetsClose: () => {},
   showAfterNavigation: () => {},
   resolve: () => {},
+  expectSpaceSwitch: () => INACTIVE_TICKET,
 };
