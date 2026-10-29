@@ -51,3 +51,10 @@ export const INACTIVE_TICKET: ToastTicket = {
   resolve: () => {},
   expectSpaceSwitch: () => INACTIVE_TICKET,
 };
+
+// Long resource names make long toasts; past this a message names the kind of thing instead.
+const MAX_NAME_LENGTH = 24;
+
+// `“Cafe”`, or `kind` for a missing or long name.
+export const nameOr = (name: string | null | undefined, kind: string) =>
+  name && name.length <= MAX_NAME_LENGTH ? `“${name}”` : kind;

@@ -3,4 +3,4 @@
 export type MemberActionTarget =
   | { kind: 'remove'; userId: number; label: string }
   | { kind: 'revoke'; inviteId: number; label: string }
-  | { kind: 'leave' };
+  | { kind: 'leave'; spaceName: string };

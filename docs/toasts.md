@@ -22,6 +22,22 @@ no queue: a message either shows now or is dropped.
   result has settled before showing what came of it.
 - An error belonging to an open sheet stays inline in the sheet, never a
   toast.
+- Work that switches space itself (leaving one) takes
+  `expectSpaceSwitch()` from its ticket before it starts. That ticket is
+  for the space switched to, and only if the next change of session or
+  space is that switch, from the same session and screen; any other
+  change voids it. Show through it only on the work's own result (e.g.
+  `movedOff`), with `showAfterNavigation`.
+
+## When to show one
+
+- Success only when the object leaves the view (deleted, archived,
+  restored out of Archived, removed, revoked, left), described from the
+  response, never the cache (a category's `archived`). A confirmation run
+  by `useConfirmAction` passes `completed` to `confirm`; it shows once
+  the dialog has finished closing.
+- Nothing for results already visible: creating or editing, filters,
+  periods, sorting, reordering, selecting a space.
 
 ## Lifecycle
 

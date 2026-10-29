@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import type { LimitModel } from '@api/models';
 import type { Confirmation } from '@components';
 import { CategoryIconBox, ConfirmationObject, ConfirmationSheet, Icon } from '@components';
+import { nameOr } from '@components/Toast/message';
 import { useTheme, useThemedStyles } from '@hooks';
 import type { ConfirmAction } from '@hooks';
 import { useDeleteLimitMutation } from '@redux/state/limit/api';
@@ -11,6 +12,13 @@ import { formatCurrencyAmount } from '@shared/utils';
 import createStyles from './style';
 
 const TILE_SIZE = 40;
+
+const deletedText = (name: string | undefined) => {
+  if (!name) return 'Monthly total limit deleted';
+
+  const quoted = nameOr(name, '');
+  return quoted ? `${quoted} limit deleted` : 'Limit deleted';
+};
 
 interface Props {
   deletion: ConfirmAction<LimitModel>;
@@ -61,7 +69,11 @@ const DeleteLimitDialog = ({ deletion, currencyCode }: Props) => {
         label: 'Delete limit',
         tone: 'danger',
         busyLabel: 'Deleting…',
-        onPress: () => confirm((limit, spaceId) => deleteLimit({ spaceId, limitId: limit.id })),
+        onPress: () =>
+          confirm(
+            (limit, spaceId) => deleteLimit({ spaceId, limitId: limit.id }),
+            () => ({ tone: 'success', text: deletedText(name) }),
+          ),
       },
       onCancel: cancel,
       isPending,

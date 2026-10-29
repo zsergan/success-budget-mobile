@@ -108,7 +108,11 @@ const MembersScreen = ({ navigation }: Props) => {
               onActionPress={requestAction}
             />
 
-            <LeaveSpaceSection isOwner={isOwner} canLeave={!!ownRow} onPress={() => requestAction({ kind: 'leave' })} />
+            <LeaveSpaceSection
+              isOwner={isOwner}
+              canLeave={!!ownRow}
+              onPress={() => requestAction({ kind: 'leave', spaceName: currentSpace.name })}
+            />
           </>
         )}
       </View>

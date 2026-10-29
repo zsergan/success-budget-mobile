@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import { act, renderHook } from '@testing-library/react-native';
 
+import { createToastRecorder } from '@components/Toast/testing';
 import { createAppStore } from '@redux/Store';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { activateSpace } from '@redux/state/space/thunks';
@@ -12,6 +13,11 @@ jest.mock('@api/instance', () => ({
   createHttpClient: () => ({ request: jest.fn() }),
 }));
 jest.mock('expo-secure-store');
+
+const mockToasts = createToastRecorder();
+jest.mock('@hooks/useToast', () => () => mockToasts.toast);
+
+beforeEach(() => mockToasts.clear());
 
 interface Item {
   id: number;
@@ -232,4 +238,60 @@ it('does not open without an active space', () => {
   act(() => result.current.open({ id: 7 }));
 
   expect(result.current.target).toBeNull();
+});
+
+describe('completion', () => {
+  const completeWith = <R,>(result: R) => {
+    let resolve!: () => void;
+    let reject!: (reason: unknown) => void;
+    const promise = new Promise<R>((res, rej) => {
+      resolve = () => res(result);
+      reject = rej;
+    });
+
+    return { action: () => ({ unwrap: () => promise }), resolve, reject };
+  };
+  const completed = jest.fn(({ archived }: { archived: boolean }, item: Item) => ({
+    tone: 'success' as const,
+    text: `${item.id} ${archived ? 'archived' : 'deleted'}`,
+  }));
+
+  it('describes what the request returned once the dialog has closed', async () => {
+    const request = completeWith({ archived: true });
+    const { result } = renderConfirmAction();
+    act(() => result.current.open({ id: 7 }));
+
+    let running!: Promise<void>;
+    act(() => {
+      running = result.current.confirm(request.action, completed);
+    });
+    await act(async () => {
+      request.resolve();
+      await running;
+    });
+
+    expect(completed).toHaveBeenCalledWith({ archived: true }, { id: 7 });
+    expect(mockToasts.shown).toEqual([{ message: { tone: 'success', text: '7 archived' }, when: 'afterSheetsClose' }]);
+  });
+
+  it.each([
+    ['fails', (request: ReturnType<typeof completeWith>) => request.reject({ message: 'No', statusCode: 409 })],
+    ['succeeds after a space switch', (request: ReturnType<typeof completeWith>) => request.resolve()],
+  ])('says nothing when the request %s', async (outcome, settle) => {
+    const request = completeWith({ archived: false });
+    const { store, result } = renderConfirmAction();
+    act(() => result.current.open({ id: 7 }));
+
+    let running!: Promise<void>;
+    act(() => {
+      running = result.current.confirm(request.action, completed);
+    });
+    if (outcome !== 'fails') act(() => store.dispatch(activateSpace(2)));
+    await act(async () => {
+      settle(request);
+      await running;
+    });
+
+    expect(mockToasts.shown).toEqual([]);
+  });
 });

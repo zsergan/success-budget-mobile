@@ -1,4 +1,5 @@
 import type { Confirmation } from '@components';
+import { nameOr } from '@components/Toast/message';
 import { CategoryIconBox, ConfirmationObject, ConfirmationSheet } from '@components';
 import type { ConfirmAction } from '@hooks';
 import type { CategoryModel } from '@api/models';
@@ -39,14 +40,22 @@ interface Props {
   deletion: ConfirmAction<CategoryModel>;
 }
 
-// A category without transactions is deleted; one with history is archived instead, by the same request.
+// A category without transactions is deleted; one with history is archived instead, by the same request. The copy
+// follows the cached count, but what happened comes from the answer: the count may be out of date.
 const DeleteCategoryDialog = ({ deletion }: Props) => {
   const { target: category, isPending, error, cancel, confirm } = deletion;
   const [deleteCategory] = useDeleteCategoryMutation();
 
   const confirmation = (target: CategoryModel): Confirmation => {
     const willDelete = target.transactionCount === 0;
-    const run = () => confirm((category, spaceId) => deleteCategory({ spaceId, categoryId: category.id }));
+    const run = () =>
+      confirm(
+        (category, spaceId) => deleteCategory({ spaceId, categoryId: category.id }),
+        ({ archived }, category) => ({
+          tone: 'success',
+          text: `${nameOr(category.name, 'Category')} ${archived ? 'archived' : 'deleted'}`,
+        }),
+      );
 
     return {
       title: willDelete ? `Delete “${target.name}”?` : `Archive “${target.name}”?`,

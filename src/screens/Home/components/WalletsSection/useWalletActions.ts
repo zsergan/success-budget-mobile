@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 
 import type { GetWalletsResponse } from '@api/dto';
+import { nameOr } from '@components/Toast/message';
 import { useConfirmAction } from '@hooks';
 import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useAppStore, useSpaceArg } from '@redux/hooks';
@@ -58,7 +59,11 @@ const useWalletActions = ({ onEdit }: Props) => {
     next.run(next.wallet);
   };
 
-  const onConfirm = () => deletion.confirm((wallet, spaceId) => deleteWallet({ spaceId, walletId: wallet.wallet.id }));
+  const onConfirm = () =>
+    deletion.confirm(
+      (wallet, spaceId) => deleteWallet({ spaceId, walletId: wallet.wallet.id }),
+      (_result, wallet) => ({ tone: 'success', text: `${nameOr(wallet.wallet.wallet_name, 'Wallet')} deleted` }),
+    );
 
   return {
     wallets,

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { nameOr } from '@components/Toast/message';
+import { useToast } from '@hooks';
 import { requireSpaceId } from '@redux/api/baseApi';
 import { useAppDispatch, useAppSelector, useSessionGuard } from '@redux/hooks';
 import { useRemoveMemberMutation, useRevokeInviteMutation } from '@redux/state/member/api';
@@ -15,6 +17,7 @@ interface UseMemberActionsProps {
 const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
   const dispatch = useAppDispatch();
   const captureSession = useSessionGuard();
+  const toast = useToast();
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
   const sessionKey = useAppSelector((state) => state.auth.sessionKey);
   const [revokeInvite] = useRevokeInviteMutation();
@@ -60,6 +63,7 @@ const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
 
     const originSpaceId = currentSpaceId;
     const isSessionCurrent = captureSession();
+    const ticket = toast.begin();
 
     isPendingRef.current = true;
     setIsPending(true);
@@ -69,9 +73,16 @@ const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
       if (target.kind === 'leave') {
         // Leaving switches spaces by itself, so only its own result says whether
         // the user is still on the space they left (they may have switched away).
+        const afterSwitch = ticket.expectSpaceSwitch();
         const { movedOff } = await dispatch(leaveCurrentSpace());
 
-        if (movedOff) onLeft();
+        if (movedOff) {
+          afterSwitch.showAfterNavigation({
+            tone: 'success',
+            text: `You left ${nameOr(target.spaceName, 'the space')}`,
+          });
+          onLeft();
+        }
 
         return;
       }
@@ -85,6 +96,10 @@ const useMemberActions = ({ onLeft }: UseMemberActionsProps) => {
       // The space changed mid-request; the switch already cleared `target`.
       if (currentSpaceIdRef.current !== originSpaceId) return;
 
+      ticket.showAfterSheetsClose({
+        tone: 'success',
+        text: target.kind === 'revoke' ? 'Invite revoked' : 'Member removed',
+      });
       setTarget(null);
     } catch (error: unknown) {
       if (isSessionCurrent() && currentSpaceIdRef.current === originSpaceId) {

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import type { CategoryModel } from '@api/models';
+import { nameOr } from '@components/Toast/message';
 import { requireSpaceId } from '@redux/api/baseApi';
 import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useSessionGuard, useSpaceArg } from '@redux/hooks';
@@ -13,7 +14,7 @@ import { EMPTY_CATEGORIES } from '@redux/state/category/selectors';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { TransactionType } from '@shared/enums';
 import { getErrorMessage } from '@shared/utils';
-import { useAlert } from '@hooks';
+import { useToast } from '@hooks';
 
 export type CategorySegment = 'expenses' | 'income' | 'archived';
 export type SortMode = 'most-used' | 'manual';
@@ -24,7 +25,7 @@ const SEGMENT_TO_TRANSACTION_TYPE: Record<Exclude<CategorySegment, 'archived'>, 
 };
 
 const useCategoryList = () => {
-  const { addAlert } = useAlert();
+  const toast = useToast();
   const captureSession = useSessionGuard();
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const categoriesQuery = useGetCategoriesQuery(useSpaceArg());
@@ -83,6 +84,7 @@ const useCategoryList = () => {
 
   const handleReorder = async (orderedCategories: CategoryModel[]) => {
     const isSessionCurrent = captureSession();
+    const ticket = toast.begin();
 
     try {
       await reorderCategories({
@@ -90,12 +92,13 @@ const useCategoryList = () => {
         categoryIds: orderedCategories.map((category) => category.id),
       }).unwrap();
     } catch (error: unknown) {
-      if (isSessionCurrent()) addAlert(getErrorMessage(error));
+      if (isSessionCurrent()) ticket.show({ tone: 'error', text: getErrorMessage(error) });
     }
   };
 
   const handleRestore = async (category: CategoryModel) => {
     const isSessionCurrent = captureSession();
+    const ticket = toast.begin();
 
     try {
       await updateCategory({
@@ -103,8 +106,9 @@ const useCategoryList = () => {
         categoryId: category.id,
         data: { is_active: 1 },
       }).unwrap();
+      if (isSessionCurrent()) ticket.show({ tone: 'success', text: `${nameOr(category.name, 'Category')} restored` });
     } catch (error: unknown) {
-      if (isSessionCurrent()) addAlert(getErrorMessage(error));
+      if (isSessionCurrent()) ticket.show({ tone: 'error', text: getErrorMessage(error) });
     }
   };
 
