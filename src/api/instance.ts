@@ -2,7 +2,8 @@ import type { AxiosError, AxiosRequestConfig } from 'axios';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
+import { beginToast } from '@components/Toast/globalToast';
+import type { ToastTicket } from '@components/Toast/message';
 import { BASE_API_URL, AUTH_TOKEN_KEY } from '@shared/constants';
 import { RATE_LIMITED_MESSAGE } from '@shared/utils/error';
 
@@ -13,8 +14,9 @@ import { endHttpSession, getHttpSessionKey, isHttpSessionLaunching } from './ses
 declare module 'axios' {
   interface AxiosRequestConfig {
     sessionKey?: number;
-    // A caller that handles this 429 itself keeps the generic alert quiet.
+    // A caller that handles this 429 itself keeps the generic toast quiet.
     isHandledRateLimit?: (error: ErrorResponse) => boolean;
+    toastTicket?: ToastTicket;
   }
 }
 
@@ -29,6 +31,7 @@ export const createHttpClient = () => {
     async (config) => {
       // Captured before the token read, so a logout during it marks the request stale.
       config.sessionKey ??= getHttpSessionKey();
+      config.toastTicket ??= beginToast();
 
       if (config.sessionKey !== getHttpSessionKey()) {
         throw new axios.CanceledError('The request’s session has ended.', config);
@@ -65,7 +68,7 @@ export const createHttpClient = () => {
         !isHttpSessionLaunching() &&
         !error.config?.isHandledRateLimit?.(getRejectValue(error))
       ) {
-        showGlobalAlert(RATE_LIMITED_MESSAGE);
+        error.config?.toastTicket?.show({ tone: 'error', text: RATE_LIMITED_MESSAGE, subject: 'rate-limit' });
       }
 
       return Promise.reject(error);

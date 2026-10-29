@@ -3,6 +3,7 @@ import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
+import { toastCount, withToasts } from '@components/Toast/testing';
 import { createAppStore } from '@redux/Store';
 import type { PendingWrite } from '@redux/state/pendingWrite/slice';
 import { writeSettled, writesRestored } from '@redux/state/pendingWrite/slice';
@@ -17,9 +18,6 @@ jest.mock('@api/instance', () => ({
   ApiClient: () => ({}),
   createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
 }));
-
-const mockAddAlert = jest.fn();
-jest.mock('@hooks/useAlert', () => () => ({ addAlert: mockAddAlert }));
 
 jest.mock('@components/Modals/BottomSheetModal/useReturnToRest', () => () => ({
   animatedIndex: undefined,
@@ -76,6 +74,18 @@ const write = (key: string, status: PendingWrite['status'], spaceId = 1): Pendin
   },
 });
 
+const deleteWrite = (key: string): PendingWrite => ({
+  status: 'unknown',
+  operation: {
+    type: 'delete',
+    spaceId: 1,
+    transactionId: 'tx-9',
+    version: 1,
+    idempotencyKey: key,
+    firstSentAt: Date.now(),
+  },
+});
+
 const renderBanner = (writes: PendingWrite[]) => {
   const store = createAppStore();
   withProfile(store);
@@ -90,7 +100,7 @@ const renderBanner = (writes: PendingWrite[]) => {
           insets: { top: 54, right: 0, bottom: 34, left: 0 },
         }}
       >
-        <PendingWritesBanner />
+        {withToasts(<PendingWritesBanner />)}
       </SafeAreaProvider>
     </Provider>,
   );
@@ -119,17 +129,55 @@ describe('PendingWritesBanner', () => {
     expect(shown()).toBeNull();
   });
 
-  it('offers to retry unanswered saves, which sends each with its own key', async () => {
+  it('offers to check unanswered saves, which sends each with its own key, and reports them in one toast', async () => {
     const store = renderBanner([write('key-1', 'unknown'), write('key-2', 'unknown')]);
 
     expect(screen.getByText('2 saves aren’t confirmed yet')).toBeTruthy();
 
-    await act(async () => fireEvent.press(screen.getByText('Retry')));
+    await act(async () => fireEvent.press(screen.getByText('Check status')));
 
     expect(posts().map(([{ headers }]) => headers['Idempotency-Key'])).toEqual(['key-1', 'key-2']);
     expect(store.getState().pendingWrite.writes).toEqual([]);
-    expect(shown()).toBeNull();
-    expect(mockAddAlert).toHaveBeenCalledWith('2 earlier saves went through');
+    expect(screen.queryByText(/confirmed yet/)).toBeNull();
+    expect(screen.getByText('2 earlier saves went through')).toBeTruthy();
+    expect(toastCount()).toBe(1);
+  });
+
+  it('names a mix of creates, edits and deletes as changes', () => {
+    renderBanner([write('key-1', 'unknown'), deleteWrite('key-2')]);
+
+    expect(screen.getByText('2 changes aren’t confirmed yet')).toBeTruthy();
+  });
+
+  it('reports only the open space’s writes, and keeps the ones still unanswered on offer', async () => {
+    const store = renderBanner([write('key-1', 'unknown'), write('key-2', 'unknown', 2), write('key-3', 'unknown')]);
+    mockedRequest.mockImplementation(({ headers }: { headers: Record<string, string> }) =>
+      headers['Idempotency-Key'] === 'key-3'
+        ? Promise.reject(new Error('Network Error'))
+        : Promise.resolve({ data: createTransactionResponseDto() }),
+    );
+
+    await act(async () => fireEvent.press(screen.getByText('Check status')));
+
+    expect(screen.getByText('An earlier save went through')).toBeTruthy();
+    expect(screen.getByText('A save isn’t confirmed yet')).toBeTruthy();
+    expect(store.getState().pendingWrite.writes.map(({ operation }) => operation.idempotencyKey)).toEqual(['key-3']);
+  });
+
+  it('reports a refusal over what went through, in one toast', async () => {
+    renderBanner([write('key-1', 'unknown'), write('key-2', 'unknown')]);
+    mockedRequest.mockImplementation(({ headers }: { headers: Record<string, string> }) =>
+      headers['Idempotency-Key'] === 'key-2'
+        ? Promise.reject({
+            response: { status: 422, data: { statusCode: 422, code: 'SOMETHING', message: 'Wallet is closed' } },
+          })
+        : Promise.resolve({ data: createTransactionResponseDto() }),
+    );
+
+    await act(async () => fireEvent.press(screen.getByText('Check status')));
+
+    expect(screen.getByText('An earlier save was refused: Wallet is closed')).toBeTruthy();
+    expect(toastCount()).toBe(1);
   });
 
   it('leaves a create that ran out to the user: sent again, or discarded', async () => {
@@ -154,14 +202,31 @@ describe('PendingWritesBanner', () => {
       headers: { 'Idempotency-Key': 'key-1' },
       data: { client_operation_id: 'key-1' },
     });
-    expect(mockAddAlert).toHaveBeenCalledWith('Transaction saved');
+    expect(screen.getByText('Transaction saved')).toBeTruthy();
 
     fireEvent.press(screen.getByText('Review'));
     fireEvent.press(screen.getByRole('button', { name: 'Discard' }));
 
     expect(store.getState().pendingWrite.writes).toEqual([]);
     expect(posts()).toHaveLength(1);
-    expect(shown()).toBeNull();
+    expect(screen.queryByText('A transaction wasn’t saved')).toBeNull();
+  });
+
+  it('keeps a create sent again but unanswered on offer, and offers its check from the toast', async () => {
+    const store = renderBanner([write('key-1', 'expired')]);
+    mockedRequest.mockRejectedValueOnce(new Error('Network Error'));
+
+    fireEvent.press(screen.getByText('Review'));
+    await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Send' })));
+
+    expect(screen.getByText('Couldn’t confirm the save')).toBeTruthy();
+    expect(screen.getByText('A save isn’t confirmed yet')).toBeTruthy();
+
+    await act(async () => fireEvent.press(screen.getAllByRole('button', { name: 'Check status' })[1]));
+
+    expect(posts().map(([{ headers }]) => headers['Idempotency-Key'])).toEqual(['key-1', 'key-1']);
+    expect(store.getState().pendingWrite.writes).toEqual([]);
+    expect(screen.getByText('An earlier save went through')).toBeTruthy();
   });
 
   it('does nothing for a review whose write was settled meanwhile', () => {

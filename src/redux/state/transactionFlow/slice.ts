@@ -35,6 +35,7 @@ export type FlowCheck = 'pending' | 'done' | 'failed';
 // `saveRefused`: the server refused it, as `refusal` says. `saveNotSent`: it could not be stored, so it never went out.
 // `saveExpired`: a create the server never got before its key ran out; only the user sends it again.
 // `saveRecovered`: an unconfirmed earlier save turned out to have applied; later changes wait for a new save.
+// `saveFound`: an earlier attempt of this create had applied, so the details show that record instead.
 export type FlowNotice =
   | 'conflict'
   | 'deleteFailed'
@@ -43,11 +44,13 @@ export type FlowNotice =
   | 'saveRefused'
   | 'saveNotSent'
   | 'saveExpired'
-  | 'saveRecovered';
+  | 'saveRecovered'
+  | 'saveFound';
 
 export type SaveNotice = Extract<FlowNotice, `save${string}`>;
 
-export type DeleteResult = 'deleted' | 'conflict' | 'failed' | 'uncertain' | 'stale';
+// `gone`: the record was already gone, by an earlier attempt or another member.
+export type DeleteResult = 'deleted' | 'gone' | 'conflict' | 'failed' | 'uncertain' | 'stale';
 
 export const CREATED_AUTO_CLOSE_MS = 5000;
 
@@ -136,7 +139,7 @@ const startCreate = (
 };
 
 // The record a delete from this flow acts on: the one shown, or the one just created.
-const recordIdOf = (flow: TransactionFlow) =>
+export const recordIdOf = (flow: TransactionFlow) =>
   flow.view.name === 'created'
     ? flow.created?.transaction.id
     : flow.view.name === 'details' || flow.view.name === 'edit'
@@ -369,7 +372,7 @@ const transactionFlowSlice = createSlice({
         view: { name: 'details' },
         saved: payload.transaction,
         check: 'done',
-        notice: null,
+        notice: 'saveFound',
         refusal: null,
         draft: null,
         baseline: null,
@@ -479,7 +482,7 @@ const transactionFlowSlice = createSlice({
       const flow = state.flow;
       if (!flow?.isSaving || recordIdOf(flow) !== payload.transactionId) return;
 
-      if (payload.result === 'deleted') {
+      if (payload.result === 'deleted' || payload.result === 'gone') {
         state.flow = null;
         return;
       }

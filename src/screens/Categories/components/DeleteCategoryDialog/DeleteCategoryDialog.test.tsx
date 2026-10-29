@@ -16,6 +16,7 @@ import {
   swipeDownSheet,
   withSheetHost,
 } from '@components/ConfirmationSheet/testing';
+import { toastCount, withToasts } from '@components/Toast/testing';
 import DeleteCategoryDialog from './DeleteCategoryDialog';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
@@ -92,7 +93,7 @@ const renderDialog = (category: CategoryModel) => {
     return <DeleteCategoryDialog deletion={deletion.current} />;
   };
 
-  render(<Provider store={store}>{withSheetHost(<Harness />)}</Provider>);
+  render(<Provider store={store}>{withSheetHost(withToasts(<Harness />))}</Provider>);
 
   const open = () => act(() => deletion.current.open(category));
 
@@ -130,6 +131,7 @@ describe.each(Object.entries(MODES))('%s', (_mode, { category, title, confirm, p
     await response.resolve();
 
     expect(screen.queryByText(title)).toBeNull();
+    expect(screen.getByText(`“Food” ${archived ? 'archived' : 'deleted'}`)).toBeTruthy();
   });
 
   it('shows a failure inside the dialog, allows a retry, and forgets it on reopening', async () => {
@@ -142,6 +144,7 @@ describe.each(Object.entries(MODES))('%s', (_mode, { category, title, confirm, p
 
     expect(screen.getByText(title)).toBeTruthy();
     expect(screen.getByText('Category is in use')).toBeTruthy();
+    expect(toastCount()).toBe(0);
 
     const retry = deferredResponse();
 
@@ -158,6 +161,62 @@ describe.each(Object.entries(MODES))('%s', (_mode, { category, title, confirm, p
     open();
 
     expect(screen.queryByText('Still in use')).toBeNull();
+  });
+});
+
+describe('completion', () => {
+  it.each([
+    ['archived although the cached count said none', MODES.delete, true, '“Food” archived'],
+    ['deleted although the cached count said some', MODES.archive, false, '“Food” deleted'],
+  ])('says what the server did: %s', async (_case, { category, confirm }, archived, text) => {
+    const response = deferredResponse(archived);
+    const { open } = renderDialog(category);
+
+    open();
+    fireEvent.press(screen.getByText(confirm));
+    await response.resolve();
+
+    expect(screen.getByText(text)).toBeTruthy();
+    expect(toastCount()).toBe(1);
+  });
+
+  it('waits for the dialog to finish closing', async () => {
+    const response = deferredResponse(true);
+    const { open } = renderDialog(MODES.archive.category);
+
+    open();
+    fireEvent.press(screen.getByText(MODES.archive.confirm));
+    holdDismissals();
+    await response.resolve();
+    expect(toastCount()).toBe(0);
+
+    finishDismissals();
+    expect(screen.getByText('“Food” archived')).toBeTruthy();
+  });
+
+  it('names the kind of thing instead of a long name', async () => {
+    const response = deferredResponse(false);
+    const { open } = renderDialog({ ...MODES.delete.category, name: 'Weekend groceries and snacks' });
+
+    open();
+    fireEvent.press(screen.getByText(MODES.delete.confirm));
+    await response.resolve();
+
+    expect(screen.getByText('Category deleted')).toBeTruthy();
+  });
+
+  it('says nothing about a deletion answered after a space switch', async () => {
+    const response = deferredResponse();
+    const { store, open } = renderDialog(MODES.delete.category);
+
+    open();
+    fireEvent.press(screen.getByText(MODES.delete.confirm));
+    act(() => {
+      store.dispatch(activateSpace(2));
+    });
+    await response.resolve();
+
+    expect(toastCount()).toBe(0);
   });
 });
 

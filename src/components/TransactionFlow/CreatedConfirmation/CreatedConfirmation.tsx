@@ -25,7 +25,7 @@ import type { CreateTransactionResult } from '@api/models';
 import { TransactionType } from '@shared/enums';
 import theme from '@shared/theme';
 import { formatAmount, formatCurrencyAmount, formatDateLong, formatDayMonth, hexToRgba } from '@shared/utils';
-import { deleteFailureText } from '../deleteMessage';
+import { deleteFailureAction, deleteFailureText } from '../deleteMessage';
 import Banner from '@components/Banner/Banner';
 import { formatDateTime } from '../format';
 
@@ -171,7 +171,7 @@ const CreatedConfirmation = ({ flow, onUndo, onShow, onOpenRecord, onAddAnother,
               <Banner
                 tone="danger"
                 text={deleteFailureText(notice, 'undo')}
-                actionLabel="Try again"
+                actionLabel={deleteFailureAction(notice)}
                 onAction={onUndo}
               />
             </View>

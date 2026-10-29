@@ -88,7 +88,7 @@ const useLimitEditorForm = ({ limit, initialScope = 'category', activeCategoryId
     setValue('name', value, { shouldValidate: true });
   };
 
-  const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<LimitFormValues>({
+  const { onSubmit, isSubmitDisabled, submitError } = useFormSubmitHandler<LimitFormValues>({
     handleSubmit,
     formState,
     onSubmit: async (formData) => {
@@ -111,6 +111,7 @@ const useLimitEditorForm = ({ limit, initialScope = 'category', activeCategoryId
     onSubmit,
     canSubmit: formState.isValid && !formState.isValidating && !isSubmitDisabled,
     errors: formState.errors,
+    submitError,
     closeBottomSheet: close,
   };
 };

@@ -5,9 +5,11 @@ import { ApiClient } from './instance';
 
 const api = ApiClient();
 
-// Sign In explains a 429 in its own message, so the generic alert stays quiet.
+// Sign In, Sign Up and Verify Email explain a 429 on screen, so the generic toast stays quiet.
+const isHandledRateLimit = () => true;
+
 export const login = async (payload: LoginPayload) => {
-  const response = await api.post<string>('/users/login', payload, { isHandledRateLimit: () => true });
+  const response = await api.post<string>('/users/login', payload, { isHandledRateLimit });
 
   return response.data;
 };
@@ -17,15 +19,13 @@ export const isConfirmationAlreadyRequested = (error: unknown) =>
   isApiError(error, 429, ApiErrorCode.CONFIRMATION_EMAIL_RATE_LIMITED);
 
 export const register = async (payload: RegisterPayload) => {
-  const response = await api.post<ProfileResponse>('/users/register', payload, {
-    isHandledRateLimit: isConfirmationAlreadyRequested,
-  });
+  const response = await api.post<ProfileResponse>('/users/register', payload, { isHandledRateLimit });
 
   return response.data;
 };
 
 export const verifyEmail = async (payload: VerifyEmailPayload) => {
-  const response = await api.post<string>('/users/verify-email', payload);
+  const response = await api.post<string>('/users/verify-email', payload, { isHandledRateLimit });
 
   return response.data;
 };

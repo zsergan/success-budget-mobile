@@ -4,12 +4,20 @@ import { Appearance, AppState, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, render, screen } from '@testing-library/react-native';
 
-import { showGlobalAlert } from '@components/Alert/AlertProvider/globalAlert';
 import { useTheme } from '@hooks';
 import type { ThemeContextValue } from './ThemeProvider';
 import ThemeProvider, { THEME_RESTORE_TIMEOUT_MS, THEME_SAVE_FAILED_MESSAGE } from './ThemeProvider';
 
-jest.mock('@components/Alert/AlertProvider/globalAlert', () => ({ showGlobalAlert: jest.fn() }));
+const mockShowToast = jest.fn();
+jest.mock('@components/Toast/globalToast', () => ({
+  beginToast: () => ({
+    isCurrent: () => true,
+    show: mockShowToast,
+    showAfterSheetsClose: jest.fn(),
+    showAfterNavigation: jest.fn(),
+    resolve: jest.fn(),
+  }),
+}));
 
 const KEY = 'sbm-THEME_PREFERENCE';
 
@@ -364,7 +372,9 @@ describe('saving the preference', () => {
     await act(() => jest.advanceTimersByTimeAsync(0));
 
     expect(shown()).toBe('dark:dark:ready');
-    expect(showGlobalAlert).toHaveBeenCalledWith(THEME_SAVE_FAILED_MESSAGE);
+    expect(mockShowToast).toHaveBeenCalledWith(
+      expect.objectContaining({ tone: 'error', text: THEME_SAVE_FAILED_MESSAGE }),
+    );
   });
 
   it('stays quiet about a failed write a newer choice has replaced', async () => {
@@ -376,7 +386,7 @@ describe('saving the preference', () => {
     await choose('light');
     await act(async () => firstWrite.reject(new Error('disk')));
 
-    expect(showGlobalAlert).not.toHaveBeenCalled();
+    expect(mockShowToast).not.toHaveBeenCalled();
     expect(await AsyncStorage.getItem(KEY)).toBe('light');
   });
 });

@@ -40,7 +40,7 @@ const MembersScreen = ({ navigation }: Props) => {
   } = useMembersData();
 
   const { remainingSeconds } = useInviteCooldown();
-  const { submit, isSubmitting, revealedInvite, closeInviteCode, failedEmail } = useInviteMember({
+  const { submit, isSubmitting, revealedInvite, closeInviteCode, failedEmail, inviteError } = useInviteMember({
     canInvite,
     cooldownRemaining: remainingSeconds,
   });
@@ -93,6 +93,7 @@ const MembersScreen = ({ navigation }: Props) => {
                 cooldownRemaining={remainingSeconds}
                 isSubmitting={isSubmitting}
                 failedEmail={failedEmail}
+                error={inviteError}
                 onSubmit={submit}
               />
             )}
@@ -107,7 +108,11 @@ const MembersScreen = ({ navigation }: Props) => {
               onActionPress={requestAction}
             />
 
-            <LeaveSpaceSection isOwner={isOwner} canLeave={!!ownRow} onPress={() => requestAction({ kind: 'leave' })} />
+            <LeaveSpaceSection
+              isOwner={isOwner}
+              canLeave={!!ownRow}
+              onPress={() => requestAction({ kind: 'leave', spaceName: currentSpace.name })}
+            />
           </>
         )}
       </View>

@@ -110,6 +110,7 @@ relying on or changing them.
   `docs/ui-pitfalls.md`.
 - Bottom sheets and confirmations (presence, keyboard, stacking, stale
   confirmations): `docs/sheets.md`.
+- Toasts (tickets, ownership, replacement, placement): `docs/toasts.md`.
 
 ## Tests
 

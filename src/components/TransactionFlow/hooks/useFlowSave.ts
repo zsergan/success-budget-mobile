@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from 'react';
 
-import { useAlert, useTransactionOperation } from '@hooks';
+import { useToast, useTransactionOperation } from '@hooks';
 import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
 import { getDraftErrors, hasDraftErrors, toCreateRequest, toUpdateRequest } from '@redux/state/transactionFlow/draft';
 import { hasUnsavedChanges, selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
@@ -28,7 +28,7 @@ const SAVE_NOTICES: Partial<Record<TransactionFailureKind, SaveNotice>> = {
 const useFlowSave = () => {
   const dispatch = useAppDispatch();
   const store = useAppStore();
-  const { addAlert } = useAlert();
+  const toast = useToast();
   const { submit, reset } = useTransactionOperation();
   const draftId = useAppSelector((state) => selectTransactionFlow(state)?.draftId);
 
@@ -48,6 +48,7 @@ const useFlowSave = () => {
     if (hasDraftErrors(errors) || (saved && !hasUnsavedChanges(flow))) return;
 
     const scope = { draftId: flow.draftId };
+    const ticket = toast.begin();
     const pending = saved
       ? submit({
           type: 'update',
@@ -63,13 +64,15 @@ const useFlowSave = () => {
 
     if (outcome.status === 'ignored') return;
 
+    // A record found stays in the sheet, which says why; one deleted since ends the flow, so a toast says it.
     if (outcome.status === 'found') {
       dispatch(createFound({ ...scope, transaction: outcome.transaction }));
-      addAlert(
-        outcome.transaction
-          ? 'This transaction was already saved'
-          : 'This transaction was saved earlier and has since been deleted',
-      );
+      if (!outcome.transaction) {
+        ticket.showAfterSheetsClose({
+          tone: 'info',
+          text: 'This transaction was saved earlier and has since been deleted',
+        });
+      }
       return;
     }
 
@@ -102,9 +105,8 @@ const useFlowSave = () => {
       dispatch(createSucceeded({ ...scope, result: outcome.result, now: Date.now() }));
     } else {
       dispatch(editSucceeded({ ...scope, transaction: outcome.result.transaction }));
-      addAlert('Changes saved');
     }
-  }, [dispatch, store, submit, addAlert]);
+  }, [dispatch, store, submit, toast]);
 };
 
 export default useFlowSave;

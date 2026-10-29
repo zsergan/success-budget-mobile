@@ -13,7 +13,7 @@ interface AcceptInviteFormData {
 }
 
 const schema = yup.object().shape({
-  code: yup.string().required().length(6, 'Enter the 6-character code'),
+  code: yup.string().required('Enter the 6-character code').length(6, 'Enter the 6-character code'),
 });
 
 type UseAcceptInviteFormProps = Pick<RootStackScreenProps<ScreenNames.ACCEPT_INVITE_SCREEN>, 'navigation'>;
@@ -30,18 +30,18 @@ const useAcceptInviteForm = ({ navigation }: UseAcceptInviteFormProps) => {
     defaultValues: { code: '' },
   });
 
-  const { onSubmit, isSubmitDisabled } = useFormSubmitHandler<AcceptInviteFormData>({
+  const { onSubmit, isSubmitDisabled, submitError } = useFormSubmitHandler<AcceptInviteFormData>({
     handleSubmit,
     formState: { isSubmitting, isSubmitSuccessful },
     onSubmit: (formData) => dispatch(acceptInviteAndSelect(formData.code)),
     onSuccess: () => navigation.goBack(),
-    getInvalidMessage: () => 'Enter the 6-character code',
   });
 
   return {
     control,
     onSubmit,
     isSubmitDisabled,
+    submitError,
   };
 };
 

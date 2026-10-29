@@ -1,4 +1,3 @@
-export { default as useAlert } from './useAlert';
 export { default as useBackPress } from './useBackPress';
 export { default as useBalanceVisibility } from './useBalanceVisibility';
 export { default as useConfirmAction } from './useConfirmAction';
@@ -18,6 +17,7 @@ export { default as useSwipe } from './useSwipe';
 export { default as useTheme } from './useTheme';
 export { default as useThemePreference } from './useThemePreference';
 export { default as useThemedStyles } from './useThemedStyles';
+export { default as useToast } from './useToast';
 export { default as useTransactionOperation } from './useTransactionOperation';
 export type { TransactionSubmitOutcome } from './useTransactionOperation';
 export { default as useTransactionsFeed } from './useTransactionsFeed';

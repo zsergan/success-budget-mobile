@@ -76,7 +76,10 @@ email verification.
   at most 72 bytes in UTF-8. Sign In keeps its older minimum of six for
   existing accounts.
 - **Rate limits.** Every `429` of these routes is explained on its screen
-  with its wait, so the global rate-limit alert stays quiet for them.
+  with its wait, so the generic rate-limit toast stays quiet for them.
+- **An accepted resend** says only what the `202` promises, as an info
+  toast: "If this address has a verified account, a code will be sent."
+  The cooldown and delivery hints stay on the screen.
 
 ## Layout
 

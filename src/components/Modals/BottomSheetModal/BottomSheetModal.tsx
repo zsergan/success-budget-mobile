@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomSheetBackdropProps, BottomSheetModalProps } from '@gorhom/bottom-sheet';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 
+import { ToastSheetPresence } from '@components/Toast/ToastProvider';
 import useThemedStyles from '@hooks/useThemedStyles';
 import theme from '@shared/theme';
 
@@ -133,6 +134,8 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
     >
+      {/* Mounted with the sheet's content: from its presentation until its closing animation ends. */}
+      <ToastSheetPresence />
       {dynamicSizing ? (
         // Dynamic sizing needs the content itself as the measured root; an extra BottomSheetView here would compete with it.
         children

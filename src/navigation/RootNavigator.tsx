@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as SplashScreen from 'expo-splash-screen';
 
+import { ToastHost } from '@components/Toast';
 import {
   AcceptInviteScreen,
   CategoriesScreen,
@@ -28,6 +29,7 @@ import { runLaunch } from '@redux/state/launch/thunks';
 import { ScreenNames } from '@shared/enums';
 import MainNavigator from './MainNavigator';
 import useSessionData from './useSessionData';
+import useToastRouteReporting from './useToastRouteReporting';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -41,6 +43,7 @@ const RootNavigator = () => {
   const isSignedIn = useAppSelector((state) => state.auth.isSignedIn);
   const { isReady: isThemeReady, scheme, colorTheme } = useTheme();
   const [hasDrawn, setHasDrawn] = useState(false);
+  const { navigationRef, reportFocusedRoute } = useToastRouteReporting();
   useSessionData();
   usePendingWritesSync();
 
@@ -84,7 +87,12 @@ const RootNavigator = () => {
       }}
     >
       <BottomSheetModalProvider>
-        <NavigationContainer theme={navigationTheme}>
+        <NavigationContainer
+          ref={navigationRef}
+          theme={navigationTheme}
+          onReady={reportFocusedRoute}
+          onStateChange={reportFocusedRoute}
+        >
           <Stack.Navigator screenOptions={{ animation: isReady ? 'slide_from_right' : 'slide_from_left' }}>
             {isReady ? (
               <>
@@ -159,6 +167,9 @@ const RootNavigator = () => {
           </Stack.Navigator>
         </NavigationContainer>
       </BottomSheetModalProvider>
+
+      {/* After the sheets' portal host, so it draws above every sheet and its backdrop. */}
+      <ToastHost />
     </GestureHandlerRootView>
   );
 };

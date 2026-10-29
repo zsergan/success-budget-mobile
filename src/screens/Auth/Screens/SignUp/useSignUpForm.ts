@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as yup from 'yup';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
-import { useAlert, useSingleSubmit } from '@hooks';
+import { useSingleSubmit } from '@hooks';
 import { useAppDispatch } from '@redux/hooks';
 import { registrationAbandoned } from '@redux/state/auth/actions';
 import { registerMe } from '@redux/state/auth/thunks';
@@ -49,7 +49,8 @@ type UseSignUpFormProps = Pick<RootStackScreenProps<ScreenNames.SIGN_UP_SCREEN>,
 
 const useSignUpForm = ({ navigation }: UseSignUpFormProps) => {
   const dispatch = useAppDispatch();
-  const { addAlert } = useAlert();
+  // Why the last registration failed; the form keeps what was typed.
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
     control,
@@ -101,15 +102,16 @@ const useSignUpForm = ({ navigation }: UseSignUpFormProps) => {
     );
 
     currentRequestId.current = request.requestId;
+    setSubmitError(null);
     const result = await request;
 
-    // A registration that ends after the user left neither pulls them back nor alerts its failure.
+    // A registration that ends after the user left neither pulls them back nor reports its failure.
     if (currentRequestId.current !== request.requestId || !navigation.isFocused()) return;
 
     if (registerMe.fulfilled.match(result)) {
       navigation.navigate(ScreenNames.VERIFY_EMAIL_SCREEN);
     } else {
-      addAlert(getErrorMessage(result.payload));
+      setSubmitError(getErrorMessage(result.payload));
     }
   };
 
@@ -120,6 +122,7 @@ const useSignUpForm = ({ navigation }: UseSignUpFormProps) => {
     onSubmit: handleSubmit(onSubmit),
     isSubmitting,
     isSubmitDisabled: !isValid,
+    submitError,
     // Only the address's format: whether it is free or real is for the server to say.
     isEmailWellFormed: emailSchema.isValidSync(email),
     focusField: setFocus,

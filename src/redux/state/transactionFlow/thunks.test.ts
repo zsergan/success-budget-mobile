@@ -5,7 +5,8 @@ import { activateSpace } from '@redux/state/space/thunks';
 import type { TransactionFeedPage, TransactionsFeedArg } from '@redux/state/transaction/api';
 import { feedSelection, periodArg, recentArg, transactionApi } from '@redux/state/transaction/api';
 import { transactionDto } from '@redux/state/transaction/fixtures';
-import { selectIsDeleting } from './selectors';
+import { selectIsDeleting, selectTransactionFlow } from './selectors';
+import { detailsOpened } from './slice';
 import { deleteTransaction } from './thunks';
 
 const mockedRequest = jest.fn();
@@ -14,7 +15,8 @@ jest.mock('@api/instance', () => ({
   ApiClient: () => ({}),
   createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
 }));
-jest.mock('expo-crypto', () => ({ randomUUID: () => 'key-1' }));
+let mockKeys = 0;
+jest.mock('expo-crypto', () => ({ randomUUID: () => `key-${(mockKeys += 1)}` }));
 jest.mock('expo-secure-store');
 
 jest.useFakeTimers();
@@ -78,12 +80,14 @@ describe('deleteTransaction', () => {
 
     expect(selectIsDeleting(store.getState(), 'tx-1')).toBe(true);
     expect(rows()).toEqual([lunch, taxi]);
-    expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }))).toBe('stale');
+    expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }))).toMatchObject({
+      result: 'stale',
+    });
 
     while (!mockedRequest.mock.calls.some(([{ method }]) => method === 'DELETE')) await Promise.resolve();
     finish({ data: true });
 
-    expect(await pending).toBe('deleted');
+    expect(await pending).toEqual({ result: 'deleted', isShownInFlow: false });
     expect(selectIsDeleting(store.getState(), 'tx-1')).toBe(false);
     expect(rows()).toEqual([taxi]);
   });
@@ -92,19 +96,113 @@ describe('deleteTransaction', () => {
     const { store, rows } = setUp();
 
     mockedRequest.mockRejectedValueOnce(new Error('Network Error'));
-    expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }))).toBe('uncertain');
+    expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }))).toMatchObject({
+      result: 'uncertain',
+    });
 
     mockedRequest.mockRejectedValueOnce({
       response: { status: 400, data: { statusCode: 400, code: 'TRANSACTION_IS_SYSTEM', message: 'System' } },
     });
-    expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }))).toBe('failed');
+    expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }))).toMatchObject({
+      result: 'failed',
+    });
 
     mockedRequest.mockRejectedValueOnce({
       response: { status: 409, data: { statusCode: 409, code: 'TRANSACTION_VERSION_CONFLICT', message: 'Conflict' } },
     });
-    expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }))).toBe('conflict');
+    expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }))).toMatchObject({
+      result: 'conflict',
+    });
 
     expect(rows()).toEqual([lunch, taxi]);
     expect(selectIsDeleting(store.getState(), 'tx-1')).toBe(false);
+  });
+
+  const deleteCalls = () =>
+    mockedRequest.mock.calls
+      .map(([config]) => config)
+      .filter(({ method }) => method === 'DELETE')
+      .map(({ url, headers }) => ({ url, key: headers['Idempotency-Key'], ifMatch: headers['If-Match'] }));
+
+  it('tells a record already gone apart from one it deleted, and drops it from the lists either way', async () => {
+    const { store, rows } = setUp();
+
+    mockedRequest.mockRejectedValueOnce({
+      response: { status: 404, data: { statusCode: 404, code: 'TRANSACTION_NOT_FOUND', message: 'Not found' } },
+    });
+
+    expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }))).toEqual({
+      result: 'gone',
+      isShownInFlow: false,
+    });
+    expect(rows()).toEqual([taxi]);
+  });
+
+  it('asks about a delete that got no answer again through its stored write and key, not a new one', async () => {
+    const { store } = setUp();
+
+    mockedRequest.mockRejectedValueOnce(new Error('Network Error')).mockResolvedValueOnce({ data: true });
+    await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }));
+    expect(store.getState().pendingWrite.writes).toHaveLength(1);
+
+    expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }))).toMatchObject({
+      result: 'deleted',
+    });
+    const [first, second] = deleteCalls();
+    expect(second).toEqual(first);
+    expect(store.getState().pendingWrite.writes).toEqual([]);
+  });
+
+  it('settles an unanswered delete with its own key before a delete of a newer version goes out', async () => {
+    const { store } = setUp();
+
+    // A refused delete refreshes the lists, so answers go by method rather than by order.
+    const deleteAnswers = [
+      () => Promise.reject(new Error('Network Error')),
+      () =>
+        Promise.reject({
+          response: {
+            status: 409,
+            data: { statusCode: 409, code: 'TRANSACTION_VERSION_CONFLICT', message: 'Conflict' },
+          },
+        }),
+      () => Promise.resolve({ data: true }),
+    ];
+    mockedRequest.mockImplementation(({ method }: { method: string }) =>
+      method === 'DELETE' ? deleteAnswers.shift()!() : new Promise(() => {}),
+    );
+    await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }));
+
+    const newer = { ...lunch, version: lunch.version + 1 };
+    expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: newer }))).toMatchObject({
+      result: 'deleted',
+    });
+
+    const [first, check, fresh] = deleteCalls();
+    expect(check).toEqual(first);
+    expect(fresh.key).not.toBe(first.key);
+    expect(fresh.ifMatch).toBe(`"${newer.version}"`);
+  });
+
+  it('says whether the open sheet still waited on the delete when it was answered', async () => {
+    const { store } = setUp();
+    store.dispatch(detailsOpened({ spaceId: 1, transaction: lunch }));
+
+    mockedRequest.mockRejectedValueOnce({
+      response: { status: 400, data: { statusCode: 400, code: 'TRANSACTION_IS_SYSTEM', message: 'System' } },
+    });
+    expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }))).toEqual({
+      result: 'failed',
+      isShownInFlow: true,
+    });
+    expect(selectTransactionFlow(store.getState())?.notice).toBe('deleteFailed');
+
+    mockedRequest.mockRejectedValueOnce({
+      response: { status: 400, data: { statusCode: 400, code: 'TRANSACTION_IS_SYSTEM', message: 'System' } },
+    });
+    expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: taxi }))).toEqual({
+      result: 'failed',
+      isShownInFlow: false,
+    });
   });
 });

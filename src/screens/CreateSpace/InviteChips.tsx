@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { Icon } from '@components';
-import { useAlert, useTheme, useThemedStyles } from '@hooks';
+import { useTheme, useThemedStyles } from '@hooks';
 
 import createStyles from './style';
 
@@ -19,7 +19,13 @@ const InviteChips = ({ emails, onChange }: Props) => {
   const { colors } = colorTheme;
   const styles = useThemedStyles(createStyles);
   const [draft, setDraft] = useState('');
-  const { addAlert } = useAlert();
+  // Why the typed address wasn't added; it goes once the address is edited.
+  const [error, setError] = useState<string | null>(null);
+
+  const changeDraft = (text: string) => {
+    setDraft(text);
+    setError(null);
+  };
 
   const addEmail = () => {
     const email = draft.trim().toLowerCase();
@@ -27,17 +33,17 @@ const InviteChips = ({ emails, onChange }: Props) => {
     if (!email) return;
 
     if (!EMAIL_PATTERN.test(email)) {
-      addAlert('Enter a valid email address');
+      setError('Enter a valid email address');
       return;
     }
 
     if (emails.includes(email)) {
-      addAlert('That email is already invited');
+      setError('That email is already invited');
       return;
     }
 
     if (emails.length >= MAX_INVITES) {
-      addAlert(`You can invite up to ${MAX_INVITES} people at once`);
+      setError(`You can invite up to ${MAX_INVITES} people at once`);
       return;
     }
 
@@ -66,14 +72,14 @@ const InviteChips = ({ emails, onChange }: Props) => {
       ))}
 
       {emails.length < MAX_INVITES && (
-        <View style={styles.inviteInputRow}>
+        <View style={[styles.inviteInputRow, !!error && styles.inviteInputRowError]}>
           <Icon name="mail" size={17} color={colors.muted} strokeWidth={1.9} />
 
           <TextInput
             keyboardAppearance={scheme}
             style={styles.inviteInput}
             value={draft}
-            onChangeText={setDraft}
+            onChangeText={changeDraft}
             placeholder="name@email.com"
             placeholderTextColor={colors.muted}
             keyboardType="email-address"
@@ -89,6 +95,8 @@ const InviteChips = ({ emails, onChange }: Props) => {
           )}
         </View>
       )}
+
+      {error && <Text style={styles.inviteError}>{error}</Text>}
 
       <Text style={styles.hint}>
         {emails.length >= MAX_INVITES

@@ -3,6 +3,7 @@ import { Provider } from 'react-redux';
 import { createAppStore } from '@redux/Store';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
+import { createToastRecorder } from '@components/Toast/testing';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { profileApi } from '@redux/state/profile/api';
 import { activateSpace } from '@redux/state/space/thunks';
@@ -15,6 +16,9 @@ jest.mock('@api/instance', () => ({
   createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
 }));
 jest.mock('expo-secure-store');
+
+const mockToasts = createToastRecorder();
+jest.mock('@hooks/useToast', () => () => mockToasts.toast);
 
 // RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
 jest.useFakeTimers();
@@ -40,6 +44,7 @@ const wrapperFor = (store: ReturnType<typeof createTestStore>) => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockToasts.clear();
 });
 
 describe('useMemberActions confirm()', () => {
@@ -78,7 +83,7 @@ describe('useMemberActions confirm()', () => {
     const { result } = renderHook(() => useMemberActions({ onLeft }), { wrapper: wrapperFor(store) });
 
     act(() => {
-      result.current.requestAction({ kind: 'leave' });
+      result.current.requestAction({ kind: 'leave', spaceName: 'Home' });
     });
 
     let confirmPromise!: Promise<void>;
@@ -95,6 +100,7 @@ describe('useMemberActions confirm()', () => {
     await act(() => confirmPromise);
 
     expect(onLeft).not.toHaveBeenCalled();
+    expect(mockToasts.shown).toEqual([]);
   });
 
   it('navigates (onLeft) after a successful leave that moved the user off the space', async () => {
@@ -106,13 +112,60 @@ describe('useMemberActions confirm()', () => {
     const { result } = renderHook(() => useMemberActions({ onLeft }), { wrapper: wrapperFor(store) });
 
     act(() => {
-      result.current.requestAction({ kind: 'leave' });
+      result.current.requestAction({ kind: 'leave', spaceName: 'Home' });
     });
 
     await act(() => result.current.confirm());
 
     expect(onLeft).toHaveBeenCalledTimes(1);
     expect(store.getState().space.currentSpaceId).not.toBe(10);
+    expect(mockToasts.shown).toEqual([
+      {
+        message: { tone: 'success', text: 'You left “Home”' },
+        when: 'afterNavigation',
+        afterSpaceSwitch: true,
+      },
+    ]);
+  });
+
+  it.each([
+    [{ kind: 'remove', userId: 42, label: 'Alex' }, 'Member removed'],
+    [{ kind: 'revoke', inviteId: 5, label: 'sam@example.com' }, 'Invite revoked'],
+  ] as const)('confirms a completed %j once its dialog has closed', async (target, text) => {
+    const store = createTestStore();
+
+    mockedRequest.mockResolvedValue({ data: undefined });
+
+    const { result } = renderHook(() => useMemberActions({ onLeft: jest.fn() }), { wrapper: wrapperFor(store) });
+
+    act(() => result.current.requestAction(target));
+    await act(() => result.current.confirm());
+
+    expect(result.current.target).toBeNull();
+    expect(mockToasts.shown).toEqual([{ message: { tone: 'success', text }, when: 'afterSheetsClose' }]);
+  });
+
+  it('says nothing about a removal answered after a space switch', async () => {
+    const store = createTestStore();
+    let resolveRemove!: () => void;
+
+    mockedRequest.mockReturnValue(new Promise((resolve) => (resolveRemove = () => resolve({ data: undefined }))));
+
+    const { result } = renderHook(() => useMemberActions({ onLeft: jest.fn() }), { wrapper: wrapperFor(store) });
+
+    act(() => result.current.requestAction({ kind: 'remove', userId: 42, label: 'Alex' }));
+
+    let confirming!: Promise<void>;
+    act(() => {
+      confirming = result.current.confirm();
+    });
+    act(() => {
+      store.dispatch(activateSpace(20));
+    });
+    resolveRemove();
+    await act(() => confirming);
+
+    expect(mockToasts.shown).toEqual([]);
   });
 
   it('keeps a failed removal of the current session open with its error, until it is retried or closed', async () => {
@@ -130,6 +183,7 @@ describe('useMemberActions confirm()', () => {
 
     expect(result.current.target).toMatchObject({ kind: 'remove', userId: 42 });
     expect(result.current.error).toBe('Not allowed');
+    expect(mockToasts.shown).toEqual([]);
 
     mockedRequest.mockReturnValue(new Promise(() => {}));
     act(() => void result.current.confirm());
@@ -203,7 +257,7 @@ describe('useMemberActions confirm()', () => {
     const { result } = renderHook(() => useMemberActions({ onLeft }), { wrapper: wrapperFor(store) });
 
     act(() => {
-      result.current.requestAction({ kind: 'leave' });
+      result.current.requestAction({ kind: 'leave', spaceName: 'Home' });
     });
 
     await act(async () => {
@@ -219,5 +273,6 @@ describe('useMemberActions confirm()', () => {
     expect(store.getState().space.currentSpaceId).toBe(99);
     expect(onLeft).not.toHaveBeenCalled();
     expect(result.current.error).toBeNull();
+    expect(mockToasts.shown).toEqual([]);
   });
 });

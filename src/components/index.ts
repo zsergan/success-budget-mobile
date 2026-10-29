@@ -1,4 +1,3 @@
-export * from './Alert';
 export * from './Brand';
 export * from './Buttons';
 export { default as Carousel } from './Carousel/Carousel';
@@ -31,6 +30,7 @@ export * from './ScreenFrame';
 export { default as SpaceSwitcher } from './SpaceSwitcher/SpaceSwitcher';
 export { default as SpacesSheet } from './SpaceSwitcher/SpacesSheet';
 export { default as ThemeProvider } from './ThemeProvider/ThemeProvider';
+export * from './Toast';
 export { default as TransactionCard } from './TransactionCard/TransactionCard';
 export * from './TransactionFlow';
 export * from './Typography';

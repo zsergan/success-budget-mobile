@@ -8,6 +8,7 @@ import { createAppStore } from '@redux/Store';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { activateSpace } from '@redux/state/space/thunks';
 import { pressSheetBackdrop, resetSheets, swipeDownSheet, withSheetHost } from '@components/ConfirmationSheet/testing';
+import { toastCount, withToasts } from '@components/Toast/testing';
 import { AppColor } from '@shared/enums';
 import DeleteLimitDialog from './DeleteLimitDialog';
 
@@ -58,7 +59,7 @@ const renderDialog = (limit: LimitModel = LIMIT) => {
     return <DeleteLimitDialog deletion={deletion.current} currencyCode="USD" />;
   };
 
-  render(<Provider store={store}>{withSheetHost(<Harness />)}</Provider>);
+  render(<Provider store={store}>{withSheetHost(withToasts(<Harness />))}</Provider>);
 
   const open = () => act(() => deletion.current.open(limit));
 
@@ -92,6 +93,21 @@ it('sends one request for a double tap and stays open and locked until the serve
   await response.resolve();
 
   expect(screen.queryByText(TITLE)).toBeNull();
+  expect(screen.getByText('“Food” limit deleted')).toBeTruthy();
+});
+
+it.each([
+  [{ ...LIMIT, name: null }, 'Monthly total limit deleted'],
+  [{ ...LIMIT, name: 'Everything we spend on weekends' }, 'Limit deleted'],
+])('confirms the deletion of %j with a short message', async (limit, text) => {
+  const response = deferredResponse();
+  const { open } = renderDialog(limit);
+
+  open();
+  fireEvent.press(screen.getByText('Delete limit'));
+  await response.resolve();
+
+  expect(screen.getByText(text)).toBeTruthy();
 });
 
 it('shows a failure inside the dialog, allows a retry, and forgets it on reopening', async () => {
@@ -104,6 +120,7 @@ it('shows a failure inside the dialog, allows a retry, and forgets it on reopeni
 
   expect(screen.getByText(TITLE)).toBeTruthy();
   expect(screen.getByText('Limit is locked')).toBeTruthy();
+  expect(toastCount()).toBe(0);
 
   const retry = deferredResponse();
 

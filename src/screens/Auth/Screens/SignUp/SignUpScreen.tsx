@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import { Button, Input, InputPicker, PasswordInput, TextLink } from '@components';
+import { Banner, Button, Input, InputPicker, PasswordInput, TextLink } from '@components';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import AuthFormLayout from '@screens/Auth/AuthFormLayout/AuthFormLayout';
@@ -19,9 +19,10 @@ const MAX_TEXT_LENGTH = 255;
 const PASSWORD_RULES = 'minlength: 8; required: lower, upper; required: digit;';
 
 const SignUpScreen = ({ navigation }: Props) => {
-  const { control, onSubmit, isSubmitting, isSubmitDisabled, isEmailWellFormed, focusField } = useSignUpForm({
-    navigation,
-  });
+  const { control, onSubmit, isSubmitting, isSubmitDisabled, submitError, isEmailWellFormed, focusField } =
+    useSignUpForm({
+      navigation,
+    });
   const currencies = useCurrencyOptions();
 
   return (
@@ -45,6 +46,12 @@ const SignUpScreen = ({ navigation }: Props) => {
         onLinkPress: () => navigation.navigate(ScreenNames.SIGN_IN_SCREEN, undefined, { pop: true }),
       }}
     >
+      {submitError && (
+        <View style={styles.failure}>
+          <Banner variant="card" tone="danger" title="Couldn’t create your account" text={submitError} />
+        </View>
+      )}
+
       <View style={styles.fields}>
         <Controller
           name="name"

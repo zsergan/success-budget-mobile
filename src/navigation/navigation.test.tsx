@@ -29,11 +29,6 @@ jest.mock('@api/instance', () => ({
   createHttpClient: () => ({ request: jest.fn(() => new Promise(() => {})) }),
 }));
 
-jest.mock('@hooks', () => ({
-  ...jest.requireActual('@hooks'),
-  useAlert: () => ({ addAlert: jest.fn() }),
-}));
-
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 

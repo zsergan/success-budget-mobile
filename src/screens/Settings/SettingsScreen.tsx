@@ -9,7 +9,7 @@ import { EMPTY_CATEGORIES } from '@redux/state/category/selectors';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { getTotalBalance } from '@redux/state/wallet/selectors';
 import { selectCurrentSpace } from '@redux/state/space/selectors';
-import { useAlert, useThemePreference } from '@hooks';
+import { useThemePreference, useToast } from '@hooks';
 import type { MainTabScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
 
@@ -29,7 +29,7 @@ interface Props extends MainTabScreenProps<ScreenNames.SETTINGS_TAB> {}
 
 const SettingsScreen = ({ navigation }: Props) => {
   const dispatch = useAppDispatch();
-  const { addAlert } = useAlert();
+  const toast = useToast();
   const { preference, setThemePreference } = useThemePreference();
 
   const currentSpace = useAppSelector(selectCurrentSpace);
@@ -45,7 +45,7 @@ const SettingsScreen = ({ navigation }: Props) => {
     dispatch(logoutMe());
   };
 
-  const showComingSoon = () => addAlert('Coming soon.');
+  const showComingSoon = () => toast.show({ tone: 'info', text: 'Coming soon.' });
 
   const categoriesLabel = `${incomes.length + expenses.length} active · ${archived.length} archived`;
   const walletsLabel = `${walletsCount} wallet${walletsCount === 1 ? '' : 's'} in this space`;

@@ -13,8 +13,6 @@ jest.mock(
   '@components/Modals/BottomSheetModal/useReturnToRest',
   () => jest.requireActual('@components/ConfirmationSheet/testing').useReturnToRestMock,
 );
-const mockAddAlert = jest.fn();
-jest.mock('@hooks/useAlert', () => () => ({ addAlert: mockAddAlert }));
 
 const INVITE: InviteResponse = {
   id: 4,
@@ -83,13 +81,28 @@ it('shares the code with the space name, once for a double tap, and stays open',
   expect(share).toHaveBeenCalledTimes(2);
 });
 
-it('says when sharing failed', async () => {
-  jest.spyOn(Share, 'share').mockRejectedValue(new Error('No app can share this'));
+it('says in the dialog when sharing failed, and drops it on the next try', async () => {
+  const share = jest.spyOn(Share, 'share').mockRejectedValueOnce(new Error('No app can share this'));
   renderDialog();
 
   await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Share invite' })));
 
-  expect(mockAddAlert).toHaveBeenCalledWith('No app can share this');
+  expect(screen.getByText('Couldn’t open sharing. Try again, or copy the code.')).toBeTruthy();
+  expect(screen.getByText(TITLE)).toBeTruthy();
+
+  share.mockReturnValueOnce(new Promise(() => {}));
+  fireEvent.press(screen.getByRole('button', { name: 'Share invite' }));
+
+  expect(screen.queryByText('Couldn’t open sharing. Try again, or copy the code.')).toBeNull();
+});
+
+it('says nothing when the share sheet is dismissed', async () => {
+  jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.dismissedAction });
+  renderDialog();
+
+  await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Share invite' })));
+
+  expect(screen.queryByText(/Couldn’t open sharing/)).toBeNull();
   expect(screen.getByText(TITLE)).toBeTruthy();
 });
 

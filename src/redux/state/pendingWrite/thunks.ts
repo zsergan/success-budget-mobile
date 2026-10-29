@@ -6,7 +6,7 @@ import { selectPendingWrite } from './selectors';
 import { writesRestored } from './slice';
 import { readPendingWrites } from './storage';
 
-const inSession = (operation: StoredOperation, sessionKey: number): TransactionOperation =>
+export const inSession = (operation: StoredOperation, sessionKey: number): TransactionOperation =>
   Object.freeze({ ...operation, sessionKey });
 
 // Writes left unsettled by a closed form, a lost connection or a restart; the user's own, never another's.

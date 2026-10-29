@@ -1,7 +1,7 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import { Button, Icon, Input, InputPicker, RootLayout, SectionTitle } from '@components';
+import { Banner, Button, Icon, Input, InputPicker, RootLayout, SectionTitle } from '@components';
 import { useTheme, useThemedStyles } from '@hooks';
 import type { IconType, RootStackScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
@@ -21,7 +21,7 @@ interface Props extends RootStackScreenProps<ScreenNames.CREATE_SPACE_SCREEN> {}
 const CreateSpaceScreen = ({ navigation }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
-  const { currencies, control, watch, onSubmit, isSubmitDisabled } = useCreateSpaceForm({ navigation });
+  const { currencies, control, watch, onSubmit, isSubmitDisabled, submitError } = useCreateSpaceForm({ navigation });
 
   const selectedType = watch('type');
   const isGroup = selectedType === SpaceType.GROUP;
@@ -63,8 +63,15 @@ const CreateSpaceScreen = ({ navigation }: Props) => {
           <Controller
             name="name"
             control={control}
-            render={({ field: { onChange, value } }) => (
-              <Input label="Space name" placeholder="Family budget" value={value} onChangeText={onChange} withShadow />
+            render={({ field: { onChange, value }, fieldState: { error } }) => (
+              <Input
+                label="Space name"
+                placeholder="Family budget"
+                value={value}
+                onChangeText={onChange}
+                error={error?.message}
+                withShadow
+              />
             )}
           />
         </View>
@@ -73,8 +80,9 @@ const CreateSpaceScreen = ({ navigation }: Props) => {
           <Controller
             name="currency"
             control={control}
-            render={({ field: { onChange, value } }) => (
+            render={({ field: { onChange, value }, fieldState: { error } }) => (
               <InputPicker
+                error={error?.message}
                 items={currencies}
                 selectedValue={value}
                 onValueChange={(v) => onChange(v as number)}
@@ -101,6 +109,8 @@ const CreateSpaceScreen = ({ navigation }: Props) => {
         ) : (
           <Text style={styles.hint}>Only you can see a personal space — there&apos;s nobody to invite.</Text>
         )}
+
+        {submitError && <Banner tone="danger" text={submitError} />}
       </View>
 
       <Button title={isGroup ? 'Create and invite' : 'Create space'} onPress={onSubmit} disabled={isSubmitDisabled} />

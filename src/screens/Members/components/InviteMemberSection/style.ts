@@ -21,6 +21,15 @@ const createStyles = ({ colors }: ColorTheme) =>
       lineHeight: theme.lineHeights.caption,
       color: colors.muted,
     },
+    error: {
+      fontFamily: theme.fonts.medium,
+      fontSize: theme.fontSizes.caption,
+      lineHeight: theme.lineHeights.caption,
+      color: colors.danger,
+    },
+    inviteRowError: {
+      borderColor: colors.danger,
+    },
     inviteRow: {
       height: 54,
       borderRadius: 16,

@@ -2,61 +2,84 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import type { TransactionModel } from '@api/models';
 import { isInitialBalance } from '@api/models';
-import { useAlert } from '@hooks';
+import type { ToastTicket } from '@components/Toast';
+import { useToast } from '@hooks';
 import type { ConfirmLock } from '@hooks/useConfirmation';
 import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/state/space/selectors';
-import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
+import type { DeleteOutcome } from '@redux/state/transactionFlow/thunks';
 import { deleteTransaction, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
-import { deleteMessage } from './deleteMessage';
+import { deleteMessage, deleteSubject } from './deleteMessage';
 
 // One delete for a list row, the details and the form: the same confirmation, asked through its owner's lock, then a
-// write the row or the sheet waits for. The sheet explains its own failures in place; a row's come as a toast with
-// the next step.
+// write the row or the sheet waits for. A sheet still waiting on it when the answer comes explains a failure in place;
+// otherwise a toast does, with the next step. What the delete did shows once the sheets it closed have gone.
 const useTransactionDelete = (confirmLock: ConfirmLock) => {
   const dispatch = useAppDispatch();
   const store = useAppStore();
-  const { addAlert } = useAlert();
+  const toast = useToast();
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
-  // Retry from a toast runs the delete again without asking; the ref lets the delete offer itself.
+  // A toast's Retry or Check status runs the delete again without asking; the ref lets the delete offer itself.
   const runRef = useRef<(transaction: TransactionModel, spaceId: number) => Promise<void>>(async () => {});
 
-  // A toast's Retry and Open act on the record, space and session the delete ran in, and on nothing once the user
-  // has moved on from them.
-  const runDelete = useCallback(
-    async (transaction: TransactionModel, spaceId = currentSpaceId) => {
-      if (spaceId === null) return;
+  const report = useCallback(
+    (
+      ticket: ToastTicket,
+      { result, isShownInFlow }: DeleteOutcome,
+      transaction: TransactionModel,
+      spaceId: number,
+      doneText: string,
+    ) => {
+      const subject = deleteSubject(transaction.id);
+      const again = { onPress: () => void runRef.current(transaction, spaceId) };
 
-      const { sessionKey } = store.getState().auth;
-      const isStillThere = () => {
-        const { auth, space } = store.getState();
-        return auth.sessionKey === sessionKey && space.currentSpaceId === spaceId;
-      };
-      const isInSheet = selectTransactionFlow(store.getState())?.saved?.id === transaction.id;
-      const result = await dispatch(deleteTransaction({ spaceId, transaction }));
-
-      if (!isStillThere()) return;
+      if (result === 'stale') return;
+      ticket.resolve(subject);
 
       if (result === 'deleted') {
-        addAlert('Transaction deleted');
-      } else if (!isInSheet && result === 'conflict') {
-        addAlert('This transaction was changed by someone else', {
-          label: 'Open',
-          onPress: () => {
-            if (isStillThere()) dispatch(openTransactionDetails({ spaceId, transaction }));
-          },
+        ticket.showAfterSheetsClose({ tone: 'success', text: doneText, subject });
+      } else if (result === 'gone') {
+        ticket.showAfterSheetsClose({ tone: 'info', text: 'This transaction is no longer available', subject });
+      } else if (isShownInFlow) {
+        return;
+      } else if (result === 'conflict') {
+        ticket.show({
+          tone: 'warning',
+          text: 'Not deleted — this transaction changed',
+          subject,
+          action: { label: 'View', onPress: () => dispatch(openTransactionDetails({ spaceId, transaction })) },
         });
-      } else if (!isInSheet && (result === 'failed' || result === 'uncertain')) {
-        addAlert(result === 'uncertain' ? 'Couldn’t confirm the delete' : 'Couldn’t delete transaction', {
-          label: 'Retry',
-          onPress: () => {
-            if (isStillThere()) void runRef.current(transaction, spaceId);
-          },
+      } else if (result === 'uncertain') {
+        ticket.show({
+          tone: 'error',
+          text: 'Couldn’t confirm the delete',
+          subject,
+          action: { label: 'Check status', ...again },
+        });
+      } else {
+        ticket.show({
+          tone: 'error',
+          text: 'Couldn’t delete transaction',
+          subject,
+          action: { label: 'Retry', ...again },
         });
       }
     },
-    [dispatch, store, addAlert, currentSpaceId],
+    [dispatch],
+  );
+
+  // The ticket is taken as the delete starts: its toast, and the actions on it, belong to the screen, space and
+  // session it ran in.
+  const runDelete = useCallback(
+    async (transaction: TransactionModel, spaceId = currentSpaceId, doneText = 'Transaction deleted') => {
+      if (spaceId === null) return;
+
+      const ticket = toast.begin();
+      const outcome = await dispatch(deleteTransaction({ spaceId, transaction }));
+      report(ticket, outcome, transaction, spaceId, doneText);
+    },
+    [dispatch, toast, report, currentSpaceId],
   );
 
   useEffect(() => {
@@ -105,7 +128,13 @@ const useTransactionDelete = (confirmLock: ConfirmLock) => {
 
   const retryDelete = useCallback((transaction: TransactionModel) => runDelete(transaction), [runDelete]);
 
-  return { requestDelete, retryDelete };
+  // Undo of a create just made: the same delete, without asking, named for what the user did.
+  const undoCreate = useCallback(
+    (transaction: TransactionModel) => runDelete(transaction, currentSpaceId, 'Transaction removed'),
+    [runDelete, currentSpaceId],
+  );
+
+  return { requestDelete, retryDelete, undoCreate };
 };
 
 export default useTransactionDelete;

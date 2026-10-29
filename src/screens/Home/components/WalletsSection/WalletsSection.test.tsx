@@ -16,6 +16,7 @@ import {
   swipeDownSheet,
   withSheetHost,
 } from '@components/ConfirmationSheet/testing';
+import { toastCount, withToasts } from '@components/Toast/testing';
 import WalletsSection from './WalletsSection';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
@@ -86,7 +87,7 @@ const renderSection = () => {
 
   render(
     <Provider store={store}>
-      {withSheetHost(<WalletsSection navigation={navigation} onFocusedWalletChange={jest.fn()} />)}
+      {withSheetHost(withToasts(<WalletsSection navigation={navigation} onFocusedWalletChange={jest.fn()} />))}
     </Provider>,
   );
 
@@ -129,6 +130,35 @@ it('sends one request for a double tap and stays open and locked until the serve
   await response.resolve();
 
   expect(screen.queryByText(QUESTION)).toBeNull();
+  expect(screen.getByText('“Cash” deleted')).toBeTruthy();
+});
+
+it('confirms a deletion only once the dialog has finished closing', async () => {
+  const response = deferredDelete();
+  const { openConfirm } = renderSection();
+
+  openConfirm();
+  press('Delete wallet');
+  holdDismissals();
+  await response.resolve();
+  expect(toastCount()).toBe(0);
+
+  finishDismissals();
+  expect(screen.getByText('“Cash” deleted')).toBeTruthy();
+});
+
+it('says nothing about a deletion answered after a space switch', async () => {
+  const response = deferredDelete();
+  const { store, openConfirm } = renderSection();
+
+  openConfirm();
+  press('Delete wallet');
+  act(() => {
+    store.dispatch(activateSpace(2));
+  });
+  await response.resolve();
+
+  expect(toastCount()).toBe(0);
 });
 
 it('shows a failure inside the dialog, allows a retry, and forgets it on reopening', async () => {
@@ -141,6 +171,7 @@ it('shows a failure inside the dialog, allows a retry, and forgets it on reopeni
 
   expect(screen.getByText(QUESTION)).toBeTruthy();
   expect(screen.getByText('Wallet has transactions')).toBeTruthy();
+  expect(toastCount()).toBe(0);
 
   const retry = deferredDelete();
 

@@ -1,0 +1,104 @@
+# Toasts
+
+One toast at a time, for the whole app (`src/components/Toast/`). There is
+no queue: a message either shows now or is dropped.
+
+## Showing one
+
+- In a component, `useToast()` (`src/hooks`). Take a ticket with
+  `begin()` when the work starts and show its outcome through it; `show`
+  is only for something already done. Outside React (the HTTP client, the
+  theme writer), `beginToast()` from `globalToast.ts` gives the same ticket.
+- A ticket belongs to the screen occurrence, session, space and foreground
+  period it was taken in. Leaving the screen (Back, another tab, a pushed
+  screen), logging out, switching space or backgrounding the app ends it,
+  for good: coming back does not revive its toast or its actions.
+- A result that closes sheets uses `showAfterSheetsClose`, so it appears
+  once every sheet has finished closing. A result that navigates uses
+  `showAfterNavigation` right before navigating; it is dropped unless that
+  navigation follows within a second.
+- Give a message a `subject` (e.g. `transaction-delete:42`) when a later
+  result may replace it, and `resolve(subject)` to take away an error the
+  result has settled before showing what came of it.
+- An error belonging to an open sheet stays inline in the sheet, never a
+  toast.
+- Work that switches space itself (leaving one) takes
+  `expectSpaceSwitch()` from its ticket before it starts. That ticket is
+  for the space switched to, and only if the next change of session or
+  space is that switch, from the same session and screen; any other
+  change voids it. Show through it only on the work's own result (e.g.
+  `movedOff`), with `showAfterNavigation`.
+
+## When to show one
+
+- Success only when the object leaves the view (deleted, archived,
+  restored out of Archived, removed, revoked, left), described from the
+  response, never the cache (a category's `archived`). A confirmation run
+  by `useConfirmAction` passes `completed` to `confirm`; it shows once
+  the dialog has finished closing.
+- Nothing for results already visible: creating or editing, filters,
+  periods, sorting, reordering, selecting a space.
+- A problem that lasts (out-of-date figures after a failed refresh) keeps
+  an inline banner with Retry; its toast is extra, once per failed
+  attempt, so closing it never makes stale data look current (Stats'
+  `useUpdateFailure`).
+- A 429 shows the generic rate-limit error only when nothing on screen
+  explains it. Mutations count as explained (the base query marks them:
+  their callers report failures in place); any other request that
+  explains its own passes `isHandledRateLimit`.
+
+## Where a problem shows
+
+- A field's error under the field; an error of an open sheet or a form
+  screen inside it, where its Retry is (`submitError`). A form that closed
+  before its answer reports the failure as a toast on the screen it was
+  sent from (`useFormSubmitHandler`).
+- A failure of work started from a screen with no place of its own for
+  it (a transaction delete outside its sheet, a wallet check, a restore)
+  is an error toast.
+- A problem that outlives the toast is a banner: stale figures, writes
+  whose outcome is unknown (`PendingWritesBanner`).
+- What nothing on screen owns (a rate-limited read, a theme that could not
+  be saved) goes through `beginToast()`.
+
+## Actions and Retry
+
+- An action belongs to its ticket: it acts only on the screen occurrence,
+  session, space and operation it was shown for, and goes when they do.
+- Retry only for a failure known to have happened, whose repeat is safe
+  (a read, a delete the server refused).
+- A write with no answer may have gone through: it offers Check status,
+  which settles it through the existing reconciliation (a delete runs
+  again and reports what it finds; pending writes resume). It stays
+  recoverable from `PendingWritesBanner` once the toast is closed.
+- A conflict names what happened in neutral words and offers View
+  ("Not deleted — this transaction changed").
+- No Undo in a toast. A new transaction's Undo stays on
+  `CreatedConfirmation`, which is not a toast.
+
+## Lifecycle
+
+- Types: success (optional action), info (no action), warning (required
+  action), error (optional action, a close control, no timer). Durations
+  and priority live in `policy.ts`.
+- The same type, subject, text and owner shown again keeps one toast and
+  restarts its timer. Success and info never push out a warning or an
+  error, and a warning never pushes out an error; the newer message is
+  dropped.
+- A touch pauses the timer; a swipe closes any toast. The action runs once
+  and closes the toast.
+
+## Placement
+
+`ToastHost` is rendered after the bottom sheets' portal host
+(`RootNavigator`), so it draws above sheets and their backdrops. It sits
+at the top while any sheet is on screen, closing included (tracked by
+`ToastSheetPresence` inside `BottomSheetModal`); otherwise 12 above the
+keyboard, the measured tab bar (`MainNavigator`) or the bottom safe area,
+or 16 from the bottom without one.
+
+## Tests
+
+Advance fake timers in small steps (see `ToastProvider.test.tsx`): `act`
+renders a timer's state change only when its callback ends, so one long
+advance would start an exit animation late.

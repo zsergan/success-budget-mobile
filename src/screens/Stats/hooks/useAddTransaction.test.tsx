@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import { act, renderHook } from '@testing-library/react-native';
 
+import { createToastRecorder } from '@components/Toast/testing';
 import { createAppStore } from '@redux/Store';
 import { activateSpace } from '@redux/state/space/thunks';
 import { walletApi } from '@redux/state/wallet/api';
@@ -16,9 +17,8 @@ jest.mock('@api/instance', () => ({
 }));
 jest.mock('expo-secure-store');
 
-const mockedAddAlert = jest.fn();
-
-jest.mock('@hooks', () => ({ useAlert: () => ({ addAlert: mockedAddAlert }) }));
+const mockToasts = createToastRecorder();
+jest.mock('@hooks', () => ({ useToast: () => mockToasts.toast }));
 
 // RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
 jest.useFakeTimers();
@@ -62,6 +62,7 @@ const renderAddTransaction = () => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockToasts.clear();
 });
 
 describe('useAddTransaction', () => {
@@ -85,6 +86,7 @@ describe('useAddTransaction', () => {
 
     expect(onNoWallets).toHaveBeenCalledTimes(1);
     expect(onHasWallets).not.toHaveBeenCalled();
+    expect(mockToasts.shown).toEqual([]);
     screenQuery.unsubscribe();
   });
 
@@ -98,7 +100,7 @@ describe('useAddTransaction', () => {
     expect(onNoWallets).not.toHaveBeenCalled();
   });
 
-  it('reports a failed request instead of treating it as no wallets', async () => {
+  it('reports a failed request instead of treating it as no wallets, and its Retry checks again', async () => {
     mockedRequest.mockRejectedValue({ response: { status: 500, data: { statusCode: 500, message: 'boom' } } });
     const { result, onHasWallets, onNoWallets } = renderAddTransaction();
 
@@ -106,7 +108,25 @@ describe('useAddTransaction', () => {
 
     expect(onNoWallets).not.toHaveBeenCalled();
     expect(onHasWallets).not.toHaveBeenCalled();
-    expect(mockedAddAlert).toHaveBeenCalledTimes(1);
+    expect(mockToasts.shown).toEqual([
+      {
+        message: expect.objectContaining({
+          tone: 'error',
+          text: 'Couldn’t load your wallets. Check your connection and try again.',
+          action: expect.objectContaining({ label: 'Retry' }),
+        }),
+        when: 'now',
+      },
+    ]);
+
+    mockedRequest.mockResolvedValue(overview([]));
+    await act(async () => {
+      mockToasts.shown[0].message.action?.onPress();
+      await jest.advanceTimersByTimeAsync(0);
+    });
+
+    expect(onNoWallets).toHaveBeenCalledTimes(1);
+    expect(mockToasts.shown).toHaveLength(1);
   });
 
   it('does nothing when the space changed while the wallets loaded', async () => {
@@ -127,5 +147,6 @@ describe('useAddTransaction', () => {
 
     expect(onNoWallets).not.toHaveBeenCalled();
     expect(onHasWallets).not.toHaveBeenCalled();
+    expect(mockToasts.shown).toEqual([]);
   });
 });

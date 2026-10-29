@@ -1,11 +1,13 @@
 import { useRef, useState } from 'react';
 
+import type { ToastMessage } from '@components/Toast/message';
 import { useAppSelector, useAppStore, useSessionGuard } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { getErrorMessage } from '@shared/utils';
+import useToast from './useToast';
 
-interface UnwrappableResult {
-  unwrap: () => Promise<unknown>;
+interface UnwrappableResult<R> {
+  unwrap: () => Promise<R>;
 }
 
 interface ConfirmRequest<T> {
@@ -25,6 +27,7 @@ const IDLE = { request: null, isPending: false, error: null };
 
 const useConfirmAction = <T>() => {
   const store = useAppStore();
+  const toast = useToast();
   const captureSession = useSessionGuard();
   const sessionKey = useAppSelector((state) => state.auth.sessionKey);
   const spaceId = useAppSelector(selectCurrentSpaceId);
@@ -49,7 +52,12 @@ const useConfirmAction = <T>() => {
 
   const cancel = () => setState((current) => (current.isPending ? current : IDLE));
 
-  const confirm = async (action: (target: T, spaceId: number) => UnwrappableResult) => {
+  // `completed` describes what the request did; it is shown once the dialog has finished closing, if the user is still
+  // on the screen, session and space it was asked in.
+  const confirm = async <R>(
+    action: (target: T, spaceId: number) => UnwrappableResult<R>,
+    completed?: (result: R, target: T) => ToastMessage,
+  ) => {
     const operation = isRequestCurrent ? request : null;
 
     // State updates land a render late, so a second tap in the same frame would still see isPending false.
@@ -63,11 +71,13 @@ const useConfirmAction = <T>() => {
     const settle = (next: ConfirmState<T>) =>
       setState((current) => (current.request === operation && isOperationCurrent() ? next : current));
 
+    const ticket = toast.begin();
     runningRef.current = operation;
     settle({ request: operation, isPending: true, error: null });
 
     try {
-      await action(operation.target, operation.spaceId).unwrap();
+      const result = await action(operation.target, operation.spaceId).unwrap();
+      if (completed && isOperationCurrent()) ticket.showAfterSheetsClose(completed(result, operation.target));
       settle(IDLE);
     } catch (actionError) {
       settle({ request: operation, isPending: false, error: getErrorMessage(actionError) });

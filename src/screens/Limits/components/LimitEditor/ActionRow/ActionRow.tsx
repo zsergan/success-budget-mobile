@@ -1,7 +1,7 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Icon } from '@components';
+import { Banner, Icon } from '@components';
 import { useTheme, useThemedStyles } from '@hooks';
 import theme from '@shared/theme';
 
@@ -12,9 +12,11 @@ interface Props {
   canSubmit: boolean;
   saveLabel: string;
   onSubmit: () => void;
+  // Why the last save failed, shown above the buttons that try it again.
+  error?: string | null;
 }
 
-const ActionRow = ({ onDeletePress, canSubmit, saveLabel, onSubmit }: Props) => {
+const ActionRow = ({ onDeletePress, canSubmit, saveLabel, onSubmit, error }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
@@ -26,6 +28,8 @@ const ActionRow = ({ onDeletePress, canSubmit, saveLabel, onSubmit }: Props) => 
 
         <Text style={styles.resetNoteText}>Resets on the 1st of every month · no rollover</Text>
       </View>
+
+      {error && <Banner tone="danger" text={error} />}
 
       <View style={styles.footerRow}>
         {onDeletePress && (

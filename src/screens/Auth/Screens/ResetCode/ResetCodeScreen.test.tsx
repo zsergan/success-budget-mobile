@@ -165,7 +165,9 @@ describe('code failures', () => {
     expect(sentTo('request')).toHaveLength(2);
     expect(screen.queryByText('Too many wrong attempts')).toBeNull();
     expect(codeField().props.editable).toBe(true);
-    expect(screen.getByText(/^New code sent\. Earlier codes no longer work\. You can resend in 0:5\d\.$/)).toBeTruthy();
+    expect(
+      screen.getByText(/^Use the code from the newest email; earlier codes stop working\. You can resend in 0:5\d\.$/),
+    ).toBeTruthy();
   });
 
   it('says the code no longer works when the device can’t tell why', async () => {
@@ -273,8 +275,12 @@ describe('resend', () => {
 
     expect(sentTo('request')).toEqual([{ email: 'anna@kovalenko.co' }, { email: 'anna@kovalenko.co' }]);
     expect(codeField().props.value).toBe('');
-    expect(screen.getByText(/^New code sent\. Earlier codes no longer work\. You can resend in 0:5\d\.$/)).toBeTruthy();
+    expect(
+      screen.getByText(/^Use the code from the newest email; earlier codes stop working\. You can resend in 0:5\d\.$/),
+    ).toBeTruthy();
     expect(isDisabled('Send again')).toBe(true);
+    // The server only accepted it, so the one message about it says no more than that.
+    expect(screen.getAllByText('If this address has a verified account, a code will be sent.')).toHaveLength(1);
   });
 
   it('sends one new code however often Send again is pressed', async () => {
@@ -310,6 +316,7 @@ describe('resend', () => {
     expect(screen.getByText('Too many attempts')).toBeTruthy();
     expect(screen.getByText(/you can resend in 29:5\d\./)).toBeTruthy();
     expect(isDisabled('Send again')).toBe(true);
+    expect(screen.queryByText('If this address has a verified account, a code will be sent.')).toBeNull();
   });
 
   it('recounts the wait from the clock on return to the app, not from a paused timer', async () => {

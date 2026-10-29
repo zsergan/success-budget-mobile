@@ -27,7 +27,7 @@ describe('colorThemes', () => {
 
   it('keeps what is drawn on a sheet apart from the sheet in both schemes', () => {
     for (const { colors } of [light, dark]) {
-      expect(colors.toast).not.toBe(colors.elevated);
+      expect(colors.line).not.toBe(colors.elevated);
       expect(colors.text).not.toBe(colors.elevated);
     }
   });

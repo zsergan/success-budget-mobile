@@ -3,7 +3,8 @@ import { View } from 'react-native';
 
 import Banner from '@components/Banner/Banner';
 import ConfirmationSheet from '@components/ConfirmationSheet/ConfirmationSheet';
-import { useAlert, useConfirmation, usePendingWrites } from '@hooks';
+import { useConfirmation, usePendingWrites, useToast } from '@hooks';
+import { pendingWriteNoun } from '@hooks/usePendingWrites';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import type { RootState } from '@redux/Store';
 import { selectSpacePendingWrites } from '@redux/state/pendingWrite/selectors';
@@ -38,7 +39,7 @@ interface Props {
 
 const PendingWritesBanner = ({ style }: Props) => {
   const dispatch = useAppDispatch();
-  const { addAlert } = useAlert();
+  const toast = useToast();
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
   const writes = useAppSelector((state) => selectSpacePendingWrites(state, spaceId));
@@ -52,10 +53,23 @@ const PendingWritesBanner = ({ style }: Props) => {
     const key = operation.idempotencyKey;
 
     const sendAgain = async () => {
+      const ticket = toast.begin();
       const result = await dispatch(sendPendingWriteAgain(key));
+      const subject = `pending-write:${key}`;
 
-      if (result?.kind === 'done' || result?.kind === 'applied') addAlert('Transaction saved');
-      else if (result?.kind === 'refused') addAlert(`Couldn’t save it: ${getErrorMessage(result.error)}`);
+      if (result?.kind === 'done' || result?.kind === 'applied') {
+        ticket.showAfterSheetsClose({ tone: 'success', text: 'Transaction saved', subject });
+      } else if (result?.kind === 'refused') {
+        ticket.show({ tone: 'error', text: `Couldn’t save it: ${getErrorMessage(result.error)}`, subject });
+      } else if (result?.kind === 'unknown') {
+        // The banner keeps offering the check after this toast is gone.
+        ticket.show({
+          tone: 'error',
+          text: 'Couldn’t confirm the save',
+          subject,
+          action: { label: 'Check status', onPress: () => void resume() },
+        });
+      }
     };
 
     lock.ask((settle) => ({
@@ -95,12 +109,16 @@ const PendingWritesBanner = ({ style }: Props) => {
 
     if (unknown.length === 0) return null;
 
+    const noun = pendingWriteNoun(unknown.map(({ operation }) => operation));
+
     return (
       <Banner
         tone="warn"
-        title={unknown.length === 1 ? 'A save isn’t confirmed yet' : `${unknown.length} saves aren’t confirmed yet`}
-        text="The server didn’t answer, so it may already be saved. Retrying never adds a transaction twice."
-        actionLabel="Retry"
+        title={
+          unknown.length === 1 ? `A ${noun} isn’t confirmed yet` : `${unknown.length} ${noun}s aren’t confirmed yet`
+        }
+        text="The server didn’t answer, so it may already have gone through. Checking never applies it twice."
+        actionLabel="Check status"
         isBusy={isResuming}
         onAction={() => void resume()}
       />

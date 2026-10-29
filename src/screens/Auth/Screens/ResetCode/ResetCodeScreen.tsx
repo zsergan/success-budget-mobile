@@ -58,7 +58,7 @@ const ResetCodeScreen = ({ navigation, route }: Props) => {
   const note = block
     ? null
     : isJustSent && resendSeconds > 0
-      ? `New code sent. Earlier codes no longer work. You can resend in ${wait}.`
+      ? `Use the code from the newest email; earlier codes stop working. You can resend in ${wait}.`
       : resendSeconds > 0
         ? `No email? Check spam — you can resend in ${wait}.`
         : 'No email? Check spam, then send a new code.';

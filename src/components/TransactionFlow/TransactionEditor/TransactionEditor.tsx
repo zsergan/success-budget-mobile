@@ -6,7 +6,6 @@ import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-shee
 import Icon from '@components/Icon/Icon';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
-import { useAlert } from '@hooks';
 import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
 import { getActiveCategories } from '@redux/state/category/selectors';
@@ -27,7 +26,7 @@ import { loadLatestRecord } from '@redux/state/transactionFlow/thunks';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { TransactionType } from '@shared/enums';
 import DeleteButton from '../DeleteButton/DeleteButton';
-import { deleteFailureText } from '../deleteMessage';
+import { deleteFailureAction, deleteFailureText } from '../deleteMessage';
 import Banner from '@components/Banner/Banner';
 import type { ListLoad } from '../SectionLoad/SectionLoad';
 import { listLoad } from '../SectionLoad/SectionLoad';
@@ -74,7 +73,7 @@ const TransactionEditor = ({
   const scrollRef = useRef<BottomSheetScrollViewMethods>(null);
   const [isNoteFocused, setNoteFocused] = useState(false);
   const [isLoadingLatest, setLoadingLatest] = useState(false);
-  const { addAlert } = useAlert();
+  const [hasLatestFailed, setLatestFailed] = useState(false);
   const spaceArg = useSpaceArg();
   const walletsQuery = useGetWalletsQuery(spaceArg);
   const categoriesQuery = useGetCategoriesQuery(spaceArg);
@@ -182,10 +181,10 @@ const TransactionEditor = ({
 
   const loadLatest = async () => {
     setLoadingLatest(true);
+    setLatestFailed(false);
     const outcome = await dispatch(loadLatestRecord());
     setLoadingLatest(false);
-
-    if (outcome === 'failed') addAlert('Couldn’t load the latest version. Check your connection and try again.');
+    setLatestFailed(outcome === 'failed');
   };
 
   const saveLabel = isEdit ? 'Save changes' : isIncome ? 'Save income' : 'Save expense';
@@ -324,7 +323,11 @@ const TransactionEditor = ({
             <Banner
               tone="warn"
               title="This transaction was changed"
-              text="Someone saved it after you opened it. Your edits are still here; loading the latest version replaces them."
+              text={
+                hasLatestFailed
+                  ? 'Couldn’t load the latest version. Check your connection and try again; your edits are still here.'
+                  : 'Someone saved it after you opened it. Your edits are still here; loading the latest version replaces them.'
+              }
               actionLabel="Load latest"
               isBusy={isLoadingLatest}
               onAction={loadLatest}
@@ -370,7 +373,7 @@ const TransactionEditor = ({
               <Banner
                 tone="danger"
                 text={deleteFailureText(flow.notice, 'delete')}
-                actionLabel="Try again"
+                actionLabel={deleteFailureAction(flow.notice)}
                 onAction={onRetryDelete}
               />
             )

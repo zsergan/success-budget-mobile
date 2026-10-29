@@ -1,6 +1,7 @@
 import type { RootState } from '@redux/Store';
 import { isDraftChanged } from './draft';
 import type { TransactionFlow } from './slice';
+import { recordIdOf } from './slice';
 
 export const selectTransactionFlow = (state: RootState) => state.transactionFlow.flow;
 
@@ -17,3 +18,9 @@ export const selectLastWalletId = (state: RootState, spaceId: number) =>
 
 export const selectIsDeleting = (state: RootState, transactionId: string) =>
   state.transactionFlow.deletingIds.includes(transactionId);
+
+// Whether the open sheet waits on this delete, so it explains the outcome in place.
+export const selectIsFlowDeleting = (state: RootState, transactionId: string) => {
+  const { flow } = state.transactionFlow;
+  return !!flow?.isSaving && recordIdOf(flow) === transactionId;
+};

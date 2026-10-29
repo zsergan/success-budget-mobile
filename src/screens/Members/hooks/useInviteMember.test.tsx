@@ -18,12 +18,6 @@ jest.mock('expo-secure-store');
 // RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
 jest.useFakeTimers();
 
-const mockedAddAlert = jest.fn();
-
-jest.mock('@hooks', () => ({
-  useAlert: () => ({ addAlert: mockedAddAlert }),
-}));
-
 const renderInviteMember = () => {
   const store = createAppStore();
 
@@ -39,7 +33,7 @@ const renderInviteMember = () => {
 
 beforeEach(() => jest.clearAllMocks());
 
-it('alerts a failed invite of the current session', async () => {
+it('keeps a failed invite of the current session at the field, with its address', async () => {
   mockedRequest.mockRejectedValue({
     response: { status: 409, data: { message: 'Already a member', statusCode: 409 } },
   });
@@ -48,8 +42,36 @@ it('alerts a failed invite of the current session', async () => {
 
   await act(() => result.current.submit('alex@example.com'));
 
-  expect(mockedAddAlert).toHaveBeenCalledWith('Already a member');
+  expect(result.current.inviteError).toEqual({ message: 'Already a member' });
   expect(result.current.failedEmail).toBe('alex@example.com');
+});
+
+it('says a malformed address is invalid without sending it', async () => {
+  const { result } = renderInviteMember();
+
+  await act(() => result.current.submit('alex@'));
+
+  expect(result.current.inviteError).toEqual({ message: 'Enter a valid email address' });
+  expect(mockedRequest).not.toHaveBeenCalled();
+});
+
+it('leaves a 429 to the cooldown, and an invite answered after a space switch to nobody', async () => {
+  const { store, result } = renderInviteMember();
+  let fail: (reason: unknown) => void = () => {};
+
+  mockedRequest.mockRejectedValueOnce({ response: { status: 429, data: { message: 'Slow down', statusCode: 429 } } });
+  await act(() => result.current.submit('alex@example.com'));
+  expect(result.current.inviteError).toBeNull();
+
+  mockedRequest.mockReturnValueOnce(new Promise((_, reject) => (fail = reject)));
+  await act(async () => {
+    const submitting = result.current.submit('sam@example.com');
+    store.dispatch(activateSpace(11));
+    fail({ response: { status: 409, data: { message: 'Already a member', statusCode: 409 } } });
+    await submitting;
+  });
+
+  expect(result.current.inviteError).toBeNull();
 });
 
 it('stays silent when a logout aborts the invite', async () => {
@@ -64,6 +86,6 @@ it('stays silent when a logout aborts the invite', async () => {
     await submitting;
   });
 
-  expect(mockedAddAlert).not.toHaveBeenCalled();
+  expect(result.current.inviteError).toBeNull();
   expect(result.current.failedEmail).toBeNull();
 });
