@@ -50,9 +50,11 @@ no queue: a message either shows now or is dropped.
 ## Where a problem shows
 
 - A field's error under the field; an error of an open sheet or a form
-  screen inside it, where its Retry is (`submitError`). A form that closed
-  before its answer reports the failure as a toast on the screen it was
-  sent from (`useFormSubmitHandler`).
+  screen inside it, where its Retry is (`submitError`). A form whose sheet
+  started closing before its answer reports the failure as a toast on the
+  screen it was sent from, once the sheets have closed
+  (`useFormSubmitHandler`, reading the sheet's `useSheetPresentation`); a
+  close the sheet reverses puts it back in the form.
 - A failure of work started from a screen with no place of its own for
   it (a transaction delete outside its sheet, a wallet check, a restore)
   is an error toast.

@@ -41,7 +41,11 @@ do: it dismisses the keyboard and shows the sheet once it has gone.
 
 ## Results and errors
 
-- An error of the open sheet stays in the sheet, never a toast.
+- An error of the open sheet stays in the sheet, never a toast. One that
+  arrives once the sheet has started closing would vanish with it, so it
+  becomes a toast after the close; `useSheetPresentation()` tells content
+  whether its showing is still on screen, and changes without re-rendering
+  the sheet.
 - A result that closes the sheet (a delete, a removal) is a toast shown
   once every sheet has finished closing: `confirm(action, completed)` in
   `useConfirmAction`, or a ticket's `showAfterSheetsClose`.

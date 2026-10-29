@@ -14,6 +14,7 @@ interface SheetProps {
   onDismiss?: () => void;
   enablePanDownToClose?: boolean;
   backdropComponent?: (props: object) => ReactNode;
+  onAnimate?: (fromIndex: number, toIndex: number) => void;
 }
 
 interface OpenSheet {
@@ -24,23 +25,30 @@ interface OpenSheet {
 // The sheets on screen, the newest last.
 const openSheets: OpenSheet[] = [];
 // While held, a dismissed sheet stays on screen, as during its animation, until finishDismissals().
-let heldDismissals: (() => void)[] | null = null;
+let heldDismissals: { sheet: OpenSheet; finish: () => void }[] | null = null;
 
 // Shows its content only between present() and dismiss(), as the real modal does.
 const BottomSheetModal = forwardRef(function BottomSheetModal(props: SheetProps, ref: Ref<unknown>) {
   const [isOpen, setOpen] = useState(false);
   const entryRef = useRef<OpenSheet>({ props, dismiss: () => {} });
 
+  const isKeptOpenRef = useRef(false);
+
+  // As the library: the close starts with onAnimate, whose handler may snap the sheet back instead.
   const dismiss = () => {
     const index = openSheets.indexOf(entryRef.current);
     if (index === -1) return;
+
+    isKeptOpenRef.current = false;
+    entryRef.current.props.onAnimate?.(0, -1);
+    if (isKeptOpenRef.current) return;
 
     openSheets.splice(index, 1);
     const finish = () => {
       setOpen(false);
       entryRef.current.props.onDismiss?.();
     };
-    if (heldDismissals) heldDismissals.push(finish);
+    if (heldDismissals) heldDismissals.push({ sheet: entryRef.current, finish });
     else finish();
   };
 
@@ -55,7 +63,10 @@ const BottomSheetModal = forwardRef(function BottomSheetModal(props: SheetProps,
       setOpen(true);
     },
     dismiss,
-    snapToIndex: () => {},
+    snapToIndex: (index: number) => {
+      isKeptOpenRef.current = true;
+      entryRef.current.props.onAnimate?.(-1, index);
+    },
   }));
 
   return isOpen ? props.children : null;
@@ -99,9 +110,20 @@ export const holdDismissals = () => {
 
 export const finishDismissals = () =>
   act(() => {
-    const finishes = heldDismissals ?? [];
+    const held = heldDismissals ?? [];
     heldDismissals = null;
-    finishes.forEach((finish) => finish());
+    held.forEach(({ finish }) => finish());
+  });
+
+// The held closes reversed, as a sheet the user pulls back up or one presented again before it closed.
+export const cancelDismissals = () =>
+  act(() => {
+    const held = heldDismissals ?? [];
+    heldDismissals = null;
+    held.forEach(({ sheet }) => {
+      openSheets.push(sheet);
+      sheet.props.onAnimate?.(-1, 0);
+    });
   });
 
 export const resetSheets = () => {

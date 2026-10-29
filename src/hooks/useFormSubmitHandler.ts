@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FieldValues, UseFormHandleSubmit } from 'react-hook-form';
 
+import { useSheetPresentation } from '@components/Modals/BottomSheetModal/sheetPresentation';
 import { useSessionGuard } from '@redux/hooks';
 import { getErrorMessage } from '@shared/utils';
 import useToast from './useToast';
@@ -14,9 +15,11 @@ interface UseFormSubmitHandlerOptions<TFormData extends FieldValues, TResult> {
   reset?: () => void;
 }
 
+let lastSubmission = 0;
+
 // Submits a valid form once at a time. Invalid fields show their own errors; a failed request is `submitError`, for
-// the form to show in place, or, once the form has gone (a sheet closed meanwhile), a toast on the screen it was sent
-// from, while that is still the one on screen.
+// the form to show in place, or, once the form is closing or gone (its sheet closed meanwhile), a toast on the screen
+// it was sent from, once the sheets have closed and while that screen is still the one on screen.
 const useFormSubmitHandler = <TFormData extends FieldValues, TResult = unknown>({
   handleSubmit,
   formState,
@@ -26,6 +29,7 @@ const useFormSubmitHandler = <TFormData extends FieldValues, TResult = unknown>(
 }: UseFormSubmitHandlerOptions<TFormData, TResult>) => {
   const captureSession = useSessionGuard();
   const toast = useToast();
+  const presentation = useSheetPresentation();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const isMountedRef = useRef(true);
 
@@ -36,9 +40,16 @@ const useFormSubmitHandler = <TFormData extends FieldValues, TResult = unknown>(
     };
   }, []);
 
+  // The form the user sent from is still the one on screen, and not on its way out.
+  const isOnScreen = (shownIn?: number) => {
+    const now = presentation?.current();
+    return isMountedRef.current && (!now || (now.id === shownIn && !now.isClosing));
+  };
+
   const submit = async (formData: TFormData) => {
     const isSessionCurrent = captureSession();
     const ticket = toast.begin();
+    const shownIn = presentation?.current().id;
     setSubmitError(null);
 
     try {
@@ -54,8 +65,26 @@ const useFormSubmitHandler = <TFormData extends FieldValues, TResult = unknown>(
       if (isSessionCurrent()) {
         const message = getErrorMessage(error);
 
-        if (isMountedRef.current) setSubmitError(message);
-        else ticket.show({ tone: 'error', text: message });
+        if (isOnScreen(shownIn)) {
+          setSubmitError(message);
+        } else {
+          lastSubmission += 1;
+          const subject = `form-submit:${lastSubmission}`;
+          ticket.showAfterSheetsClose({ tone: 'error', text: message, subject });
+
+          // A close the sheet reverses brings the form back, so the error returns to it.
+          if (presentation && isMountedRef.current && presentation.current().id === shownIn) {
+            const stopWatching = presentation.subscribe(() => {
+              const now = presentation.current();
+              if (now.isClosing) return;
+
+              stopWatching();
+              if (now.id !== shownIn) return;
+              ticket.resolve(subject);
+              if (isMountedRef.current) setSubmitError(message);
+            });
+          }
+        }
       }
 
       throw error;

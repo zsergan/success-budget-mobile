@@ -10,6 +10,7 @@ import { ToastSheetPresence } from '@components/Toast/ToastProvider';
 import useThemedStyles from '@hooks/useThemedStyles';
 import theme from '@shared/theme';
 
+import { createSheetPresentation, SheetPresentationContext } from './sheetPresentation';
 import createStyles from './style';
 import useReturnToRest from './useReturnToRest';
 
@@ -72,22 +73,28 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
     if (height > 0) setContentHeight(height);
   }, []);
 
+  const [presentation] = useState(createSheetPresentation);
+
   const handleKeptOpen = useCallback(() => onKeptOpen?.(), [onKeptOpen]);
   const { animatedIndex, watch: watchReturn, stop: stopWatchingReturn } = useReturnToRest(handleKeptOpen);
 
   const handleAnimate = useCallback(
     (_fromIndex: number, toIndex: number) => {
-      if (toIndex !== -1 || !shouldKeepOpen?.()) return;
-      watchReturn();
-      sheetRef.current?.snapToIndex(0);
+      if (toIndex === -1 && shouldKeepOpen?.()) {
+        watchReturn();
+        sheetRef.current?.snapToIndex(0);
+        return;
+      }
+      presentation.setClosing(toIndex === -1);
     },
-    [shouldKeepOpen, watchReturn],
+    [presentation, shouldKeepOpen, watchReturn],
   );
 
   const handleDismiss = useCallback(() => {
     stopWatchingReturn();
+    presentation.closed();
     onDismiss?.();
-  }, [onDismiss, stopWatchingReturn]);
+  }, [onDismiss, presentation, stopWatchingReturn]);
 
   const renderHandle = useCallback(
     () => (
@@ -129,23 +136,25 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
       enableContentPanningGesture={!fitContent}
       enablePanDownToClose={isDismissible}
       onDismiss={handleDismiss}
-      onAnimate={shouldKeepOpen ? handleAnimate : undefined}
+      onAnimate={handleAnimate}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
     >
       {/* Mounted with the sheet's content: from its presentation until its closing animation ends. */}
       <ToastSheetPresence />
-      {dynamicSizing ? (
-        // Dynamic sizing needs the content itself as the measured root; an extra BottomSheetView here would compete with it.
-        children
-      ) : fitContent ? (
-        <View style={{ maxHeight: maxHeight - FITTED_SHEET_HANDLE_HEIGHT }} onLayout={handleContentLayout}>
-          {children}
-        </View>
-      ) : (
-        <BottomSheetView style={styles.contentContainer}>{children}</BottomSheetView>
-      )}
+      <SheetPresentationContext.Provider value={presentation}>
+        {dynamicSizing ? (
+          // Dynamic sizing needs the content itself as the measured root; an extra BottomSheetView here would compete with it.
+          children
+        ) : fitContent ? (
+          <View style={{ maxHeight: maxHeight - FITTED_SHEET_HANDLE_HEIGHT }} onLayout={handleContentLayout}>
+            {children}
+          </View>
+        ) : (
+          <BottomSheetView style={styles.contentContainer}>{children}</BottomSheetView>
+        )}
+      </SheetPresentationContext.Provider>
     </BottomSheetModal>
   );
 });
