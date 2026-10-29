@@ -60,7 +60,7 @@ module.exports = defineConfig([
         { args: 'all', ignoreRestSiblings: true, argsIgnorePattern: '^_' },
       ],
       // TODO: this codebase relies on the `useRef(...).current` lazy-init idiom (BottomSheetModal,
-      // AlertProvider, LongPressedModal) in several places without React Compiler.
+      // LongPressedModal) in several places without React Compiler.
       // Downgraded to `warn` pending a dedicated refactor.
       'react-hooks/refs': 'warn',
     },
