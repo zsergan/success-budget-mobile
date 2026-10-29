@@ -38,6 +38,14 @@ no queue: a message either shows now or is dropped.
   the dialog has finished closing.
 - Nothing for results already visible: creating or editing, filters,
   periods, sorting, reordering, selecting a space.
+- A problem that lasts (out-of-date figures after a failed refresh) keeps
+  an inline banner with Retry; its toast is extra, once per failed
+  attempt, so closing it never makes stale data look current (Stats'
+  `useUpdateFailure`).
+- A 429 shows the generic rate-limit error only when nothing on screen
+  explains it. Mutations count as explained (the base query marks them:
+  their callers report failures in place); any other request that
+  explains its own passes `isHandledRateLimit`.
 
 ## Lifecycle
 
