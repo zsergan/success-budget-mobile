@@ -4,6 +4,7 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useNavigation } from '@react-navigation/native';
 
 import {
+  Banner,
   BottomSheetModal as BottomModal,
   RangePickerSheet,
   ScreenFrame,
@@ -23,8 +24,6 @@ import StatsEmptyState from './components/StatsEmptyState/StatsEmptyState';
 import StatsFailure from './components/StatsFailure/StatsFailure';
 import StatsHeader from './components/StatsHeader/StatsHeader';
 import StatsList from './components/StatsList/StatsList';
-import UpdateFailedToast from './components/UpdateFailedToast/UpdateFailedToast';
-import { UPDATE_TOAST_SPACE } from './components/UpdateFailedToast/style';
 import { parseDateKey } from './format';
 import { toHistoryFilter } from './historyFilter';
 import useAddTransaction from './hooks/useAddTransaction';
@@ -32,6 +31,7 @@ import useComposeWithNewWallet from './hooks/useComposeWithNewWallet';
 import useSpaceStatus from './hooks/useSpaceStatus';
 import useStatsData from './hooks/useStatsData';
 import useStatsSelection from './hooks/useStatsSelection';
+import useUpdateFailure from './hooks/useUpdateFailure';
 import type { BreakdownGroup } from './statsItems';
 import { buildStatsItems } from './statsItems';
 import { getStatsViewState } from './statsViewState';
@@ -47,8 +47,18 @@ const StatsScreen = () => {
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const selection = useStatsSelection(JSON.stringify([spaceId, range.from, range.to]));
   const { breakdownType, mode } = selection;
-  const { summary, trend, breakdown, refreshIfStale, updateFailed, retryFailed, loadFailed, loadError, accessDenied } =
-    useStatsData(range, breakdownType);
+  const {
+    summary,
+    trend,
+    breakdown,
+    refreshIfStale,
+    isUpdating,
+    failedUpdateAttempt,
+    retryFailed,
+    loadFailed,
+    loadError,
+    accessDenied,
+  } = useStatsData(range, breakdownType);
   useRefreshOnReturn(refreshIfStale);
 
   const dispatch = useAppDispatch();
@@ -94,7 +104,11 @@ const StatsScreen = () => {
       <StatsFailure variant="loadFailed" error={loadError} onAction={retryFailed} />
     ) : null;
 
-  const showsUpdateFailed = updateFailed && !failure;
+  const updateFailure = useUpdateFailure({
+    attempt: failure ? null : failedUpdateAttempt,
+    isUpdating,
+    retryFailed,
+  });
 
   const viewState = getStatsViewState(summary.data);
   // Neither block shows an earlier cycle's answer, so both come from the current one.
@@ -163,6 +177,18 @@ const StatsScreen = () => {
             onReset={resetPeriod}
           />
 
+          {updateFailure.isShown && !failure && (
+            <View style={styles.banner}>
+              <Banner
+                tone="danger"
+                text="Couldn’t update. You’re seeing the last loaded data."
+                actionLabel="Retry"
+                isBusy={updateFailure.isRetrying}
+                onAction={updateFailure.retry}
+              />
+            </View>
+          )}
+
           <StatsList
             items={items}
             summary={summary}
@@ -183,10 +209,7 @@ const StatsScreen = () => {
             onModeChange={selection.changeMode}
             onToggleOther={selection.toggleOther}
             onOpenHistory={openHistory}
-            bottomSpace={showsUpdateFailed ? UPDATE_TOAST_SPACE : undefined}
           />
-
-          {showsUpdateFailed && <UpdateFailedToast onRetry={retryFailed} />}
         </View>
       </ScreenFrame>
     </>

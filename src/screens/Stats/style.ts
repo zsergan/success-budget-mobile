@@ -1,8 +1,13 @@
 import { StyleSheet } from 'react-native';
 
+import theme from '@shared/theme';
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+  },
+  banner: {
+    paddingHorizontal: theme.spacing.xl,
   },
 });
 

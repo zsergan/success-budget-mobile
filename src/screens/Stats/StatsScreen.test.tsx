@@ -3,8 +3,12 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Provider } from 'react-redux';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 
+import { withSheetHost } from '@components/ConfirmationSheet/testing';
+import { useToastControl } from '@components/Toast/ToastProvider';
+import { toastCount, withToasts } from '@components/Toast/testing';
+import focusedRoutePath from '@navigation/focusedRoutePath';
 import { createAppStore } from '@redux/Store';
 import { spaceApi } from '@redux/state/space/api';
 import { activateSpace } from '@redux/state/space/thunks';
@@ -56,7 +60,6 @@ jest.mock('@api/instance', () => ({
   createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
 }));
 jest.mock('expo-secure-store');
-jest.mock('@hooks/useAlert', () => () => ({ addAlert: jest.fn() }));
 
 // RTK Query schedules cache removal and batched notifications on timers that would otherwise outlive the test.
 jest.useFakeTimers({ now: new Date(2026, 8, 28, 12) });
@@ -126,6 +129,18 @@ const HistoryProbe = ({ route }: MainTabScreenProps<ScreenNames.TRANSACTIONS_TAB
   <Text testID="history-filter">{JSON.stringify(route.params?.filter ?? null)}</Text>
 );
 
+// Tells the toast which screen is focused, as RootNavigator does.
+const RoutedContainer = ({ children }: { children: ReactNode }) => {
+  const { reportRoute } = useToastControl();
+  const report = () => reportRoute(focusedRoutePath(navigationRef.getRootState()), true);
+
+  return (
+    <NavigationContainer ref={navigationRef} onReady={report} onStateChange={report}>
+      {children}
+    </NavigationContainer>
+  );
+};
+
 const renderStats = ({ spaceId = 1 }: { spaceId?: number | null } = {}) => {
   const store = createAppStore();
   if (spaceId !== null) store.dispatch(activateSpace(spaceId));
@@ -134,13 +149,17 @@ const renderStats = ({ spaceId = 1 }: { spaceId?: number | null } = {}) => {
 
   const view = render(
     <Provider store={store}>
-      <NavigationContainer ref={navigationRef}>
-        <Tab.Navigator initialRouteName={ScreenNames.STATS_TAB} screenOptions={{ headerShown: false }}>
-          <Tab.Screen name={ScreenNames.HOME_TAB} component={() => null} />
-          <Tab.Screen name={ScreenNames.TRANSACTIONS_TAB} component={HistoryProbe} />
-          <Tab.Screen name={ScreenNames.STATS_TAB} component={StatsScreen} />
-        </Tab.Navigator>
-      </NavigationContainer>
+      {withSheetHost(
+        withToasts(
+          <RoutedContainer>
+            <Tab.Navigator initialRouteName={ScreenNames.STATS_TAB} screenOptions={{ headerShown: false }}>
+              <Tab.Screen name={ScreenNames.HOME_TAB} component={() => null} />
+              <Tab.Screen name={ScreenNames.TRANSACTIONS_TAB} component={HistoryProbe} />
+              <Tab.Screen name={ScreenNames.STATS_TAB} component={StatsScreen} />
+            </Tab.Navigator>
+          </RoutedContainer>,
+        ),
+      )}
     </Provider>,
   );
 
@@ -156,6 +175,25 @@ const renderAllRows = () => {
 const spacesRequests = () => mockedRequest.mock.calls.filter(([config]: [RequestConfig]) => config.url === '/spaces');
 
 const settle = () => act(async () => jest.advanceTimersByTimeAsync(10));
+
+const STALE_BANNER = 'Couldn’t update. You’re seeing the last loaded data.';
+const UPDATE_TOAST = 'Couldn’t update statistics';
+const toastButton = (name: string) => within(screen.getByTestId('toast')).getByRole('button', { name });
+// The banner's Retry, apart from the toast's.
+const bannerRetry = () => {
+  const inToast = screen.queryByTestId('toast') && toastButton('Retry');
+  return screen.getAllByRole('button', { name: 'Retry' }).find((button) => button !== inToast)!;
+};
+// Lets an exit animation finish.
+const afterExit = () => act(async () => jest.advanceTimersByTimeAsync(300));
+
+// A return after the stale time refreshes every block.
+const refreshOnReturn = async () => {
+  act(() => navigationRef.navigate(ScreenNames.HOME_TAB));
+  await act(async () => jest.advanceTimersByTimeAsync(31_000));
+  act(() => navigationRef.navigate(ScreenNames.STATS_TAB));
+  await settle();
+};
 
 beforeAll(renderAllRows);
 
@@ -359,7 +397,7 @@ describe('StatsScreen', () => {
     });
     await settle();
 
-    expect(screen.getByText('Couldn’t update')).toBeTruthy();
+    expect(screen.getByText(STALE_BANNER)).toBeTruthy();
     expect(screen.getByText('No income in this period')).toBeTruthy();
     expect(screen.queryByText('Switch to Expense to see where the money went.')).toBeNull();
     expect(screen.getByText('It appears once income is recorded in this period.')).toBeTruthy();
@@ -423,7 +461,8 @@ describe('StatsScreen', () => {
 
     expect(screen.getByText('Couldn’t load the trend')).toBeTruthy();
     expect(screen.getByText('Housing')).toBeTruthy();
-    expect(screen.queryByText('Couldn’t update')).toBeNull();
+    expect(screen.queryByText(STALE_BANNER)).toBeNull();
+    expect(toastCount()).toBe(0);
 
     mockedRequest.mockClear();
     delete fail.trend;
@@ -454,6 +493,7 @@ describe('StatsScreen', () => {
     expect(screen.getByText('Couldn’t load your stats')).toBeTruthy();
     expect(screen.getByText(/^Error 503 · /)).toBeTruthy();
     expect(screen.queryByText('Couldn’t load the trend')).toBeNull();
+    expect(toastCount()).toBe(0);
 
     fail = {};
     fireEvent.press(screen.getByText('Retry'));
@@ -476,26 +516,96 @@ describe('StatsScreen', () => {
     expect(navigationRef.getCurrentRoute()?.name).toBe(ScreenNames.HOME_TAB);
   });
 
-  it('keeps the figures when a refresh fails and offers a lasting Retry', async () => {
+  it('keeps the figures when a refresh fails, reports it once and offers a lasting Retry', async () => {
     renderStats();
     await settle();
 
     fail.breakdown = failure(500);
-    act(() => navigationRef.navigate(ScreenNames.HOME_TAB));
-    await act(async () => jest.advanceTimersByTimeAsync(31_000));
-    act(() => navigationRef.navigate(ScreenNames.STATS_TAB));
-    await settle();
+    fail.summary = failure(500);
+    await refreshOnReturn();
 
-    expect(screen.getByText('Couldn’t update')).toBeTruthy();
+    expect(screen.getByText(STALE_BANNER)).toBeTruthy();
+    expect(screen.getByText(UPDATE_TOAST)).toBeTruthy();
+    expect(toastCount()).toBe(1);
     expect(screen.getByText('Housing')).toBeTruthy();
     await act(async () => jest.advanceTimersByTimeAsync(10_000));
-    expect(screen.getByText('Couldn’t update')).toBeTruthy();
+    expect(screen.getByText(STALE_BANNER)).toBeTruthy();
+    expect(toastCount()).toBe(1);
 
     delete fail.breakdown;
-    fireEvent.press(screen.getByLabelText('Retry the update'));
+    delete fail.summary;
+    fireEvent.press(bannerRetry());
+    await settle();
+    await afterExit();
+
+    expect(screen.queryByText(STALE_BANNER)).toBeNull();
+    expect(toastCount()).toBe(0);
+  });
+
+  it('keeps the banner after the toast is closed, without bringing the toast back until another attempt fails', async () => {
+    renderStats();
     await settle();
 
-    expect(screen.queryByText('Couldn’t update')).toBeNull();
+    fail.breakdown = failure(500);
+    await refreshOnReturn();
+    fireEvent.press(toastButton('Close'));
+    await afterExit();
+
+    expect(toastCount()).toBe(0);
+    expect(screen.getByText(STALE_BANNER)).toBeTruthy();
+
+    fireEvent.press(screen.getByText('By wallet'));
+    await settle();
+    expect(toastCount()).toBe(0);
+
+    let failAgain!: () => void;
+    fail.breakdown = () => new Promise<never>((_, reject) => (failAgain = () => void failure(500)().catch(reject)));
+    fireEvent.press(bannerRetry());
+    await settle();
+
+    expect(screen.getByText(STALE_BANNER)).toBeTruthy();
+    expect(bannerRetry().props.accessibilityState).toMatchObject({ busy: true });
+    expect(toastCount()).toBe(0);
+
+    await act(async () => failAgain());
+    await settle();
+
+    expect(bannerRetry().props.accessibilityState).toMatchObject({ busy: false });
+    expect(screen.getByText(UPDATE_TOAST)).toBeTruthy();
+  });
+
+  it('retries from the toast and takes it away once the figures are current', async () => {
+    renderStats();
+    await settle();
+
+    fail.breakdown = failure(500);
+    await refreshOnReturn();
+    mockedRequest.mockClear();
+    delete fail.breakdown;
+    fireEvent.press(toastButton('Retry'));
+    await settle();
+    await afterExit();
+
+    expect(statsRequests()).toEqual([expect.stringContaining('/breakdown')]);
+    expect(toastCount()).toBe(0);
+    expect(screen.queryByText(STALE_BANNER)).toBeNull();
+  });
+
+  it('takes the toast and the banner away when another period is picked', async () => {
+    renderStats();
+    await settle();
+
+    fail.breakdown = failure(500);
+    await refreshOnReturn();
+    expect(toastCount()).toBe(1);
+
+    delete fail.breakdown;
+    fireEvent.press(screen.getByText('Week'));
+    await settle();
+    await afterExit();
+
+    expect(toastCount()).toBe(0);
+    expect(screen.queryByText(STALE_BANNER)).toBeNull();
   });
 
   it('opens History filtered by a row and keeps its state on the way back', async () => {

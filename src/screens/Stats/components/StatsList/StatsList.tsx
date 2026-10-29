@@ -58,8 +58,6 @@ interface Props {
   onModeChange: (mode: BreakdownMode) => void;
   onToggleOther: () => void;
   onOpenHistory: (group: BreakdownGroup) => void;
-  // Extra room under the last row for something floating over the list's bottom.
-  bottomSpace?: number;
 }
 
 const StatsList = ({
@@ -82,7 +80,6 @@ const StatsList = ({
   onModeChange,
   onToggleOther,
   onOpenHistory,
-  bottomSpace,
 }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
@@ -174,7 +171,7 @@ const StatsList = ({
   return (
     <FlatList
       style={styles.list}
-      contentContainerStyle={[styles.content, bottomSpace !== undefined && { paddingBottom: bottomSpace }]}
+      contentContainerStyle={styles.content}
       data={items}
       keyExtractor={(item) => item.key}
       renderItem={renderItem}

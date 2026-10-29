@@ -54,6 +54,8 @@ interface Cycle {
   startedAt: number;
   // The one automatic reload after control sums disagreed; it is not repeated.
   isReconciling: boolean;
+  // Retries of this cycle's failed blocks; each is a new attempt.
+  retries: number;
 }
 
 interface CycleState {
@@ -114,6 +116,7 @@ const startCycle = (
   asOf: useServerClock ? null : new Date().toISOString(),
   startedAt: Date.now(),
   isReconciling,
+  retries: 0,
 });
 
 const restart = (prev: CycleState, options: RestartOptions): CycleState => {
@@ -304,16 +307,23 @@ const useStatsData = (range: DateRange, transactionType: TransactionType) => {
   const errors = blocks.map((block) => block.error ?? (block.hasError ? summaryBlock.error : undefined));
   const retryFailed = () => {
     const failed = blocks.filter((block) => block.hasError || block.updateFailed);
+    if (failed.length === 0) return;
+
+    setStored((prev) => (prev.cycle ? { ...prev, cycle: { ...prev.cycle, retries: prev.cycle.retries + 1 } } : prev));
     // Blocks waiting on summary share its retry; run it once.
     new Set(failed.map((block) => block.retry)).forEach((retry) => retry());
   };
+
+  const updateFailed = blocks.some((block) => block.updateFailed);
 
   return {
     summary: summaryBlock,
     trend: trendBlock,
     breakdown: breakdownBlock,
     isUpdating: blocks.some((block) => block.isUpdating),
-    updateFailed: blocks.some((block) => block.updateFailed),
+    updateFailed,
+    // The attempt whose update failed, the same for every block it failed; a retry or a new cycle is a new one.
+    failedUpdateAttempt: updateFailed && cycle ? `${cycle.id}:${cycle.retries}` : null,
     // Every block failed with nothing to show: one screen-wide failure instead of three cards.
     loadFailed: blocks.every((block) => block.hasError),
     loadError: errors.find((error) => error !== undefined),
