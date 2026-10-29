@@ -1,4 +1,3 @@
-export * from './Alert';
 export * from './Brand';
 export * from './Buttons';
 export { default as Carousel } from './Carousel/Carousel';

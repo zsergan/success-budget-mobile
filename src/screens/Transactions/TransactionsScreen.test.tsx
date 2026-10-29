@@ -57,7 +57,6 @@ jest.mock('@api/instance', () => ({
   createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),
 }));
 jest.mock('expo-secure-store');
-jest.mock('@hooks/useAlert', () => () => ({ addAlert: jest.fn() }));
 
 jest.useFakeTimers({ now: new Date(2026, 8, 28, 12) });
 

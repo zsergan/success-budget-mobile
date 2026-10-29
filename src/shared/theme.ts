@@ -21,11 +21,8 @@ export interface ThemeColors {
   accentDeep: string;
   secondary: string;
   onSecondary: string;
-  // The toast, raised above sheets as well as screens.
-  toast: string;
   // The bottom tab bar; a raised surface in the dark theme, where it is not separated by a shadow.
   tabBar: string;
-  onToast: string;
   track: string;
   hairline: string;
   danger: string;
@@ -113,9 +110,7 @@ const lightColors: ThemeColors = {
   accentDeep: '#8A5406',
   secondary: '#1D2430',
   onSecondary: '#FCFDFE',
-  toast: '#1D2430',
   tabBar: '#F6F7F9',
-  onToast: '#FCFDFE',
   track: '#E3E7EC',
   hairline: '#E3E7EC',
   danger: '#E04F3D',
@@ -162,9 +157,7 @@ const darkColors: ThemeColors = {
   accentDeep: '#8A5406',
   secondary: '#1F2733',
   onSecondary: '#F2F4F8',
-  toast: '#2A3340',
   tabBar: '#1F2733',
-  onToast: '#F2F4F8',
   track: '#252E3B',
   hairline: '#222A35',
   danger: '#F2695A',

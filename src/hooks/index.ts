@@ -1,4 +1,3 @@
-export { default as useAlert } from './useAlert';
 export { default as useBackPress } from './useBackPress';
 export { default as useBalanceVisibility } from './useBalanceVisibility';
 export { default as useConfirmAction } from './useConfirmAction';

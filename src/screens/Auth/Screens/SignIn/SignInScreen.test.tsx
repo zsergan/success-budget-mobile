@@ -3,6 +3,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { login } from '@api/auth.api';
+import { toastCount, withToasts } from '@components/Toast/testing';
 import { createAppStore } from '@redux/Store';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
@@ -14,13 +15,6 @@ jest.mock('expo-secure-store');
 jest.mock('@api/auth.api', () => ({
   ...jest.requireActual('@api/auth.api'),
   login: jest.fn(),
-}));
-
-const mockedAddAlert = jest.fn();
-
-jest.mock('@hooks', () => ({
-  ...jest.requireActual('@hooks'),
-  useAlert: () => ({ addAlert: mockedAddAlert }),
 }));
 
 const mockedLogin = jest.mocked(login);
@@ -41,7 +35,11 @@ const renderSignIn = () => {
   render(
     <SafeAreaProvider initialMetrics={metrics}>
       <Provider store={createAppStore()}>
-        <SignInScreen {...({ navigation, route: {} } as unknown as RootStackScreenProps<ScreenNames.SIGN_IN_SCREEN>)} />
+        {withToasts(
+          <SignInScreen
+            {...({ navigation, route: {} } as unknown as RootStackScreenProps<ScreenNames.SIGN_IN_SCREEN>)}
+          />,
+        )}
       </Provider>
     </SafeAreaProvider>,
   );
@@ -120,7 +118,7 @@ const submitWithoutWaiting = async () => {
 };
 
 describe('a failed sign-in', () => {
-  it('marks the email and explains wrong credentials in place, without an alert', async () => {
+  it('marks the email and explains wrong credentials in place, without a toast', async () => {
     rejectWith(401, { statusCode: 401, code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' });
     renderSignIn();
 
@@ -129,7 +127,7 @@ describe('a failed sign-in', () => {
     expect(screen.getByText('Wrong email or password')).toBeTruthy();
     expect(screen.getByText('No account matches this email and password.')).toBeTruthy();
     expect(screen.queryByText(/attempts left/)).toBeNull();
-    expect(mockedAddAlert).not.toHaveBeenCalled();
+    expect(toastCount()).toBe(0);
   });
 
   it('drops the wrong-credentials message once either field changes', async () => {
@@ -191,7 +189,7 @@ describe('a failed sign-in', () => {
     await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Retry' })));
 
     expect(mockedLogin).toHaveBeenCalledWith({ email: 'anna@kovalenko.com', password: 'secret1' });
-    expect(mockedAddAlert).not.toHaveBeenCalled();
+    expect(toastCount()).toBe(0);
   });
 
   it('tells a server failure apart from a lost connection', async () => {
