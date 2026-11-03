@@ -2,6 +2,7 @@
   "expo": {
     "name": "SuccessBudget",
     "slug": "SuccessBudget",
+    "scheme": "successbudget",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,7 +13,8 @@
       "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "associatedDomains": ["applinks:success-budget-backend-staging-x3dqf.ondigitalocean.app"]
     },
     "android": {
       "adaptiveIcon": {

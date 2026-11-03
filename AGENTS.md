@@ -42,7 +42,8 @@ currencies. Redux Toolkit + RTK Query, React Navigation, react-hook-form + yup.
   and exact body, persisted per user until its outcome is known; see
   `spaceCreation/thunks.ts`),
   `invitation` (the pending invitation link token, kept in SecureStore
-  through sign-in, registration and restarts),
+  through sign-in, registration and restarts; see
+  `docs/invitation-links.md`),
   `passwordReset` (the recovery flow's address, resend cooldown and
   in-memory reset authorization, apart from registration's `userEmail`;
   see `docs/password-recovery.md`) and `launch` (fonts + stored
@@ -116,6 +117,8 @@ relying on or changing them.
 - Bottom sheets and confirmations (presence, keyboard, stacking, stale
   confirmations): `docs/sheets.md`.
 - Toasts (tickets, ownership, replacement, placement): `docs/toasts.md`.
+- Invitation links (accepted URLs, pending invitation, when the flow
+  opens): `docs/invitation-links.md`.
 
 ## Tests
 
