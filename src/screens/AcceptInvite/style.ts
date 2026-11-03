@@ -12,6 +12,9 @@ const createStyles = ({ colors }: ColorTheme) =>
     sectionsContainer: {
       rowGap: theme.spacing.xl,
     },
+    actions: {
+      rowGap: theme.spacing.md,
+    },
     description: {
       fontFamily: theme.fonts.medium,
       fontSize: theme.fontSizes.bodySm,

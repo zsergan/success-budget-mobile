@@ -35,8 +35,8 @@ const useInvitationLinks = (navigationRef: NavigationContainerRefWithCurrent<Roo
 
     // The same link delivered again finds the flow already open and opens no second one.
     const state = navigationRef.getRootState();
-    if (state?.routes[state.index]?.name !== ScreenNames.INVITATION_SCREEN) {
-      navigationRef.navigate(ScreenNames.INVITATION_SCREEN);
+    if (state?.routes[state.index]?.name !== ScreenNames.ACCEPT_INVITE_SCREEN) {
+      navigationRef.navigate(ScreenNames.ACCEPT_INVITE_SCREEN);
     }
     dispatch(invitationOpenHandled());
   }, [dispatch, navigationRef, isReady, isOpenRequested, isNavigationReady]);

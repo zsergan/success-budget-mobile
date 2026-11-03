@@ -14,6 +14,7 @@ export type {
 } from './ConfirmationSheet/ConfirmationSheet';
 export { default as Divider } from './Divider/Divider';
 export { default as Banner } from './Banner/Banner';
+export { default as PendingInvitationNotice } from './PendingInvitationNotice/PendingInvitationNotice';
 export { default as EmptyState } from './EmptyState/EmptyState';
 export { default as ErrorBoundary } from './ErrorBoundary/ErrorBoundary';
 export { default as Fab } from './Fab/Fab';

@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import { Banner, Button, Input, InputPicker, PasswordInput, TextLink } from '@components';
+import { Banner, Button, Input, InputPicker, PasswordInput, PendingInvitationNotice, TextLink } from '@components';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import AuthFormLayout from '@screens/Auth/AuthFormLayout/AuthFormLayout';
@@ -29,6 +29,7 @@ const SignUpScreen = ({ navigation }: Props) => {
     <AuthFormLayout
       title="Create your account"
       description="Name, email, password and the currency of your personal space."
+      headerAccessory={<PendingInvitationNotice />}
       onBackButtonPress={() => navigation.goBack()}
       action={
         <Button

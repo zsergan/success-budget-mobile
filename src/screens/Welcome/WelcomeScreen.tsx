@@ -1,7 +1,7 @@
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BrandLockup, Button, Icon } from '@components';
+import { BrandLockup, Button, Icon, PendingInvitationNotice } from '@components';
 import { useTheme, useThemedStyles } from '@hooks';
 import { ScreenNames } from '@shared/enums';
 import type { IconType, RootStackScreenProps } from '@shared/types';
@@ -61,6 +61,8 @@ const WelcomeScreen = ({ navigation }: Props) => {
         </View>
 
         <View style={styles.footer}>
+          <PendingInvitationNotice />
+
           <Button
             title="Sign In"
             size="lg"

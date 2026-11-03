@@ -43,7 +43,31 @@ toasts or logs. Storage follows every change of it.
 
 `useInvitationLinks` (`src/navigation/`) reads the launch URL, listens for
 URLs while running, and restores the stored invitation. It opens
-`InvitationScreen` only in the launch's `ready` phase, so never before the
-stored session is read, the user is signed in and the required data has
-loaded; a link opened on Welcome or during a failed launch waits for it.
-The screen previews the invitation and joins only on "Join".
+`AcceptInviteScreen` only in the launch's `ready` phase, so never before
+the stored session is read, the user is signed in and the required data
+has loaded; a link opened on Welcome or during a failed launch waits for
+it. Welcome, Sign In and Sign Up meanwhile say to use the invited email.
+
+## Joining
+
+`AcceptInviteScreen` shows a link's preview (space name, currency,
+expiry) and keeps the six-digit code entry a tap away; without a link it
+is the code form. Opening a link only previews: the join request goes out
+on "Join space" alone, and "Try again" repeats a failed join only when the
+join was what failed.
+
+| Answer                                | Shown                                     | Way out                               |
+| ------------------------------------- | ----------------------------------------- | ------------------------------------- |
+| `201`                                 | —                                         | the space is selected; Home           |
+| `409 SPACE_ALREADY_MEMBER` on accept  | — (a repeat, or an older membership)      | the space is selected; Home           |
+| `409 SPACE_ALREADY_MEMBER` on preview | already a member                          | Open space                            |
+| `403 SPACE_INVITE_EMAIL_MISMATCH`     | sent to another address; no account named | Switch account (keeps the invitation) |
+| `404 SPACE_INVITE_UNUSABLE`           | no longer available                       | Close                                 |
+| `404` for a code                      | no invitation has the code                | edit the code                         |
+| `400 SPACE_MEMBER_LIMIT_REACHED`      | the space is full                         | Try again                             |
+| `429`                                 | a countdown from `Retry-After`            | Try again once it ends                |
+| No answer                             | check the connection                      | Try again                             |
+
+A join lands on Home through `popTo`, never `goBack`: a screen opened from
+an email has nothing of the user's own behind it. A join that outlives
+its session selects nothing (`acceptInviteAndSelect`).

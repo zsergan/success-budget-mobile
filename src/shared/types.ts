@@ -46,9 +46,8 @@ export type RootStackParamList = {
   [ScreenNames.CATEGORIES_SCREEN]: undefined;
   [ScreenNames.CREATE_SPACE_SCREEN]: undefined;
   [ScreenNames.MEMBERS_SCREEN]: undefined;
+  // No params: a link's token stays in the invitation state, never in navigation.
   [ScreenNames.ACCEPT_INVITE_SCREEN]: undefined;
-  // No params: the link token stays in the invitation state, never in navigation.
-  [ScreenNames.INVITATION_SCREEN]: undefined;
   [ScreenNames.LAUNCH_SCREEN]: undefined;
   [ScreenNames.WELCOME_SCREEN]: undefined;
   [ScreenNames.SIGN_IN_SCREEN]: { passwordReset?: PasswordResetOutcome } | undefined;

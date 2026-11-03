@@ -41,9 +41,9 @@ export const memberApi = baseApi.injectEndpoints({
       query: ({ spaceId, userId }) => ({ url: `/spaces/${spaceId}/members/${userId}`, method: 'DELETE' }),
       invalidatesTags: invalidatesOnSuccess(() => ['Spaces']),
     }),
-    // Reads only; POST keeps the link token out of the URL.
+    // Reads only; POST keeps the link token out of the URL. The invitation screen explains its own 429.
     previewInvite: build.query<InvitePreview, InvitePreviewRequest>({
-      query: (body) => ({ url: '/spaces/invites/preview', method: 'POST', body }),
+      query: (body) => ({ url: '/spaces/invites/preview', method: 'POST', body, isHandledRateLimit: () => true }),
     }),
     acceptInvite: build.mutation<SpaceSummary, AcceptInviteRequest>({
       query: (body) => ({ url: '/spaces/invites/accept', method: 'POST', body }),

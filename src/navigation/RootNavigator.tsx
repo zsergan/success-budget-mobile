@@ -12,7 +12,6 @@ import {
   CreateSpaceScreen,
   CreateWalletScreen,
   ForgotPasswordScreen,
-  InvitationScreen,
   MembersScreen,
   NewPasswordScreen,
   ResetCodeScreen,
@@ -126,11 +125,6 @@ const RootNavigator = () => {
                 <Stack.Screen
                   name={ScreenNames.ACCEPT_INVITE_SCREEN}
                   component={AcceptInviteScreen}
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name={ScreenNames.INVITATION_SCREEN}
-                  component={InvitationScreen}
                   options={{ headerShown: false }}
                 />
               </>
