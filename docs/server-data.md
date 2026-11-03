@@ -26,6 +26,8 @@ invitation ended.
 A space creation left unanswered past its key's lifetime refreshes
 Spaces without being sent again, so the user sees whether it was created
 before sending it once more.
+An invitation accept refused with `409 SPACE_ALREADY_MEMBER` counts as
+joined: it refreshes Spaces and selects the space the answer names.
 A transaction request refused with `403 FORBIDDEN_SPACE` removes every
 cached entry of that space and refreshes Spaces, whose fallback moves the
 selection to a space the user still belongs to.

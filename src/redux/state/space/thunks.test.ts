@@ -129,6 +129,30 @@ describe('acceptInviteAndSelect', () => {
     expect(store.getState().space.currentSpaceId).toBe(55);
   });
 
+  it('takes an already-member answer as joined: selects its space and refreshes the spaces list', async () => {
+    const store = signedInStore();
+    store.dispatch(activateSpace(1));
+    store.dispatch(spaceApi.endpoints.getSpaces.initiate());
+    mockedRequest.mockImplementation(async ({ url }: { url: string }) => {
+      if (url === '/spaces') return { data: [space({ id: 1 }), space({ id: 41, type: SpaceType.GROUP })] };
+      throw {
+        response: {
+          status: 409,
+          data: { statusCode: 409, code: 'SPACE_ALREADY_MEMBER', message: 'Already a member', spaceId: 41 },
+        },
+      };
+    });
+    await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
+    mockedRequest.mockClear();
+
+    await expect(store.dispatch(acceptInviteAndSelect({ token: '87.proof' }))).resolves.toEqual({ spaceId: 41 });
+    await jest.runOnlyPendingTimersAsync();
+    await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
+
+    expect(store.getState().space.currentSpaceId).toBe(41);
+    expect(mockedRequest).toHaveBeenCalledWith(expect.objectContaining({ url: '/spaces', method: 'GET' }));
+  });
+
   it('keeps the current space when the accept fails', async () => {
     const store = signedInStore();
 
