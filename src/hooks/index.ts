@@ -10,6 +10,7 @@ export { default as usePendingWrites } from './usePendingWrites';
 export { default as usePendingWritesSync } from './usePendingWritesSync';
 export { default as usePeriod } from './usePeriod';
 export { default as useRefreshOnReturn } from './useRefreshOnReturn';
+export { default as useSecondsUntil } from './useSecondsUntil';
 export { default as useSheetPresence } from './useSheetPresence';
 export { default as useSingleSubmit } from './useSingleSubmit';
 export { default as useSpaceRefresh } from './useSpaceRefresh';

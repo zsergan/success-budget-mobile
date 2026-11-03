@@ -11,7 +11,7 @@ import type { RootStackScreenProps } from '@shared/types';
 import type { PasswordResetFailure } from '@screens/Auth/passwordReset/passwordResetFailure';
 import { getPasswordResetFailure } from '@screens/Auth/passwordReset/passwordResetFailure';
 import useLatestRequest from '@screens/Auth/passwordReset/useLatestRequest';
-import useSecondsUntil from '@screens/Auth/passwordReset/useSecondsUntil';
+import useSecondsUntil from '@hooks/useSecondsUntil';
 import { CODE_LENGTH } from './components/CodeInput/CodeInput';
 
 // Paste and code autofill may bring spaces or dashes; only the digits count, leading zeros included.

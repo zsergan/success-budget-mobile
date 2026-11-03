@@ -1,7 +1,7 @@
 import { Banner } from '@components';
 
 import type { PasswordResetFailure } from './passwordResetFailure';
-import useSecondsUntil from './useSecondsUntil';
+import useSecondsUntil from '@hooks/useSecondsUntil';
 
 interface Props {
   failure: PasswordResetFailure;
