@@ -1,8 +1,8 @@
-import { Text } from 'react-native';
+import { ScrollView, Text } from 'react-native';
 import { Provider } from 'react-redux';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 
 import type { InviteEmailStatus, SpaceMember } from '@api/dto';
 import { resetSheets, withSheetHost } from '@components/ConfirmationSheet/testing';
@@ -176,6 +176,27 @@ beforeEach(() => {
   mockedRequest.mockImplementation(route);
 });
 
+describe('layout', () => {
+  it('heads the screen with Members over the space name and currency', async () => {
+    await openMembers();
+
+    expect(screen.getByRole('header', { name: 'Members' })).toBeTruthy();
+    expect(screen.getByText('Family · EUR')).toBeTruthy();
+  });
+
+  it('keeps the leave section in the scrolling content, after the list', async () => {
+    roster = [
+      owner,
+      ...Array.from({ length: 10 }, (_, index) => invitation(90 + index, `p${index}@example.com`, 'sent')),
+    ];
+    await openMembers();
+
+    const scroll = screen.UNSAFE_getByType(ScrollView);
+    expect(within(scroll).getByText('Leave this space')).toBeTruthy();
+    expect(within(scroll).getAllByText('Invited member')).toHaveLength(10);
+  });
+});
+
 describe('inviting by email', () => {
   it('says they’ll get an email with a link, and never that there is no email', async () => {
     await openMembers();
@@ -248,6 +269,24 @@ describe('inviting by email', () => {
     expect(toastCount()).toBe(0);
 
     await settle(120_000);
+    expect(screen.getByRole('button', { name: 'Resend invitation email' }).props.accessibilityState?.disabled).toBe(
+      false,
+    );
+  });
+
+  it('offers a resend at once when the roster arrives after the screen first drew', async () => {
+    roster = [owner, invitation(88, 'ben@example.com', 'failed')];
+    let answerRoster: () => void = () => {};
+    mockedRequest.mockImplementationOnce(
+      () => new Promise((resolve) => (answerRoster = () => resolve({ data: roster }))),
+    );
+    await openMembers();
+    await settle(2000);
+
+    answerRoster();
+    await settle(100);
+    await settle(100);
+
     expect(screen.getByRole('button', { name: 'Resend invitation email' }).props.accessibilityState?.disabled).toBe(
       false,
     );

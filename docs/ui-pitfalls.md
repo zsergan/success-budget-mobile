@@ -56,3 +56,20 @@ Seen on Sign In after a password reset and in simulator previews.
 The fix: focus once the screen has appeared, from the native stack's
 `transitionEnd` event for the screen being shown (`event.data.closing` is
 false); see `SignInScreen.tsx`.
+
+## A bottom block that still scrolls
+
+A block that belongs at the bottom of a short screen but after a long
+list (Members' "Leave this space") stays in the scroll content: give
+`RootLayout` `contentContainerStyle={{ flexGrow: 1 }}` and the content
+above the block `flexGrow: 1`. An absolute or `footer` block would cover
+the list's end or ride the keyboard. Screens without a tab bar keep the
+bottom safe area from `ScreenFrame`'s default edges.
+
+## Fixed heights clip at large text
+
+A badge, tag or pill with a fixed `height` clips its label once the
+system text size grows. Use `minHeight` with a little vertical padding,
+and let a name line `flexWrap` so its badge drops under the name instead
+of truncating it (`MemberRow`). A side-by-side header (label and count)
+needs `flexWrap` too.

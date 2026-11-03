@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 
 import { EmptyState, RootLayout, SectionTitle } from '@components';
@@ -91,12 +91,14 @@ const MembersScreen = ({ navigation }: Props) => {
   const isLastInviteShown = !!lastInvite && (!!lastInviteRow || (rosterReceivedAt ?? 0) < lastInvite.invitedAt);
 
   return (
-    <RootLayout style={styles.root} scrollable blurredStatusBar>
-      <SectionTitle title="Members" onBackButtonPress={() => navigation.goBack()} />
+    <RootLayout contentContainerStyle={styles.scrollContent} scrollable blurredStatusBar>
+      <SectionTitle
+        title="Members"
+        subtitle={`${currentSpace.name} · ${currentSpace.currency.code}`}
+        onBackButtonPress={() => navigation.goBack()}
+      />
 
-      <View style={styles.scrollContent}>
-        <Text style={styles.spaceLine}>{`${currentSpace.name} · ${currentSpace.currency.code}`}</Text>
-
+      <View style={styles.content}>
         {error && !isInitialLoading && memberRows.length === 0 ? (
           <EmptyState
             icon="users"
@@ -107,43 +109,46 @@ const MembersScreen = ({ navigation }: Props) => {
           />
         ) : (
           <>
-            {isOwner && currentSpace.type === SpaceType.GROUP && (
-              <InviteMemberSection
-                canInvite={canInvite}
-                isAtMemberCap={isAtMemberCap}
-                isAtInviteCap={isAtInviteCap}
-                cooldownRemaining={remainingSeconds}
-                isSubmitting={isSubmitting}
-                failedEmail={failedEmail}
-                error={inviteError}
-                onSubmit={submit}
-                feedback={
-                  lastInvite &&
-                  isLastInviteShown && (
-                    <InviteFeedback
-                      email={lastInvite.invite.email}
-                      status={lastInviteRow?.email_status ?? lastInvite.invite.email_status}
-                      resend={lastInviteRow ? availabilityOf(lastInviteRow) : NO_RESEND}
-                      onRetry={() => lastInviteRow && resend(lastInviteRow)}
-                      onShareCode={() => setSharedCodeInviteId(lastInvite.invite.id)}
-                    />
-                  )
-                }
+            <View style={styles.main}>
+              {isOwner && currentSpace.type === SpaceType.GROUP && (
+                <InviteMemberSection
+                  canInvite={canInvite}
+                  isAtMemberCap={isAtMemberCap}
+                  isAtInviteCap={isAtInviteCap}
+                  cooldownRemaining={remainingSeconds}
+                  isSubmitting={isSubmitting}
+                  failedEmail={failedEmail}
+                  error={inviteError}
+                  onSubmit={submit}
+                  feedback={
+                    lastInvite &&
+                    isLastInviteShown && (
+                      <InviteFeedback
+                        email={lastInvite.invite.email}
+                        status={lastInviteRow?.email_status ?? lastInvite.invite.email_status}
+                        resend={lastInviteRow ? availabilityOf(lastInviteRow) : NO_RESEND}
+                        onRetry={() => lastInviteRow && resend(lastInviteRow)}
+                        onShareCode={() => setSharedCodeInviteId(lastInvite.invite.id)}
+                      />
+                    )
+                  }
+                />
+              )}
+
+              <MembersList
+                memberRows={memberRows}
+                inviteRows={inviteRows}
+                ownUserId={ownRow?.user_id}
+                isRefreshing={isRefreshing}
+                refreshFailed={!!error && !isInitialLoading}
+                onRetry={retry}
+                onActionPress={requestAction}
+                resendAvailabilityOf={isOwner ? availabilityOf : undefined}
+                onResend={resend}
               />
-            )}
+            </View>
 
-            <MembersList
-              memberRows={memberRows}
-              inviteRows={inviteRows}
-              ownUserId={ownRow?.user_id}
-              isRefreshing={isRefreshing}
-              refreshFailed={!!error && !isInitialLoading}
-              onRetry={retry}
-              onActionPress={requestAction}
-              resendAvailabilityOf={isOwner ? availabilityOf : undefined}
-              onResend={resend}
-            />
-
+            {/* Pushed to the bottom of a short list, below a long one: inside the scroll, never pinned. */}
             <LeaveSpaceSection
               isOwner={isOwner}
               canLeave={!!ownRow}

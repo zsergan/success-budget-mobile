@@ -29,6 +29,18 @@ const createStyles = ({ colors }: ColorTheme) =>
       lineHeight: theme.lineHeights.label,
       color: colors.text,
     },
+    titleColumn: {
+      flexGrow: 1,
+      flexShrink: 1,
+      minWidth: 0,
+      rowGap: 2,
+    },
+    subtitle: {
+      fontFamily: theme.fonts.medium,
+      fontSize: theme.fontSizes.bodySm,
+      lineHeight: theme.lineHeights.bodySm,
+      color: colors.muted,
+    },
     headerTitle: {
       fontSize: theme.fontSizes.titleSm,
       lineHeight: theme.lineHeights.titleSm,
