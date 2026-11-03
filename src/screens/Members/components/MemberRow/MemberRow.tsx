@@ -3,6 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import type { SpaceMember } from '@api/dto';
 import Icon from '@components/Icon/Icon';
 import { useTheme, useThemedStyles } from '@hooks';
+import type { ResendAvailability } from '../../hooks/useInviteResend';
 
 import createStyles from './style';
 
@@ -13,6 +14,8 @@ interface Props {
   // actually act on safely -- see MembersList for why these can differ.
   canAct: boolean;
   onActionPress: () => void;
+  // A pending invitation whose email did not go out; `resend` only for the owner.
+  deliveryFailure?: { resend: ResendAvailability | null; onResend: () => void };
 }
 
 const getInitials = (name: string) =>
@@ -23,7 +26,7 @@ const getInitials = (name: string) =>
     .map((word) => word[0]?.toUpperCase())
     .join('');
 
-const MemberRow = ({ member, isSelf, canAct, onActionPress }: Props) => {
+const MemberRow = ({ member, isSelf, canAct, onActionPress, deliveryFailure }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const isInvite = member.type === 'invite';
@@ -37,20 +40,24 @@ const MemberRow = ({ member, isSelf, canAct, onActionPress }: Props) => {
         ? 'Owner'
         : null;
 
+  const resend = deliveryFailure?.resend;
+  const resendLabel = resend && resend.waitSeconds > 0 ? `Resend in ${resend.waitSeconds}s` : 'Resend';
+
   return (
     <View style={styles.row}>
       <View style={[styles.rowAvatar, isSelf && styles.rowAvatarSelf]}>
-        {member.name ? (
+        {member.name && !isInvite ? (
           <Text style={[styles.rowInitials, isSelf && styles.rowInitialsSelf]}>{getInitials(member.name)}</Text>
         ) : (
-          <Icon name="mail" size={17} color={colors.muted} strokeWidth={1.9} />
+          <Icon name="user" size={17} color={colors.muted} strokeWidth={1.9} />
         )}
       </View>
 
       <View style={styles.rowText}>
         <View style={styles.rowNameLine}>
+          {/* An invitation never names anyone: whether the address has an account is not shown. */}
           <Text style={styles.rowName} numberOfLines={1}>
-            {member.name || member.email}
+            {isInvite ? 'Invited member' : member.name || member.email}
           </Text>
 
           {tag && (
@@ -58,14 +65,34 @@ const MemberRow = ({ member, isSelf, canAct, onActionPress }: Props) => {
               <Text style={[styles.rowTagText, isInvite && styles.rowTagTextInvite]}>{tag}</Text>
             </View>
           )}
+
+          {deliveryFailure && (
+            <View style={[styles.rowTag, styles.rowTagFailed]} accessibilityLabel="Email not sent">
+              <Text style={[styles.rowTagText, styles.rowTagTextFailed]}>Not sent</Text>
+            </View>
+          )}
         </View>
 
-        {member.name && (
+        {(isInvite || member.name) && (
           <Text style={styles.rowMeta} numberOfLines={1}>
             {member.email}
           </Text>
         )}
       </View>
+
+      {deliveryFailure && resend && (
+        <TouchableOpacity
+          style={styles.rowResend}
+          onPress={deliveryFailure.onResend}
+          disabled={!resend.isAvailable}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`${resendLabel} invitation email`}
+          accessibilityState={{ disabled: !resend.isAvailable, busy: resend.isResending }}
+        >
+          <Text style={[styles.rowResendText, !resend.isAvailable && styles.rowResendTextDisabled]}>{resendLabel}</Text>
+        </TouchableOpacity>
+      )}
 
       {canAct && (
         <TouchableOpacity

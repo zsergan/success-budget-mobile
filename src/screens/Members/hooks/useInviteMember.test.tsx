@@ -20,18 +20,61 @@ jest.useFakeTimers();
 
 const renderInviteMember = () => {
   const store = createAppStore();
+  const onInvited = jest.fn();
 
   store.dispatch(activateSpace(10));
 
   const Wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
-  const { result } = renderHook(() => useInviteMember({ canInvite: true, cooldownRemaining: 0 }), {
+  const { result } = renderHook(() => useInviteMember({ canInvite: true, cooldownRemaining: 0, onInvited }), {
     wrapper: Wrapper,
   });
 
-  return { store, result };
+  return { store, result, onInvited };
+};
+
+const created = {
+  id: 87,
+  email: 'alex@example.com',
+  expires_at: '2026-11-08T10:00:00.000Z',
+  code: '042917',
+  email_status: 'queued',
+  resend_after_seconds: 60,
 };
 
 beforeEach(() => jest.clearAllMocks());
+
+it('keeps the created invitation, its code included, for its email’s progress, and opens nothing by itself', async () => {
+  mockedRequest.mockResolvedValue({ data: created });
+  const { result, onInvited } = renderInviteMember();
+
+  let isSent = false;
+  await act(async () => {
+    isSent = await result.current.submit(' Alex@Example.com ');
+  });
+
+  expect(isSent).toBe(true);
+  expect(mockedRequest).toHaveBeenCalledWith(
+    expect.objectContaining({ url: '/spaces/10/invites', method: 'POST', data: { email: 'alex@example.com' } }),
+  );
+  expect(result.current.lastInvite).toMatchObject({ invite: created });
+  expect(onInvited).toHaveBeenCalledTimes(1);
+});
+
+it('drops an invitation answered after a space switch', async () => {
+  let answer: (value: unknown) => void = () => {};
+  mockedRequest.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+  const { store, result, onInvited } = renderInviteMember();
+
+  await act(async () => {
+    const submitting = result.current.submit('alex@example.com');
+    store.dispatch(activateSpace(11));
+    answer({ data: created });
+    await submitting;
+  });
+
+  expect(result.current.lastInvite).toBeNull();
+  expect(onInvited).not.toHaveBeenCalled();
+});
 
 it('keeps a failed invite of the current session at the field, with its address', async () => {
   mockedRequest.mockRejectedValue({

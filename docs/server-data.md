@@ -147,6 +147,11 @@ described in the lifecycle section.
   every 30 s per space. Stats follows through its revision and also
   restarts its own cycle when it is older than 30 s. Open details are read
   again on a return to the app; a form being edited keeps its draft.
+- **Invitation emails.** Members asks for the roster again every 5 s
+  while an invitation's email is `queued` or `sending` and the screen is
+  in focus, for at most 2 minutes after the screen comes into focus or the
+  owner invites or resends (`useDeliveryPolling`). A `sent`, `failed` or
+  `not_sent` email, leaving the screen or the end of that window stops it.
 - **Month rollover.** `useSpaceRefresh` also wakes when a new month begins:
   it renders the screen again, so a current period moves onto the new
   month, and refreshes the space's data regardless of the 30 s limit.

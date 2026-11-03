@@ -2,6 +2,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import type { SpaceInviteRow, SpaceMemberRow } from '@api/dto';
 import { useThemedStyles } from '@hooks';
+import type { ResendAvailability } from '../../hooks/useInviteResend';
 import type { MemberActionTarget } from '../../types';
 import MemberRow from '../MemberRow/MemberRow';
 
@@ -16,7 +17,14 @@ interface Props {
   refreshFailed: boolean;
   onRetry: () => void;
   onActionPress: (target: MemberActionTarget) => void;
+  // Null for anyone but the owner, who alone can resend.
+  resendAvailabilityOf?: (invite: SpaceInviteRow) => ResendAvailability | null;
+  onResend?: (invite: SpaceInviteRow) => void;
 }
+
+// Only a failure needs the reader's attention; a queued, sending or sent email leaves the row as it is.
+const hasDeliveryFailed = ({ email_status }: SpaceInviteRow) =>
+  email_status === 'failed' || email_status === 'not_sent';
 
 // Never substitute the membership id (member.id) for user_id: without a user_id the row
 // is not actionable, whatever can_remove says.
@@ -30,6 +38,8 @@ const MembersList = ({
   refreshFailed,
   onRetry,
   onActionPress,
+  resendAvailabilityOf = () => null,
+  onResend = () => {},
 }: Props) => {
   const styles = useThemedStyles(createStyles);
   const memberCount = memberRows.length;
@@ -75,6 +85,11 @@ const MembersList = ({
             isSelf={false}
             canAct={invite.can_remove}
             onActionPress={() => onActionPress({ kind: 'revoke', inviteId: invite.id, label: invite.email })}
+            deliveryFailure={
+              hasDeliveryFailed(invite)
+                ? { resend: resendAvailabilityOf(invite), onResend: () => onResend(invite) }
+                : undefined
+            }
           />
         ))}
       </View>

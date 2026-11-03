@@ -71,6 +71,30 @@ const createStyles = ({ colors }: ColorTheme) =>
     rowTagTextInvite: {
       color: colors.warn,
     },
+    rowTagFailed: {
+      backgroundColor: `${colors.danger}1A`,
+    },
+    rowTagTextFailed: {
+      color: colors.danger,
+    },
+    rowResend: {
+      height: 34,
+      paddingHorizontal: theme.spacing.md,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.track,
+    },
+    rowResendText: {
+      fontFamily: theme.fonts.semiBold,
+      fontSize: theme.fontSizes.caption,
+      color: colors.text,
+      // Plus Jakarta Sans under-measures its own width and clips the last glyph (see cde3346).
+      paddingRight: 2,
+    },
+    rowResendTextDisabled: {
+      color: colors.muted,
+    },
     rowMeta: {
       fontFamily: theme.fonts.medium,
       fontSize: theme.fontSizes.caption,

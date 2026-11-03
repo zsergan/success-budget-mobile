@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 
 import { EmptyState, RootLayout, SectionTitle } from '@components';
 import { useTheme, useThemedStyles } from '@hooks';
@@ -6,19 +8,24 @@ import { SpaceType } from '@shared/enums';
 import type { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
 import InviteCodeDialog from './components/InviteCodeDialog/InviteCodeDialog';
+import InviteFeedback from './components/InviteFeedback/InviteFeedback';
 import InviteMemberSection from './components/InviteMemberSection/InviteMemberSection';
 import LeaveSpaceDialog from './components/LeaveSpaceDialog/LeaveSpaceDialog';
 import LeaveSpaceSection from './components/LeaveSpaceSection/LeaveSpaceSection';
 import MemberRemovalDialog from './components/MemberRemovalDialog/MemberRemovalDialog';
 import MembersList from './components/MembersList/MembersList';
+import useDeliveryPolling from './hooks/useDeliveryPolling';
 import useInviteCooldown from './hooks/useInviteCooldown';
 import useInviteMember from './hooks/useInviteMember';
+import useInviteResend from './hooks/useInviteResend';
 import useMemberActions from './hooks/useMemberActions';
 import useMembersData from './hooks/useMembersData';
 
 import createStyles from './style';
 
 interface Props extends RootStackScreenProps<ScreenNames.MEMBERS_SCREEN> {}
+
+const NO_RESEND = { isAvailable: false, waitSeconds: 0, isResending: false };
 
 const MembersScreen = ({ navigation }: Props) => {
   const { colors } = useTheme().colorTheme;
@@ -36,14 +43,25 @@ const MembersScreen = ({ navigation }: Props) => {
     isAtMemberCap,
     isAtInviteCap,
     canInvite,
+    hasPendingDelivery,
+    rosterReceivedAt,
     retry,
   } = useMembersData();
 
+  const { watch: watchDelivery } = useDeliveryPolling({ isFocused: useIsFocused(), hasPendingDelivery });
   const { remainingSeconds } = useInviteCooldown();
-  const { submit, isSubmitting, revealedInvite, closeInviteCode, failedEmail, inviteError } = useInviteMember({
+  const { submit, isSubmitting, lastInvite, failedEmail, inviteError } = useInviteMember({
     canInvite,
     cooldownRemaining: remainingSeconds,
+    onInvited: watchDelivery,
   });
+  const { availabilityOf, resend } = useInviteResend({
+    isOwner,
+    inviteRows,
+    rosterReceivedAt,
+    onResent: watchDelivery,
+  });
+  const [sharedCodeInviteId, setSharedCodeInviteId] = useState<number | null>(null);
   const {
     target,
     isPending,
@@ -67,6 +85,10 @@ const MembersScreen = ({ navigation }: Props) => {
   }
 
   const removalTarget = target?.kind === 'remove' || target?.kind === 'revoke' ? target : null;
+  // The roster's row once it has one: the create response's state is only `queued`. Missing from a roster answered
+  // after the invite, it was accepted or revoked, and there is nothing left to report.
+  const lastInviteRow = lastInvite && inviteRows.find(({ id }) => id === lastInvite.invite.id);
+  const isLastInviteShown = !!lastInvite && (!!lastInviteRow || (rosterReceivedAt ?? 0) < lastInvite.invitedAt);
 
   return (
     <RootLayout style={styles.root} scrollable blurredStatusBar>
@@ -95,6 +117,18 @@ const MembersScreen = ({ navigation }: Props) => {
                 failedEmail={failedEmail}
                 error={inviteError}
                 onSubmit={submit}
+                feedback={
+                  lastInvite &&
+                  isLastInviteShown && (
+                    <InviteFeedback
+                      email={lastInvite.invite.email}
+                      status={lastInviteRow?.email_status ?? lastInvite.invite.email_status}
+                      resend={lastInviteRow ? availabilityOf(lastInviteRow) : NO_RESEND}
+                      onRetry={() => lastInviteRow && resend(lastInviteRow)}
+                      onShareCode={() => setSharedCodeInviteId(lastInvite.invite.id)}
+                    />
+                  )
+                }
               />
             )}
 
@@ -106,6 +140,8 @@ const MembersScreen = ({ navigation }: Props) => {
               refreshFailed={!!error && !isInitialLoading}
               onRetry={retry}
               onActionPress={requestAction}
+              resendAvailabilityOf={isOwner ? availabilityOf : undefined}
+              onResend={resend}
             />
 
             <LeaveSpaceSection
@@ -137,7 +173,11 @@ const MembersScreen = ({ navigation }: Props) => {
         onCancel={cancel}
       />
 
-      <InviteCodeDialog invite={revealedInvite} spaceName={currentSpace.name} onClose={closeInviteCode} />
+      <InviteCodeDialog
+        invite={lastInvite && lastInvite.invite.id === sharedCodeInviteId ? lastInvite.invite : null}
+        spaceName={currentSpace.name}
+        onClose={() => setSharedCodeInviteId(null)}
+      />
     </RootLayout>
   );
 };
