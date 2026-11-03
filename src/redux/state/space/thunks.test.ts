@@ -5,6 +5,7 @@ import { loginMe, logoutMe } from '../auth/thunks';
 import { baseApi } from '@redux/api/baseApi';
 import { memberApi } from '../member/api';
 import { profileApi } from '../profile/api';
+import { withProfile } from '../profile/fixtures';
 import { spaceApi } from './api';
 import { walletApi } from '../wallet/api';
 import {
@@ -41,8 +42,15 @@ const signedInStore = () => {
   const store = createAppStore();
 
   store.dispatch(loginMe.fulfilled('test-token', 'req-login', { email: 'a@b.com', password: 'password1' }));
+  withProfile(store);
 
   return store;
+};
+
+// A creation is stored before it goes out.
+const requestSent = async () => {
+  const isSent = () => mockedRequest.mock.calls.some(([{ method }]) => method !== 'GET');
+  for (let tick = 0; tick < 50 && !isSent(); tick += 1) await Promise.resolve();
 };
 
 beforeEach(() => jest.clearAllMocks());
@@ -98,6 +106,7 @@ describe('createSpaceAndSelect', () => {
     mockedRequest.mockReturnValueOnce(new Promise((resolve) => (finishCreate = resolve)));
 
     const pending = store.dispatch(createSpaceAndSelect({ name: 'New', currency_id: 1, type: SpaceType.GROUP }));
+    await requestSent();
 
     store.dispatch(logoutMe.fulfilled(undefined, 'req-logout', undefined));
     store.dispatch(loginMe.fulfilled('token-2', 'req-login-2', { email: 'a@b.com', password: 'password1' }));
@@ -196,7 +205,7 @@ describe('leaveCurrentSpace', () => {
   });
 
   it('fails without a request when the profile is not loaded yet', async () => {
-    const store = signedInStore();
+    const store = createAppStore();
 
     store.dispatch(activateSpace(10));
 
@@ -234,6 +243,7 @@ describe('a request from before a logout and a new login', () => {
     );
 
     const pending = start();
+    await requestSent();
 
     await store.dispatch(logoutMe());
     store.dispatch(loginMe.fulfilled('token-2', 'req-login-2', { email: 'a@b.com', password: 'password1' }));

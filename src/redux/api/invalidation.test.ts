@@ -421,7 +421,12 @@ describe('member and space rules', () => {
     {
       name: 'create space',
       mutate: (store: ReturnType<typeof createAppStore>) =>
-        store.dispatch(spaceApi.endpoints.createSpace.initiate({ name: 'New', currency_id: 1, type: SpaceType.GROUP })),
+        store.dispatch(
+          spaceApi.endpoints.createSpace.initiate({
+            idempotencyKey: 'key-1',
+            data: { name: 'New', currency_id: 1, type: SpaceType.GROUP },
+          }),
+        ),
       expected: ['/spaces'],
     },
   ])('$name refetches exactly $expected', async ({ mutate, expected }) => {

@@ -38,6 +38,9 @@ currencies. Redux Toolkit + RTK Query, React Navigation, react-hook-form + yup.
   (the open transaction sheet; ends on logout or space switch),
   `pendingWrite` (transaction writes persisted per user before sending,
   until their outcome is known; see `transaction/operations.ts`),
+  `spaceCreation` (the unanswered space creation's `Idempotency-Key`
+  and exact body, persisted per user until its outcome is known; see
+  `spaceCreation/thunks.ts`),
   `passwordReset` (the recovery flow's address, resend cooldown and
   in-memory reset authorization, apart from registration's `userEmail`;
   see `docs/password-recovery.md`) and `launch` (fonts + stored

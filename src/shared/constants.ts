@@ -30,6 +30,9 @@ export const INVITE_EXPIRY_DAYS = 7;
 // Fallback only: prefer the 429's `error.retryAfterMs` (see @api/errors).
 export const INVITE_RATE_LIMIT_COOLDOWN_MS = 60_000;
 
+// The server keeps an Idempotency-Key's answer for 24 hours; past this a write is never resent on its own.
+export const IDEMPOTENCY_KEY_LIFETIME_MS = 23 * 60 * 60 * 1000;
+
 export const DEFAULT_WALLET_DESIGN = AppColor.SLATE;
 
 // A missing `design`, or a color newer than this build, falls back rather than crashing.

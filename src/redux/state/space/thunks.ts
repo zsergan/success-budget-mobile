@@ -6,6 +6,7 @@ import { baseApi, spaceIdOfArg, spaceTags } from '@redux/api/baseApi';
 import type { AppThunk } from '@redux/Store';
 import { memberApi } from '../member/api';
 import { selectProfileId } from '../profile/selectors';
+import { submitSpaceCreation } from '../spaceCreation/thunks';
 import { spaceApi } from './api';
 import { pickFallbackSpaceId, selectSpaces } from './selectors';
 
@@ -77,7 +78,7 @@ export const createSpaceAndSelect =
   (data: CreateSpaceRequest): AppThunk<Promise<SpaceSummary>> =>
   async (dispatch, getState) => {
     const { sessionKey } = getState().auth;
-    const space = await dispatch(spaceApi.endpoints.createSpace.initiate(data, { track: false })).unwrap();
+    const space = await dispatch(submitSpaceCreation(data));
 
     if (getState().auth.sessionKey === sessionKey) {
       dispatch(activateSpace(space.id));

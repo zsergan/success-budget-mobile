@@ -23,6 +23,9 @@ An invitation resend refreshes Members after any answer except one that
 outlived its session: a refused or unanswered resend may still have
 scheduled an email, a `429` moves the cooldown and a `404` means the
 invitation ended.
+A space creation left unanswered past its key's lifetime refreshes
+Spaces without being sent again, so the user sees whether it was created
+before sending it once more.
 A transaction request refused with `403 FORBIDDEN_SPACE` removes every
 cached entry of that space and refreshes Spaces, whose fallback moves the
 selection to a space the user still belongs to.

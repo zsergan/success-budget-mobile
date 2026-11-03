@@ -13,6 +13,7 @@ import memberReducer from './state/member/slice';
 import passwordResetReducer from './state/passwordReset/slice';
 import pendingWriteReducer from './state/pendingWrite/slice';
 import spaceReducer from './state/space/slice';
+import spaceCreationReducer from './state/spaceCreation/slice';
 import transactionFlowReducer from './state/transactionFlow/slice';
 
 const rootReducer = combineReducers({
@@ -22,6 +23,7 @@ const rootReducer = combineReducers({
   passwordReset: passwordResetReducer,
   pendingWrite: pendingWriteReducer,
   space: spaceReducer,
+  spaceCreation: spaceCreationReducer,
   transactionFlow: transactionFlowReducer,
   [baseApi.reducerPath]: baseApi.reducer,
 });
