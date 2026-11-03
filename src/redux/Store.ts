@@ -9,6 +9,8 @@ import { logoutMe } from './state/auth/thunks';
 import launchReducer from './state/launch/slice';
 import { selectIsLaunching } from './state/launch/selectors';
 import { startSpaceSelectionListener } from './state/space/listeners';
+import invitationReducer from './state/invitation/slice';
+import { startInvitationPersistence } from './state/invitation/listeners';
 import memberReducer from './state/member/slice';
 import passwordResetReducer from './state/passwordReset/slice';
 import pendingWriteReducer from './state/pendingWrite/slice';
@@ -18,6 +20,7 @@ import transactionFlowReducer from './state/transactionFlow/slice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
+  invitation: invitationReducer,
   launch: launchReducer,
   member: memberReducer,
   passwordReset: passwordResetReducer,
@@ -50,6 +53,7 @@ export const createAppStore = (preloadedState?: Partial<RootState>) => {
   });
 
   startSpaceSelectionListener(sessionListener);
+  startInvitationPersistence(sessionListener);
 
   return configureStore({
     reducer: rootReducer,
@@ -65,7 +69,7 @@ const store = createAppStore();
 
 bindHttpSession({
   getKey: () => store.getState().auth.sessionKey,
-  end: () => store.dispatch(logoutMe()),
+  end: () => store.dispatch(logoutMe({ reason: 'sessionExpired' })),
   isLaunching: () => selectIsLaunching(store.getState()),
 });
 

@@ -54,7 +54,13 @@ export const loginMe = createAppAsyncThunk('auth/loginMe', async (payload: Login
   }
 });
 
-export const logoutMe = createAppAsyncThunk('auth/logoutMe', async () => {
+// `accountSwitch`: the user signs out to answer a pending invitation with another account. `sessionExpired`: the server
+// ended the session. Neither is the user leaving, so a pending invitation outlives them.
+export interface LogoutOptions {
+  reason?: 'accountSwitch' | 'sessionExpired';
+}
+
+export const logoutMe = createAppAsyncThunk('auth/logoutMe', async (_options: LogoutOptions | undefined) => {
   try {
     await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
   } catch {
