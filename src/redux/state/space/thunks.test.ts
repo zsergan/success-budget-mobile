@@ -115,7 +115,7 @@ describe('acceptInviteAndSelect', () => {
     store.dispatch(activateSpace(1));
     mockedRequest.mockResolvedValue({ data: space({ id: 55, type: SpaceType.GROUP }) });
 
-    await store.dispatch(acceptInviteAndSelect('123456'));
+    await store.dispatch(acceptInviteAndSelect({ code: '123456' }));
 
     expect(store.getState().space.currentSpaceId).toBe(55);
   });
@@ -126,7 +126,7 @@ describe('acceptInviteAndSelect', () => {
     store.dispatch(activateSpace(1));
     mockedRequest.mockRejectedValue({ response: { status: 404, data: { statusCode: 404, message: 'Not found' } } });
 
-    await expect(store.dispatch(acceptInviteAndSelect('000000'))).rejects.toMatchObject({ statusCode: 404 });
+    await expect(store.dispatch(acceptInviteAndSelect({ code: '000000' }))).rejects.toMatchObject({ statusCode: 404 });
     expect(store.getState().space.currentSpaceId).toBe(1);
   });
 });
@@ -262,7 +262,7 @@ describe('a request from before a logout and a new login', () => {
     await expect(
       settleInNextSession(
         store,
-        () => store.dispatch(acceptInviteAndSelect('123456')),
+        () => store.dispatch(acceptInviteAndSelect({ code: '123456' })),
         () => respond(space({ id: 55 })),
       ),
     ).rejects.toBeDefined();

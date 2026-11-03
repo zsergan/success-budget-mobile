@@ -74,6 +74,20 @@ describe('an API error body', () => {
     expect(getRejectValue(httpError(400, body))).toEqual(body);
   });
 
+  it('keeps the space id of an already-member answer', () => {
+    const body = {
+      statusCode: 409,
+      code: 'SPACE_ALREADY_MEMBER',
+      requestId: 'req-43',
+      message: 'You are already a member of this space',
+      path: '/api/v1/spaces/invites/accept',
+      timestamp: '2026-11-02T09:00:00.000Z',
+      spaceId: 41,
+    };
+
+    expect(getRejectValue(httpError(409, body))).toEqual(body);
+  });
+
   it('takes the status from the response, not from the body', () => {
     expect(getRejectValue(httpError(503, { ...errorBody, statusCode: 200 })).statusCode).toBe(503);
   });

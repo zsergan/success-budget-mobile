@@ -126,7 +126,7 @@ describe('a space form submitted before a logout and a new login', () => {
   const submits = {
     create: (store: AppStore) =>
       store.dispatch(createSpaceAndSelect({ name: 'New', currency_id: 1, type: SpaceType.GROUP })),
-    accept: (store: AppStore) => store.dispatch(acceptInviteAndSelect('123456')),
+    accept: (store: AppStore) => store.dispatch(acceptInviteAndSelect({ code: '123456' })),
   };
   const oldResponses = {
     success: (resolve: (value: unknown) => void) => resolve({ data: { id: 7 } }),

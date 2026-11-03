@@ -14,6 +14,10 @@ export const ApiErrorCode = {
   TRANSACTION_OPERATION_EXISTS: 'TRANSACTION_OPERATION_EXISTS',
   TRANSACTION_OPERATION_NOT_FOUND: 'TRANSACTION_OPERATION_NOT_FOUND',
   IDEMPOTENCY_KEY_REUSED: 'IDEMPOTENCY_KEY_REUSED',
+  SPACE_INVITE_UNUSABLE: 'SPACE_INVITE_UNUSABLE',
+  SPACE_INVITE_EMAIL_MISMATCH: 'SPACE_INVITE_EMAIL_MISMATCH',
+  SPACE_INVITE_RATE_LIMITED: 'SPACE_INVITE_RATE_LIMITED',
+  SPACE_ALREADY_MEMBER: 'SPACE_ALREADY_MEMBER',
   VALIDATION_FAILED: 'VALIDATION_FAILED',
   PASSWORD_RESET_CODE_INVALID: 'PASSWORD_RESET_CODE_INVALID',
   PASSWORD_RESET_CODE_UNUSABLE: 'PASSWORD_RESET_CODE_UNUSABLE',
@@ -28,6 +32,8 @@ export interface ErrorResponse {
   path: string;
   statusCode: number;
   timestamp: string;
+  // The space a `SPACE_ALREADY_MEMBER` answer is about, so the client can open it.
+  spaceId?: number;
   // From the response's Retry-After header when it parses, whatever the body; only `getRejectValue` sets it.
   retryAfterMs?: number;
   // Set by httpBaseQuery (not getRejectValue) when the session that sent the

@@ -33,7 +33,7 @@ const useAcceptInviteForm = ({ navigation }: UseAcceptInviteFormProps) => {
   const { onSubmit, isSubmitDisabled, submitError } = useFormSubmitHandler<AcceptInviteFormData>({
     handleSubmit,
     formState: { isSubmitting, isSubmitSuccessful },
-    onSubmit: (formData) => dispatch(acceptInviteAndSelect(formData.code)),
+    onSubmit: (formData) => dispatch(acceptInviteAndSelect({ code: formData.code })),
     onSuccess: () => navigation.goBack(),
   });
 

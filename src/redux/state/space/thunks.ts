@@ -1,7 +1,7 @@
 import { createAction } from '@reduxjs/toolkit';
 import type { QueryCacheKey } from '@reduxjs/toolkit/query';
 
-import type { CreateSpaceRequest, SpaceSummary } from '@api/dto';
+import type { AcceptInviteRequest, CreateSpaceRequest, SpaceSummary } from '@api/dto';
 import { baseApi, spaceIdOfArg, spaceTags } from '@redux/api/baseApi';
 import type { AppThunk } from '@redux/Store';
 import { memberApi } from '../member/api';
@@ -87,10 +87,10 @@ export const createSpaceAndSelect =
   };
 
 export const acceptInviteAndSelect =
-  (code: string): AppThunk<Promise<SpaceSummary>> =>
+  (request: AcceptInviteRequest): AppThunk<Promise<SpaceSummary>> =>
   async (dispatch, getState) => {
     const { sessionKey } = getState().auth;
-    const space = await dispatch(memberApi.endpoints.acceptInvite.initiate(code, { track: false })).unwrap();
+    const space = await dispatch(memberApi.endpoints.acceptInvite.initiate(request, { track: false })).unwrap();
 
     if (getState().auth.sessionKey === sessionKey) {
       dispatch(activateSpace(space.id));
