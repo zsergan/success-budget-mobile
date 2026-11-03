@@ -8,7 +8,7 @@ import { withToasts } from '@components/Toast/testing';
 import { createAppStore } from '@redux/Store';
 import { loginMe } from '@redux/state/auth/thunks';
 import { withProfile } from '@redux/state/profile/fixtures';
-import { SpaceType } from '@shared/enums';
+import { ScreenNames, SpaceType } from '@shared/enums';
 import useCreateSpaceForm from './useCreateSpaceForm';
 
 const mockedRequest = jest.fn();
@@ -32,7 +32,7 @@ const renderForm = async (status: 'unknown' | 'expired') => {
   const store = createAppStore();
   store.dispatch(loginMe.fulfilled('token', 'login', { email: 'anna@example.com', password: 'password1' }));
   withProfile(store, 1);
-  const navigation = { goBack: jest.fn() };
+  const navigation = { goBack: jest.fn(), replace: jest.fn() };
   const Wrapper = ({ children }: { children: ReactNode }) => (
     <Provider store={store}>{withSheetHost(withToasts(children))}</Provider>
   );
@@ -66,7 +66,8 @@ describe('an unanswered space creation from an earlier run', () => {
     expect(posts).toEqual([
       expect.objectContaining({ url: '/spaces', data: family, headers: { 'Idempotency-Key': 'key-1' } }),
     ]);
-    expect(navigation.goBack).toHaveBeenCalled();
+    expect(navigation.replace).toHaveBeenCalledWith(ScreenNames.MEMBERS_SCREEN);
+    expect(navigation.goBack).not.toHaveBeenCalled();
   });
 
   it('warns that one past the key lifetime may already exist', async () => {

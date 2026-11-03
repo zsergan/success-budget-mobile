@@ -11,8 +11,7 @@ import { createSpaceAndSelect } from '@redux/state/space/thunks';
 import { selectSpaceCreationAttempt } from '@redux/state/spaceCreation/selectors';
 import type { SpaceCreationStatus } from '@redux/state/spaceCreation/slice';
 import { isSameCreateSpaceRequest, restoreSpaceCreation } from '@redux/state/spaceCreation/thunks';
-import type { ScreenNames } from '@shared/enums';
-import { SpaceType } from '@shared/enums';
+import { ScreenNames, SpaceType } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
 import { useFormSubmitHandler } from '@hooks';
 
@@ -89,11 +88,17 @@ const useCreateSpaceForm = ({ navigation }: UseCreateSpaceFormProps) => {
     reset(toFormData(unresolved.request));
   }, [unresolved, isDirty, reset]);
 
-  const { onSubmit, isSubmitDisabled, submitError } = useFormSubmitHandler<CreateSpaceFormData>({
+  const { onSubmit, isSubmitDisabled, submitError } = useFormSubmitHandler<CreateSpaceFormData, boolean>({
     handleSubmit,
     formState: { isSubmitting, isSubmitSuccessful },
-    onSubmit: (formData) => dispatch(createSpaceAndSelect(toRequest(formData))),
-    onSuccess: () => navigation.goBack(),
+    onSubmit: async (formData) => {
+      const request = toRequest(formData);
+      await dispatch(createSpaceAndSelect(request));
+
+      return request.invites !== undefined;
+    },
+    // The new space is selected; with invitations, its roster shows how each email went, failures included.
+    onSuccess: (hasInvites) => (hasInvites ? navigation.replace(ScreenNames.MEMBERS_SCREEN) : navigation.goBack()),
   });
 
   const values = useWatch({ control }) as CreateSpaceFormData;
