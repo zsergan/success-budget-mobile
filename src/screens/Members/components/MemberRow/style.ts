@@ -40,10 +40,13 @@ const createStyles = ({ colors }: ColorTheme) =>
       minWidth: 0,
       rowGap: 3,
     },
+    // With large text the badge drops under the name instead of cutting it short.
     rowNameLine: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       alignItems: 'center',
       columnGap: theme.spacing.xs + 3,
+      rowGap: 2,
     },
     rowName: {
       flexShrink: 1,
@@ -52,8 +55,9 @@ const createStyles = ({ colors }: ColorTheme) =>
       color: colors.text,
     },
     rowTag: {
-      height: 19,
+      minHeight: 19,
       paddingHorizontal: theme.spacing.xs + 3,
+      paddingVertical: 1,
       borderRadius: 6,
       alignItems: 'center',
       justifyContent: 'center',
@@ -71,29 +75,20 @@ const createStyles = ({ colors }: ColorTheme) =>
     rowTagTextInvite: {
       color: colors.warn,
     },
-    rowTagFailed: {
-      backgroundColor: `${colors.danger}1A`,
-    },
-    rowTagTextFailed: {
-      color: colors.danger,
-    },
     rowResend: {
+      width: 34,
       height: 34,
-      paddingHorizontal: theme.spacing.md,
       borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.track,
     },
-    rowResendText: {
-      fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
-      color: colors.text,
-      // Plus Jakarta Sans under-measures its own width and clips the last glyph (see cde3346).
-      paddingRight: 2,
+    rowResendDisabled: {
+      opacity: 0.45,
     },
-    rowResendTextDisabled: {
-      color: colors.muted,
+    rowMetaFailed: {
+      fontFamily: theme.fonts.semiBold,
+      color: colors.danger,
     },
     rowMeta: {
       fontFamily: theme.fonts.medium,

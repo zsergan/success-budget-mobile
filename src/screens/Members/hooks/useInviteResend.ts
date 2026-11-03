@@ -22,10 +22,11 @@ const useNow = (until: number) => {
   const [now, setNow] = useState(Date.now);
 
   useEffect(() => {
-    if (until <= Date.now()) return;
-
     const tick = () => setNow(Date.now());
+    // Read once even when `until` has passed: `now` may predate it, as when the roster arrives after the first render.
     const first = setTimeout(tick, 0);
+    if (until <= Date.now()) return () => clearTimeout(first);
+
     const timer = setInterval(tick, 1000);
     const foreground = AppState.addEventListener('change', (state) => {
       if (state === 'active') tick();

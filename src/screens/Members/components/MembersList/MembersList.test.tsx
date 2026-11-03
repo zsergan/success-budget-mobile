@@ -189,7 +189,7 @@ describe('MembersList', () => {
 
       expect(screen.getAllByText('Invited member')).toHaveLength(statuses.length);
       expect(screen.getAllByText('Invited')).toHaveLength(statuses.length);
-      statuses.forEach((_, index) => expect(screen.getByText(`p${index}@example.com`)).toBeTruthy());
+      statuses.forEach((_, index) => expect(screen.getByText(new RegExp(`p${index}@example\\.com$`))).toBeTruthy());
       expect(screen.getByText(`1 member · ${statuses.length} pending`)).toBeTruthy();
     });
 

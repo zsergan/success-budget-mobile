@@ -56,7 +56,7 @@ const MemberRow = ({ member, isSelf, canAct, onActionPress, deliveryFailure }: P
       <View style={styles.rowText}>
         <View style={styles.rowNameLine}>
           {/* An invitation never names anyone: whether the address has an account is not shown. */}
-          <Text style={styles.rowName} numberOfLines={1}>
+          <Text style={styles.rowName} numberOfLines={2}>
             {isInvite ? 'Invited member' : member.name || member.email}
           </Text>
 
@@ -65,16 +65,16 @@ const MemberRow = ({ member, isSelf, canAct, onActionPress, deliveryFailure }: P
               <Text style={[styles.rowTagText, isInvite && styles.rowTagTextInvite]}>{tag}</Text>
             </View>
           )}
-
-          {deliveryFailure && (
-            <View style={[styles.rowTag, styles.rowTagFailed]} accessibilityLabel="Email not sent">
-              <Text style={[styles.rowTagText, styles.rowTagTextFailed]}>Not sent</Text>
-            </View>
-          )}
         </View>
 
         {(isInvite || member.name) && (
-          <Text style={styles.rowMeta} numberOfLines={1}>
+          // The middle goes first, so both the start of the address and its domain stay readable.
+          <Text style={styles.rowMeta} numberOfLines={1} ellipsizeMode="middle">
+            {deliveryFailure && (
+              <Text style={styles.rowMetaFailed} accessibilityLabel="Email not sent">
+                {'Not sent · '}
+              </Text>
+            )}
             {member.email}
           </Text>
         )}
@@ -82,7 +82,7 @@ const MemberRow = ({ member, isSelf, canAct, onActionPress, deliveryFailure }: P
 
       {deliveryFailure && resend && (
         <TouchableOpacity
-          style={styles.rowResend}
+          style={[styles.rowResend, !resend.isAvailable && styles.rowResendDisabled]}
           onPress={deliveryFailure.onResend}
           disabled={!resend.isAvailable}
           hitSlop={8}
@@ -90,7 +90,7 @@ const MemberRow = ({ member, isSelf, canAct, onActionPress, deliveryFailure }: P
           accessibilityLabel={`${resendLabel} invitation email`}
           accessibilityState={{ disabled: !resend.isAvailable, busy: resend.isResending }}
         >
-          <Text style={[styles.rowResendText, !resend.isAvailable && styles.rowResendTextDisabled]}>{resendLabel}</Text>
+          <Icon name="refresh" size={15} color={colors.text} strokeWidth={2} />
         </TouchableOpacity>
       )}
 

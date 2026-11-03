@@ -8,10 +8,13 @@ const createStyles = ({ colors }: ColorTheme) =>
     section: {
       rowGap: theme.spacing.sm,
     },
+    // Wraps the count under the label when large text leaves no room beside it.
     sectionHeaderRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       alignItems: 'baseline',
       justifyContent: 'space-between',
+      columnGap: theme.spacing.md,
     },
     label: {
       fontFamily: theme.fonts.semiBold,
