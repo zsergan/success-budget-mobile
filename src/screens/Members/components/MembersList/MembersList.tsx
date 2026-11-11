@@ -26,6 +26,9 @@ interface Props {
 const hasDeliveryFailed = ({ email_status }: SpaceInviteRow) =>
   email_status === 'failed' || email_status === 'not_sent';
 
+// Sent means only that the mail server took it, so it may still need another. A queued or sending one is on its way.
+const isResendable = (invite: SpaceInviteRow) => hasDeliveryFailed(invite) || invite.email_status === 'sent';
+
 // Never substitute the membership id (member.id) for user_id: without a user_id the row
 // is not actionable, whatever can_remove says.
 const hasUsableUserId = (userId: unknown): userId is number => typeof userId === 'number';
@@ -78,20 +81,21 @@ const MembersList = ({
           );
         })}
 
-        {inviteRows.map((invite) => (
-          <MemberRow
-            key={`invite-${invite.id}`}
-            member={invite}
-            isSelf={false}
-            canAct={invite.can_remove}
-            onActionPress={() => onActionPress({ kind: 'revoke', inviteId: invite.id, label: invite.email })}
-            deliveryFailure={
-              hasDeliveryFailed(invite)
-                ? { resend: resendAvailabilityOf(invite), onResend: () => onResend(invite) }
-                : undefined
-            }
-          />
-        ))}
+        {inviteRows.map((invite) => {
+          const availability = isResendable(invite) ? resendAvailabilityOf(invite) : null;
+
+          return (
+            <MemberRow
+              key={`invite-${invite.id}`}
+              member={invite}
+              isSelf={false}
+              canAct={invite.can_remove}
+              onActionPress={() => onActionPress({ kind: 'revoke', inviteId: invite.id, label: invite.email })}
+              isDeliveryFailed={hasDeliveryFailed(invite)}
+              resend={availability ? { availability, onResend: () => onResend(invite) } : undefined}
+            />
+          );
+        })}
       </View>
 
       {hasUnsafeRemovalTarget && (

@@ -104,6 +104,12 @@ const route = ({ method, url }: Request) => {
 const rosterReads = () =>
   mockedRequest.mock.calls.filter(([{ method, url }]: [Request]) => method === 'GET' && url === '/spaces/10/members')
     .length;
+const writesSent = () =>
+  mockedRequest.mock.calls
+    .map(([config]: [Request]) => config)
+    .filter(({ method }) => method !== 'GET')
+    .map(({ method, url }) => `${method} ${url}`);
+const resendButton = () => screen.getByRole('button', { name: /^Resend( in \d+s)? invitation email$/ });
 const resendsSent = () =>
   mockedRequest.mock.calls.filter(([{ url }]: [Request]) => url.endsWith('/resend')).map(([{ url }]) => url);
 
@@ -126,7 +132,7 @@ const Navigation = () => {
   );
 };
 
-const openMembers = async () => {
+const openMembers = async ({ role = 'owner' }: { role?: 'owner' | 'member' } = {}) => {
   const store = createAppStore();
   store.dispatch(
     profileApi.util.upsertQueryEntries([
@@ -144,7 +150,7 @@ const openMembers = async () => {
             name: 'Family',
             type: SpaceType.GROUP,
             currency: { id: 3, code: 'EUR', name: 'Euro' },
-            role: 'owner',
+            role,
             member_count: 1,
             created_at: '2026-11-01T10:00:00.000Z',
           },
@@ -322,7 +328,7 @@ describe('pending invitations', () => {
 
     expect(screen.getAllByText('Invited member')).toHaveLength(3);
     expect(screen.getAllByLabelText('Email not sent')).toHaveLength(1);
-    expect(screen.getAllByRole('button', { name: /Resend/ })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /Resend/ })).toHaveLength(2);
     expect(screen.getByText('1 member · 3 pending')).toBeTruthy();
   });
 
@@ -371,5 +377,96 @@ describe('pending invitations', () => {
     await settle(1000);
 
     expect(toastCount()).toBe(1);
+  });
+});
+
+describe('resending a sent invitation', () => {
+  it('sends another email for the same invitation, then waits for the roster’s state', async () => {
+    roster = [owner, invitation(87, 'anna@example.com', 'sent')];
+    await openMembers();
+    expect(screen.queryByLabelText('Email not sent')).toBeNull();
+
+    roster = [owner, invitation(87, 'anna@example.com', 'queued', 60)];
+    fireEvent.press(resendButton());
+    await settle();
+
+    expect(writesSent()).toEqual(['POST /spaces/10/invites/87/resend']);
+    expect(screen.queryByRole('button', { name: /Resend/ })).toBeNull();
+
+    roster = [owner, invitation(87, 'anna@example.com', 'sent', 55)];
+    await settle(DELIVERY_POLL_INTERVAL_MS);
+    expect(resendButton().props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.queryByLabelText('Email not sent')).toBeNull();
+  });
+
+  it('waits out the roster’s cooldown, then a refusal’s Retry-After', async () => {
+    roster = [owner, invitation(87, 'anna@example.com', 'sent', 30)];
+    resends = [refused(429, 'SPACE_INVITE_RATE_LIMITED', { 'retry-after': '90' })];
+    await openMembers();
+    await settle(1000);
+
+    expect(resendButton().props.accessibilityLabel).toMatch(/^Resend in \d+s/);
+    fireEvent.press(resendButton());
+    await settle();
+    expect(resendsSent()).toEqual([]);
+
+    await settle(30_000);
+    expect(resendButton().props.accessibilityState?.disabled).toBe(false);
+    fireEvent.press(resendButton());
+    await settle(1000);
+
+    expect(resendsSent()).toHaveLength(1);
+    expect(resendButton().props.accessibilityLabel).toMatch(/^Resend in [89]\ds/);
+    expect(toastCount()).toBe(0);
+  });
+
+  it('takes one press at a time', async () => {
+    roster = [owner, invitation(87, 'anna@example.com', 'sent')];
+    resends = [() => new Promise(() => {})];
+    await openMembers();
+
+    fireEvent.press(resendButton());
+    await settle();
+    fireEvent.press(resendButton());
+    await settle();
+
+    expect(resendsSent()).toHaveLength(1);
+    expect(resendButton().props.accessibilityState).toMatchObject({ disabled: true, busy: true });
+  });
+
+  it('leaves no resend for an invitation accepted or revoked meanwhile', async () => {
+    roster = [owner, invitation(87, 'anna@example.com', 'sent')];
+    resends = [refused(404, 'NOT_FOUND')];
+    await openMembers();
+
+    roster = [owner];
+    fireEvent.press(resendButton());
+    await settle(1000);
+
+    expect(screen.queryByText('Invited member')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Resend/ })).toBeNull();
+    expect(toastCount()).toBe(0);
+  });
+
+  it('is offered from the roster after a restart, not from the invite that created it', async () => {
+    await openMembers();
+    roster = [owner, invitation(87, 'anna@example.com', 'queued', 60)];
+    await invite();
+    expect(screen.queryByRole('button', { name: /Resend/ })).toBeNull();
+
+    screen.unmount();
+    roster = [owner, invitation(87, 'anna@example.com', 'sent', 0)];
+    await openMembers();
+
+    expect(screen.queryByText('Invitation created')).toBeNull();
+    expect(resendButton().props.accessibilityState?.disabled).toBe(false);
+  });
+
+  it('is not offered to a member who does not own the space', async () => {
+    roster = [owner, invitation(87, 'anna@example.com', 'sent'), invitation(88, 'ben@example.com', 'failed')];
+    await openMembers({ role: 'member' });
+
+    expect(screen.getAllByText('Invited member')).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: /Resend/ })).toBeNull();
   });
 });

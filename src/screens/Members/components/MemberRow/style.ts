@@ -83,6 +83,9 @@ const createStyles = ({ colors }: ColorTheme) =>
       justifyContent: 'center',
       backgroundColor: colors.track,
     },
+    rowResendQuiet: {
+      backgroundColor: 'transparent',
+    },
     rowResendDisabled: {
       opacity: 0.45,
     },

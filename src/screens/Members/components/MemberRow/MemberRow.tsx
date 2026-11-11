@@ -14,8 +14,10 @@ interface Props {
   // actually act on safely -- see MembersList for why these can differ.
   canAct: boolean;
   onActionPress: () => void;
-  // A pending invitation whose email did not go out; `resend` only for the owner.
-  deliveryFailure?: { resend: ResendAvailability | null; onResend: () => void };
+  // A pending invitation whose email did not go out.
+  isDeliveryFailed?: boolean;
+  // Another email for a pending invitation, for the owner only.
+  resend?: { availability: ResendAvailability; onResend: () => void };
 }
 
 const getInitials = (name: string) =>
@@ -26,7 +28,7 @@ const getInitials = (name: string) =>
     .map((word) => word[0]?.toUpperCase())
     .join('');
 
-const MemberRow = ({ member, isSelf, canAct, onActionPress, deliveryFailure }: Props) => {
+const MemberRow = ({ member, isSelf, canAct, onActionPress, isDeliveryFailed = false, resend }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const isInvite = member.type === 'invite';
@@ -40,8 +42,9 @@ const MemberRow = ({ member, isSelf, canAct, onActionPress, deliveryFailure }: P
         ? 'Owner'
         : null;
 
-  const resend = deliveryFailure?.resend;
-  const resendLabel = resend && resend.waitSeconds > 0 ? `Resend in ${resend.waitSeconds}s` : 'Resend';
+  const availability = resend?.availability;
+  const resendLabel =
+    availability && availability.waitSeconds > 0 ? `Resend in ${availability.waitSeconds}s` : 'Resend';
 
   return (
     <View style={styles.row}>
@@ -70,7 +73,7 @@ const MemberRow = ({ member, isSelf, canAct, onActionPress, deliveryFailure }: P
         {(isInvite || member.name) && (
           // The middle goes first, so both the start of the address and its domain stay readable.
           <Text style={styles.rowMeta} numberOfLines={1} ellipsizeMode="middle">
-            {deliveryFailure && (
+            {isDeliveryFailed && (
               <Text style={styles.rowMetaFailed} accessibilityLabel="Email not sent">
                 {'Not sent · '}
               </Text>
@@ -80,17 +83,22 @@ const MemberRow = ({ member, isSelf, canAct, onActionPress, deliveryFailure }: P
         )}
       </View>
 
-      {deliveryFailure && resend && (
+      {resend && availability && (
+        // Quiet unless the email failed: a sent one may still not have arrived, but nothing is known to be wrong.
         <TouchableOpacity
-          style={[styles.rowResend, !resend.isAvailable && styles.rowResendDisabled]}
-          onPress={deliveryFailure.onResend}
-          disabled={!resend.isAvailable}
+          style={[
+            styles.rowResend,
+            !isDeliveryFailed && styles.rowResendQuiet,
+            !availability.isAvailable && styles.rowResendDisabled,
+          ]}
+          onPress={resend.onResend}
+          disabled={!availability.isAvailable}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={`${resendLabel} invitation email`}
-          accessibilityState={{ disabled: !resend.isAvailable, busy: resend.isResending }}
+          accessibilityState={{ disabled: !availability.isAvailable, busy: availability.isResending }}
         >
-          <Icon name="refresh" size={15} color={colors.text} strokeWidth={2} />
+          <Icon name="refresh" size={15} color={isDeliveryFailed ? colors.text : colors.muted} strokeWidth={2} />
         </TouchableOpacity>
       )}
 

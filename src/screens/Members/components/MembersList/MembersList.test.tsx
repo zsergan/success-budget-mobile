@@ -194,12 +194,36 @@ describe('MembersList', () => {
     });
 
     it('mark only a failed email, and leave queued, sending and sent rows plain', () => {
-      renderList([invitation(10, 'q@example.com', 'queued'), invitation(11, 's@example.com', 'sent')], {
+      renderList(
+        [
+          invitation(10, 'q@example.com', 'queued'),
+          invitation(11, 'g@example.com', 'sending'),
+          invitation(12, 's@example.com', 'sent'),
+        ],
+        { resendAvailabilityOf: () => ready },
+      );
+
+      expect(screen.queryByLabelText('Email not sent')).toBeNull();
+    });
+
+    it('offer no resend while an email is queued or sending', () => {
+      renderList([invitation(10, 'q@example.com', 'queued'), invitation(11, 'g@example.com', 'sending')], {
         resendAvailabilityOf: () => ready,
       });
 
-      expect(screen.queryByText('Not sent')).toBeNull();
       expect(screen.queryByRole('button', { name: /Resend/ })).toBeNull();
+    });
+
+    it('offer the owner a resend of a sent email, as it may not have arrived, without calling it failed', () => {
+      const onResend = jest.fn();
+      const sent = invitation(10, 's@example.com', 'sent');
+      renderList([sent], { resendAvailabilityOf: () => ready, onResend });
+
+      fireEvent.press(screen.getByRole('button', { name: 'Resend invitation email' }));
+
+      expect(onResend).toHaveBeenCalledWith(sent);
+      expect(screen.queryByLabelText('Email not sent')).toBeNull();
+      expect(screen.getByText('s@example.com')).toBeTruthy();
     });
 
     it('offer the owner a resend of a failed email', () => {
@@ -230,7 +254,7 @@ describe('MembersList', () => {
     });
 
     it('show a failure but no resend to anyone but the owner', () => {
-      renderList([invitation(10, 'f@example.com', 'failed')]);
+      renderList([invitation(10, 'f@example.com', 'failed'), invitation(11, 's@example.com', 'sent')]);
 
       expect(screen.getByLabelText('Email not sent')).toBeTruthy();
       expect(screen.queryByRole('button', { name: /Resend/ })).toBeNull();
