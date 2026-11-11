@@ -24,8 +24,9 @@ outlived its session: a refused or unanswered resend may still have
 scheduled an email, a `429` moves the cooldown and a `404` means the
 invitation ended.
 A space creation left unanswered past its key's lifetime refreshes
-Spaces without being sent again, so the user sees whether it was created
-before sending it once more.
+Spaces without being sent again, so the user sees whether it was created;
+creating it anyway starts a new attempt under a new key, as the old one
+may no longer be known to the server.
 An invitation accept refused with `409 SPACE_ALREADY_MEMBER` counts as
 joined: it refreshes Spaces and selects the space the answer names.
 A transaction request refused with `403 FORBIDDEN_SPACE` removes every

@@ -70,9 +70,16 @@ describe('an unanswered space creation from an earlier run', () => {
     expect(navigation.goBack).not.toHaveBeenCalled();
   });
 
-  it('warns that one past the key lifetime may already exist', async () => {
+  it('warns that one past the key lifetime may already exist, and creates it anyway under a new key', async () => {
     const { result } = await renderForm('expired');
 
     expect(result.current.pendingNotice).toMatch('may already exist');
+
+    await act(async () => {
+      await result.current.onSubmit();
+    });
+
+    const posts = mockedRequest.mock.calls.map(([config]) => config).filter(({ method }) => method === 'POST');
+    expect(posts).toEqual([expect.objectContaining({ headers: { 'Idempotency-Key': 'new-key' } })]);
   });
 });

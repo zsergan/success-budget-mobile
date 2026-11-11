@@ -67,9 +67,10 @@ export const restoreSpaceCreation =
     if (attempt?.status === 'unknown' && hasOutlivedKey(attempt)) await dispatch(expireAttempt(attempt.idempotencyKey));
   };
 
-// Sends a space creation under a key stored before it goes out. The same body again reuses the key and the body as
-// first sent; an unanswered attempt keeps them through a logout or a restart. Nothing is sent when it cannot be
-// stored first, and an unanswered one past the key's lifetime waits for the user to send it again.
+// Sends a space creation under a key stored before it goes out. The same body again reuses the key, the body as first
+// sent and its first send time; an unanswered attempt keeps them through a logout or a restart. Nothing is sent when it
+// cannot be stored first. One unanswered past the key's lifetime is never sent again: the user's next tap after the
+// warning starts a new attempt under a new key.
 export const submitSpaceCreation =
   (request: CreateSpaceRequest): AppThunk<Promise<SpaceSummary>> =>
   async (dispatch, getState) => {
@@ -83,17 +84,20 @@ export const submitSpaceCreation =
     if (!isCurrent()) throw sessionEnded();
 
     const previous = getState().spaceCreation.attempt;
-    const reused = previous && isSameCreateSpaceRequest(previous.request, request) ? previous : null;
+    const retried =
+      previous && previous.status !== 'expired' && isSameCreateSpaceRequest(previous.request, request)
+        ? previous
+        : null;
 
-    if (reused?.status === 'unknown' && hasOutlivedKey(reused)) {
-      await dispatch(expireAttempt(reused.idempotencyKey));
+    if (retried && hasOutlivedKey(retried)) {
+      await dispatch(expireAttempt(retried.idempotencyKey));
       throw new Error(SPACE_MAY_EXIST_MESSAGE);
     }
 
     // An earlier attempt of this body may have applied, so a refusal now says nothing about it.
-    const isRetry = reused !== null && reused.status !== 'expired';
-    const attempt: SpaceCreationAttempt = reused
-      ? { ...reused, status: 'sending', firstSentAt: isRetry ? reused.firstSentAt : Date.now() }
+    const isRetry = retried !== null;
+    const attempt: SpaceCreationAttempt = retried
+      ? { ...retried, status: 'sending' }
       : {
           idempotencyKey: randomUUID(),
           request: { ...request, ...(request.invites && { invites: [...request.invites] }) },
@@ -106,7 +110,8 @@ export const submitSpaceCreation =
     const persisted = await dispatch(persistSpaceCreation());
     if (!isCurrent()) throw sessionEnded();
     if (!persisted && !isRetry) {
-      dispatch(attemptSettled({ key, status: null }));
+      // Storage still holds the earlier attempt, so it stays the one on record.
+      dispatch(attemptRecorded({ userId, attempt: previous }));
       throw new Error(SPACE_NOT_SENT_MESSAGE);
     }
 

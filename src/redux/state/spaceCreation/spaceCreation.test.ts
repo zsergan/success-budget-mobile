@@ -297,16 +297,61 @@ describe('space creation', () => {
       expect(await stored()).toMatchObject({ idempotencyKey: 'key-1', status: 'expired' });
     });
 
-    it('sends it with the same key, under a new lifetime, only when the user taps again', async () => {
+    it('starts a new attempt with a new key and send time only when the user taps again', async () => {
       const store = await leaveUnanswered();
       await expect(create(store)).rejects.toThrow(SPACE_MAY_EXIST_MESSAGE);
       mockedRequest.mockClear();
-      mockedRequest.mockImplementation(answers(created));
+      let storedWhenSent: unknown;
+      mockedRequest.mockImplementationOnce(async () => {
+        storedWhenSent = await stored();
+        return { data: created };
+      });
 
       await create(store);
 
-      expect(posts()).toEqual([postOf('key-1')]);
+      expect(posts()).toEqual([postOf('key-2')]);
+      expect(storedWhenSent).toEqual({
+        idempotencyKey: 'key-2',
+        request: family,
+        firstSentAt: Date.now(),
+        status: 'sending',
+      });
       expect(store.getState().space.currentSpaceId).toBe(41);
+    });
+
+    it('keeps the new key when the new attempt goes unanswered too', async () => {
+      const store = await leaveUnanswered();
+      await expect(create(store)).rejects.toThrow(SPACE_MAY_EXIST_MESSAGE);
+      const startedAt = Date.now();
+      mockedRequest.mockImplementationOnce(noAnswer).mockImplementationOnce(answers(created));
+
+      await expect(create(store)).rejects.toThrow(SPACE_UNCONFIRMED_MESSAGE);
+      expect(await stored()).toMatchObject({ idempotencyKey: 'key-2', firstSentAt: startedAt, status: 'unknown' });
+
+      jest.setSystemTime(Date.now() + 60_000);
+      await create(store);
+
+      expect(posts().map(({ headers }) => headers)).toEqual([
+        { 'Idempotency-Key': 'key-1' },
+        { 'Idempotency-Key': 'key-2' },
+        { 'Idempotency-Key': 'key-2' },
+      ]);
+    });
+
+    it('sends no new attempt that cannot be stored first, and keeps the warning on record', async () => {
+      const store = await leaveUnanswered();
+      await expect(create(store)).rejects.toThrow(SPACE_MAY_EXIST_MESSAGE);
+      mockedRequest.mockClear();
+      jest.spyOn(AsyncStorage, 'setItem').mockRejectedValueOnce(new Error('Disk full'));
+
+      await expect(create(store)).rejects.toThrow('Could not create the space');
+
+      expect(posts()).toEqual([]);
+      expect(selectSpaceCreationAttempt(store.getState())).toMatchObject({
+        idempotencyKey: 'key-1',
+        status: 'expired',
+      });
+      expect(await stored()).toMatchObject({ idempotencyKey: 'key-1', status: 'expired' });
     });
 
     it('is restored as needing the user after a restart', async () => {
@@ -318,7 +363,7 @@ describe('space creation', () => {
       expect(posts()).toEqual([]);
     });
 
-    it('forgets a renewed attempt the server refuses', async () => {
+    it('forgets a new attempt the server refuses', async () => {
       const store = await leaveUnanswered();
       await expect(create(store)).rejects.toThrow(SPACE_MAY_EXIST_MESSAGE);
       mockedRequest.mockImplementationOnce(refusal(429, 'SPACE_INVITE_RATE_LIMITED'));
@@ -326,6 +371,92 @@ describe('space creation', () => {
       await expect(create(store)).rejects.toMatchObject({ code: 'SPACE_INVITE_RATE_LIMITED' });
 
       expect(await stored()).toBeNull();
+    });
+  });
+
+  describe('the key lifetime', () => {
+    const HOUR = 60 * 60 * 1000;
+    const firstSentAt = Date.parse('2026-11-03T12:00:00.000Z');
+    const at = (hours: number) => jest.setSystemTime(firstSentAt + hours * HOUR);
+
+    it('counts from the first send through repeated lost answers', async () => {
+      const store = signIn();
+      mockedRequest.mockImplementation(noAnswer);
+
+      for (const hours of [0, 8, 16, 22.9]) {
+        at(hours);
+        await expect(create(store)).rejects.toThrow(SPACE_UNCONFIRMED_MESSAGE);
+        expect(await stored()).toEqual({ idempotencyKey: 'key-1', request: family, firstSentAt, status: 'unknown' });
+      }
+
+      at(23);
+      await expect(create(store)).rejects.toThrow(SPACE_MAY_EXIST_MESSAGE);
+      expect(posts()).toHaveLength(4);
+    });
+
+    it('keeps its original age through a restart', async () => {
+      mockedRequest.mockImplementation(noAnswer);
+      await expect(create(signIn())).rejects.toThrow();
+
+      at(12);
+      let store = await restart();
+      expect(selectSpaceCreationAttempt(store.getState())).toMatchObject({ firstSentAt, status: 'unknown' });
+      await expect(create(store)).rejects.toThrow(SPACE_UNCONFIRMED_MESSAGE);
+
+      at(23);
+      store = await restart();
+      expect(selectSpaceCreationAttempt(store.getState())).toMatchObject({
+        idempotencyKey: 'key-1',
+        status: 'expired',
+      });
+      mockedRequest.mockImplementation(answers(created));
+      await create(store);
+      expect(posts()).toEqual([postOf('key-2')]);
+    });
+
+    // A server that keeps each key for 24 hours from its first use, a replay renewing nothing, and whose answers are lost.
+    it('never sends a key the server may have forgotten', async () => {
+      const RETENTION_MS = 24 * HOUR;
+      const keys = new Map<string, { createdAt: number; spaceId: number }>();
+      const sent: { key: string; sentAt: number }[] = [];
+      let spaces = 0;
+
+      mockedRequest.mockImplementation(async ({ method, headers }: SentRequest) => {
+        if (method !== 'POST') return { data: [] };
+
+        const key = headers!['Idempotency-Key'];
+        sent.push({ key, sentAt: Date.now() });
+        const kept = keys.get(key);
+        if (!kept || Date.now() - kept.createdAt >= RETENTION_MS) {
+          keys.set(key, { createdAt: Date.now(), spaceId: ++spaces });
+        }
+
+        throw new Error('Network Error');
+      });
+
+      let store = signIn();
+      for (const hours of [0, 6, 12, 18, 22.99]) {
+        at(hours);
+        if (hours === 12) store = await restart();
+        await expect(create(store)).rejects.toThrow(SPACE_UNCONFIRMED_MESSAGE);
+      }
+
+      for (const hours of [23, 24, 30]) {
+        at(hours);
+        store = await restart();
+        expect(selectSpaceCreationAttempt(store.getState())).toMatchObject({
+          idempotencyKey: 'key-1',
+          status: 'expired',
+        });
+      }
+
+      expect(spaces).toBe(1);
+      expect(sent.every(({ key, sentAt }) => key === 'key-1' && sentAt - firstSentAt < 23 * HOUR)).toBe(true);
+
+      // Creating it anyway is the user's own decision, under a key of its own.
+      await expect(create(store)).rejects.toThrow(SPACE_UNCONFIRMED_MESSAGE);
+      expect(sent.at(-1)).toEqual({ key: 'key-2', sentAt: firstSentAt + 30 * HOUR });
+      expect(spaces).toBe(2);
     });
   });
 

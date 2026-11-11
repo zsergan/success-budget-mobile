@@ -5,8 +5,8 @@ import type { CreateSpaceRequest } from '@api/dto';
 import { logoutMe } from '../auth/thunks';
 
 // `sending`: stored before it went out, so one found after a restart got no answer we know of.
-// `unknown`: no answer, or a server failure; the space may exist. `expired`: unknown past the key's lifetime, so only
-// the user sends it again.
+// `unknown`: no answer, or a server failure; the space may exist. `expired`: unknown past the key's lifetime; the key is
+// never sent again, and only the user starts a new attempt.
 export type SpaceCreationStatus = 'sending' | 'unknown' | 'expired';
 
 // The exact body sent, with its key and when it first went out (which starts the key's lifetime on the server).
@@ -36,7 +36,7 @@ const spaceCreationSlice = createSlice({
       state.userId = payload.userId;
       state.attempt = payload.attempt;
     },
-    attemptRecorded: (state, { payload }: PayloadAction<{ userId: number; attempt: SpaceCreationAttempt }>) => {
+    attemptRecorded: (state, { payload }: PayloadAction<{ userId: number; attempt: SpaceCreationAttempt | null }>) => {
       state.userId = payload.userId;
       state.attempt = payload.attempt;
     },
