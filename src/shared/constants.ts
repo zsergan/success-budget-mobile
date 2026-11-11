@@ -1,6 +1,7 @@
 import { AppColor } from '@shared/enums';
 import theme from '@shared/theme';
 import { resolveApiBaseUrl } from '@shared/utils/apiBaseUrl';
+import { originOf } from '@shared/utils/inviteLink';
 
 const API_BASE_URLS = {
   local: 'http://localhost:3000/api/v1',
@@ -15,7 +16,10 @@ export const BASE_API_URL = resolveApiBaseUrl({
   overrideUrl: process.env.EXPO_PUBLIC_API_BASE_URL,
   isDevBuild: __DEV__,
 });
+// The backend serves invitation links from the root of its API host (PUBLIC_WEB_ORIGIN).
+export const INVITE_LINK_ORIGIN = originOf(BASE_API_URL);
 export const AUTH_TOKEN_KEY = 'sbm-AUTH_TOKEN_KEY';
+export const PENDING_INVITATION_KEY = 'sbm-PENDING_INVITATION';
 export const BALANCE_HIDDEN_KEY = 'sbm-BALANCE_HIDDEN';
 export const THEME_PREFERENCE_KEY = 'sbm-THEME_PREFERENCE';
 
@@ -29,6 +33,9 @@ export const INVITE_EXPIRY_DAYS = 7;
 
 // Fallback only: prefer the 429's `error.retryAfterMs` (see @api/errors).
 export const INVITE_RATE_LIMIT_COOLDOWN_MS = 60_000;
+
+// The server keeps an Idempotency-Key's answer for 24 hours; past this a write is never resent on its own.
+export const IDEMPOTENCY_KEY_LIFETIME_MS = 23 * 60 * 60 * 1000;
 
 export const DEFAULT_WALLET_DESIGN = AppColor.SLATE;
 

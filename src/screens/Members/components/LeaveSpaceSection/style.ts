@@ -32,6 +32,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       fontSize: theme.fontSizes.caption,
       lineHeight: theme.lineHeights.caption,
       color: colors.muted,
+      textAlign: 'center',
     },
   });
 

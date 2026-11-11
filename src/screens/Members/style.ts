@@ -9,14 +9,19 @@ const createStyles = ({ colors }: ColorTheme) =>
       flex: 1,
       rowGap: theme.spacing.sm,
     },
-    spaceLine: {
-      fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodySm,
-      color: colors.muted,
-    },
+    // Fills the screen's height, so a short list leaves the room above the leave section.
     scrollContent: {
+      flexGrow: 1,
       rowGap: theme.spacing.xl,
+    },
+    content: {
+      flexGrow: 1,
+      rowGap: theme.spacing.xxl,
       paddingBottom: theme.spacing.xl,
+    },
+    main: {
+      flexGrow: 1,
+      rowGap: theme.spacing.xl,
     },
     centered: {
       flex: 1,

@@ -384,7 +384,7 @@ describe('ownership', () => {
     await show(ticket, error);
 
     act(() => {
-      store.dispatch({ type: logoutMe.fulfilled.type });
+      store.dispatch(logoutMe.fulfilled(undefined, 'logout', undefined));
     });
     await elapse(300);
     await show(ticket, error);
@@ -541,7 +541,7 @@ describe('handoff', () => {
     // The session ended instead.
     const second = control.begin().expectSpaceSwitch();
     act(() => {
-      store.dispatch({ type: logoutMe.fulfilled.type });
+      store.dispatch(logoutMe.fulfilled(undefined, 'logout', undefined));
     });
     expect(second.isCurrent()).toBe(false);
 

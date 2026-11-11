@@ -15,7 +15,7 @@ const AccountSettingsSection = ({ navigation, onChangePasswordPress, onLogoutPre
     <SettingsRow
       icon="mail"
       label="Join a space"
-      sub="Enter a code someone shared with you"
+      sub="Enter the 6-digit code from an invitation email"
       onPress={() => navigation.navigate(ScreenNames.ACCEPT_INVITE_SCREEN)}
     />
 

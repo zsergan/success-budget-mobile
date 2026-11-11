@@ -40,10 +40,13 @@ const createStyles = ({ colors }: ColorTheme) =>
       minWidth: 0,
       rowGap: 3,
     },
+    // With large text the badge drops under the name instead of cutting it short.
     rowNameLine: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       alignItems: 'center',
       columnGap: theme.spacing.xs + 3,
+      rowGap: 2,
     },
     rowName: {
       flexShrink: 1,
@@ -52,8 +55,9 @@ const createStyles = ({ colors }: ColorTheme) =>
       color: colors.text,
     },
     rowTag: {
-      height: 19,
+      minHeight: 19,
       paddingHorizontal: theme.spacing.xs + 3,
+      paddingVertical: 1,
       borderRadius: 6,
       alignItems: 'center',
       justifyContent: 'center',
@@ -70,6 +74,24 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     rowTagTextInvite: {
       color: colors.warn,
+    },
+    rowResend: {
+      width: 34,
+      height: 34,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.track,
+    },
+    rowResendQuiet: {
+      backgroundColor: 'transparent',
+    },
+    rowResendDisabled: {
+      opacity: 0.45,
+    },
+    rowMetaFailed: {
+      fontFamily: theme.fonts.semiBold,
+      color: colors.danger,
     },
     rowMeta: {
       fontFamily: theme.fonts.medium,

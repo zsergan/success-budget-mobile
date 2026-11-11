@@ -1,9 +1,10 @@
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
 import { useTheme, useThemedStyles } from '@hooks';
-import { INVITE_EXPIRY_DAYS, SPACE_LIMITS } from '@shared/constants';
+import { SPACE_LIMITS } from '@shared/constants';
 
 import createStyles from './style';
 
@@ -17,6 +18,8 @@ interface Props {
   // The last attempt's failure, under the field until the address is edited.
   error: { message: string } | null;
   onSubmit: (email: string) => Promise<boolean>;
+  // How the latest invitation's email is going, under the field.
+  feedback?: ReactNode;
 }
 
 const InviteMemberSection = ({
@@ -28,6 +31,7 @@ const InviteMemberSection = ({
   failedEmail,
   error,
   onSubmit,
+  feedback,
 }: Props) => {
   const { scheme, colorTheme } = useTheme();
   const { colors } = colorTheme;
@@ -106,10 +110,12 @@ const InviteMemberSection = ({
           <Text style={styles.hint}>
             {cooldownRemaining > 0
               ? `Too many invites sent -- try again in ${cooldownRemaining}s.`
-              : `There's no email -- after you invite, share the code with them yourself. Invites expire after ${INVITE_EXPIRY_DAYS} days if unused.`}
+              : 'They’ll get an email with a link to join.'}
           </Text>
         </>
       )}
+
+      {feedback}
     </View>
   );
 };

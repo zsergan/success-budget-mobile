@@ -21,7 +21,9 @@ interface Props extends RootStackScreenProps<ScreenNames.CREATE_SPACE_SCREEN> {}
 const CreateSpaceScreen = ({ navigation }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
-  const { currencies, control, watch, onSubmit, isSubmitDisabled, submitError } = useCreateSpaceForm({ navigation });
+  const { currencies, control, watch, onSubmit, isSubmitDisabled, submitError, pendingNotice } = useCreateSpaceForm({
+    navigation,
+  });
 
   const selectedType = watch('type');
   const isGroup = selectedType === SpaceType.GROUP;
@@ -111,6 +113,7 @@ const CreateSpaceScreen = ({ navigation }: Props) => {
         )}
 
         {submitError && <Banner tone="danger" text={submitError} />}
+        {pendingNotice && <Banner tone="warn" text={pendingNotice} />}
       </View>
 
       <Button title={isGroup ? 'Create and invite' : 'Create space'} onPress={onSubmit} disabled={isSubmitDisabled} />

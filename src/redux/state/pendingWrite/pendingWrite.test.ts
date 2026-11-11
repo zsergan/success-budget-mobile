@@ -114,7 +114,7 @@ describe('pending writes', () => {
 
     const submission = submit(store);
     await storing;
-    store.dispatch(logoutMe.fulfilled(undefined, 'logout'));
+    store.dispatch(logoutMe.fulfilled(undefined, 'logout', undefined));
     withProfile(store, 2);
     store.dispatch(activateSpace(1));
     release();

@@ -12,16 +12,23 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 interface UseInviteMemberProps {
   canInvite: boolean;
   cooldownRemaining: number;
+  // An email is now queued for it.
+  onInvited?: () => void;
 }
 
-const useInviteMember = ({ canInvite, cooldownRemaining }: UseInviteMemberProps) => {
+const useInviteMember = ({ canInvite, cooldownRemaining, onInvited }: UseInviteMemberProps) => {
   const [inviteMember] = useInviteMemberMutation();
   const captureSession = useSessionGuard();
   const store = useAppStore();
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [revealedInvite, setRevealedInvite] = useState<InviteResponse | null>(null);
+  // The latest invitation, with the code its create response alone carries, for its email's progress.
+  const [lastInvite, setLastInvite] = useState<{
+    spaceId: number | null;
+    invite: InviteResponse;
+    invitedAt: number;
+  } | null>(null);
   const [failedEmail, setFailedEmail] = useState<string | null>(null);
   // A new object for every failure, so the same message twice still shows again after the address was edited.
   const [inviteError, setInviteError] = useState<{ message: string } | null>(null);
@@ -54,12 +61,12 @@ const useInviteMember = ({ canInvite, cooldownRemaining }: UseInviteMemberProps)
     try {
       const invite = await inviteMember({ spaceId: requireSpaceId(originSpaceId), email }).unwrap();
 
-      // The space changed while this was in flight -- don't pop up an
-      // invite code for a space the user isn't looking at anymore.
-      if (!isSpaceCurrent()) return false;
+      // The space changed while this was in flight: its invitation belongs to a space the user isn't looking at.
+      if (!isSessionCurrent() || !isSpaceCurrent()) return false;
 
-      setRevealedInvite(invite);
+      setLastInvite({ spaceId: originSpaceId, invite, invitedAt: Date.now() });
       setFailedEmail(null);
+      onInvited?.();
 
       return true;
     } catch (error: unknown) {
@@ -82,9 +89,13 @@ const useInviteMember = ({ canInvite, cooldownRemaining }: UseInviteMemberProps)
     }
   };
 
-  const closeInviteCode = () => setRevealedInvite(null);
-
-  return { submit, isSubmitting, revealedInvite, closeInviteCode, failedEmail, inviteError };
+  return {
+    submit,
+    isSubmitting,
+    lastInvite: lastInvite?.spaceId === currentSpaceId ? lastInvite : null,
+    failedEmail,
+    inviteError,
+  };
 };
 
 export default useInviteMember;

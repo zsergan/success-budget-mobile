@@ -5,6 +5,7 @@ import { ApiErrorCode } from '@api/dto';
 import type { CreateTransactionResult, TransactionModel, UpdateTransactionResult } from '@api/models';
 import { spaceTags } from '@redux/api/baseApi';
 import type { AppThunk, RootState } from '@redux/Store';
+import { IDEMPOTENCY_KEY_LIFETIME_MS } from '@shared/constants';
 import { selectPendingWrite } from '../pendingWrite/selectors';
 import { writeRecorded, writeSettled } from '../pendingWrite/slice';
 import { forgetPendingWrite, persistPendingWrites } from '../pendingWrite/storage';
@@ -26,8 +27,8 @@ export type StoredOperation = TransactionRequest & { idempotencyKey: string; fir
 
 export type TransactionOperation = Readonly<StoredOperation & { sessionKey: number }>;
 
-// The server keeps a key's answer for 24 hours; past this a create is looked up by its operation id, never resent.
-export const KEY_LIFETIME_MS = 23 * 60 * 60 * 1000;
+// Past the key's lifetime a create is looked up by its operation id, never resent.
+export const KEY_LIFETIME_MS = IDEMPOTENCY_KEY_LIFETIME_MS;
 
 interface OperationResults {
   create: CreateTransactionResult;

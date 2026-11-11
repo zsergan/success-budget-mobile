@@ -383,6 +383,12 @@ describe('member and space rules', () => {
       expected: ['/spaces/1/members'],
     },
     {
+      name: 'resend invite',
+      mutate: (store: ReturnType<typeof createAppStore>) =>
+        store.dispatch(memberApi.endpoints.resendInvite.initiate({ spaceId: 1, inviteId: 3 })),
+      expected: ['/spaces/1/members'],
+    },
+    {
       name: 'revoke invite',
       mutate: (store: ReturnType<typeof createAppStore>) =>
         store.dispatch(memberApi.endpoints.revokeInvite.initiate({ spaceId: 1, inviteId: 3 })),
@@ -403,18 +409,74 @@ describe('member and space rules', () => {
     {
       name: 'accept invite',
       mutate: (store: ReturnType<typeof createAppStore>) =>
-        store.dispatch(memberApi.endpoints.acceptInvite.initiate('123456')),
+        store.dispatch(memberApi.endpoints.acceptInvite.initiate({ code: '123456' })),
+      expected: ['/spaces'],
+    },
+    {
+      name: 'accept invite by link token',
+      mutate: (store: ReturnType<typeof createAppStore>) =>
+        store.dispatch(memberApi.endpoints.acceptInvite.initiate({ token: '87.proof' })),
       expected: ['/spaces'],
     },
     {
       name: 'create space',
       mutate: (store: ReturnType<typeof createAppStore>) =>
-        store.dispatch(spaceApi.endpoints.createSpace.initiate({ name: 'New', currency_id: 1, type: SpaceType.GROUP })),
+        store.dispatch(
+          spaceApi.endpoints.createSpace.initiate({
+            idempotencyKey: 'key-1',
+            data: { name: 'New', currency_id: 1, type: SpaceType.GROUP },
+          }),
+        ),
       expected: ['/spaces'],
     },
   ])('$name refetches exactly $expected', async ({ mutate, expected }) => {
     mutationResponse = { id: 9 };
 
     expect(await refetchedMembersAndSpaces(mutate)).toEqual(expected);
+  });
+
+  const resend = (store: ReturnType<typeof createAppStore>) =>
+    store.dispatch(memberApi.endpoints.resendInvite.initiate({ spaceId: 1, inviteId: 3 }));
+
+  it.each([
+    ['the cooldown', { statusCode: 429, code: 'SPACE_INVITE_RATE_LIMITED', message: 'Wait' }],
+    ['an ended invitation', { statusCode: 404, code: 'NOT_FOUND', message: 'Not found' }],
+    ['a server failure', { statusCode: 500, message: 'Server error' }],
+  ])('a resend refused for %s still refreshes the roster', async (_, error) => {
+    mutationFails = true;
+    mutationError = error;
+
+    expect(await refetchedMembersAndSpaces(resend)).toEqual(['/spaces/1/members']);
+  });
+
+  it('a resend without an answer still refreshes the roster, as it may have scheduled an email', async () => {
+    const answer = mockedRequest.getMockImplementation()!;
+    mockedRequest.mockImplementation(async (config: RequestConfig) => {
+      if (config.method === 'POST') throw new Error('Network Error');
+      return answer(config);
+    });
+
+    expect(await refetchedMembersAndSpaces(resend)).toEqual(['/spaces/1/members']);
+  });
+
+  it('a resend that outlived its session refreshes nothing in the next one', async () => {
+    const store = createAppStore();
+    let failResend: (reason: unknown) => void = () => {};
+
+    store.dispatch(loginMe.fulfilled('token', 'login', { email: 'a@b.com', password: 'password1' }));
+    mockedRequest.mockReturnValueOnce(new Promise((_, reject) => (failResend = reject)));
+    const pending = resend(store);
+
+    store.dispatch(logoutMe.fulfilled(undefined, 'logout', undefined));
+    store.dispatch(loginMe.fulfilled('token-2', 'login-2', { email: 'a@b.com', password: 'password1' }));
+    store.dispatch(memberApi.endpoints.getMembers.initiate({ spaceId: 1 }));
+    await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
+    mockedRequest.mockClear();
+
+    failResend({ response: { status: 429, data: { statusCode: 429, message: 'Wait' } } });
+    await pending;
+    await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
+
+    expect(mockedRequest).not.toHaveBeenCalled();
   });
 });

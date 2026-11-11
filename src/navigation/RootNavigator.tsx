@@ -28,6 +28,7 @@ import { selectLaunch } from '@redux/state/launch/selectors';
 import { runLaunch } from '@redux/state/launch/thunks';
 import { ScreenNames } from '@shared/enums';
 import MainNavigator from './MainNavigator';
+import useInvitationLinks from './useInvitationLinks';
 import useSessionData from './useSessionData';
 import useToastRouteReporting from './useToastRouteReporting';
 
@@ -51,12 +52,13 @@ const RootNavigator = () => {
     dispatch(runLaunch());
   }, [dispatch]);
 
+  const isReady = phase === 'ready';
+  const { onNavigationReady } = useInvitationLinks(navigationRef, isReady);
+
   // A sign-in from Welcome loads the session's required data the same way a cold start does.
   useEffect(() => {
     if (isSignedIn && phase === 'welcome') dispatch(runLaunch());
   }, [dispatch, isSignedIn, phase]);
-
-  const isReady = phase === 'ready';
 
   const navigationTheme = useMemo(() => {
     const { colors } = colorTheme;
@@ -90,7 +92,10 @@ const RootNavigator = () => {
         <NavigationContainer
           ref={navigationRef}
           theme={navigationTheme}
-          onReady={reportFocusedRoute}
+          onReady={() => {
+            reportFocusedRoute();
+            onNavigationReady();
+          }}
           onStateChange={reportFocusedRoute}
         >
           <Stack.Navigator screenOptions={{ animation: isReady ? 'slide_from_right' : 'slide_from_left' }}>

@@ -5,6 +5,7 @@ import { loginMe, logoutMe } from '../auth/thunks';
 import { baseApi } from '@redux/api/baseApi';
 import { memberApi } from '../member/api';
 import { profileApi } from '../profile/api';
+import { withProfile } from '../profile/fixtures';
 import { spaceApi } from './api';
 import { walletApi } from '../wallet/api';
 import {
@@ -41,8 +42,15 @@ const signedInStore = () => {
   const store = createAppStore();
 
   store.dispatch(loginMe.fulfilled('test-token', 'req-login', { email: 'a@b.com', password: 'password1' }));
+  withProfile(store);
 
   return store;
+};
+
+// A creation is stored before it goes out.
+const requestSent = async () => {
+  const isSent = () => mockedRequest.mock.calls.some(([{ method }]) => method !== 'GET');
+  for (let tick = 0; tick < 50 && !isSent(); tick += 1) await Promise.resolve();
 };
 
 beforeEach(() => jest.clearAllMocks());
@@ -98,6 +106,7 @@ describe('createSpaceAndSelect', () => {
     mockedRequest.mockReturnValueOnce(new Promise((resolve) => (finishCreate = resolve)));
 
     const pending = store.dispatch(createSpaceAndSelect({ name: 'New', currency_id: 1, type: SpaceType.GROUP }));
+    await requestSent();
 
     store.dispatch(logoutMe.fulfilled(undefined, 'req-logout', undefined));
     store.dispatch(loginMe.fulfilled('token-2', 'req-login-2', { email: 'a@b.com', password: 'password1' }));
@@ -115,9 +124,33 @@ describe('acceptInviteAndSelect', () => {
     store.dispatch(activateSpace(1));
     mockedRequest.mockResolvedValue({ data: space({ id: 55, type: SpaceType.GROUP }) });
 
-    await store.dispatch(acceptInviteAndSelect('123456'));
+    await store.dispatch(acceptInviteAndSelect({ code: '123456' }));
 
     expect(store.getState().space.currentSpaceId).toBe(55);
+  });
+
+  it('takes an already-member answer as joined: selects its space and refreshes the spaces list', async () => {
+    const store = signedInStore();
+    store.dispatch(activateSpace(1));
+    store.dispatch(spaceApi.endpoints.getSpaces.initiate());
+    mockedRequest.mockImplementation(async ({ url }: { url: string }) => {
+      if (url === '/spaces') return { data: [space({ id: 1 }), space({ id: 41, type: SpaceType.GROUP })] };
+      throw {
+        response: {
+          status: 409,
+          data: { statusCode: 409, code: 'SPACE_ALREADY_MEMBER', message: 'Already a member', spaceId: 41 },
+        },
+      };
+    });
+    await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
+    mockedRequest.mockClear();
+
+    await expect(store.dispatch(acceptInviteAndSelect({ token: '87.proof' }))).resolves.toEqual({ spaceId: 41 });
+    await jest.runOnlyPendingTimersAsync();
+    await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
+
+    expect(store.getState().space.currentSpaceId).toBe(41);
+    expect(mockedRequest).toHaveBeenCalledWith(expect.objectContaining({ url: '/spaces', method: 'GET' }));
   });
 
   it('keeps the current space when the accept fails', async () => {
@@ -126,7 +159,7 @@ describe('acceptInviteAndSelect', () => {
     store.dispatch(activateSpace(1));
     mockedRequest.mockRejectedValue({ response: { status: 404, data: { statusCode: 404, message: 'Not found' } } });
 
-    await expect(store.dispatch(acceptInviteAndSelect('000000'))).rejects.toMatchObject({ statusCode: 404 });
+    await expect(store.dispatch(acceptInviteAndSelect({ code: '000000' }))).rejects.toMatchObject({ statusCode: 404 });
     expect(store.getState().space.currentSpaceId).toBe(1);
   });
 });
@@ -196,7 +229,7 @@ describe('leaveCurrentSpace', () => {
   });
 
   it('fails without a request when the profile is not loaded yet', async () => {
-    const store = signedInStore();
+    const store = createAppStore();
 
     store.dispatch(activateSpace(10));
 
@@ -234,6 +267,7 @@ describe('a request from before a logout and a new login', () => {
     );
 
     const pending = start();
+    await requestSent();
 
     await store.dispatch(logoutMe());
     store.dispatch(loginMe.fulfilled('token-2', 'req-login-2', { email: 'a@b.com', password: 'password1' }));
@@ -262,7 +296,7 @@ describe('a request from before a logout and a new login', () => {
     await expect(
       settleInNextSession(
         store,
-        () => store.dispatch(acceptInviteAndSelect('123456')),
+        () => store.dispatch(acceptInviteAndSelect({ code: '123456' })),
         () => respond(space({ id: 55 })),
       ),
     ).rejects.toBeDefined();

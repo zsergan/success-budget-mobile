@@ -190,7 +190,7 @@ describe('a late response after a logout and a new login', () => {
 
     await sendAndFail(status, {
       beforeResponse: () => {
-        store.dispatch(logoutMe.fulfilled(undefined, 'req-logout'));
+        store.dispatch(logoutMe.fulfilled(undefined, 'req-logout', undefined));
         signIn(store, 'token-2');
       },
     });

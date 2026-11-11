@@ -55,6 +55,7 @@ const readApiBody = (data: unknown): Partial<ErrorResponse> => {
     ...(isString(body.requestId) && { requestId: body.requestId }),
     ...(isString(body.path) && { path: body.path }),
     ...(isString(body.timestamp) && { timestamp: body.timestamp }),
+    ...(typeof body.spaceId === 'number' && { spaceId: body.spaceId }),
   };
 };
 

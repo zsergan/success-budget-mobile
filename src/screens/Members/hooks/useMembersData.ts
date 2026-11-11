@@ -1,4 +1,4 @@
-import type { SpaceMember } from '@api/dto';
+import type { InviteEmailStatus, SpaceMember } from '@api/dto';
 import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetMembersQuery } from '@redux/state/member/api';
@@ -9,10 +9,13 @@ import { SpaceType } from '@shared/enums';
 
 const EMPTY_MEMBERS: SpaceMember[] = [];
 
+// An email still on its way: the roster changes on its own until it is sent or has failed.
+export const isDeliveryPending = (status: InviteEmailStatus | undefined) => status === 'queued' || status === 'sending';
+
 const useMembersData = () => {
   const currentSpace = useAppSelector(selectCurrentSpace);
   const membersQuery = useGetMembersQuery(useSpaceArg());
-  const { currentData, isFetching, isError, error, refetch } = membersQuery;
+  const { currentData, isFetching, isError, error, refetch, fulfilledTimeStamp } = membersQuery;
   const members = currentData ?? EMPTY_MEMBERS;
   const hasLoaded = currentData !== undefined;
   const profileId = useAppSelector(selectProfileId);
@@ -43,6 +46,9 @@ const useMembersData = () => {
     isAtMemberCap,
     isAtInviteCap,
     canInvite,
+    hasPendingDelivery: inviteRows.some((invite) => isDeliveryPending(invite.email_status)),
+    // When the roster was answered: its resend_after_seconds count from here.
+    rosterReceivedAt: fulfilledTimeStamp,
     retry: refetch,
   };
 };

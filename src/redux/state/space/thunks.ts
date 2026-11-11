@@ -1,11 +1,13 @@
 import { createAction } from '@reduxjs/toolkit';
 import type { QueryCacheKey } from '@reduxjs/toolkit/query';
 
-import type { CreateSpaceRequest, SpaceSummary } from '@api/dto';
+import type { AcceptInviteRequest, CreateSpaceRequest, ErrorResponse, SpaceSummary } from '@api/dto';
+import { ApiErrorCode } from '@api/dto';
 import { baseApi, spaceIdOfArg, spaceTags } from '@redux/api/baseApi';
 import type { AppThunk } from '@redux/Store';
 import { memberApi } from '../member/api';
 import { selectProfileId } from '../profile/selectors';
+import { submitSpaceCreation } from '../spaceCreation/thunks';
 import { spaceApi } from './api';
 import { pickFallbackSpaceId, selectSpaces } from './selectors';
 
@@ -77,7 +79,7 @@ export const createSpaceAndSelect =
   (data: CreateSpaceRequest): AppThunk<Promise<SpaceSummary>> =>
   async (dispatch, getState) => {
     const { sessionKey } = getState().auth;
-    const space = await dispatch(spaceApi.endpoints.createSpace.initiate(data, { track: false })).unwrap();
+    const space = await dispatch(submitSpaceCreation(data));
 
     if (getState().auth.sessionKey === sessionKey) {
       dispatch(activateSpace(space.id));
@@ -86,17 +88,28 @@ export const createSpaceAndSelect =
     return space;
   };
 
+// A repeat whose answer was lost, or a membership from before, answers 409 with the space: joined either way.
 export const acceptInviteAndSelect =
-  (code: string): AppThunk<Promise<SpaceSummary>> =>
+  (request: AcceptInviteRequest): AppThunk<Promise<{ spaceId: number }>> =>
   async (dispatch, getState) => {
     const { sessionKey } = getState().auth;
-    const space = await dispatch(memberApi.endpoints.acceptInvite.initiate(code, { track: false })).unwrap();
+    let spaceId: number;
 
-    if (getState().auth.sessionKey === sessionKey) {
-      dispatch(activateSpace(space.id));
+    try {
+      ({ id: spaceId } = await dispatch(memberApi.endpoints.acceptInvite.initiate(request, { track: false })).unwrap());
+    } catch (error) {
+      const { code, spaceId: memberOf, isStale } = (error ?? {}) as Partial<ErrorResponse>;
+      if (isStale || code !== ApiErrorCode.SPACE_ALREADY_MEMBER || memberOf === undefined) throw error;
+
+      dispatch(spaceApi.util.invalidateTags(['Spaces']));
+      spaceId = memberOf;
     }
 
-    return space;
+    if (getState().auth.sessionKey === sessionKey) {
+      dispatch(activateSpace(spaceId));
+    }
+
+    return { spaceId };
   };
 
 // Resolves `movedOff: true` when it switched the user off the space they

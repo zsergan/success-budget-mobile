@@ -19,6 +19,16 @@ Likewise a transaction write refused with `TRANSACTION_NOT_FOUND`,
 `FORBIDDEN_WALLET` or `FORBIDDEN_CATEGORY` refreshes everything a
 transaction write does, since the cached record, wallet or category is
 behind the server.
+An invitation resend refreshes Members after any answer except one that
+outlived its session: a refused or unanswered resend may still have
+scheduled an email, a `429` moves the cooldown and a `404` means the
+invitation ended.
+A space creation left unanswered past its key's lifetime refreshes
+Spaces without being sent again, so the user sees whether it was created;
+creating it anyway starts a new attempt under a new key, as the old one
+may no longer be known to the server.
+An invitation accept refused with `409 SPACE_ALREADY_MEMBER` counts as
+joined: it refreshes Spaces and selects the space the answer names.
 A transaction request refused with `403 FORBIDDEN_SPACE` removes every
 cached entry of that space and refreshes Spaces, whose fallback moves the
 selection to a space the user still belongs to.
@@ -52,7 +62,8 @@ Every resource except Profile and Currencies is scoped to the active space.
 | `History.Latest` | `GET /spaces/:id/transactions/latest`                           | `transaction.latest`  | Single most recent row (or `null`); tells "no transactions at all" apart from "none in this period"                                                                                                      |
 | `History.Count`  | `GET /spaces/:id/transactions/count?from&to[&q]`                | — (RTK Query only)    | `summary.count` of the same `History.Feed` selection, initial balances included; the period picker's counter                                                                                             |
 | `History.Feed`   | `GET /spaces/:id/transactions/feed?from&to&time_zone[&q]`       | — (RTK Query only)    | Cursor pages of rows (same row shape) with the selection's `summary` and each listed day's `net`; one entry per selection and load generation; the Transactions tab, its search and the Stats drill-down |
-| `Members`        | `GET /spaces/:id/members`                                       | `member.members`      | Member rows and pending invite rows                                                                                                                                                                      |
+| `Members`        | `GET /spaces/:id/members`                                       | `member.members`      | Member rows and pending invite rows with their email delivery state                                                                                                                                      |
+| `InvitePreview`  | `POST /spaces/invites/preview`                                  | — (RTK Query only)    | Not scoped to a space and provides no tags; one entry per link token, read again after a restart rather than stored                                                                                      |
 | `Statistics`     | `GET /spaces/:id/statistics/{summary,trend,breakdown}`          | — (RTK Query only)    | Every transaction sum and count; category and wallet names, colors, archived and deleted state                                                                                                           |
 
 "History" below means all of `History.Recent`, `History.Latest`,
@@ -116,6 +127,7 @@ Space-scoped endpoints are written without their `/spaces/:id` prefix.
 | Edit wallet                         | `PUT /wallets/:id`                                                               | Wallets; History (embedded wallet)                                                                                                                                       | Wallets, `History.Range`, `History.Latest`                                                           | **`History.Recent`**             |
 | Delete wallet (soft)                | `DELETE /wallets/:id`                                                            | Wallets (row gone, total and delta change); History (embedded wallet becomes `null`). Limits and Categories keep counting its history.                                   | Wallets, `History.Range`, `History.Latest`                                                           | **`History.Recent`**             |
 | Invite member                       | `POST /spaces/:id/invites`                                                       | Members                                                                                                                                                                  | Members                                                                                              | —                                |
+| Resend invite                       | `POST /spaces/:id/invites/:inviteId/resend`                                      | Members (`email_status`, `can_resend`, `resend_after_seconds`)                                                                                                           | Members, also after a refusal or no answer                                                           | —                                |
 | Revoke invite                       | `DELETE /spaces/:id/invites/:inviteId`                                           | Members                                                                                                                                                                  | Members                                                                                              | —                                |
 | Remove another member (owner)       | `DELETE /spaces/:id/members/:userId`                                             | Members; Spaces (`member_count`)                                                                                                                                         | Members, Spaces                                                                                      | —                                |
 | Leave space                         | `DELETE /spaces/:id/members/:self`                                               | Spaces (space gone, or ownership moved to the oldest member); active space may no longer be accessible                                                                   | `activateSpace(null)`, then Spaces, whose fallback activates the next space and reloads all its data | —                                |
@@ -136,6 +148,11 @@ described in the lifecycle section.
   every 30 s per space. Stats follows through its revision and also
   restarts its own cycle when it is older than 30 s. Open details are read
   again on a return to the app; a form being edited keeps its draft.
+- **Invitation emails.** Members asks for the roster again every 5 s
+  while an invitation's email is `queued` or `sending` and the screen is
+  in focus, for at most 2 minutes after the screen comes into focus or the
+  owner invites or resends (`useDeliveryPolling`). A `sent`, `failed` or
+  `not_sent` email, leaving the screen or the end of that window stops it.
 - **Month rollover.** `useSpaceRefresh` also wakes when a new month begins:
   it renders the screen again, so a current period moves onto the new
   month, and refreshes the space's data regardless of the 30 s limit.

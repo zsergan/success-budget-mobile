@@ -13,6 +13,7 @@ interface Props {
   onClose: () => void;
 }
 
+// A fallback to the email, opened only on request: the create response is the only one that carries the code.
 const InviteCodeDialog = ({ invite, spaceName, onClose }: Props) => {
   const styles = useThemedStyles(createStyles);
   // A failed share, said in the dialog while it stays open; it belongs to the invite it was for.
@@ -32,9 +33,9 @@ const InviteCodeDialog = ({ invite, spaceName, onClose }: Props) => {
     <ConfirmationSheet
       confirmation={
         invite && {
-          title: `Invite sent to ${invite.email}`,
+          title: `Invite code for ${invite.email}`,
           description:
-            'There’s no email — this code is shown only once. Share it or send it to them yourself; it works until it’s used or expires.',
+            'If the email doesn’t arrive, share this code. They enter it under Join a space; it works until it’s used or the invitation expires. It isn’t shown again once you leave this screen.',
           context: (
             <View style={styles.codeContainer}>
               <Text style={styles.code} selectable>

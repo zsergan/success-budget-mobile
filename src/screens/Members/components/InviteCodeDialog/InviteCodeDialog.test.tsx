@@ -18,9 +18,11 @@ const INVITE: InviteResponse = {
   id: 4,
   email: 'anna@example.com',
   expires_at: '2026-11-01T00:00:00.000Z',
-  code: 'K7QX2P',
+  code: '042917',
+  email_status: 'queued',
+  resend_after_seconds: 60,
 };
-const TITLE = 'Invite sent to anna@example.com';
+const TITLE = 'Invite code for anna@example.com';
 
 const renderDialog = () => {
   const onClose = jest.fn();
@@ -51,13 +53,14 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
-it('shows the code once, selectable, with how to pass it on', () => {
+it('offers the code, selectable, as a fallback to the email, never saying there is no email', () => {
   renderDialog();
 
   expect(screen.getByRole('header', { name: TITLE })).toBeTruthy();
-  expect(screen.getByText('K7QX2P').props.selectable).toBe(true);
-  expect(screen.getByText(/this code is shown only once/)).toBeTruthy();
-  expect(screen.getByText(/it works until it’s used or expires/)).toBeTruthy();
+  expect(screen.getByText('042917').props.selectable).toBe(true);
+  expect(screen.getByText(/If the email doesn’t arrive, share this code/)).toBeTruthy();
+  expect(screen.getByText(/works until it’s used or the invitation expires/)).toBeTruthy();
+  expect(screen.queryByText(/no email/i)).toBeNull();
 });
 
 it('shares the code with the space name, once for a double tap, and stays open', async () => {
@@ -71,7 +74,7 @@ it('shares the code with the space name, once for a double tap, and stays open',
   fireEvent.press(screen.getByRole('button', { name: 'Share invite' }));
 
   expect(share).toHaveBeenCalledTimes(1);
-  expect(share).toHaveBeenCalledWith({ message: 'Join "Flat" on Success Budget -- use invite code K7QX2P' });
+  expect(share).toHaveBeenCalledWith({ message: 'Join "Flat" on Success Budget -- use invite code 042917' });
 
   await act(async () => finishSharing());
 

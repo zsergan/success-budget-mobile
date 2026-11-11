@@ -13,7 +13,7 @@ import type { RootStackScreenProps } from '@shared/types';
 import type { PasswordResetFailure } from '@screens/Auth/passwordReset/passwordResetFailure';
 import { getPasswordResetFailure } from '@screens/Auth/passwordReset/passwordResetFailure';
 import useLatestRequest from '@screens/Auth/passwordReset/useLatestRequest';
-import useSecondsUntil from '@screens/Auth/passwordReset/useSecondsUntil';
+import useSecondsUntil from '@hooks/useSecondsUntil';
 import emailSchema from '@screens/Auth/validation/emailSchema';
 
 const schema = yup.object().shape({ email: emailSchema });

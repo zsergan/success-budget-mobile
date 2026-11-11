@@ -10,6 +10,7 @@ import { toastCount, withToasts } from '@components/Toast/testing';
 
 import { createAppStore } from '@redux/Store';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
+import { withProfile } from '@redux/state/profile/fixtures';
 import { spaceApi } from '@redux/state/space/api';
 import { acceptInviteAndSelect, activateSpace, createSpaceAndSelect } from '@redux/state/space/thunks';
 import { SpaceType } from '@shared/enums';
@@ -30,7 +31,12 @@ type AppStore = ReturnType<typeof createAppStore>;
 
 const createSpace = (store: AppStore) =>
   store
-    .dispatch(spaceApi.endpoints.createSpace.initiate({ name: 'Home', currency_id: 1, type: SpaceType.PERSONAL }))
+    .dispatch(
+      spaceApi.endpoints.createSpace.initiate({
+        idempotencyKey: 'key-1',
+        data: { name: 'Home', currency_id: 1, type: SpaceType.PERSONAL },
+      }),
+    )
     .unwrap();
 
 const renderSubmitHandler = (onSubmit: (store: AppStore) => Promise<unknown> = createSpace) => {
@@ -124,15 +130,18 @@ it('does not count a submit that resolves after the session ended as a save', as
 
 describe('a space form submitted before a logout and a new login', () => {
   const submits = {
-    create: (store: AppStore) =>
-      store.dispatch(createSpaceAndSelect({ name: 'New', currency_id: 1, type: SpaceType.GROUP })),
-    accept: (store: AppStore) => store.dispatch(acceptInviteAndSelect('123456')),
+    create: (store: AppStore) => {
+      withProfile(store);
+      return store.dispatch(createSpaceAndSelect({ name: 'New', currency_id: 1, type: SpaceType.GROUP }));
+    },
+    accept: (store: AppStore) => store.dispatch(acceptInviteAndSelect({ code: '123456' })),
   };
   const oldResponses = {
     success: (resolve: (value: unknown) => void) => resolve({ data: { id: 7 } }),
     failure: (_: unknown, reject: (reason: unknown) => void) =>
       reject({ response: { status: 500, data: { message: 'Server error', statusCode: 500 } } }),
   };
+  const isPostSent = () => mockedRequest.mock.calls.some(([{ method }]) => method === 'POST');
   const cases = Object.entries(submits).flatMap(([form, submit]) =>
     Object.entries(oldResponses).map(([outcome, respond]) => [form, outcome, submit, respond] as const),
   );
@@ -146,6 +155,8 @@ describe('a space form submitted before a logout and a new login', () => {
 
     await act(async () => {
       const submitting = result.current.onSubmit();
+      // A creation is stored before it goes out.
+      for (let tick = 0; tick < 50 && !isPostSent(); tick += 1) await Promise.resolve();
 
       await store.dispatch(logoutMe());
       store.dispatch(loginMe.fulfilled('token-2', 'req-login-2', { email: 'a@b.com', password: 'password1' }));

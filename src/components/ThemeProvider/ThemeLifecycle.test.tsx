@@ -35,7 +35,7 @@ it('keeps the preference through sign-out, sign-in and a space switch', async ()
   await act(async () => {
     store.dispatch(activateSpace(1));
     store.dispatch(activateSpace(2));
-    store.dispatch(logoutMe.fulfilled(undefined, 'req-logout'));
+    store.dispatch(logoutMe.fulfilled(undefined, 'req-logout', undefined));
     store.dispatch(loginMe.fulfilled('a-token', 'req-login', { email: 'me@example.com', password: 'password1' }));
   });
 

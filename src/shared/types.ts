@@ -46,6 +46,7 @@ export type RootStackParamList = {
   [ScreenNames.CATEGORIES_SCREEN]: undefined;
   [ScreenNames.CREATE_SPACE_SCREEN]: undefined;
   [ScreenNames.MEMBERS_SCREEN]: undefined;
+  // No params: a link's token stays in the invitation state, never in navigation.
   [ScreenNames.ACCEPT_INVITE_SCREEN]: undefined;
   [ScreenNames.LAUNCH_SCREEN]: undefined;
   [ScreenNames.WELCOME_SCREEN]: undefined;

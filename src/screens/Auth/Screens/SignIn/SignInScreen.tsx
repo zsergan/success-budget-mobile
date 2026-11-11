@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import { Banner, Button, Input, PasswordInput, TextLink } from '@components';
+import { Banner, Button, Input, PasswordInput, PendingInvitationNotice, TextLink } from '@components';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import AuthFormLayout from '@screens/Auth/AuthFormLayout/AuthFormLayout';
@@ -38,6 +38,7 @@ const SignInScreen = ({ navigation, route }: Props) => {
     <AuthFormLayout
       title="Welcome back"
       description="Sign in to your Success Budget account."
+      headerAccessory={<PendingInvitationNotice />}
       onBackButtonPress={() => navigation.goBack()}
       action={
         <Button
