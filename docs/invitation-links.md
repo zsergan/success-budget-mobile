@@ -40,9 +40,10 @@ toasts or logs. Storage follows every change of it.
 | Kept seven days                                                       | dropped on the next start               |
 
 The stored invitation is read once at start, and that read can finish
-after the user has acted. Every change of intent (a link opened, a join,
-a terminal answer, a decline, an ordinary sign-out) bumps the slice's
-`revision`, even with nothing loaded yet; opening the flow does not.
+after the user has acted. Every change of intent (a link opened, a join
+or terminal answer for the pending token, a decline, an ordinary
+sign-out) bumps the slice's `revision`, even with nothing loaded yet;
+opening the flow and a join by code do not.
 Storage is rewritten on each bump, writes go out one after another, and
 a read that finishes under a newer revision is dropped unused. So a
 sign-out or a decline made before the stored link loaded keeps it gone,

@@ -28,7 +28,11 @@ const cleared = (state: InvitationState): InvitationState => ({ ...initialState,
 // Answers after which the token can never be used: it ended, or its space already has the user.
 const TERMINAL_CODES: string[] = [ApiErrorCode.SPACE_INVITE_UNUSABLE, ApiErrorCode.SPACE_ALREADY_MEMBER];
 
-const tokenOfArg = (arg: unknown) => (arg as { token?: unknown } | undefined)?.token;
+// A join or preview by link answers for the pending invitation only when it carried that token; one by code never does.
+const isForPending = (state: InvitationState, arg: unknown) => {
+  const token = (arg as { token?: unknown } | undefined)?.token;
+  return token !== undefined && state.pending?.token === token;
+};
 
 const invitationSlice = createSlice({
   name: 'invitation',
@@ -66,7 +70,7 @@ const invitationSlice = createSlice({
     });
 
     builder.addMatcher(memberApi.endpoints.acceptInvite.matchFulfilled, (state, action) => {
-      if (state.pending?.token === tokenOfArg(action.meta.arg.originalArgs)) return cleared(state);
+      if (isForPending(state, action.meta.arg.originalArgs)) return cleared(state);
     });
 
     builder.addMatcher(
@@ -75,7 +79,7 @@ const invitationSlice = createSlice({
         const error = action.payload as ErrorResponse | undefined;
         const isTerminal = !error?.isStale && error?.code !== undefined && TERMINAL_CODES.includes(error.code);
 
-        if (isTerminal && state.pending?.token === tokenOfArg(action.meta.arg.originalArgs)) return cleared(state);
+        if (isTerminal && isForPending(state, action.meta.arg.originalArgs)) return cleared(state);
       },
     );
   },

@@ -279,6 +279,24 @@ describe('a restore still reading when the intent changes', () => {
     expect(stored()).toMatchObject({ token: token(88) });
   });
 
+  it('restores it through a join with a code', async () => {
+    keep(87);
+    const store = signedIn();
+    const release = deferNextRead();
+    const restoring = store.dispatch(restoreInvitation());
+    mockedRequest
+      .mockResolvedValueOnce({ data: { id: 41 } })
+      .mockImplementationOnce(refusal(404, 'SPACE_INVITE_UNUSABLE'));
+
+    await store.dispatch(memberApi.endpoints.acceptInvite.initiate({ code: '042917' }));
+    await store.dispatch(memberApi.endpoints.acceptInvite.initiate({ code: '000000' }));
+    await release();
+    await restoring;
+
+    expect(selectPendingInvitationToken(store.getState())).toBe(token(87));
+    expect(stored()).toMatchObject({ token: token(87) });
+  });
+
   it.each([
     ['an account switch', (store: Store) => store.dispatch(switchAccountForInvitation())],
     ['an expired session', (store: Store) => store.dispatch(logoutMe({ reason: 'sessionExpired' }))],
