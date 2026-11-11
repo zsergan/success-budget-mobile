@@ -39,6 +39,17 @@ toasts or logs. Storage follows every change of it.
 | Not now, Close, or leaving the screen by back                         | cleared                                 |
 | Kept seven days                                                       | dropped on the next start               |
 
+The stored invitation is read once at start, and that read can finish
+after the user has acted. Every change of intent (a link opened, a join,
+a terminal answer, a decline, an ordinary sign-out) bumps the slice's
+`revision`, even with nothing loaded yet; opening the flow does not.
+Storage is rewritten on each bump, writes go out one after another, and
+a read that finishes under a newer revision is dropped unused. So a
+sign-out or a decline made before the stored link loaded keeps it gone,
+in memory and in storage, and removing an outlived record never removes
+a newer link. An account switch and a `401` do not bump it, so a read
+still under way restores the invitation through them.
+
 ## Opening the flow
 
 `useInvitationLinks` (`src/navigation/`) reads the launch URL, listens for

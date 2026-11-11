@@ -22,16 +22,16 @@ export const receiveInvitationLink =
     return true;
   };
 
-// The intent kept through a registration, a verification or a restart.
+// The intent kept through a registration, a verification or a restart. What was read is dropped unused when the intent
+// changed meanwhile (a newer link, a sign-out, a decline): storage already follows that change.
 export const restoreInvitation = (): AppThunk<Promise<void>> => async (dispatch, getState) => {
+  const { revision } = getState().invitation;
   const stored = await readInvitation();
+  if (getState().invitation.revision !== revision || !stored) return;
 
-  if (!stored || isOutlived(stored.storedAt)) {
-    if (stored && !getState().invitation.pending) await persistInvitation(getState());
-    return;
-  }
-
-  dispatch(invitationRestored(stored));
+  // Writes what is pending now, queued after any earlier write, so it never removes a newer link.
+  if (isOutlived(stored.storedAt)) await persistInvitation(getState());
+  else dispatch(invitationRestored(stored));
 };
 
 // The user leaves to answer the invitation with the invited account; the intent waits for the next sign-in.
