@@ -85,6 +85,10 @@ an email has nothing of the user's own behind it. A join that outlives
 its session selects nothing (`acceptInviteAndSelect`).
 
 A join by code answered late moves the user only if the screen is still
-open on the invitation it was sent from. A newer link shown meanwhile
-stays on screen and pending, with an empty code form behind it; once the
-screen is left, the join still selects its space but navigates nowhere.
+open and no link became the pending invitation since the code was sent
+(the slice's `linkRevision`, which an answer or a decline never moves).
+So a link opened meanwhile stays on screen and pending, even one opened
+again after another (A, B, then A), with an empty code form behind it;
+an answer that ended the original link does not hold the user there.
+Once the screen is left, the join still selects its space but navigates
+nowhere.

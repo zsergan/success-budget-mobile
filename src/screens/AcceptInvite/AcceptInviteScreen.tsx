@@ -4,6 +4,8 @@ import { Controller } from 'react-hook-form';
 
 import { Banner, Button, Input, RootLayout, SectionTitle, TextLink } from '@components';
 import { useThemedStyles } from '@hooks';
+import { useAppStore } from '@redux/hooks';
+import { selectInvitationLinkRevision } from '@redux/state/invitation/selectors';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
 import LinkInvitation from './components/LinkInvitation/LinkInvitation';
@@ -26,22 +28,20 @@ const AcceptInviteScreen = ({ navigation }: Props) => {
 
   const link = useLinkInvitation({ onJoined: openJoinedSpace });
 
-  // A code join ends the flow only while the screen is still open on the invitation it was sent from: a newer link
-  // shown since, or the screen left, keeps the user where they are.
-  const flowRef = useRef({ token: link.token, isOpen: true });
-  useEffect(() => {
-    flowRef.current.token = link.token;
-  }, [link.token]);
+  // A code join ends the flow only while the screen is still open and no link was opened since it was sent, read from
+  // the store so a link not yet shown counts too, and the same token opened again (A, B, then A) as well.
+  const store = useAppStore();
+  const isOpenRef = useRef(true);
   useEffect(
     () => () => {
-      flowRef.current.isOpen = false;
+      isOpenRef.current = false;
     },
     [],
   );
   const captureFlow = useCallback(() => {
-    const { token } = flowRef.current;
-    return () => flowRef.current.isOpen && flowRef.current.token === token;
-  }, []);
+    const linkRevision = selectInvitationLinkRevision(store.getState());
+    return () => isOpenRef.current && selectInvitationLinkRevision(store.getState()) === linkRevision;
+  }, [store]);
 
   const form = useAcceptInviteForm({ onJoined: openJoinedSpace, captureFlow });
   const [isEnteringCode, setEnteringCode] = useState(link.token === null);
@@ -57,7 +57,7 @@ const AcceptInviteScreen = ({ navigation }: Props) => {
   useEffect(
     () =>
       navigation.addListener('beforeRemove', () => {
-        flowRef.current.isOpen = false;
+        isOpenRef.current = false;
         forget();
       }),
     [navigation, forget],

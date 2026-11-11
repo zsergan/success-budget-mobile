@@ -19,11 +19,18 @@ interface InvitationState {
   // Bumped by every change of intent, a sign-out or a decline included even with nothing pending, so a storage read
   // started before it is known to be stale. Survives clearing.
   revision: number;
+  // The revision at which a link last became the pending invitation, by opening or restoring it; the same link again
+  // leaves it. Unlike `revision`, an answer or a decline never moves it. Survives clearing.
+  linkRevision: number;
 }
 
-const initialState: InvitationState = { pending: null, isOpenRequested: false, revision: 0 };
+const initialState: InvitationState = { pending: null, isOpenRequested: false, revision: 0, linkRevision: 0 };
 
-const cleared = (state: InvitationState): InvitationState => ({ ...initialState, revision: state.revision + 1 });
+const cleared = (state: InvitationState): InvitationState => ({
+  ...initialState,
+  revision: state.revision + 1,
+  linkRevision: state.linkRevision,
+});
 
 // Answers after which the token can never be used: it ended, or its space already has the user.
 const TERMINAL_CODES: string[] = [ApiErrorCode.SPACE_INVITE_UNUSABLE, ApiErrorCode.SPACE_ALREADY_MEMBER];
@@ -40,9 +47,12 @@ const invitationSlice = createSlice({
   reducers: {
     // The same link again keeps when it was first kept; another one replaces it.
     invitationLinkOpened: (state, { payload }: PayloadAction<PendingInvitation>) => {
-      if (state.pending?.token !== payload.token) state.pending = payload;
       state.isOpenRequested = true;
       state.revision += 1;
+      if (state.pending?.token === payload.token) return;
+
+      state.pending = payload;
+      state.linkRevision = state.revision;
     },
     // A link opened while storage was being read is newer than what it held.
     invitationRestored: (state, { payload }: PayloadAction<PendingInvitation>) => {
@@ -51,6 +61,7 @@ const invitationSlice = createSlice({
       state.pending = payload;
       state.isOpenRequested = true;
       state.revision += 1;
+      state.linkRevision = state.revision;
     },
     invitationOpenHandled: (state) => {
       state.isOpenRequested = false;

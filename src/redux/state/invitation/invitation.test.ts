@@ -134,6 +134,47 @@ describe('an invitation link', () => {
   });
 });
 
+describe('the link revision', () => {
+  const linkRevision = (store: Store) => store.getState().invitation.linkRevision;
+
+  it('moves when a link becomes the pending one, including an earlier link opened again', () => {
+    const store = createAppStore();
+    store.dispatch(receiveInvitationLink(appLink(87)));
+    const first = linkRevision(store);
+
+    store.dispatch(receiveInvitationLink(appLink(88)));
+    const second = linkRevision(store);
+    store.dispatch(receiveInvitationLink(appLink(87)));
+
+    expect(second).toBeGreaterThan(first);
+    expect(linkRevision(store)).toBeGreaterThan(second);
+  });
+
+  it('stays for the same link again, a terminal answer and a decline', async () => {
+    const store = signedIn();
+    store.dispatch(receiveInvitationLink(appLink(87)));
+    const opened = linkRevision(store);
+
+    store.dispatch(receiveInvitationLink(appLink(87)));
+    mockedRequest.mockImplementationOnce(refusal(404, 'SPACE_INVITE_UNUSABLE'));
+    await store.dispatch(memberApi.endpoints.previewInvite.initiate({ token: token(87) }));
+    store.dispatch(invitationCleared({ token: token(87) }));
+
+    expect(store.getState().invitation.pending).toBeNull();
+    expect(linkRevision(store)).toBe(opened);
+  });
+
+  it('moves when a stored link is restored', async () => {
+    keep(87);
+    const store = createAppStore();
+
+    await store.dispatch(restoreInvitation());
+
+    expect(linkRevision(store)).toBe(store.getState().invitation.revision);
+    expect(linkRevision(store)).toBeGreaterThan(0);
+  });
+});
+
 describe('restoring the invitation after a restart', () => {
   it('asks to open the flow again', async () => {
     mockSecureStore.set(PENDING_INVITATION_KEY, JSON.stringify({ token: token(87), storedAt: Date.now() }));

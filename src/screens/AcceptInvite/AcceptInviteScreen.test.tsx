@@ -2,6 +2,7 @@ import 'react-native-gesture-handler/jestSetup';
 import { act, fireEvent, screen } from '@testing-library/react-native';
 
 import { logoutMe } from '@redux/state/auth/thunks';
+import { receiveInvitationLink } from '@redux/state/invitation/thunks';
 import { AUTH_TOKEN_KEY, PENDING_INVITATION_KEY } from '@shared/constants';
 import {
   button,
@@ -372,6 +373,62 @@ describe('a code join answered late', () => {
     await chooseCodeEntry();
     expect(screen.getByLabelText('Invite code').props.value).toBe('');
     expect(button('Join space').props.accessibilityState?.disabled).toBe(false);
+  });
+
+  it('leaves the original link open and kept when it was opened again meanwhile', async () => {
+    server.previews[token(87)] = [previewOf('Cabin')];
+    server.previews[token(88)] = [previewOf('Trip')];
+    const store = await openLink();
+    await chooseCodeEntry();
+    const join = await submitHeldCode();
+
+    await receive(link(88));
+    await receive(link(87));
+    expect(screen.getByText('Cabin')).toBeTruthy();
+
+    join.settle(ok(family));
+    await settle();
+
+    expect(store.getState().space.currentSpaceId).toBe(41);
+    expect(screen.getByText('Cabin')).toBeTruthy();
+    expect(button('Join space')).toBeTruthy();
+    expect(store.getState().invitation.pending?.token).toBe(token(87));
+    expect(storedToken()).toBe(token(87));
+  });
+
+  it('leaves a link open that arrived before its preview could show', async () => {
+    server.previews[token(87)] = [previewOf('Cabin')];
+    server.previews[token(88)] = [previewOf('Trip')];
+    const store = await openLink();
+    await chooseCodeEntry();
+    const join = await submitHeldCode();
+
+    await act(async () => {
+      store.dispatch(receiveInvitationLink(link(88)));
+      join.settle(ok(family));
+    });
+    await settle();
+
+    expect(screen.getByText('Trip')).toBeTruthy();
+    expect(storedToken()).toBe(token(88));
+  });
+
+  it('lands on Home when the link it came from ended meanwhile, with nothing newer', async () => {
+    const preview = held();
+    server.previews[token(87)] = [preview.answer];
+    const store = await openLink();
+    await chooseCodeEntry();
+    const join = await submitHeldCode();
+
+    preview.settle(refused(404, 'SPACE_INVITE_UNUSABLE'));
+    await settle();
+    expect(store.getState().invitation.pending).toBeNull();
+
+    join.settle(ok(family));
+    await settle();
+
+    expect(store.getState().space.currentSpaceId).toBe(41);
+    expect(isOnHome()).toBe(true);
   });
 
   it('lands on Home when nothing newer arrived', async () => {
