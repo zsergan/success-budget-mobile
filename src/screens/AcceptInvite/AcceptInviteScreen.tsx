@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
@@ -25,7 +25,25 @@ const AcceptInviteScreen = ({ navigation }: Props) => {
   const leave = () => (navigation.canGoBack() ? navigation.goBack() : openJoinedSpace());
 
   const link = useLinkInvitation({ onJoined: openJoinedSpace });
-  const form = useAcceptInviteForm({ onJoined: openJoinedSpace });
+
+  // A code join ends the flow only while the screen is still open on the invitation it was sent from: a newer link
+  // shown since, or the screen left, keeps the user where they are.
+  const flowRef = useRef({ token: link.token, isOpen: true });
+  useEffect(() => {
+    flowRef.current.token = link.token;
+  }, [link.token]);
+  useEffect(
+    () => () => {
+      flowRef.current.isOpen = false;
+    },
+    [],
+  );
+  const captureFlow = useCallback(() => {
+    const { token } = flowRef.current;
+    return () => flowRef.current.isOpen && flowRef.current.token === token;
+  }, []);
+
+  const form = useAcceptInviteForm({ onJoined: openJoinedSpace, captureFlow });
   const [isEnteringCode, setEnteringCode] = useState(link.token === null);
   const [shownToken, setShownToken] = useState(link.token);
   if (link.token !== shownToken) {
@@ -36,7 +54,14 @@ const AcceptInviteScreen = ({ navigation }: Props) => {
 
   // Leaving by back or a gesture declines the invitation; an account switch unmounts the screen without it.
   const { forget } = link;
-  useEffect(() => navigation.addListener('beforeRemove', forget), [navigation, forget]);
+  useEffect(
+    () =>
+      navigation.addListener('beforeRemove', () => {
+        flowRef.current.isOpen = false;
+        forget();
+      }),
+    [navigation, forget],
+  );
 
   const { problem } = link;
   const isWaiting = link.waitSeconds > 0;

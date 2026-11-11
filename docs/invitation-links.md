@@ -83,3 +83,8 @@ join was what failed.
 A join lands on Home through `popTo`, never `goBack`: a screen opened from
 an email has nothing of the user's own behind it. A join that outlives
 its session selects nothing (`acceptInviteAndSelect`).
+
+A join by code answered late moves the user only if the screen is still
+open on the invitation it was sent from. A newer link shown meanwhile
+stays on screen and pending, with an empty code form behind it; once the
+screen is left, the join still selects its space but navigates nowhere.

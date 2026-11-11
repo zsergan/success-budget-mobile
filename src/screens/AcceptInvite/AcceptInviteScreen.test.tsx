@@ -2,7 +2,7 @@ import 'react-native-gesture-handler/jestSetup';
 import { act, fireEvent, screen } from '@testing-library/react-native';
 
 import { logoutMe } from '@redux/state/auth/thunks';
-import { AUTH_TOKEN_KEY } from '@shared/constants';
+import { AUTH_TOKEN_KEY, PENDING_INVITATION_KEY } from '@shared/constants';
 import {
   button,
   codeFormsShown,
@@ -18,6 +18,7 @@ import {
   ok,
   openApp,
   previewOf,
+  receive,
   refused,
   resetInvitationWorld,
   sentTo,
@@ -324,6 +325,102 @@ describe('joining with a code', () => {
     expect(button(/^Try again in \d+ s$/).props.accessibilityState?.disabled).toBe(true);
     await settle(20_000);
     expect(button('Join space').props.accessibilityState?.disabled).toBe(false);
+  });
+});
+
+describe('a code join answered late', () => {
+  const storedToken = () => JSON.parse(mockSecureStore.get(PENDING_INVITATION_KEY) ?? 'null')?.token;
+
+  const submitHeldCode = async () => {
+    const join = held();
+    server.accepts['042917'] = [join.answer];
+    fireEvent.changeText(screen.getByLabelText('Invite code'), '042917');
+    await settle();
+    fireEvent.press(button('Join space'));
+    await settle();
+
+    return join;
+  };
+
+  const isTabSelected = (name: string) =>
+    screen.queryByRole('button', { name: new RegExp(`^${name}`), selected: true }) !== null;
+
+  const chooseCodeEntry = async () => {
+    fireEvent.press(screen.getByText('Enter a 6-digit code instead'));
+    await settle();
+  };
+
+  it.each([
+    ['entered as a fallback from a link', async () => (await openLink(), chooseCodeEntry())],
+    ['entered directly', async () => void (await openCodeForm())],
+  ])('leaves a link received meanwhile open and kept (%s)', async (_, openForm) => {
+    server.previews[token(87)] = [previewOf('Family')];
+    server.previews[token(88)] = [previewOf('Trip')];
+    await openForm();
+    const join = await submitHeldCode();
+
+    await receive(link(88));
+    expect(screen.getByText('Trip')).toBeTruthy();
+
+    join.settle(ok(family));
+    await settle();
+
+    expect(screen.getByText('Trip')).toBeTruthy();
+    expect(button('Join space')).toBeTruthy();
+    expect(storedToken()).toBe(token(88));
+
+    await chooseCodeEntry();
+    expect(screen.getByLabelText('Invite code').props.value).toBe('');
+    expect(button('Join space').props.accessibilityState?.disabled).toBe(false);
+  });
+
+  it('lands on Home when nothing newer arrived', async () => {
+    server.previews[token(87)] = [previewOf('Family')];
+    const store = await openLink();
+    await chooseCodeEntry();
+    const join = await submitHeldCode();
+
+    join.settle(ok(family));
+    await settle();
+
+    expect(store.getState().space.currentSpaceId).toBe(41);
+    expect(isOnHome()).toBe(true);
+  });
+
+  it('moves nothing once the invitation was declined', async () => {
+    server.previews[token(87)] = [previewOf('Family')];
+    const store = await openLink();
+    await chooseCodeEntry();
+    const join = await submitHeldCode();
+    fireEvent.press(screen.getByText('Back to the invitation link'));
+    await settle();
+    await press('Not now');
+    fireEvent.press(screen.getByText('Profile'));
+    await settle();
+    expect(isTabSelected('Profile')).toBe(true);
+
+    join.settle(ok(family));
+    await settle();
+
+    expect(store.getState().space.currentSpaceId).toBe(41);
+    expect(isTabSelected('Profile')).toBe(true);
+    expect(invitationsShown() + codeFormsShown()).toBe(0);
+  });
+
+  it('after a sign-out selects nothing and opens nothing', async () => {
+    const store = await openCodeForm();
+    const join = await submitHeldCode();
+    await act(async () => {
+      await store.dispatch(logoutMe());
+    });
+
+    join.settle(ok(family));
+    await settle();
+    expect(isOnWelcome()).toBe(true);
+
+    await signIn(store);
+    expect(store.getState().space.currentSpaceId).toBe(1);
+    expect(codeFormsShown()).toBe(0);
   });
 });
 
