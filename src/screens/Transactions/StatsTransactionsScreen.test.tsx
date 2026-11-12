@@ -10,7 +10,11 @@ import { Fab } from '@components';
 import { createAppStore } from '@redux/Store';
 import { withProfile } from '@redux/state/profile/fixtures';
 import { activateSpace } from '@redux/state/space/thunks';
+import { transactionApi } from '@redux/state/transaction/api';
 import { feedDto, transactionDto } from '@redux/state/transaction/fixtures';
+import { closed } from '@redux/state/transactionFlow/slice';
+import { deleteTransaction } from '@redux/state/transactionFlow/thunks';
+import { mapTransaction } from '@api/models';
 import { AppColor, ScreenNames, TransactionKind, TransactionType } from '@shared/enums';
 import type { HistoryFilter, StatsStackParamList } from '@shared/types';
 import StatsTransactionsScreen from './StatsTransactionsScreen';
@@ -221,6 +225,111 @@ describe('StatsTransactionsScreen', () => {
     await settle();
 
     expect(store.getState().transactionFlow.flow).toMatchObject({ spaceId: 1 });
+  });
+
+  describe('with transactions changing under it', () => {
+    let rows: ReturnType<typeof invoice>[];
+
+    const serve = () =>
+      mockedRequest.mockImplementation(({ url, method }: RequestConfig & { method?: string }) => {
+        if (url === FEED) {
+          const income = rows.reduce((sum, { amount }) => sum + Number(amount), 0).toFixed(2);
+
+          return Promise.resolve({ data: feedDto(rows, { summary: { count: rows.length, income, expense: '0.00' } }) });
+        }
+        if (method === 'PATCH') {
+          return Promise.resolve({
+            data: { transaction: { ...invoice('tx-1', '450.00', 22), version: 2 }, wallets: [] },
+          });
+        }
+        if (url === '/spaces/1/transactions/tx-1') return Promise.resolve({ data: invoice('tx-1', '450.00', 22) });
+
+        return Promise.resolve({ data: null });
+      });
+
+    beforeEach(() => {
+      rows = [invoice('tx-2', '400.00', 25), invoice('tx-1', '450.00', 22)];
+      serve();
+    });
+
+    it('comes back from transaction details to the same list, then to Stats', async () => {
+      const store = renderScreen();
+      await settle();
+
+      fireEvent.press(screen.getByText('+450.00'));
+      await settle();
+      expect(store.getState().transactionFlow.flow).toMatchObject({ spaceId: 1, view: { name: 'details' } });
+
+      act(() => {
+        store.dispatch(closed());
+      });
+      await settle();
+
+      expect(navigationRef.getCurrentRoute()?.name).toBe(ScreenNames.STATS_TRANSACTIONS_SCREEN);
+      expect(screen.getByText('+450.00')).toBeTruthy();
+      expect(screen.getByText('850.00')).toBeTruthy();
+      expect(feedRequests()).toHaveLength(1);
+
+      fireEvent.press(screen.getByRole('button', { name: 'Back to Stats' }));
+      await settle();
+
+      expect(navigationRef.getCurrentRoute()?.name).toBe(ScreenNames.STATS_OVERVIEW_SCREEN);
+    });
+
+    it('drops a record edited out of the selection and updates the amount, with the same request', async () => {
+      const store = renderScreen();
+      await settle();
+
+      rows = [invoice('tx-2', '400.00', 25)];
+      await act(async () => {
+        await store.dispatch(
+          transactionApi.endpoints.updateTransaction.initiate({
+            spaceId: 1,
+            transactionId: 'tx-1',
+            version: 1,
+            idempotencyKey: 'edit-1',
+            data: { category_id: 8 },
+          }),
+        );
+      });
+      await settle();
+
+      expect(screen.queryByText('+450.00')).toBeNull();
+      expect(screen.getAllByText('+400.00').length).toBeGreaterThan(0);
+      expect(screen.getByText('400.00')).toBeTruthy();
+      const [first, ...refreshes] = feedRequests().map(({ params }) => params);
+      expect(refreshes.length).toBeGreaterThan(0);
+      refreshes.forEach((params) =>
+        expect(params).toMatchObject({ from: first?.from, to: first?.to, category_id: 7, kind: 'regular' }),
+      );
+      expectNoFilterOrCreateActions();
+    });
+
+    it('shows the empty state, still with the way back, once the last match is deleted', async () => {
+      rows = [invoice('tx-1', '450.00', 22)];
+      const store = renderScreen();
+      await settle();
+      expect(screen.getByText('450.00')).toBeTruthy();
+
+      rows = [];
+      await act(async () => {
+        await store.dispatch(
+          deleteTransaction({ spaceId: 1, transaction: mapTransaction(invoice('tx-1', '450.00', 22)) }),
+        );
+      });
+      await settle();
+
+      expect(screen.queryByText('+450.00')).toBeNull();
+      expect(screen.getByText('No transactions here')).toBeTruthy();
+      expect(screen.getByText('0.00')).toBeTruthy();
+      expect(within(screen.getByTestId('applied-filter')).getByText('Freelance')).toBeTruthy();
+      expectNoFilterOrCreateActions();
+
+      fireEvent.press(screen.getByRole('button', { name: 'Back to Stats' }));
+      await settle();
+
+      expect(navigationRef.getCurrentRoute()?.name).toBe(ScreenNames.STATS_OVERVIEW_SCREEN);
+    });
   });
 
   it('goes back to Stats from a button that stays outside the scrolled list', async () => {

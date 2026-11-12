@@ -10,6 +10,7 @@ import { useToastControl } from '@components/Toast/ToastProvider';
 import { toastCount, withToasts } from '@components/Toast/testing';
 import focusedRoutePath from '@navigation/focusedRoutePath';
 import StatsNavigator from '@navigation/StatsNavigator';
+import { TransactionsScreen } from '@screens';
 import { createAppStore } from '@redux/Store';
 import { spaceApi } from '@redux/state/space/api';
 import { activateSpace } from '@redux/state/space/thunks';
@@ -172,7 +173,7 @@ const renderStats = ({ spaceId = 1 }: { spaceId?: number | null } = {}) => {
           <RoutedContainer>
             <Tab.Navigator initialRouteName={ScreenNames.STATS_TAB} screenOptions={{ headerShown: false }}>
               <Tab.Screen name={ScreenNames.HOME_TAB} component={() => null} />
-              <Tab.Screen name={ScreenNames.TRANSACTIONS_TAB} component={() => null} />
+              <Tab.Screen name={ScreenNames.TRANSACTIONS_TAB} component={TransactionsScreen} />
               <Tab.Screen name={ScreenNames.STATS_TAB} component={StatsNavigator} />
             </Tab.Navigator>
           </RoutedContainer>,
@@ -670,6 +671,74 @@ describe('StatsScreen', () => {
     expect(screen.getByText('Gifts')).toBeTruthy();
     expect(screen.queryByTestId('applied-filter')).toBeNull();
     expect(statsRequests()).toHaveLength(0);
+  });
+
+  it("opens an expense category's transactions, while Other only expands", async () => {
+    renderStats();
+    await settle();
+    mockedRequest.mockClear();
+
+    fireEvent.press(screen.getByText('Other'));
+    await settle();
+
+    expect(currentRouteName()).toBe(ScreenNames.STATS_OVERVIEW_SCREEN);
+    expect(screen.getByText('Gifts')).toBeTruthy();
+    expect(feedParams()).toEqual([]);
+
+    const housing = fixture.breakdown.expense.by_category.primary_items.find(({ name }) => name === 'Housing')!;
+    fireEvent.press(screen.getByText('Housing'));
+    await settle();
+
+    expect(currentRouteName()).toBe(ScreenNames.STATS_TRANSACTIONS_SCREEN);
+    expect(feedParams()).toEqual([
+      expect.objectContaining({ transaction_type: 'expense', kind: 'regular', category_id: housing.id }),
+    ]);
+    expect(feedParams()[0]).not.toHaveProperty('wallet_id');
+    const context = within(screen.getByTestId('applied-filter'));
+    expect(context.getByText('Expenses')).toBeTruthy();
+    expect(context.getByText('Housing')).toBeTruthy();
+  });
+
+  it("keeps History and a row's transactions independent of each other", async () => {
+    renderStats();
+    await settle();
+    fireEvent.press(screen.getByText('Housing'));
+    await settle();
+    const selection = shownFilter();
+    mockedRequest.mockClear();
+
+    act(() => navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB));
+    await settle();
+
+    expect(navigationRef.getCurrentRoute()?.params).toBeUndefined();
+    const [history] = feedParams();
+    expect(history).toEqual({
+      from: new Date(2026, 8, 1).toISOString(),
+      to: new Date(2026, 8, 30, 23, 59, 59, 999).toISOString(),
+      time_zone: expect.any(String),
+    });
+    expect(screen.getByRole('button', { name: 'Search transactions' })).toBeTruthy();
+
+    fireEvent.press(screen.getByText('Year'));
+    await settle();
+    const requests = feedParams();
+    expect(requests.every((params) => !('category_id' in params!) && !('kind' in params!))).toBe(true);
+    expect(requests.at(-1)).toMatchObject({ from: new Date(2026, 0, 1).toISOString() });
+
+    act(() => navigationRef.navigate(ScreenNames.STATS_TAB));
+    await settle();
+
+    expect(currentRouteName()).toBe(ScreenNames.STATS_TRANSACTIONS_SCREEN);
+    expect(shownFilter()).toEqual(selection);
+    expect(within(screen.getByTestId('applied-filter')).getByText('Housing')).toBeTruthy();
+    expect(feedParams()).toHaveLength(requests.length);
+
+    await backToStats();
+    act(() => navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB));
+    await settle();
+
+    expect(feedParams()).toHaveLength(requests.length);
+    expect(feedParams().at(-1)).toMatchObject({ from: new Date(2026, 0, 1).toISOString() });
   });
 
   it("opens a wallet row's regular income, comes back to the same view and opens another row", async () => {
