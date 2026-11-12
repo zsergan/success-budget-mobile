@@ -13,7 +13,6 @@ import {
 import { useConfirmation, useSpaceRefresh } from '@hooks';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
-import { filterSelection } from '@redux/state/transactionFlow/selection';
 import { TransactionType } from '@shared/enums';
 import type { ScreenNames } from '@shared/enums';
 import type { HistoryFilter, StatsStackScreenProps } from '@shared/types';
@@ -39,7 +38,7 @@ const StatsTransactions = ({ filter, onBack }: Props) => {
   useSpaceRefresh();
   const { lock: deleteLock, confirmation: deleteConfirmation } = useConfirmation();
   const { requestDelete } = useTransactionDelete(deleteLock);
-  const { openDetails } = useTransactionFlow(filterSelection(filter));
+  const { openDetails } = useTransactionFlow();
 
   const visibleIdsRef = useRef<string[]>([]);
   const getVisibleIds = useCallback(() => visibleIdsRef.current, []);

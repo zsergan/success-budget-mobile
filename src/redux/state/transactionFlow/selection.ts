@@ -1,66 +1,25 @@
 import type { TransactionModel } from '@api/models';
-import type { TransactionKind, TransactionType } from '@shared/enums';
-import type { HistoryFilter } from '@shared/types';
 
-// What the screen a transaction was created from lists or counts: its period, and the filter on top of it.
+// The period the screen a transaction was created from lists or counts.
 export interface ViewSelection {
   from: string;
   to: string;
-  filter?: {
-    // The filter's name, as the screen shows it.
-    name: string;
-    transactionType: TransactionType;
-    kind?: TransactionKind;
-    categoryId?: number;
-    walletId?: number;
-  };
 }
 
-// `otherPeriod` wins over `filtered`: moving to the record's month is the first thing that makes it visible.
-export type SavedPlace = 'shown' | 'otherPeriod' | 'filtered';
+export type SavedPlace = 'shown' | 'otherPeriod';
 
 export const whereSaved = (
-  {
-    timestamp,
-    transactionType,
-    kind,
-    category,
-    wallet,
-  }: Pick<TransactionModel, 'timestamp' | 'transactionType' | 'kind' | 'category' | 'wallet'>,
+  { timestamp }: Pick<TransactionModel, 'timestamp'>,
   selection: ViewSelection | null,
 ): SavedPlace => {
   if (!selection) return 'shown';
 
   const time = Date.parse(timestamp);
-  if (time < Date.parse(selection.from) || time > Date.parse(selection.to)) return 'otherPeriod';
 
-  const { filter } = selection;
-  if (!filter) return 'shown';
-
-  const matches =
-    filter.transactionType === transactionType &&
-    (filter.kind === undefined || filter.kind === kind) &&
-    (filter.categoryId === undefined || filter.categoryId === category.id) &&
-    (filter.walletId === undefined || filter.walletId === wallet?.id);
-
-  return matches ? 'shown' : 'filtered';
+  return time < Date.parse(selection.from) || time > Date.parse(selection.to) ? 'otherPeriod' : 'shown';
 };
 
 export const rangeSelection = ({ from, to }: { from: Date; to: Date }): ViewSelection => ({
   from: from.toISOString(),
   to: to.toISOString(),
-});
-
-export const filterSelection = ({
-  from,
-  to,
-  name,
-  transactionType,
-  kind,
-  categoryId,
-  walletId,
-}: HistoryFilter): ViewSelection => ({
-  from,
-  to,
-  filter: { name, transactionType, kind, categoryId, walletId },
 });
