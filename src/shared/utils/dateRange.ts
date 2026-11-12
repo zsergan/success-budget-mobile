@@ -24,6 +24,53 @@ const monthShort = (date: Date) => date.toLocaleString('en-US', { month: 'short'
 export const toLocalDateKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
+const zoneFormats = new Map<string, Intl.DateTimeFormat>();
+
+// An instant's calendar fields by a zone's own rules, daylight saving included; the device's zone when none is given
+// or the device does not know the zone.
+export const toZonedParts = (date: Date, timeZone?: string) => {
+  try {
+    if (timeZone) {
+      let format = zoneFormats.get(timeZone);
+      if (!format) {
+        format = new Intl.DateTimeFormat('en-US', {
+          timeZone,
+          hourCycle: 'h23',
+          year: 'numeric',
+          month: 'numeric',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: 'numeric',
+        });
+        zoneFormats.set(timeZone, format);
+      }
+      const parts = Object.fromEntries(format.formatToParts(date).map(({ type, value }) => [type, Number(value)]));
+
+      return { year: parts.year, month: parts.month - 1, day: parts.day, hour: parts.hour % 24, minute: parts.minute };
+    }
+  } catch {
+    // Falls through to the device's zone.
+  }
+
+  return {
+    year: date.getFullYear(),
+    month: date.getMonth(),
+    day: date.getDate(),
+    hour: date.getHours(),
+    minute: date.getMinutes(),
+  };
+};
+
+// The zone's calendar day of an instant as a device date, for helpers that read local fields. Noon, so no
+// daylight saving gap on the device moves it to another day.
+export const toZonedDay = (date: Date, timeZone?: string) => {
+  if (!timeZone) return date;
+
+  const { year, month, day } = toZonedParts(date, timeZone);
+
+  return new Date(year, month, day, 12);
+};
+
 /** Month boundaries for whatever month `reference` falls in, no preset attached. */
 export const getMonthRange = (reference: Date | string): { from: Date; to: Date } => {
   const date = new Date(reference);
@@ -57,8 +104,10 @@ export const getCurrentYearRange = (reference: Date = new Date()): DateRange => 
   preset: 'year',
 });
 
-export const formatRangeLabel = (range: Pick<DateRange, 'from' | 'to'>): string => {
-  const { from, to } = range;
+// With a zone, the days the range's ends fall on there; otherwise on the device.
+export const formatRangeLabel = (range: Pick<DateRange, 'from' | 'to'>, timeZone?: string): string => {
+  const from = toZonedDay(range.from, timeZone);
+  const to = toZonedDay(range.to, timeZone);
   const sameYear = from.getFullYear() === to.getFullYear();
   const sameMonth = sameYear && from.getMonth() === to.getMonth();
 

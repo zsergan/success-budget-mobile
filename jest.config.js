@@ -1,3 +1,6 @@
+// One device zone for every run, and not UTC, so a mix-up of local and UTC days fails here as well as in CI.
+process.env.TZ = 'America/Chicago';
+
 module.exports = {
   preset: 'jest-expo',
   setupFiles: ['react-native-gesture-handler/jestSetup.js', '<rootDir>/jest.setup.js'],

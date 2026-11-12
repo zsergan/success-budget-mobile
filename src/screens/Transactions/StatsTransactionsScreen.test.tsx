@@ -65,11 +65,12 @@ interface RequestConfig {
 const METRICS = { frame: { x: 0, y: 0, width: 393, height: 852 }, insets: { top: 59, left: 0, right: 0, bottom: 34 } };
 const FEED = '/spaces/1/transactions/feed';
 
+// Stats was summed in New York; the device (jest.config.js) is in Chicago, an hour behind.
 const september = {
   spaceId: 1,
-  from: new Date(2026, 8, 1).toISOString(),
-  to: new Date(2026, 8, 30, 9, 15, 42, 123).toISOString(),
-  timeZone: 'Pacific/Auckland',
+  from: '2026-09-01T04:00:00.000Z',
+  to: '2026-09-30T13:15:42.123Z',
+  timeZone: 'America/New_York',
   transactionType: TransactionType.INCOME,
   kind: TransactionKind.REGULAR,
   color: AppColor.INDIGO,
@@ -162,7 +163,7 @@ describe('StatsTransactionsScreen', () => {
         transaction_type: TransactionType.INCOME,
         kind: TransactionKind.REGULAR,
         category_id: 7,
-        time_zone: 'Pacific/Auckland',
+        time_zone: 'America/New_York',
       },
     ]);
     expect(screen.getByText('Income')).toBeTruthy();
@@ -170,6 +171,27 @@ describe('StatsTransactionsScreen', () => {
     expect(screen.getByText('1–30 Sep 2026')).toBeTruthy();
     expect(screen.getByText('850.00')).toBeTruthy();
     expectNoFilterOrCreateActions();
+  });
+
+  it('tells the period, the days, their totals and the times in the zone Stats was summed in', async () => {
+    const at = (id: string, timestamp: string) => ({ ...invoice(id, '425.00', 1), timestamp });
+    mockedRequest.mockImplementation(() =>
+      Promise.resolve({
+        data: feedDto([at('tx-2', '2026-09-01T18:00:00Z'), at('tx-1', '2026-09-01T04:30:00Z')], {
+          summary: { count: 2, income: '850.00', expense: '0.00' },
+          day_totals: [{ date: '2026-09-01', net: '850.00' }],
+        }),
+      }),
+    );
+    renderScreen();
+    await settle();
+
+    expect(screen.getByText('1–30 Sep 2026')).toBeTruthy();
+    expect(screen.getByText('Tue, Sep 1')).toBeTruthy();
+    expect(screen.queryByText('Mon, Aug 31')).toBeNull();
+    expect(screen.getByText('+850.00')).toBeTruthy();
+    expect(screen.getByText(' · 00:30')).toBeTruthy();
+    expect(screen.getByText(' · 14:00')).toBeTruthy();
   });
 
   it('names an expense wallet selection', async () => {

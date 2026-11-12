@@ -42,10 +42,26 @@ describe('groupRowsByDay', () => {
         row('b', new Date(2025, 9, 6, 12), TransactionType.EXPENSE, '5'),
         row('c', new Date(2025, 9, 6, 9), TransactionType.INCOME, '1'),
       ],
-      NOW,
+      { now: NOW },
     );
 
     expect(groups.map(({ items }) => items.map(({ id }) => id))).toEqual([['a'], ['b', 'c']]);
     expect(groups.map(({ label }) => label)).toEqual(['Today', 'Mon, Oct 6, 2025']);
+  });
+
+  it('cuts the days in the given zone rather than on the device', () => {
+    const rows = [
+      row('late', new Date('2026-09-01T18:00:00Z'), TransactionType.EXPENSE, '10'),
+      row('early', new Date('2026-09-01T04:30:00Z'), TransactionType.EXPENSE, '5'),
+    ];
+    const now = new Date('2026-09-02T03:00:00Z');
+
+    expect(groupRowsByDay(rows, { now, timeZone: 'America/New_York' })).toEqual([
+      { key: '2026-09-01', label: 'Today', items: rows },
+    ]);
+    expect(groupRowsByDay(rows, { now }).map(({ key, label }) => [key, label])).toEqual([
+      ['2026-09-01', 'Today'],
+      ['2026-08-31', 'Yesterday'],
+    ]);
   });
 });

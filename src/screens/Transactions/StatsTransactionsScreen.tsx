@@ -53,6 +53,7 @@ const StatsTransactions = ({ filter, onBack }: Props) => {
 
         <TransactionsList
           {...feedListProps(data)}
+          timeZone={filter.timeZone}
           onPressTransaction={openDetails}
           onDeleteTransaction={requestDelete}
           onVisibleRowsChange={(ids) => {

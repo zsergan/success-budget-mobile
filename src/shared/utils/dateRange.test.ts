@@ -8,6 +8,7 @@ import {
   getCurrentYearRange,
   getMonthRange,
   toLocalDateKey,
+  toZonedParts,
 } from './dateRange';
 
 describe('getCurrentWeekRange', () => {
@@ -132,5 +133,33 @@ describe('toLocalDateKey', () => {
   it('formats the local calendar day with zero padding', () => {
     expect(toLocalDateKey(new Date(2026, 0, 5, 23, 59))).toBe('2026-01-05');
     expect(toLocalDateKey(new Date(2026, 11, 31, 0, 0))).toBe('2026-12-31');
+  });
+});
+
+describe('a zone other than the device’s', () => {
+  it('reads an instant by the zone’s own rules on either side of a daylight saving change', () => {
+    expect(toZonedParts(new Date('2026-03-08T06:30:00Z'), 'America/New_York')).toEqual({
+      year: 2026,
+      month: 2,
+      day: 8,
+      hour: 1,
+      minute: 30,
+    });
+    expect(toZonedParts(new Date('2026-03-08T07:30:00Z'), 'America/New_York')).toMatchObject({ day: 8, hour: 3 });
+    expect(toZonedParts(new Date('2026-11-01T04:30:00Z'), 'America/New_York')).toMatchObject({ day: 1, hour: 0 });
+    expect(toZonedParts(new Date('2026-11-02T04:30:00Z'), 'America/New_York')).toMatchObject({ day: 1, hour: 23 });
+  });
+
+  it('falls back to the device for a zone it does not know', () => {
+    const date = new Date(2026, 8, 1, 7, 5);
+
+    expect(toZonedParts(date, 'Nowhere/Unknown')).toEqual({ year: 2026, month: 8, day: 1, hour: 7, minute: 5 });
+  });
+
+  it('labels a range by the days its ends fall on in the zone, across a daylight saving change', () => {
+    const march = { from: new Date('2026-03-01T05:00:00.000Z'), to: new Date('2026-04-01T03:59:59.999Z') };
+
+    expect(formatRangeLabel(march, 'America/New_York')).toBe('1–31 Mar 2026');
+    expect(formatRangeLabel(march)).toBe('28 Feb – 31 Mar 2026');
   });
 });

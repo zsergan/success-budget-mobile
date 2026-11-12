@@ -21,7 +21,7 @@ const AppliedFilter = ({ filter, total, currencyCode }: Props) => {
   const { colors, categories } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const isExpense = filter.transactionType === TransactionType.EXPENSE;
-  const range = formatRangeLabel({ from: new Date(filter.from), to: new Date(filter.to) });
+  const range = formatRangeLabel({ from: new Date(filter.from), to: new Date(filter.to) }, filter.timeZone);
 
   const tag = (icon: IconType, color: string, label: string, strokeWidth: number) => (
     <View style={styles.tag}>

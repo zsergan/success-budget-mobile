@@ -85,8 +85,13 @@ const useTransactionsData = (props: UseTransactionsDataProps) => {
   const latestQuery = useGetLatestTransactionQuery(needsLatest ? spaceArg : skipToken);
 
   const sections = useMemo<HistorySection[]>(
-    () => groupRowsByDay(items).map((group) => ({ ...group, total: dayNets[group.key] ?? null })),
-    [items, dayNets],
+    // A Stats selection's days are those of its zone, the one the server cut its day totals in.
+    () =>
+      groupRowsByDay(items, { timeZone: filter?.timeZone }).map((group) => ({
+        ...group,
+        total: dayNets[group.key] ?? null,
+      })),
+    [items, dayNets, filter?.timeZone],
   );
 
   let viewState: TransactionsViewState;

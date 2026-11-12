@@ -24,12 +24,14 @@ interface Props {
   transaction: TransactionModel;
   currencyCode?: string;
   isHighlighted?: boolean;
+  // The zone the time is told in; the device's when left out.
+  timeZone?: string;
   onPress?: (transaction: TransactionModel) => void;
   // Swiping left offers Delete; `onSettled` slides the row back once the confirmation closes.
   onDelete?: (transaction: TransactionModel, onSettled: () => void) => void;
 }
 
-const TransactionCard = ({ transaction, currencyCode, isHighlighted = false, onPress, onDelete }: Props) => {
+const TransactionCard = ({ transaction, currencyCode, isHighlighted = false, timeZone, onPress, onDelete }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const swipeRef = useRef<SwipeableMethods>(null);
@@ -101,7 +103,7 @@ const TransactionCard = ({ transaction, currencyCode, isHighlighted = false, onP
             {wallet ? wallet.wallet_name : 'Deleted wallet'}
           </Text>
 
-          <Text style={[styles.meta, styles.fixed]}>{` · ${formatDateHHMM(transaction.timestamp)}`}</Text>
+          <Text style={[styles.meta, styles.fixed]}>{` · ${formatDateHHMM(transaction.timestamp, timeZone)}`}</Text>
         </View>
       </View>
     </Pressable>
