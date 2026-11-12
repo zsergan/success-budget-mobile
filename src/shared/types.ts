@@ -14,16 +14,20 @@ type AddWalletParams =
 // A one-time request to open the composer on a wallet that was just created.
 export type ComposeWithWallet = { spaceId: number; walletId: number };
 
-// A History view opened from a Stats row: the period's own instants, as the statistics API returned them.
+// The transactions behind a Stats row: the period's own instants and zone, as the statistics API returned them.
 export type HistoryFilter = {
   spaceId: number;
   from: string;
   to: string;
+  // The zone the row was summed in, so the list's days and totals are cut the same way.
+  timeZone: string;
   transactionType: TransactionType;
   // Starting balances are left out of the list itself, so it adds up to the row.
   kind: TransactionKind;
-  // The row's name, shown on the applied filter.
+  // The row's name and look, shown with the list.
   name: string;
+  icon: IconType;
+  color: AppColor;
 } & ({ categoryId: number; walletId?: never } | { walletId: number; categoryId?: never });
 
 // A one-time request to bring a saved transaction into view: its month, no filter, the row scrolled to.

@@ -1,4 +1,5 @@
 import type { StatisticsBreakdown } from '@api/dto';
+import { toMobileIcon } from '@api/models';
 import { TransactionKind } from '@shared/enums';
 import type { HistoryFilter } from '@shared/types';
 
@@ -15,8 +16,11 @@ export const toHistoryFilter = (
   return {
     spaceId,
     name: group.name,
+    icon: group.kind === 'category' ? toMobileIcon(group.icon) : 'wallet',
+    color: group.color,
     from: period.from,
     to: period.actual_to,
+    timeZone: period.time_zone,
     transactionType,
     kind: TransactionKind.REGULAR,
     ...(group.kind === 'category' ? { categoryId: group.id } : { walletId: group.id }),

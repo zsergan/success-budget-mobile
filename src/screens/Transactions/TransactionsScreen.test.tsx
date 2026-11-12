@@ -3,7 +3,7 @@ import { Provider } from 'react-redux';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ScrollView, SectionList, StyleSheet, VirtualizedList } from 'react-native';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 
 import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { createAppStore } from '@redux/Store';
@@ -13,7 +13,7 @@ import { transactionApi } from '@redux/state/transaction/api';
 import { feedDto, transactionDto } from '@redux/state/transaction/fixtures';
 import { deleteTransaction } from '@redux/state/transactionFlow/thunks';
 import { mapTransaction } from '@api/models';
-import { ScreenNames, TransactionKind, TransactionType } from '@shared/enums';
+import { AppColor, ScreenNames, TransactionKind, TransactionType } from '@shared/enums';
 import { colorThemes } from '@shared/theme';
 import type { MainTabParamList } from '@shared/types';
 import { hexToRgba } from '@shared/utils';
@@ -135,6 +135,9 @@ describe('TransactionsScreen', () => {
         transactionType: TransactionType.EXPENSE,
         kind: TransactionKind.REGULAR,
         name: 'Food',
+        icon: 'grocery',
+        color: AppColor.SLATE,
+        timeZone: ZONE,
         categoryId: 2,
       },
       reveal: { spaceId: 1, transactionId: 'tx-aug', timestamp: august },
@@ -210,6 +213,9 @@ describe('TransactionsScreen', () => {
       transactionType: TransactionType.INCOME,
       kind: TransactionKind.REGULAR,
       name: 'Everyday',
+      icon: 'wallet' as const,
+      color: AppColor.INDIGO,
+      timeZone: 'Pacific/Auckland',
       walletId: 1,
     };
     renderTransactions({ filter });
@@ -221,9 +227,10 @@ describe('TransactionsScreen', () => {
       transaction_type: TransactionType.INCOME,
       kind: TransactionKind.REGULAR,
       wallet_id: 1,
-      time_zone: ZONE,
+      time_zone: 'Pacific/Auckland',
     });
-    expect(screen.getByText(/^Income · /)).toBeTruthy();
+    expect(within(screen.getByTestId('applied-filter')).getByText('Income')).toBeTruthy();
+    expect(within(screen.getByTestId('applied-filter')).getByText('Everyday')).toBeTruthy();
     expect(screen.getByText('4 050.00')).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText('Clear filter'));
@@ -999,6 +1006,9 @@ describe('TransactionsScreen', () => {
               transactionType: TransactionType.EXPENSE,
               kind: TransactionKind.REGULAR,
               name: 'Food',
+              icon: 'grocery',
+              color: AppColor.SLATE,
+              timeZone: ZONE,
               categoryId: 2,
             },
           }),
@@ -1060,6 +1070,9 @@ describe('TransactionsScreen', () => {
           transactionType: TransactionType.EXPENSE,
           kind: TransactionKind.REGULAR,
           name: 'Food',
+          icon: 'grocery',
+          color: AppColor.SLATE,
+          timeZone: ZONE,
           categoryId: 2,
         },
       });
@@ -1099,6 +1112,9 @@ describe('TransactionsScreen', () => {
               transactionType: TransactionType.EXPENSE,
               kind: TransactionKind.REGULAR,
               name: 'Food',
+              icon: 'grocery',
+              color: AppColor.SLATE,
+              timeZone: ZONE,
               categoryId: 2,
             },
           }),

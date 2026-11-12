@@ -619,8 +619,11 @@ describe('StatsScreen', () => {
     expect(JSON.parse(String(screen.getByTestId('history-filter').props.children))).toEqual({
       spaceId: 1,
       name: 'Gifts',
+      icon: 'gifts',
+      color: 'clay',
       from: fixture.breakdown.expense.period.from,
       to: fixture.breakdown.expense.period.actual_to,
+      timeZone: fixture.breakdown.expense.period.time_zone,
       transactionType: 'expense',
       kind: 'regular',
       categoryId: 10,
@@ -647,8 +650,11 @@ describe('StatsScreen', () => {
     expect(JSON.parse(String(screen.getByTestId('history-filter').props.children))).toEqual({
       spaceId: 1,
       name: 'Savings',
+      icon: 'wallet',
+      color: savings.color,
       from: period.from,
       to: period.actual_to,
+      timeZone: period.time_zone,
       transactionType: 'income',
       kind: 'regular',
       walletId: savings.id,

@@ -1,5 +1,6 @@
 import type { TransactionModel } from '@api/models';
 import type { TransactionKind, TransactionType } from '@shared/enums';
+import type { HistoryFilter } from '@shared/types';
 
 // What the screen a transaction was created from lists or counts: its period, and the filter on top of it.
 export interface ViewSelection {
@@ -48,4 +49,18 @@ export const whereSaved = (
 export const rangeSelection = ({ from, to }: { from: Date; to: Date }): ViewSelection => ({
   from: from.toISOString(),
   to: to.toISOString(),
+});
+
+export const filterSelection = ({
+  from,
+  to,
+  name,
+  transactionType,
+  kind,
+  categoryId,
+  walletId,
+}: HistoryFilter): ViewSelection => ({
+  from,
+  to,
+  filter: { name, transactionType, kind, categoryId, walletId },
 });

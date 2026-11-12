@@ -17,7 +17,7 @@ import {
 import { usePeriod, useConfirmation, useSpaceRefresh } from '@hooks';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
-import { rangeSelection } from '@redux/state/transactionFlow/selection';
+import { filterSelection, rangeSelection } from '@redux/state/transactionFlow/selection';
 import { monthPeriodOf, toDateRange } from '@shared/utils';
 import { TransactionType } from '@shared/enums';
 import type { ScreenNames } from '@shared/enums';
@@ -32,6 +32,7 @@ import TransactionsHeader from './components/TransactionsHeader/TransactionsHead
 import TransactionsList from './components/TransactionsList/TransactionsList';
 import useSearch from './hooks/useSearch';
 import useTransactionsData from './hooks/useTransactionsData';
+import { feedListProps } from './feedListProps';
 import { MAX_SEARCH_LENGTH } from './search';
 
 import styles from './style';
@@ -124,50 +125,31 @@ const TransactionsScreen = () => {
     if (reveal) navigation.setParams({ reveal: undefined, filter: undefined });
   }, [navigation, reveal]);
 
-  const { openCreate, openDetails } = useTransactionFlow(
+  const { openCreate, openDetails } = useTransactionFlow(filter ? filterSelection(filter) : rangeSelection(range));
+  const data = useTransactionsData(
     filter
-      ? {
-          from: filter.from,
-          to: filter.to,
-          filter: {
-            name: filter.name,
-            transactionType: filter.transactionType,
-            kind: filter.kind,
-            categoryId: filter.categoryId,
-            walletId: filter.walletId,
-          },
-        }
-      : rangeSelection(range),
+      ? { filter, getVisibleIds }
+      : {
+          range,
+          q,
+          aroundId: anchor && !q && anchor.spaceId === spaceId ? anchor.transactionId : undefined,
+          getVisibleIds,
+        },
   );
   const {
     transactions,
-    sections,
-    selectionKey,
     viewState,
     latest,
     income,
     expense,
     count,
     currencyCode,
-    hasNextPage,
-    isLoadingNextPage,
-    hasNextPageError,
-    loadNextPage,
     hasPreviousPage,
-    isLoadingPreviousPage,
-    hasPreviousPageError,
-    loadPreviousPage,
     refreshFailed,
     retry,
     retryLatest,
     missedAroundId,
-  } = useTransactionsData({
-    range,
-    filter,
-    q,
-    aroundId: anchor && !filter && !q && anchor.spaceId === spaceId ? anchor.transactionId : undefined,
-    getVisibleIds,
-  });
+  } = data;
 
   // A record already listed is only scrolled to; any other opens its month, without a filter, around it.
   if (reveal && reveal !== revealed) {
@@ -253,9 +235,7 @@ const TransactionsScreen = () => {
 
       <ScreenFrame edges={['top', 'left', 'right']} blurredStatusBar>
         <TransactionsList
-          groups={viewState === 'ready' ? sections : []}
-          selectionKey={selectionKey}
-          currencyCode={currencyCode}
+          {...feedListProps(data)}
           onPressTransaction={openDetails}
           onDeleteTransaction={requestDelete}
           highlightId={highlightId}
@@ -265,19 +245,6 @@ const TransactionsScreen = () => {
           onVisibleRowsChange={(ids) => {
             visibleIdsRef.current = ids;
           }}
-          older={{
-            hasMore: hasNextPage,
-            isLoading: isLoadingNextPage,
-            hasError: hasNextPageError,
-            onReached: loadNextPage,
-          }}
-          newer={{
-            hasMore: hasPreviousPage,
-            isLoading: isLoadingPreviousPage,
-            hasError: hasPreviousPageError,
-            onReached: loadPreviousPage,
-          }}
-          onRetryPage={retry}
           header={
             <>
               <TransactionsHeader

@@ -24,7 +24,14 @@ jest.useFakeTimers();
 
 interface RequestConfig {
   url: string;
-  params?: { from?: string; to?: string; transaction_type?: string; category_id?: number; cursor?: string };
+  params?: {
+    from?: string;
+    to?: string;
+    transaction_type?: string;
+    category_id?: number;
+    wallet_id?: number;
+    cursor?: string;
+  };
 }
 
 type Responder = (config: RequestConfig) => Promise<unknown>;
@@ -62,7 +69,7 @@ const dto: Transaction = {
 const january: DateRange = { from: new Date('2026-01-01'), to: new Date('2026-01-31'), preset: 'month' };
 const february: DateRange = { from: new Date('2026-02-01'), to: new Date('2026-02-28'), preset: 'month' };
 
-const renderForSpace = (spaceId: number, range = january) => {
+const renderForSpace = (spaceId: number, range = january, filter?: HistoryFilter) => {
   const store = createAppStore();
 
   store.dispatch(activateSpace(spaceId));
@@ -70,8 +77,8 @@ const renderForSpace = (spaceId: number, range = january) => {
   const wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
   const rendered = renderHook(
     (props: { range: DateRange; filter?: HistoryFilter | null }) =>
-      useTransactionsData({ range: props.range, filter: props.filter ?? null }),
-    { wrapper, initialProps: { range } as { range: DateRange; filter?: HistoryFilter | null } },
+      useTransactionsData(props.filter ? { filter: props.filter } : { range: props.range }),
+    { wrapper, initialProps: { range, filter } as { range: DateRange; filter?: HistoryFilter | null } },
   );
 
   return { store, ...rendered };
@@ -141,49 +148,151 @@ describe('useTransactionsData viewState', () => {
   });
 });
 
-describe('a Stats filter', () => {
-  const filter: HistoryFilter = {
+describe('a Stats selection', () => {
+  const selection = {
     spaceId: 1,
-    name: 'Food',
     from: '2026-08-31T21:00:00.000Z',
     to: '2026-09-30T09:15:42.123Z',
+    timeZone: 'Pacific/Auckland',
     transactionType: TransactionType.EXPENSE,
     kind: TransactionKind.REGULAR,
-    categoryId: 1,
   };
+  const category: HistoryFilter = { ...selection, name: 'Food', icon: 'grocery', color: AppColor.SLATE, categoryId: 1 };
+  const wallet: HistoryFilter = {
+    ...selection,
+    transactionType: TransactionType.INCOME,
+    name: 'Cash',
+    icon: 'wallet',
+    color: AppColor.INDIGO,
+    walletId: 3,
+  };
+  const feedParams = () =>
+    mockedRequest.mock.calls
+      .map(([config]: [RequestConfig]) => config)
+      .filter(({ url }) => url.endsWith('/feed'))
+      .map(({ params }) => params);
 
-  it("asks for the filter's own bounds instead of the period and skips the latest check", async () => {
+  it("asks for exactly a category's regular transactions up to the cutoff, in the zone Stats summed them in", async () => {
+    respondRange = () => rows('tx-1');
+
+    const { result, unmount } = renderForSpace(1, january, category);
+    await waitFor(() => expect(result.current.viewState).toBe('ready'));
+
+    expect(feedParams()).toEqual([
+      {
+        from: '2026-08-31T21:00:00.000Z',
+        to: '2026-09-30T09:15:42.123Z',
+        transaction_type: TransactionType.EXPENSE,
+        kind: TransactionKind.REGULAR,
+        category_id: 1,
+        time_zone: 'Pacific/Auckland',
+      },
+    ]);
+    expect(latestCalls()).toBe(0);
+
+    unmount();
+  });
+
+  it("asks for exactly a wallet's regular transactions of the breakdown's type", async () => {
+    respondRange = () => rows('tx-1');
+
+    const { result, unmount } = renderForSpace(1, january, wallet);
+    await waitFor(() => expect(result.current.viewState).toBe('ready'));
+
+    expect(feedParams()).toEqual([
+      {
+        from: '2026-08-31T21:00:00.000Z',
+        to: '2026-09-30T09:15:42.123Z',
+        transaction_type: TransactionType.INCOME,
+        kind: TransactionKind.REGULAR,
+        wallet_id: 3,
+        time_zone: 'Pacific/Auckland',
+      },
+    ]);
+
+    unmount();
+  });
+
+  it('keeps the same selection for the next page and for a retry of it', async () => {
+    let failsPage = true;
+    respondRange = (config) => {
+      if (!config.params?.cursor) {
+        return feed(feedDto([{ ...dto, id: 'a' }], { page_info: { next_cursor: 'c1', previous_cursor: null } }));
+      }
+      if (failsPage) return serverError();
+
+      return rows('b');
+    };
+
+    const { result, unmount } = renderForSpace(1, january, category);
+    await waitFor(() => expect(result.current.viewState).toBe('ready'));
+
+    act(() => result.current.loadNextPage());
+    await waitFor(() => expect(result.current.hasNextPageError).toBe(true));
+
+    failsPage = false;
+    act(() => result.current.retry());
+    await waitFor(() => expect(result.current.transactions.map(({ id }) => id)).toEqual(['a', 'b']));
+
+    const [first, ...pages] = feedParams();
+    expect(pages).toEqual([
+      { ...first, cursor: 'c1' },
+      { ...first, cursor: 'c1' },
+    ]);
+
+    unmount();
+  });
+
+  it('keeps the same selection when a failed first load is retried', async () => {
+    respondRange = serverError;
+
+    const { result, unmount } = renderForSpace(1, january, category);
+    await waitFor(() => expect(result.current.viewState).toBe('rangeError'));
+
+    respondRange = () => rows('tx-1');
+    act(() => result.current.retry());
+    await waitFor(() => expect(result.current.viewState).toBe('ready'));
+
+    const [first, second] = feedParams();
+    expect(second).toEqual(first);
+    expect(second).toMatchObject({ to: category.to, time_zone: 'Pacific/Auckland', category_id: 1 });
+
+    unmount();
+  });
+
+  it('replaces the period of the history it is opened over', async () => {
     respondRange = () => rows('tx-1');
 
     const { result, rerender, unmount } = renderForSpace(1);
     await waitFor(() => expect(result.current.viewState).toBe('ready'));
     mockedRequest.mockClear();
 
-    rerender({ range: january, filter });
+    rerender({ range: january, filter: category });
     await waitFor(() => expect(result.current.viewState).toBe('ready'));
 
-    expect(mockedRequest).toHaveBeenCalledTimes(1);
-    expect(mockedRequest.mock.calls[0][0].params).toEqual({
-      from: filter.from,
-      to: filter.to,
-      transaction_type: TransactionType.EXPENSE,
-      kind: TransactionKind.REGULAR,
-      category_id: 1,
-      time_zone: expect.any(String),
-    });
+    expect(feedParams()).toHaveLength(1);
+    expect(feedParams()[0]).toMatchObject({ from: category.from, to: category.to });
 
     unmount();
   });
 
   it('reports no matches rather than an empty account', async () => {
-    const { result, rerender, unmount } = renderForSpace(1);
-    await waitFor(() => expect(result.current.viewState).toBe('trueEmpty'));
-    mockedRequest.mockClear();
-
-    rerender({ range: january, filter });
+    const { result, unmount } = renderForSpace(1, january, category);
 
     await waitFor(() => expect(result.current.viewState).toBe('noMatches'));
     expect(latestCalls()).toBe(0);
+
+    unmount();
+  });
+
+  it('asks for nothing while another space is active', async () => {
+    const { result, unmount } = renderForSpace(2, january, category);
+
+    await act(async () => jest.advanceTimersByTimeAsync(10));
+
+    expect(feedParams()).toEqual([]);
+    expect(result.current.transactions).toEqual([]);
+    expect(result.current.viewState).toBe('loading');
 
     unmount();
   });

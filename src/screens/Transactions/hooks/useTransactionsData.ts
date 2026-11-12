@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import type { SkipToken } from '@reduxjs/toolkit/query';
 import { skipToken } from '@reduxjs/toolkit/query';
 
 import type { Money } from '@api/dto';
@@ -6,13 +7,13 @@ import { useTransactionsFeed } from '@hooks';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { feedSelection, feedSelectionKey, periodArg, useGetLatestTransactionQuery } from '@redux/state/transaction/api';
-import type { TransactionsArg } from '@redux/state/transaction/api';
+import type { FeedSelection, TransactionsArg } from '@redux/state/transaction/api';
 import { getEmptyPeriodState } from '@redux/state/transaction/selectors';
 import type { HistoryFilter } from '@shared/types';
 import type { DateRange, DayGroup } from '@shared/utils';
 import { groupRowsByDay } from '@shared/utils';
 
-// trueEmpty: no transactions at all; filteredEmpty: none in this period; noMatches: none under a Stats filter;
+// trueEmpty: no transactions at all; filteredEmpty: none in this period; noMatches: none behind a Stats row;
 // noSearchMatches: none for the search in this period.
 // latestError: the period is empty but whether any transactions exist couldn't be checked.
 export type TransactionsViewState =
@@ -23,17 +24,25 @@ export interface HistorySection extends DayGroup {
   total: Money | null;
 }
 
-interface UseTransactionsDataProps {
+interface ListedRows {
+  // The rows on screen, top first, kept in view when the history is refreshed after a change.
+  getVisibleIds?: () => string[];
+}
+
+interface HistoryRange extends ListedRows {
   range: DateRange;
-  // Replaces the period: its bounds go to the API exactly as Stats got them.
-  filter: HistoryFilter | null;
   // Open the period at this record's page instead of its newest one.
   aroundId?: string;
   // Search text, trimmed; empty for the plain history.
   q?: string;
-  // The rows on screen, top first, kept in view when the history is refreshed after a change.
-  getVisibleIds?: () => string[];
 }
+
+interface StatsSelection extends ListedRows {
+  // The transactions behind a Stats row: bounds and zone go to the API exactly as Stats got them.
+  filter: HistoryFilter;
+}
+
+type UseTransactionsDataProps = HistoryRange | StatsSelection;
 
 const toFilterArg = ({
   spaceId,
@@ -52,19 +61,27 @@ const toFilterArg = ({
   ...(categoryId !== undefined ? { categoryId } : { walletId }),
 });
 
-const useTransactionsData = ({ range, filter, q, aroundId, getVisibleIds }: UseTransactionsDataProps) => {
+const useTransactionsData = (props: UseTransactionsDataProps) => {
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
+  const filter = 'filter' in props ? props.filter : null;
+  const history = 'filter' in props ? null : props;
+  const q = history?.q;
 
-  const selection =
-    spaceId === null ? skipToken : feedSelection(filter ? toFilterArg(filter) : periodArg(spaceId, range), { q });
-  const feed = useTransactionsFeed(selection, { aroundId, getVisibleIds });
+  let selection: FeedSelection | SkipToken = skipToken;
+  // A selection from another space is never listed under this one's currency and actions.
+  if (filter && filter.spaceId === spaceId) {
+    selection = feedSelection(toFilterArg(filter), { timeZone: filter.timeZone });
+  } else if (history && spaceId !== null) {
+    selection = feedSelection(periodArg(spaceId, history.range), { q });
+  }
+  const feed = useTransactionsFeed(selection, { aroundId: history?.aroundId, getVisibleIds: props.getVisibleIds });
   const { items, summary, dayNets } = feed;
   const isEmpty = !feed.isLoading && !feed.hasError && items.length === 0;
 
   // Whether the account has any history at all only matters for an empty period.
   const spaceArg = useSpaceArg();
-  const needsLatest = !filter && !q && isEmpty;
+  const needsLatest = history !== null && !q && isEmpty;
   const latestQuery = useGetLatestTransactionQuery(needsLatest ? spaceArg : skipToken);
 
   const sections = useMemo<HistorySection[]>(
@@ -74,18 +91,18 @@ const useTransactionsData = ({ range, filter, q, aroundId, getVisibleIds }: UseT
 
   let viewState: TransactionsViewState;
 
-  if (feed.isLoading) {
+  if (feed.isLoading || (filter && selection === skipToken)) {
     viewState = 'loading';
   } else if (feed.hasError) {
     viewState = 'rangeError';
   } else if (!isEmpty) {
     viewState = 'ready';
-  } else if (filter) {
+  } else if (!history) {
     viewState = 'noMatches';
   } else if (q) {
     viewState = 'noSearchMatches';
   } else {
-    viewState = getEmptyPeriodState(latestQuery, range);
+    viewState = getEmptyPeriodState(latestQuery, history.range);
   }
 
   return {
