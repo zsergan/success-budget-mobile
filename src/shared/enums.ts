@@ -35,6 +35,8 @@ export enum ScreenNames {
   ADD_WALLET_SCREEN = 'AddWalletScreen',
   TRANSACTIONS_TAB = 'Transactions',
   STATS_TAB = 'Stats',
+  STATS_OVERVIEW_SCREEN = 'StatsOverviewScreen',
+  STATS_TRANSACTIONS_SCREEN = 'StatsTransactionsScreen',
   SETTINGS_TAB = 'Settings',
   CATEGORIES_SCREEN = 'CategoriesScreen',
   CREATE_SPACE_SCREEN = 'CreateSpaceScreen',

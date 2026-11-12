@@ -1,4 +1,4 @@
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import type { Money } from '@api/dto';
 import { Icon } from '@components';
@@ -14,11 +14,10 @@ interface Props {
   // Null until the filter has an answer.
   total: Money | null;
   currencyCode?: string;
-  // Only where the filter sits on top of a history it can be taken off.
-  onClear?: () => void;
 }
 
-const AppliedFilter = ({ filter, total, currencyCode, onClear }: Props) => {
+// The fixed context of a Stats row's transactions: nothing here can be pressed or taken off.
+const AppliedFilter = ({ filter, total, currencyCode }: Props) => {
   const { colors, categories } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const isExpense = filter.transactionType === TransactionType.EXPENSE;
@@ -33,24 +32,9 @@ const AppliedFilter = ({ filter, total, currencyCode, onClear }: Props) => {
 
   return (
     <View style={styles.root} testID="applied-filter">
-      <View style={styles.context}>
-        <View style={styles.tags}>
-          {isExpense ? tag('expense', colors.danger, 'Expenses', 2.4) : tag('income', colors.ok, 'Income', 2.4)}
-          {tag(filter.icon, categories[filter.color].stroke, filter.name, 2)}
-        </View>
-
-        {onClear && (
-          <TouchableOpacity
-            style={styles.clearButton}
-            onPress={onClear}
-            activeOpacity={0.6}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Clear filter"
-          >
-            <Icon name="close" size={13} color={colors.text} strokeWidth={2.1} />
-          </TouchableOpacity>
-        )}
+      <View style={styles.tags}>
+        {isExpense ? tag('expense', colors.danger, 'Expenses', 2.4) : tag('income', colors.ok, 'Income', 2.4)}
+        {tag(filter.icon, categories[filter.color].stroke, filter.name, 2)}
       </View>
 
       <View style={styles.summary}>

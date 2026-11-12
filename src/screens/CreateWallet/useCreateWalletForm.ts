@@ -67,7 +67,10 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
 
     navigation.popTo(ScreenNames.HOME_SCREEN, {
       screen: addTransaction.returnTo,
-      params: { composeWith: { spaceId: addTransaction.spaceId, walletId } },
+      params: {
+        screen: ScreenNames.STATS_OVERVIEW_SCREEN,
+        params: { composeWith: { spaceId: addTransaction.spaceId, walletId } },
+      },
     });
 
     return true;

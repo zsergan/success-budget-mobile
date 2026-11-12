@@ -3,7 +3,7 @@ import { Provider } from 'react-redux';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ScrollView, SectionList, StyleSheet, VirtualizedList } from 'react-native';
-import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { createAppStore } from '@redux/Store';
@@ -13,7 +13,7 @@ import { transactionApi } from '@redux/state/transaction/api';
 import { feedDto, transactionDto } from '@redux/state/transaction/fixtures';
 import { deleteTransaction } from '@redux/state/transactionFlow/thunks';
 import { mapTransaction } from '@api/models';
-import { AppColor, ScreenNames, TransactionKind, TransactionType } from '@shared/enums';
+import { ScreenNames } from '@shared/enums';
 import { colorThemes } from '@shared/theme';
 import type { MainTabParamList } from '@shared/types';
 import { hexToRgba } from '@shared/utils';
@@ -126,20 +126,8 @@ beforeEach(() => {
 });
 
 describe('TransactionsScreen', () => {
-  it('shows a revealed record on its month with the filter that hid it removed', async () => {
+  it("opens a revealed record's month around it and takes the request off the route", async () => {
     renderTransactions({
-      filter: {
-        spaceId: 1,
-        from: new Date(2026, 8, 1).toISOString(),
-        to: new Date(2026, 8, 28).toISOString(),
-        transactionType: TransactionType.EXPENSE,
-        kind: TransactionKind.REGULAR,
-        name: 'Food',
-        icon: 'grocery',
-        color: AppColor.SLATE,
-        timeZone: ZONE,
-        categoryId: 2,
-      },
       reveal: { spaceId: 1, transactionId: 'tx-aug', timestamp: august },
     });
     await settle();
@@ -151,7 +139,7 @@ describe('TransactionsScreen', () => {
       around_id: 'tx-aug',
     });
     expect(screen.getByText('Taxi')).toBeTruthy();
-    expect(navigationRef.getCurrentRoute()?.params).toEqual({ filter: undefined, reveal: undefined });
+    expect(navigationRef.getCurrentRoute()?.params).toEqual({ reveal: undefined });
   });
 
   it('lands on a revealed row once it is measured, and fades it only after it has been on screen', async () => {
@@ -186,62 +174,6 @@ describe('TransactionsScreen', () => {
     await act(async () => jest.advanceTimersByTimeAsync(2500));
     expect(isLit()).toBe(false);
     restore();
-  });
-
-  it('lists only regular income of a wallet under an Income filter, and the usual history once it is cleared', async () => {
-    const salary = (id: string, amount: string) =>
-      transactionDto({
-        id,
-        amount,
-        transaction_type: TransactionType.INCOME,
-        timestamp: new Date(2026, 8, 10).toISOString(),
-      });
-    mockedRequest.mockImplementation(({ url, params }: RequestConfig) =>
-      Promise.resolve({
-        data:
-          url === FEED && params?.kind
-            ? feedDto([salary('tx-1', '3200.00'), salary('tx-2', '850.00')], {
-                summary: { count: 2, income: '4050.00', expense: '0.00' },
-              })
-            : feedDto([]),
-      }),
-    );
-    const filter = {
-      spaceId: 1,
-      from: '2026-08-31T21:00:00.000Z',
-      to: '2026-09-28T09:15:42.123Z',
-      transactionType: TransactionType.INCOME,
-      kind: TransactionKind.REGULAR,
-      name: 'Everyday',
-      icon: 'wallet' as const,
-      color: AppColor.INDIGO,
-      timeZone: 'Pacific/Auckland',
-      walletId: 1,
-    };
-    renderTransactions({ filter });
-    await settle();
-
-    expect(listRequests().at(-1)?.params).toEqual({
-      from: filter.from,
-      to: filter.to,
-      transaction_type: TransactionType.INCOME,
-      kind: TransactionKind.REGULAR,
-      wallet_id: 1,
-      time_zone: 'Pacific/Auckland',
-    });
-    expect(within(screen.getByTestId('applied-filter')).getByText('Income')).toBeTruthy();
-    expect(within(screen.getByTestId('applied-filter')).getByText('Everyday')).toBeTruthy();
-    expect(screen.getByText('4 050.00')).toBeTruthy();
-
-    fireEvent.press(screen.getByLabelText('Clear filter'));
-    await settle();
-
-    expect(screen.queryByTestId('applied-filter')).toBeNull();
-    expect(listRequests().at(-1)?.params).toEqual({
-      from: new Date(2026, 8, 1).toISOString(),
-      to: new Date(2026, 8, 30, 23, 59, 59, 999).toISOString(),
-      time_zone: ZONE,
-    });
   });
 
   it('ignores a reveal meant for another space', async () => {
@@ -971,7 +903,7 @@ describe('TransactionsScreen', () => {
       scrollToLocation.mockRestore();
     });
 
-    it.each(['period', 'space', 'filter'])('forgets a return still on its way once the %s changes', async (change) => {
+    it.each(['period', 'space'])('forgets a return still on its way once the %s changes', async (change) => {
       const scrollToLocation = jest.spyOn(SectionList.prototype, 'scrollToLocation').mockImplementation(() => {});
       let releaseAround: () => void = () => {};
       mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
@@ -996,23 +928,6 @@ describe('TransactionsScreen', () => {
 
       if (change === 'period') fireEvent.press(screen.getByText('Year'));
       if (change === 'space') act(() => void store.dispatch(activateSpace(2)));
-      if (change === 'filter')
-        act(() =>
-          navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB, {
-            filter: {
-              spaceId: 1,
-              from: new Date(2026, 8, 1).toISOString(),
-              to: new Date(2026, 8, 28).toISOString(),
-              transactionType: TransactionType.EXPENSE,
-              kind: TransactionKind.REGULAR,
-              name: 'Food',
-              icon: 'grocery',
-              color: AppColor.SLATE,
-              timeZone: ZONE,
-              categoryId: 2,
-            },
-          }),
-        );
       await settle();
       await act(async () => releaseAround());
       await settle();
@@ -1060,91 +975,6 @@ describe('TransactionsScreen', () => {
       expect(screen.UNSAFE_queryByType(Fab)).toBeTruthy();
       expect(mockedRequest.mock.calls.at(-1)?.[0].params).not.toHaveProperty('q');
     });
-
-    it('offers no search under a Stats filter', async () => {
-      renderTransactions({
-        filter: {
-          spaceId: 1,
-          from: new Date(2026, 8, 1).toISOString(),
-          to: new Date(2026, 8, 28).toISOString(),
-          transactionType: TransactionType.EXPENSE,
-          kind: TransactionKind.REGULAR,
-          name: 'Food',
-          icon: 'grocery',
-          color: AppColor.SLATE,
-          timeZone: ZONE,
-          categoryId: 2,
-        },
-      });
-      await settle();
-
-      expect(screen.queryByRole('button', { name: 'Search transactions' })).toBeNull();
-    });
-
-    it.each(['still out', 'not yet sent'])(
-      'ends a search %s once a Stats filter opens, with + under it and the plain history after it',
-      async (stage) => {
-        let answer: (value: unknown) => void = () => {};
-        mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
-          if (url !== FEED) return Promise.resolve({ data: null });
-          if (params?.q) return new Promise((resolve) => (answer = resolve));
-          return Promise.resolve({ data: feedDto([coffee, taxi]) });
-        });
-        renderTransactions(undefined);
-        await settle();
-        act(() =>
-          screen.UNSAFE_getByType(SectionList).props.onViewableItemsChanged({
-            viewableItems: [{ item: mapTransaction(taxi), isViewable: true }],
-          }),
-        );
-        const field = await openSearch();
-        fireEvent.changeText(field, 'coffee');
-        if (stage === 'still out') fireEvent(field, 'submitEditing');
-        await settle();
-        const sent = listRequests().length;
-
-        act(() =>
-          navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB, {
-            filter: {
-              spaceId: 1,
-              from: new Date(2026, 8, 1).toISOString(),
-              to: new Date(2026, 8, 28).toISOString(),
-              transactionType: TransactionType.EXPENSE,
-              kind: TransactionKind.REGULAR,
-              name: 'Food',
-              icon: 'grocery',
-              color: AppColor.SLATE,
-              timeZone: ZONE,
-              categoryId: 2,
-            },
-          }),
-        );
-        await settle();
-        await act(async () =>
-          answer({ data: feedDto([coffee], { summary: { count: 1, income: '0.00', expense: '9.99' } }) }),
-        );
-        await act(async () => jest.advanceTimersByTimeAsync(300));
-
-        expect(listRequests().slice(sent)).toEqual([
-          expect.objectContaining({ params: expect.not.objectContaining({ q: expect.anything() }) }),
-        ]);
-        expect(listRequests().at(-1)?.params).toMatchObject({ category_id: 2 });
-        expect(screen.queryByText('9.99')).toBeNull();
-        expect(screen.UNSAFE_queryByType(Fab)).toBeTruthy();
-
-        fireEvent.press(screen.getByLabelText('Clear filter'));
-        await settle();
-
-        expect(listRequests().at(-1)?.params).toEqual({
-          from: new Date(2026, 8, 1).toISOString(),
-          to: new Date(2026, 8, 30, 23, 59, 59, 999).toISOString(),
-          time_zone: ZONE,
-        });
-        expect(screen.queryByText('Cancel', { includeHiddenElements: false })).toBeNull();
-        expect(screen.UNSAFE_queryByType(Fab)).toBeTruthy();
-        expect((await openSearch()).props.value).toBe('');
-      },
-    );
 
     it('leaves search when a record is shown from elsewhere', async () => {
       renderTransactions(undefined);

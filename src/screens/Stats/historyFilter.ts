@@ -5,7 +5,8 @@ import type { HistoryFilter } from '@shared/types';
 
 import type { BreakdownGroup } from './statsItems';
 
-// Only real categories and wallets open History; the bounds pass through untouched so its sum matches the row.
+// Only real categories and wallets open their transactions; the bounds pass through untouched so the list's sum
+// matches the row.
 export const toHistoryFilter = (
   group: BreakdownGroup,
   { period, transaction_type: transactionType }: Pick<StatisticsBreakdown, 'period' | 'transaction_type'>,

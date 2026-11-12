@@ -17,12 +17,11 @@ import {
 import { usePeriod, useConfirmation, useSpaceRefresh } from '@hooks';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
-import { filterSelection, rangeSelection } from '@redux/state/transactionFlow/selection';
+import { rangeSelection } from '@redux/state/transactionFlow/selection';
 import { monthPeriodOf, toDateRange } from '@shared/utils';
 import { TransactionType } from '@shared/enums';
 import type { ScreenNames } from '@shared/enums';
 import type { MainTabNavigationProp, MainTabScreenProps, RevealTransaction } from '@shared/types';
-import AppliedFilter from './components/AppliedFilter/AppliedFilter';
 import type { SearchStatus } from './components/FilterBar/FilterBar';
 import FilterBar from './components/FilterBar/FilterBar';
 import RangeCount from './components/RangeCount/RangeCount';
@@ -66,21 +65,12 @@ const TransactionsScreen = () => {
   const handleOpenPicker = () => rangePickerRef.current?.present();
 
   const spaceId = useAppSelector(selectCurrentSpaceId);
-  const requestedFilter = route.params?.filter;
-  const filter = requestedFilter?.spaceId === spaceId ? requestedFilter : null;
-  const clearFilter = () => navigation.setParams({ filter: undefined });
-
-  // A filter left from another space must not come back when that space is selected again.
-  useEffect(() => {
-    if (requestedFilter && requestedFilter.spaceId !== spaceId) navigation.setParams({ filter: undefined });
-  }, [navigation, requestedFilter, spaceId]);
 
   const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod, openMonthOf } = usePeriod();
-  // Offered on the plain history only; a Stats filter stays as it is until it is cleared.
   const search = useSearch();
-  const q = filter ? '' : search.submitted;
+  const q = search.submitted;
 
-  // Show from a confirmation: the record's month with no filter, its row scrolled to and lit for a moment.
+  // Show from a confirmation: the record's month with no search, its row scrolled to and lit for a moment.
   // The user's period changes only on this explicit request.
   const reveal = route.params?.reveal;
   const [highlightId, setHighlightId] = useState<string | null>(null);
@@ -97,13 +87,8 @@ const TransactionsScreen = () => {
   // Where the plain history was when a search opened; Cancel brings it back while the period is the same.
   const [returnPoint, setReturnPoint] = useState<Anchor | null>(null);
   const [restoreId, setRestoreId] = useState<string | null>(null);
-  // A Stats filter ends a search, so + works under it and clearing it shows the plain history.
-  if (filter && (search.isSearching || search.query || search.submitted || returnPoint)) {
-    search.cancel();
-    setReturnPoint(null);
-  }
-  // A restore holds only while its row still anchors the plain history: another period or a filter drops it.
-  if (restoreId && (filter || anchor?.transactionId !== restoreId)) setRestoreId(null);
+  // A restore holds only while its row still anchors the plain history: another period drops it.
+  if (restoreId && anchor?.transactionId !== restoreId) setRestoreId(null);
   // The plain history was replaced by results at least once, so Cancel has a place to return to.
   const [hasLeftHistory, setHasLeftHistory] = useState(false);
   if (q && returnPoint && !hasLeftHistory) setHasLeftHistory(true);
@@ -122,20 +107,16 @@ const TransactionsScreen = () => {
   const getVisibleIds = useCallback(() => visibleIdsRef.current, []);
 
   useEffect(() => {
-    if (reveal) navigation.setParams({ reveal: undefined, filter: undefined });
+    if (reveal) navigation.setParams({ reveal: undefined });
   }, [navigation, reveal]);
 
-  const { openCreate, openDetails } = useTransactionFlow(filter ? filterSelection(filter) : rangeSelection(range));
-  const data = useTransactionsData(
-    filter
-      ? { filter, getVisibleIds }
-      : {
-          range,
-          q,
-          aroundId: anchor && !q && anchor.spaceId === spaceId ? anchor.transactionId : undefined,
-          getVisibleIds,
-        },
-  );
+  const { openCreate, openDetails } = useTransactionFlow(rangeSelection(range));
+  const data = useTransactionsData({
+    range,
+    q,
+    aroundId: anchor && !q && anchor.spaceId === spaceId ? anchor.transactionId : undefined,
+    getVisibleIds,
+  });
   const {
     transactions,
     viewState,
@@ -151,12 +132,12 @@ const TransactionsScreen = () => {
     missedAroundId,
   } = data;
 
-  // A record already listed is only scrolled to; any other opens its month, without a filter, around it.
+  // A record already listed is only scrolled to; any other opens its month around it.
   if (reveal && reveal !== revealed) {
     setRevealed(reveal);
     if (reveal.spaceId === spaceId) {
       const isListed =
-        !filter && !q && isShownMonth(reveal.timestamp) && transactions.some(({ id }) => id === reveal.transactionId);
+        !q && isShownMonth(reveal.timestamp) && transactions.some(({ id }) => id === reveal.transactionId);
 
       if (!isListed) {
         openMonthOf(reveal.timestamp);
@@ -248,7 +229,6 @@ const TransactionsScreen = () => {
           header={
             <>
               <TransactionsHeader
-                canSearch={!filter}
                 isSearching={search.isSearching}
                 query={search.query}
                 error={search.isTooLong ? `Search is limited to ${MAX_SEARCH_LENGTH} characters` : null}
@@ -259,26 +239,17 @@ const TransactionsScreen = () => {
                 onClear={search.clear}
               />
 
-              {filter ? (
-                <AppliedFilter
-                  filter={filter}
-                  total={filter.transactionType === TransactionType.INCOME ? income : expense}
-                  currencyCode={currencyCode}
-                  onClear={clearFilter}
-                />
-              ) : (
-                <FilterBar
-                  period={period}
-                  income={income}
-                  expense={expense}
-                  isLoading={viewState === 'loading'}
-                  search={searchStatus}
-                  currencyCode={currencyCode}
-                  onPresetPress={selectCurrent}
-                  onOpenPicker={handleOpenPicker}
-                  onReset={resetPeriod}
-                />
-              )}
+              <FilterBar
+                period={period}
+                income={income}
+                expense={expense}
+                isLoading={viewState === 'loading'}
+                search={searchStatus}
+                currencyCode={currencyCode}
+                onPresetPress={selectCurrent}
+                onOpenPicker={handleOpenPicker}
+                onReset={resetPeriod}
+              />
 
               <PendingWritesBanner style={styles.banner} />
 
@@ -325,8 +296,6 @@ const TransactionsScreen = () => {
                   onJumpToLatest={() => openMonthOf(latest.timestamp)}
                 />
               )}
-
-              {viewState === 'noMatches' && <TransactionsEmptyState variant="noMatches" onClearFilter={clearFilter} />}
 
               {viewState === 'noSearchMatches' && (
                 <TransactionsEmptyState

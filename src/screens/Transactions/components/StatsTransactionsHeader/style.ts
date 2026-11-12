@@ -5,10 +5,10 @@ import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme) =>
   StyleSheet.create({
-    header: {
+    bar: {
+      paddingHorizontal: theme.spacing.xl,
       paddingTop: 6,
-      paddingBottom: 14,
-      rowGap: theme.spacing.xs,
+      paddingBottom: theme.spacing.xs,
     },
     back: {
       flexDirection: 'row',
@@ -32,6 +32,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       lineHeight: theme.lineHeights.titleLg,
       letterSpacing: theme.letterSpacing.titleLg,
       color: colors.text,
+      paddingBottom: 14,
     },
   });
 

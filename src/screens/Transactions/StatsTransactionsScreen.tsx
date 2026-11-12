@@ -1,5 +1,6 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
+import { CommonActions } from '@react-navigation/native';
 
 import {
   Banner,
@@ -10,12 +11,17 @@ import {
   useTransactionFlow,
 } from '@components';
 import { useConfirmation, useSpaceRefresh } from '@hooks';
+import { useAppSelector } from '@redux/hooks';
+import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { filterSelection } from '@redux/state/transactionFlow/selection';
 import { TransactionType } from '@shared/enums';
-import type { HistoryFilter } from '@shared/types';
+import type { ScreenNames } from '@shared/enums';
+import type { HistoryFilter, StatsStackScreenProps } from '@shared/types';
 import AppliedFilter from './components/AppliedFilter/AppliedFilter';
 import TransactionsSkeleton from './components/Skeleton/TransactionsSkeleton';
-import StatsTransactionsHeader from './components/StatsTransactionsHeader/StatsTransactionsHeader';
+import StatsTransactionsHeader, {
+  StatsTransactionsTitle,
+} from './components/StatsTransactionsHeader/StatsTransactionsHeader';
 import TransactionsEmptyState from './components/TransactionsEmptyState/TransactionsEmptyState';
 import TransactionsList from './components/TransactionsList/TransactionsList';
 import { feedListProps } from './feedListProps';
@@ -29,7 +35,7 @@ interface Props {
   onBack: () => void;
 }
 
-const StatsTransactionsScreen = ({ filter, onBack }: Props) => {
+const StatsTransactions = ({ filter, onBack }: Props) => {
   useSpaceRefresh();
   const { lock: deleteLock, confirmation: deleteConfirmation } = useConfirmation();
   const { requestDelete } = useTransactionDelete(deleteLock);
@@ -43,7 +49,9 @@ const StatsTransactionsScreen = ({ filter, onBack }: Props) => {
 
   return (
     <>
-      <ScreenFrame edges={['top', 'left', 'right']} blurredStatusBar>
+      <ScreenFrame edges={['top', 'left', 'right']}>
+        <StatsTransactionsHeader onBack={onBack} />
+
         <TransactionsList
           {...feedListProps(data)}
           onPressTransaction={openDetails}
@@ -53,7 +61,7 @@ const StatsTransactionsScreen = ({ filter, onBack }: Props) => {
           }}
           header={
             <>
-              <StatsTransactionsHeader onBack={onBack} />
+              <StatsTransactionsTitle />
 
               <AppliedFilter
                 filter={filter}
@@ -90,6 +98,31 @@ const StatsTransactionsScreen = ({ filter, onBack }: Props) => {
       <ConfirmationSheet confirmation={deleteConfirmation} />
     </>
   );
+};
+
+// The list belongs to the space its row was summed in. Once another space is active, or none, it is never shown
+// again, even if its own space comes back, and its route leaves the stack wherever the user is.
+const StatsTransactionsScreen = ({
+  navigation,
+  route,
+}: StatsStackScreenProps<ScreenNames.STATS_TRANSACTIONS_SCREEN>) => {
+  const { filter } = route.params;
+  const spaceId = useAppSelector(selectCurrentSpaceId);
+  const [isStale, setIsStale] = useState(filter.spaceId !== spaceId);
+  if (!isStale && filter.spaceId !== spaceId) setIsStale(true);
+
+  useEffect(() => {
+    if (!isStale) return;
+
+    // Not goBack(): from another tab it must take only this route away, without bringing Stats into focus.
+    navigation.dispatch((state) => {
+      const routes = state.routes.filter(({ key }) => key !== route.key);
+
+      return CommonActions.reset({ ...state, routes, index: routes.length - 1 });
+    });
+  }, [isStale, navigation, route.key]);
+
+  return isStale ? null : <StatsTransactions filter={filter} onBack={navigation.goBack} />;
 };
 
 export default StatsTransactionsScreen;

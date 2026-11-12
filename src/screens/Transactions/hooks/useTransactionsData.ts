@@ -108,7 +108,7 @@ const useTransactionsData = (props: UseTransactionsDataProps) => {
   return {
     transactions: items,
     sections,
-    // Which history is listed: the space, period or Stats filter, and the search.
+    // What is listed: the space, the period and search, or the Stats selection.
     selectionKey: selection === skipToken ? '' : feedSelectionKey(selection),
     viewState,
     latest: latestQuery.currentData,

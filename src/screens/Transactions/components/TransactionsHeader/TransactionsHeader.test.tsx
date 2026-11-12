@@ -25,7 +25,7 @@ const renderHeader = (props: Partial<ComponentProps<typeof TransactionsHeader>> 
     onClear: jest.fn(),
   };
 
-  render(<TransactionsHeader canSearch isSearching={false} query="" {...handlers} {...props} />);
+  render(<TransactionsHeader isSearching={false} query="" {...handlers} {...props} />);
 
   return handlers;
 };
@@ -72,13 +72,6 @@ describe('TransactionsHeader', () => {
     expect(onClear).toHaveBeenCalledTimes(1);
   });
 
-  it('offers no search under a Stats filter', () => {
-    renderHeader({ canSearch: false });
-
-    expect(screen.queryByLabelText('Search transactions')).toBeNull();
-    expect(screen.getByText('Transactions')).toBeTruthy();
-  });
-
   it('says under the field why its text is not searched, and only while searching', () => {
     const error = 'Search is limited to 255 characters';
     renderHeader({ isSearching: true, query: 'a'.repeat(256), error });
@@ -86,7 +79,6 @@ describe('TransactionsHeader', () => {
 
     screen.rerender(
       <TransactionsHeader
-        canSearch
         isSearching={false}
         query=""
         error={error}
@@ -105,7 +97,6 @@ describe('TransactionsHeader', () => {
     const blur = TextInput.prototype.blur as jest.Mock;
     const header = (isSearching: boolean, query = '') => (
       <TransactionsHeader
-        canSearch
         isSearching={isSearching}
         query={query}
         onOpen={jest.fn()}

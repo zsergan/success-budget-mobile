@@ -2,11 +2,12 @@ import { View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { BottomTabBar, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
-import { HomeScreen, LimitsScreen, SettingsScreen, StatsScreen, TransactionsScreen } from '@screens';
+import { HomeScreen, LimitsScreen, SettingsScreen, TransactionsScreen } from '@screens';
 import { Icon, TransactionFlowSheet, useToastControl } from '@components';
 import { useTheme } from '@hooks';
 import { ScreenNames } from '@shared/enums';
 import type { MainTabParamList } from '@shared/types';
+import StatsNavigator from './StatsNavigator';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -64,7 +65,7 @@ const MainNavigator = () => {
 
         <Tab.Screen
           name={ScreenNames.STATS_TAB}
-          component={StatsScreen}
+          component={StatsNavigator}
           options={{ tabBarIcon: StatsIcon, headerShown: false }}
         />
 

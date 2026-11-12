@@ -17,7 +17,7 @@ import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { activateSpace } from '@redux/state/space/thunks';
 import { rangeSelection } from '@redux/state/transactionFlow/selection';
 import { ScreenNames, TransactionType } from '@shared/enums';
-import type { MainTabNavigationProp } from '@shared/types';
+import type { StatsStackNavigationProp } from '@shared/types';
 import { formatRangeLabel, hasComparison, isCurrentMonth, monthPeriodOf } from '@shared/utils';
 import CreateWalletSheet from './components/CreateWalletSheet/CreateWalletSheet';
 import StatsEmptyState from './components/StatsEmptyState/StatsEmptyState';
@@ -38,7 +38,7 @@ import { getStatsViewState } from './statsViewState';
 import styles from './style';
 
 const StatsScreen = () => {
-  const navigation = useNavigation<MainTabNavigationProp<ScreenNames.STATS_TAB>>();
+  const navigation = useNavigation<StatsStackNavigationProp<ScreenNames.STATS_OVERVIEW_SCREEN>>();
   const rangePickerRef = useRef<BottomSheetModal>(null);
   const walletSheetRef = useRef<BottomSheetModal>(null);
   const spacesSheetRef = useRef<BottomSheetModal>(null);
@@ -129,9 +129,9 @@ const StatsScreen = () => {
   if (breakdown.data && selection.selectedSegmentKey !== null && !isSegmentShown) selection.selectSegment(null);
   const selectedSegmentKey = isSegmentShown ? selection.selectedSegmentKey : null;
 
-  const openHistory = (group: BreakdownGroup) => {
+  const openTransactions = (group: BreakdownGroup) => {
     const filter = breakdown.data && spaceId !== null && toHistoryFilter(group, breakdown.data, spaceId);
-    if (filter) navigation.navigate(ScreenNames.TRANSACTIONS_TAB, { filter });
+    if (filter) navigation.navigate(ScreenNames.STATS_TRANSACTIONS_SCREEN, { filter });
   };
 
   const monthLabel = range.from.toLocaleString('en-US', { month: 'long', year: 'numeric' });
@@ -208,7 +208,7 @@ const StatsScreen = () => {
             onBreakdownTypeChange={selection.changeBreakdownType}
             onModeChange={selection.changeMode}
             onToggleOther={selection.toggleOther}
-            onOpenHistory={openHistory}
+            onOpenHistory={openTransactions}
           />
         </View>
       </ScreenFrame>

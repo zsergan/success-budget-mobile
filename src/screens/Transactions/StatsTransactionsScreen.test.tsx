@@ -1,16 +1,18 @@
 import type { ReactNode, Ref } from 'react';
+import { SectionList } from 'react-native';
 import { Provider } from 'react-redux';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 
 import { Fab } from '@components';
 import { createAppStore } from '@redux/Store';
 import { withProfile } from '@redux/state/profile/fixtures';
 import { activateSpace } from '@redux/state/space/thunks';
 import { feedDto, transactionDto } from '@redux/state/transaction/fixtures';
-import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
-import type { HistoryFilter } from '@shared/types';
+import { AppColor, ScreenNames, TransactionKind, TransactionType } from '@shared/enums';
+import type { HistoryFilter, StatsStackParamList } from '@shared/types';
 import StatsTransactionsScreen from './StatsTransactionsScreen';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
@@ -79,7 +81,8 @@ const invoice = (id: string, amount: string, day: number) =>
     category: { ...transactionDto().category, id: 7, name: 'Freelance', transaction_type: TransactionType.INCOME },
   });
 
-const onBack = jest.fn();
+const Stack = createNativeStackNavigator<StatsStackParamList>();
+const navigationRef = createNavigationContainerRef<StatsStackParamList>();
 
 const renderScreen = (filter: HistoryFilter = freelance) => {
   const store = createAppStore();
@@ -89,8 +92,19 @@ const renderScreen = (filter: HistoryFilter = freelance) => {
   render(
     <Provider store={store}>
       <SafeAreaProvider initialMetrics={METRICS}>
-        <NavigationContainer>
-          <StatsTransactionsScreen filter={filter} onBack={onBack} />
+        <NavigationContainer
+          ref={navigationRef}
+          initialState={{
+            routes: [
+              { name: ScreenNames.STATS_OVERVIEW_SCREEN },
+              { name: ScreenNames.STATS_TRANSACTIONS_SCREEN, params: { filter } },
+            ],
+          }}
+        >
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name={ScreenNames.STATS_OVERVIEW_SCREEN} component={() => null} />
+            <Stack.Screen name={ScreenNames.STATS_TRANSACTIONS_SCREEN} component={StatsTransactionsScreen} />
+          </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>
     </Provider>,
@@ -209,12 +223,25 @@ describe('StatsTransactionsScreen', () => {
     expect(store.getState().transactionFlow.flow).toMatchObject({ spaceId: 1 });
   });
 
-  it('goes back to Stats', async () => {
+  it('goes back to Stats from a button that stays outside the scrolled list', async () => {
     renderScreen();
     await settle();
 
-    fireEvent.press(screen.getByLabelText('Back to Stats'));
+    const back = screen.getByRole('button', { name: 'Back to Stats' });
+    expect(within(screen.UNSAFE_getByType(SectionList)).queryByLabelText('Back to Stats')).toBeNull();
 
-    expect(onBack).toHaveBeenCalledTimes(1);
+    fireEvent.press(back);
+    await settle();
+
+    expect(navigationRef.getCurrentRoute()?.name).toBe(ScreenNames.STATS_OVERVIEW_SCREEN);
+  });
+
+  it('shows and asks for nothing when it opens under another space, and leaves the stack', async () => {
+    renderScreen({ ...freelance, spaceId: 2 });
+    await settle();
+
+    expect(feedRequests()).toEqual([]);
+    expect(screen.queryByTestId('applied-filter')).toBeNull();
+    expect(navigationRef.getRootState()?.routes.map(({ name }) => name)).toEqual([ScreenNames.STATS_OVERVIEW_SCREEN]);
   });
 });

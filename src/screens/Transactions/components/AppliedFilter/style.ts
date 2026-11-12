@@ -8,13 +8,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     root: {
       rowGap: theme.spacing.md,
     },
-    context: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      columnGap: theme.spacing.sm,
-    },
     tags: {
-      flex: 1,
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 7,
@@ -40,14 +34,6 @@ const createStyles = ({ colors }: ColorTheme) =>
       color: colors.text,
       // Plus Jakarta Sans under-measures its own width and clips the last glyph (see cde3346).
       paddingRight: 2,
-    },
-    clearButton: {
-      width: 32,
-      height: 32,
-      borderRadius: 11,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.track,
     },
     summary: {
       flexDirection: 'row',

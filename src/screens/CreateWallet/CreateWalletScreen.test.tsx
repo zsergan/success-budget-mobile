@@ -8,7 +8,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { createAppStore } from '@redux/Store';
 import { activateSpace } from '@redux/state/space/thunks';
 import { AppColor, ScreenNames } from '@shared/enums';
-import type { MainTabParamList, MainTabScreenProps, RootStackParamList } from '@shared/types';
+import type { MainTabParamList, RootStackParamList, StatsStackParamList, StatsStackScreenProps } from '@shared/types';
 import CreateWalletScreen from './CreateWalletScreen';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
@@ -28,8 +28,16 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
-const StatsProbe = ({ route }: MainTabScreenProps<ScreenNames.STATS_TAB>) => (
+const StatsStack = createNativeStackNavigator<StatsStackParamList>();
+
+const OverviewProbe = ({ route }: StatsStackScreenProps<ScreenNames.STATS_OVERVIEW_SCREEN>) => (
   <Text testID="stats-params">{JSON.stringify(route.params ?? null)}</Text>
+);
+
+const StatsProbe = () => (
+  <StatsStack.Navigator screenOptions={{ headerShown: false }}>
+    <StatsStack.Screen name={ScreenNames.STATS_OVERVIEW_SCREEN} component={OverviewProbe} />
+  </StatsStack.Navigator>
 );
 
 const Tabs = () => (
@@ -76,6 +84,14 @@ const createWallet = async () => {
 
 const statsParams = () => JSON.parse(String(screen.getByTestId('stats-params').props.children));
 
+// The Stats tab's own stack: the intent goes to the overview already there, never to a second one.
+const statsStackNames = () => {
+  const tabs = navigationRef.getRootState()?.routes[0].state;
+  const stats = tabs?.routes.find(({ name }) => name === ScreenNames.STATS_TAB);
+
+  return stats?.state?.routes.map(({ name }) => name);
+};
+
 const routeNames = () => (navigationRef.getRootState()?.routes ?? []).map((route) => route.name);
 
 beforeEach(() => {
@@ -97,6 +113,7 @@ describe('creating a wallet for Add transaction', () => {
 
     expect(routeNames()).toEqual([ScreenNames.HOME_SCREEN]);
     expect(statsParams()).toEqual({ composeWith: { spaceId: 1, walletId: 9 } });
+    expect(statsStackNames()).toEqual([ScreenNames.STATS_OVERVIEW_SCREEN]);
   });
 
   it('just goes back when the space changed since the sheet was opened', async () => {

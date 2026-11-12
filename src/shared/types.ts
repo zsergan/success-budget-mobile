@@ -14,7 +14,8 @@ type AddWalletParams =
 // A one-time request to open the composer on a wallet that was just created.
 export type ComposeWithWallet = { spaceId: number; walletId: number };
 
-// The transactions behind a Stats row: the period's own instants and zone, as the statistics API returned them.
+// The transactions behind a Stats row, as a route's params: the period's own instants and zone, as the statistics
+// API returned them.
 export type HistoryFilter = {
   spaceId: number;
   from: string;
@@ -36,10 +37,16 @@ export type RevealTransaction = { spaceId: number; transactionId: string; timest
 // How a recovery ended, for Sign In: `unknown` when the answer to the new password was lost and it may have applied.
 export type PasswordResetOutcome = { email: string; outcome: 'updated' | 'unknown' };
 
+// The Stats tab's own stack: the overview stays mounted under the transactions of one of its rows.
+export type StatsStackParamList = {
+  [ScreenNames.STATS_OVERVIEW_SCREEN]: { composeWith?: ComposeWithWallet } | undefined;
+  [ScreenNames.STATS_TRANSACTIONS_SCREEN]: { filter: HistoryFilter };
+};
+
 export type MainTabParamList = {
   [ScreenNames.HOME_TAB]: undefined;
-  [ScreenNames.TRANSACTIONS_TAB]: { filter?: HistoryFilter; reveal?: RevealTransaction } | undefined;
-  [ScreenNames.STATS_TAB]: { composeWith?: ComposeWithWallet } | undefined;
+  [ScreenNames.TRANSACTIONS_TAB]: { reveal?: RevealTransaction } | undefined;
+  [ScreenNames.STATS_TAB]: NavigatorScreenParams<StatsStackParamList> | undefined;
   [ScreenNames.LIMITS_TAB]: undefined;
   [ScreenNames.SETTINGS_TAB]: undefined;
 };
@@ -73,6 +80,16 @@ export type MainTabScreenProps<T extends keyof MainTabParamList> = CompositeScre
 export type MainTabNavigationProp<T extends keyof MainTabParamList> = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, T>,
   NativeStackNavigationProp<RootStackParamList>
+>;
+
+export type StatsStackScreenProps<T extends keyof StatsStackParamList> = CompositeScreenProps<
+  NativeStackScreenProps<StatsStackParamList, T>,
+  MainTabScreenProps<ScreenNames.STATS_TAB>
+>;
+
+export type StatsStackNavigationProp<T extends keyof StatsStackParamList> = CompositeNavigationProp<
+  NativeStackNavigationProp<StatsStackParamList, T>,
+  MainTabNavigationProp<ScreenNames.STATS_TAB>
 >;
 
 // UI + category icon names (see `src/shared/icons.ts` for each path); legacy names are excluded here but still resolved there.

@@ -17,8 +17,7 @@ type Props =
       onResetRange?: () => void;
       onJumpToLatest: () => void;
     }
-  // Without `onClearFilter` the list is a fixed selection: there is nothing to take off.
-  | { variant: 'noMatches'; onClearFilter?: () => void }
+  | { variant: 'noMatches' }
   | { variant: 'noSearchMatches'; query: string; activeRange: DateRange; onClearSearch: () => void }
   | { variant: 'rangeError'; onRetry: () => void }
   | { variant: 'latestError'; onRetry: () => void };
@@ -66,7 +65,6 @@ const TransactionsEmptyState = (props: Props) => (
         icon="filter"
         title="No transactions here"
         description="They may have been changed or deleted since Stats was opened."
-        {...(props.onClearFilter && { actionLabel: 'Clear filter', onActionPress: props.onClearFilter })}
       />
     )}
 
