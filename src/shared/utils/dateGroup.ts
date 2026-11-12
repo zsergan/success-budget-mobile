@@ -1,9 +1,9 @@
 import type { TransactionModel } from '@api/models';
 import { compareDays } from './compare';
-import { toLocalDateKey } from './dateRange';
+import { toLocalDateKey, toZonedDay } from './dateRange';
 
 export interface DayGroup {
-  // The calendar day on the device, so two days never merge over an equal label.
+  // The calendar day, on the device or in the given zone, so two days never merge over an equal label.
   key: string;
   label: string;
   items: TransactionModel[];
@@ -26,16 +26,21 @@ export const formatGroupLabel = (value: Date | string, now = new Date()) => {
 };
 
 // Rows of one day stay together in list order, wherever a page boundary fell.
-export const groupRowsByDay = (transactions: TransactionModel[], now = new Date()): DayGroup[] => {
+// Days are the device's unless a zone is given, e.g. the one the server summed its day totals in.
+export const groupRowsByDay = (
+  transactions: TransactionModel[],
+  { now = new Date(), timeZone }: { now?: Date; timeZone?: string } = {},
+): DayGroup[] => {
   const groups = new Map<string, DayGroup>();
+  const today = toZonedDay(now, timeZone);
 
   transactions.forEach((transaction) => {
-    const date = new Date(transaction.timestamp);
+    const date = toZonedDay(new Date(transaction.timestamp), timeZone);
     const key = toLocalDateKey(date);
     const group = groups.get(key);
 
     if (group) group.items.push(transaction);
-    else groups.set(key, { key, label: formatGroupLabel(date, now), items: [transaction] });
+    else groups.set(key, { key, label: formatGroupLabel(date, today), items: [transaction] });
   });
 
   return [...groups.values()];

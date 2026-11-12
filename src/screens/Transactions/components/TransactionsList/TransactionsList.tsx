@@ -34,6 +34,8 @@ interface Props {
   // Which history is listed; a new one starts at the top.
   selectionKey: string;
   currencyCode?: string;
+  // The zone the groups' days were cut in, for the rows' times; the device's when left out.
+  timeZone?: string;
   header: ReactElement;
   // Shown in place of the groups while there are none (loading, empty or error states).
   placeholder: ReactElement;
@@ -106,6 +108,7 @@ const TransactionsList = ({
   groups,
   selectionKey,
   currencyCode,
+  timeZone,
   header,
   placeholder,
   onPressTransaction,
@@ -256,6 +259,7 @@ const TransactionsList = ({
           <TransactionCard
             transaction={item}
             currencyCode={currencyCode}
+            timeZone={timeZone}
             isHighlighted={item.id === highlightId}
             onPress={onPressTransaction}
             onDelete={onDeleteTransaction}

@@ -929,7 +929,7 @@ describe('TransactionFlowSheet', () => {
     expect(flow()).toMatchObject({ view: { name: 'details' }, check: 'done', saved: { amount: '30.00' } });
   });
 
-  it('tells a record outside the viewed period from one hidden by a filter, and shows it on request', async () => {
+  it('says a record was saved outside the viewed period, and shows it on request', async () => {
     const { open, flow } = renderFlow();
     const september = { from: '2026-09-01T00:00:00.000Z', to: '2026-09-30T23:59:59.999Z' };
 
@@ -947,18 +947,6 @@ describe('TransactionFlowSheet', () => {
       screen: ScreenNames.TRANSACTIONS_TAB,
       params: { reveal: { spaceId: 1, transactionId: 'tx-9', timestamp: '2026-01-05T10:00:00.000Z' } },
     });
-
-    open(TransactionType.EXPENSE, 7, {
-      from: '2026-01-01T00:00:00.000Z',
-      to: '2026-01-31T23:59:59.999Z',
-      filter: { name: 'Taxi', transactionType: TransactionType.EXPENSE, categoryId: 2 },
-    });
-    await settle();
-    fillExpense();
-    fireEvent.press(screen.getByText('Save expense'));
-    await act(async () => answerWrite({ data: createTransactionResponseDto() }));
-
-    expect(screen.getByText('Saved, but hidden by the “Taxi” filter')).toBeTruthy();
   });
 
   it('asks before discarding entered values, and closes at once without them', async () => {

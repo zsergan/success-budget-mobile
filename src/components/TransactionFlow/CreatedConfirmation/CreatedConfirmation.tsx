@@ -141,12 +141,10 @@ const CreatedConfirmation = ({ flow, onUndo, onShow, onOpenRecord, onAddAnother,
           {`${wallet.wallet_name} balance ${formatCurrencyAmount(wallet.balance, currencyCode)} · was ${formatCurrencyAmount(previousBalance, currencyCode)}`}
         </Text>
 
-        {place !== 'shown' && (
+        {place === 'otherPeriod' && (
           <View style={styles.hiddenRow}>
             <Text style={styles.hiddenText}>
-              {place === 'otherPeriod'
-                ? `Saved to ${savedToLabel(transaction.timestamp)} — outside the period you’re viewing`
-                : `Saved, but hidden by the “${selection?.filter?.name}” filter`}
+              {`Saved to ${savedToLabel(transaction.timestamp)} — outside the period you’re viewing`}
             </Text>
 
             <TouchableOpacity onPress={onShow} disabled={isUndoing} hitSlop={8} accessibilityRole="button">

@@ -5,13 +5,13 @@ import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import type { ScreenNames } from '@shared/enums';
-import type { MainTabNavigationProp, MainTabScreenProps } from '@shared/types';
+import type { StatsStackNavigationProp, StatsStackScreenProps } from '@shared/types';
 
 // The wallet saved for Add transaction opens the composer once, after the refreshed list has it and only in its
 // own space; another space or a failed refresh drops it, so the composer never pops up later out of context.
 const useComposeWithNewWallet = (openExpense: (walletId: number) => void) => {
-  const navigation = useNavigation<MainTabNavigationProp<ScreenNames.STATS_TAB>>();
-  const composeWith = useRoute<MainTabScreenProps<ScreenNames.STATS_TAB>['route']>().params?.composeWith;
+  const navigation = useNavigation<StatsStackNavigationProp<ScreenNames.STATS_OVERVIEW_SCREEN>>();
+  const composeWith = useRoute<StatsStackScreenProps<ScreenNames.STATS_OVERVIEW_SCREEN>['route']>().params?.composeWith;
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const walletsQuery = useGetWalletsQuery(useSpaceArg());
 

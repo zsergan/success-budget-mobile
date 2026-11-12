@@ -1,5 +1,5 @@
 import type { ReactNode, Ref } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 import { Provider } from 'react-redux';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -9,17 +9,18 @@ import { withSheetHost } from '@components/ConfirmationSheet/testing';
 import { useToastControl } from '@components/Toast/ToastProvider';
 import { toastCount, withToasts } from '@components/Toast/testing';
 import focusedRoutePath from '@navigation/focusedRoutePath';
+import StatsNavigator from '@navigation/StatsNavigator';
+import { TransactionsScreen } from '@screens';
 import { createAppStore } from '@redux/Store';
 import { spaceApi } from '@redux/state/space/api';
 import { activateSpace } from '@redux/state/space/thunks';
 import { transactionApi } from '@redux/state/transaction/api';
 import type { Space } from '@api/dto';
 import { ScreenNames, SpaceType, TransactionType } from '@shared/enums';
-import type { MainTabParamList, MainTabScreenProps } from '@shared/types';
+import type { HistoryFilter, MainTabParamList } from '@shared/types';
 import type { StatsFixture } from './fixtures/statsFixtures';
 import { STATS_FIXTURES } from './fixtures/statsFixtures';
-import StatsScreen from './StatsScreen';
-import { createTransactionResponseDto } from '@redux/state/transaction/fixtures';
+import { createTransactionResponseDto, feedDto } from '@redux/state/transaction/fixtures';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => ({
@@ -125,9 +126,27 @@ const answer = (config: RequestConfig) => {
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const navigationRef = createNavigationContainerRef<MainTabParamList>();
 
-const HistoryProbe = ({ route }: MainTabScreenProps<ScreenNames.TRANSACTIONS_TAB>) => (
-  <Text testID="history-filter">{JSON.stringify(route.params?.filter ?? null)}</Text>
-);
+const currentRouteName = () => navigationRef.getCurrentRoute()?.name;
+const focusedTab = () => {
+  const state = navigationRef.getRootState();
+
+  return state?.routes[state.index].name;
+};
+// The Stats tab's own stack, whichever tab is in focus.
+const statsStack = () =>
+  (navigationRef.getRootState()?.routes.find(({ name }) => name === ScreenNames.STATS_TAB)?.state?.routes ?? []).map(
+    ({ name }) => name,
+  );
+const shownFilter = () => (navigationRef.getCurrentRoute()?.params as { filter?: HistoryFilter } | undefined)?.filter;
+const feedParams = () =>
+  mockedRequest.mock.calls
+    .map(([config]: [RequestConfig]) => config)
+    .filter(({ url }) => url.endsWith('/transactions/feed'))
+    .map(({ params }) => params);
+const backToStats = async () => {
+  fireEvent.press(screen.getByRole('button', { name: 'Back to Stats' }));
+  await settle();
+};
 
 // Tells the toast which screen is focused, as RootNavigator does.
 const RoutedContainer = ({ children }: { children: ReactNode }) => {
@@ -154,8 +173,8 @@ const renderStats = ({ spaceId = 1 }: { spaceId?: number | null } = {}) => {
           <RoutedContainer>
             <Tab.Navigator initialRouteName={ScreenNames.STATS_TAB} screenOptions={{ headerShown: false }}>
               <Tab.Screen name={ScreenNames.HOME_TAB} component={() => null} />
-              <Tab.Screen name={ScreenNames.TRANSACTIONS_TAB} component={HistoryProbe} />
-              <Tab.Screen name={ScreenNames.STATS_TAB} component={StatsScreen} />
+              <Tab.Screen name={ScreenNames.TRANSACTIONS_TAB} component={TransactionsScreen} />
+              <Tab.Screen name={ScreenNames.STATS_TAB} component={StatsNavigator} />
             </Tab.Navigator>
           </RoutedContainer>,
         ),
@@ -212,6 +231,7 @@ beforeEach(() => {
     }
 
     if (config.method === 'POST') return Promise.resolve({ data: createTransactionResponseDto() });
+    if (config.url.endsWith('/transactions/feed')) return Promise.resolve({ data: feedDto([]) });
 
     return config.url === '/spaces' ? respondSpaces() : Promise.resolve({ data: null });
   });
@@ -330,14 +350,14 @@ describe('StatsScreen', () => {
     expect(fill?.map((node) => StyleSheet.flatten(node.props.style).width)).toContain('100%');
   });
 
-  it('opens History for an archived category but not for deleted wallets', async () => {
+  it('opens the transactions of an archived category but not of deleted wallets', async () => {
     fixture = STATS_FIXTURES.deletedWallets;
     renderStats();
     await settle();
     fireEvent.press(screen.getByRole('tab', { name: 'By wallet' }));
 
     fireEvent.press(screen.getByText('Deleted wallets'));
-    expect(navigationRef.getCurrentRoute()?.name).toBe(ScreenNames.STATS_TAB);
+    expect(currentRouteName()).toBe(ScreenNames.STATS_OVERVIEW_SCREEN);
 
     fixture = STATS_FIXTURES.archived;
     fireEvent.press(screen.getByText('Week'));
@@ -346,8 +366,8 @@ describe('StatsScreen', () => {
     expect(screen.getByText('Archived')).toBeTruthy();
 
     fireEvent.press(screen.getByText('Subscriptions'));
-    expect(navigationRef.getCurrentRoute()?.name).toBe(ScreenNames.TRANSACTIONS_TAB);
-    expect(JSON.parse(String(screen.getByTestId('history-filter').props.children))).toMatchObject({
+    expect(currentRouteName()).toBe(ScreenNames.STATS_TRANSACTIONS_SCREEN);
+    expect(shownFilter()).toMatchObject({
       name: 'Subscriptions',
       transactionType: 'expense',
       kind: 'regular',
@@ -608,32 +628,120 @@ describe('StatsScreen', () => {
     expect(screen.queryByText(STALE_BANNER)).toBeNull();
   });
 
-  it('opens History filtered by a row and keeps its state on the way back', async () => {
+  it("opens a category row's transactions inside Stats and comes back to the same overview with one tap", async () => {
     renderStats();
     await settle();
     fireEvent.press(screen.getByText('Other'));
     mockedRequest.mockClear();
 
+    const { period } = fixture.breakdown.expense;
     fireEvent.press(screen.getByText('Gifts'));
-    expect(navigationRef.getCurrentRoute()?.name).toBe(ScreenNames.TRANSACTIONS_TAB);
-    expect(JSON.parse(String(screen.getByTestId('history-filter').props.children))).toEqual({
+    await settle();
+
+    expect(currentRouteName()).toBe(ScreenNames.STATS_TRANSACTIONS_SCREEN);
+    expect(focusedTab()).toBe(ScreenNames.STATS_TAB);
+    expect(shownFilter()).toEqual({
       spaceId: 1,
       name: 'Gifts',
-      from: fixture.breakdown.expense.period.from,
-      to: fixture.breakdown.expense.period.actual_to,
+      icon: 'gifts',
+      color: 'clay',
+      from: period.from,
+      to: period.actual_to,
+      timeZone: period.time_zone,
       transactionType: 'expense',
       kind: 'regular',
       categoryId: 10,
     });
+    expect(feedParams()).toEqual([
+      {
+        from: period.from,
+        to: period.actual_to,
+        transaction_type: 'expense',
+        kind: 'regular',
+        category_id: 10,
+        time_zone: period.time_zone,
+      },
+    ]);
+    expect(within(screen.getByTestId('applied-filter')).getByText('Gifts')).toBeTruthy();
+
+    await backToStats();
+
+    expect(currentRouteName()).toBe(ScreenNames.STATS_OVERVIEW_SCREEN);
+    expect(statsStack()).toEqual([ScreenNames.STATS_OVERVIEW_SCREEN]);
+    expect(screen.getByText('Gifts')).toBeTruthy();
+    expect(screen.queryByTestId('applied-filter')).toBeNull();
+    expect(statsRequests()).toHaveLength(0);
+  });
+
+  it("opens an expense category's transactions, while Other only expands", async () => {
+    renderStats();
+    await settle();
+    mockedRequest.mockClear();
+
+    fireEvent.press(screen.getByText('Other'));
+    await settle();
+
+    expect(currentRouteName()).toBe(ScreenNames.STATS_OVERVIEW_SCREEN);
+    expect(screen.getByText('Gifts')).toBeTruthy();
+    expect(feedParams()).toEqual([]);
+
+    const housing = fixture.breakdown.expense.by_category.primary_items.find(({ name }) => name === 'Housing')!;
+    fireEvent.press(screen.getByText('Housing'));
+    await settle();
+
+    expect(currentRouteName()).toBe(ScreenNames.STATS_TRANSACTIONS_SCREEN);
+    expect(feedParams()).toEqual([
+      expect.objectContaining({ transaction_type: 'expense', kind: 'regular', category_id: housing.id }),
+    ]);
+    expect(feedParams()[0]).not.toHaveProperty('wallet_id');
+    const context = within(screen.getByTestId('applied-filter'));
+    expect(context.getByText('Expenses')).toBeTruthy();
+    expect(context.getByText('Housing')).toBeTruthy();
+  });
+
+  it("keeps History and a row's transactions independent of each other", async () => {
+    renderStats();
+    await settle();
+    fireEvent.press(screen.getByText('Housing'));
+    await settle();
+    const selection = shownFilter();
+    mockedRequest.mockClear();
+
+    act(() => navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB));
+    await settle();
+
+    expect(navigationRef.getCurrentRoute()?.params).toBeUndefined();
+    const [history] = feedParams();
+    expect(history).toEqual({
+      from: new Date(2026, 8, 1).toISOString(),
+      to: new Date(2026, 8, 30, 23, 59, 59, 999).toISOString(),
+      time_zone: expect.any(String),
+    });
+    expect(screen.getByRole('button', { name: 'Search transactions' })).toBeTruthy();
+
+    fireEvent.press(screen.getByText('Year'));
+    await settle();
+    const requests = feedParams();
+    expect(requests.every((params) => !('category_id' in params!) && !('kind' in params!))).toBe(true);
+    expect(requests.at(-1)).toMatchObject({ from: new Date(2026, 0, 1).toISOString() });
 
     act(() => navigationRef.navigate(ScreenNames.STATS_TAB));
     await settle();
 
-    expect(screen.getByText('Gifts')).toBeTruthy();
-    expect(statsRequests()).toHaveLength(0);
+    expect(currentRouteName()).toBe(ScreenNames.STATS_TRANSACTIONS_SCREEN);
+    expect(shownFilter()).toEqual(selection);
+    expect(within(screen.getByTestId('applied-filter')).getByText('Housing')).toBeTruthy();
+    expect(feedParams()).toHaveLength(requests.length);
+
+    await backToStats();
+    act(() => navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB));
+    await settle();
+
+    expect(feedParams()).toHaveLength(requests.length);
+    expect(feedParams().at(-1)).toMatchObject({ from: new Date(2026, 0, 1).toISOString() });
   });
 
-  it('opens the regular income of a wallet from Income by wallet, and comes back to the same view', async () => {
+  it("opens a wallet row's regular income, comes back to the same view and opens another row", async () => {
     renderStats();
     await settle();
     fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
@@ -642,25 +750,138 @@ describe('StatsScreen', () => {
     mockedRequest.mockClear();
 
     const { period, by_wallet: byWallet } = fixture.breakdown.income;
-    const savings = byWallet.primary_items.find((item) => item.name === 'Savings')!;
-    fireEvent.press(screen.getByText('Savings'));
-    expect(JSON.parse(String(screen.getByTestId('history-filter').props.children))).toEqual({
+    const [first, second] = byWallet.primary_items;
+    const filterOf = (wallet: typeof first) => ({
       spaceId: 1,
-      name: 'Savings',
+      name: wallet.name,
+      icon: 'wallet',
+      color: wallet.color,
       from: period.from,
       to: period.actual_to,
+      timeZone: period.time_zone,
       transactionType: 'income',
       kind: 'regular',
-      walletId: savings.id,
+      walletId: wallet.id,
     });
 
-    act(() => navigationRef.navigate(ScreenNames.STATS_TAB));
+    fireEvent.press(screen.getByText(first.name));
     await settle();
+    expect(shownFilter()).toEqual(filterOf(first));
+    expect(feedParams().at(-1)).toMatchObject({ transaction_type: 'income', kind: 'regular', wallet_id: first.id });
+
+    await backToStats();
 
     expect(screen.getByRole('tab', { name: 'Income' }).props.accessibilityState).toMatchObject({ selected: true });
     expect(screen.getByRole('tab', { name: 'By wallet' }).props.accessibilityState).toMatchObject({ selected: true });
     expect(screen.getByRole('adjustable').props.accessibilityValue.text).toBe('Income, $4,050.00, 2 wallets');
     expect(statsRequests()).toHaveLength(0);
+
+    fireEvent.press(screen.getByText(second.name));
+    await settle();
+
+    expect(statsStack()).toEqual([ScreenNames.STATS_OVERVIEW_SCREEN, ScreenNames.STATS_TRANSACTIONS_SCREEN]);
+    expect(shownFilter()).toEqual(filterOf(second));
+    expect(feedParams().at(-1)).toMatchObject({ wallet_id: second.id });
+    expect(feedParams().at(-1)).not.toHaveProperty('category_id');
+  });
+
+  describe("a row's transactions after the space changes", () => {
+    const openHousing = async () => {
+      const view = renderStats();
+      await settle();
+      fireEvent.press(screen.getByText('Housing'));
+      await settle();
+      expect(screen.getByTestId('applied-filter')).toBeTruthy();
+      mockedRequest.mockClear();
+
+      return view;
+    };
+
+    it('are discarded on the spot, with the overview of the new space in their place', async () => {
+      const { store } = await openHousing();
+
+      act(() => {
+        store.dispatch(activateSpace(2));
+      });
+      await settle();
+
+      expect(statsStack()).toEqual([ScreenNames.STATS_OVERVIEW_SCREEN]);
+      expect(currentRouteName()).toBe(ScreenNames.STATS_OVERVIEW_SCREEN);
+      expect(screen.queryByTestId('applied-filter')).toBeNull();
+      expect(feedParams()).toEqual([]);
+    });
+
+    it('never come back, even once their own space is active again, and leave another tab in focus', async () => {
+      const { store } = await openHousing();
+      act(() => navigationRef.navigate(ScreenNames.HOME_TAB));
+
+      act(() => {
+        store.dispatch(activateSpace(2));
+      });
+      await settle();
+
+      expect(focusedTab()).toBe(ScreenNames.HOME_TAB);
+      expect(statsStack()).toEqual([ScreenNames.STATS_OVERVIEW_SCREEN]);
+
+      act(() => {
+        store.dispatch(activateSpace(1));
+      });
+      await settle();
+      act(() => navigationRef.navigate(ScreenNames.STATS_TAB));
+      await settle();
+
+      expect(currentRouteName()).toBe(ScreenNames.STATS_OVERVIEW_SCREEN);
+      expect(screen.queryByTestId('applied-filter')).toBeNull();
+      expect(feedParams()).toEqual([]);
+    });
+
+    it('are discarded when no space is left active', async () => {
+      const { store } = await openHousing();
+
+      act(() => {
+        store.dispatch(activateSpace(null));
+      });
+      await settle();
+
+      expect(statsStack()).toEqual([ScreenNames.STATS_OVERVIEW_SCREEN]);
+      expect(screen.queryByTestId('applied-filter')).toBeNull();
+      expect(feedParams()).toEqual([]);
+    });
+  });
+
+  it('opens the composer once with a wallet created for Add transaction, delivered to the nested overview', async () => {
+    const wallet = { id: 9, wallet_name: 'Cash', design: 'slate', balance: 0 };
+    const answerRequest = mockedRequest.getMockImplementation()!;
+    mockedRequest.mockImplementation((config: RequestConfig) =>
+      config.url === '/spaces/1/wallets'
+        ? Promise.resolve({
+            data: {
+              total_balance: 0,
+              total_balance_currency: 'USD',
+              wallets: [{ wallet, total_spend: 0, total_income: 0 }],
+            },
+          })
+        : answerRequest(config),
+    );
+    const { store } = renderStats();
+    await settle();
+
+    act(() =>
+      navigationRef.navigate(ScreenNames.STATS_TAB, {
+        screen: ScreenNames.STATS_OVERVIEW_SCREEN,
+        params: { composeWith: { spaceId: 1, walletId: 9 } },
+      }),
+    );
+    await settle();
+
+    expect(statsStack()).toEqual([ScreenNames.STATS_OVERVIEW_SCREEN]);
+    expect(navigationRef.getCurrentRoute()?.params).toEqual({ composeWith: undefined });
+    expect(store.getState().transactionFlow.flow).toMatchObject({ spaceId: 1, view: { name: 'create' } });
+    const { draftId } = store.getState().transactionFlow.flow!;
+
+    await settle();
+
+    expect(store.getState().transactionFlow.flow?.draftId).toBe(draftId);
   });
 
   describe('without a space', () => {

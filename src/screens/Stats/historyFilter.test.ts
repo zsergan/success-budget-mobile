@@ -12,7 +12,7 @@ import { toHistoryFilter } from './historyFilter';
 const breakdown = (transactionType: TransactionType, actualTo: string | null = '2026-09-30T09:15:42.123Z') =>
   ({
     transaction_type: transactionType,
-    period: { from: '2026-08-31T21:00:00.000Z', actual_to: actualTo },
+    period: { from: '2026-08-31T21:00:00.000Z', actual_to: actualTo, time_zone: 'Europe/Kyiv' },
   }) as Pick<StatisticsBreakdown, 'period' | 'transaction_type'>;
 
 const expense = breakdown(TransactionType.EXPENSE);
@@ -24,6 +24,8 @@ const category = (id: number, name: string, isArchived = false) =>
     key: `category:${id}`,
     id,
     name,
+    icon: 'Home goods',
+    color: AppColor.EVERGREEN,
     is_archived: isArchived,
     opens_history: true,
   }) as CategoryBreakdownItem;
@@ -37,12 +39,15 @@ const wallet = {
 } as WalletBreakdownItem;
 
 describe('toHistoryFilter', () => {
-  it('passes the space and the period bounds through as they came, with regular transactions only', () => {
+  it('passes the space, the period bounds and its zone through as they came, with regular transactions only', () => {
     expect(toHistoryFilter(category(12, 'Restaurants'), expense, 7)).toEqual({
       spaceId: 7,
       name: 'Restaurants',
+      icon: 'home-goods',
+      color: AppColor.EVERGREEN,
       from: '2026-08-31T21:00:00.000Z',
       to: '2026-09-30T09:15:42.123Z',
+      timeZone: 'Europe/Kyiv',
       transactionType: TransactionType.EXPENSE,
       kind: TransactionKind.REGULAR,
       categoryId: 12,
@@ -53,8 +58,11 @@ describe('toHistoryFilter', () => {
     expect(toHistoryFilter(wallet, income, 7)).toEqual({
       spaceId: 7,
       name: 'Cash',
+      icon: 'wallet',
+      color: AppColor.INDIGO,
       from: '2026-08-31T21:00:00.000Z',
       to: '2026-09-30T09:15:42.123Z',
+      timeZone: 'Europe/Kyiv',
       transactionType: TransactionType.INCOME,
       kind: TransactionKind.REGULAR,
       walletId: 3,

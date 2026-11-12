@@ -17,7 +17,7 @@ type Props =
       onResetRange?: () => void;
       onJumpToLatest: () => void;
     }
-  | { variant: 'noMatches'; onClearFilter: () => void }
+  | { variant: 'noMatches' }
   | { variant: 'noSearchMatches'; query: string; activeRange: DateRange; onClearSearch: () => void }
   | { variant: 'rangeError'; onRetry: () => void }
   | { variant: 'latestError'; onRetry: () => void };
@@ -63,10 +63,8 @@ const TransactionsEmptyState = (props: Props) => (
       <EmptyState
         variant="solid"
         icon="filter"
-        title="Nothing matches this filter"
-        description="These transactions may have been deleted or changed since."
-        actionLabel="Clear filter"
-        onActionPress={props.onClearFilter}
+        title="No transactions here"
+        description="They may have been changed or deleted since Stats was opened."
       />
     )}
 

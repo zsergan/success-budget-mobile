@@ -26,8 +26,6 @@ const hiddenWhen = (isHidden: boolean) => ({
 });
 
 interface Props {
-  // Hidden while a Stats filter is shown: search starts from the plain history.
-  canSearch: boolean;
   isSearching: boolean;
   query: string;
   // Why the text is not searched for, shown under the field.
@@ -40,7 +38,6 @@ interface Props {
 }
 
 const TransactionsHeader = ({
-  canSearch,
   isSearching,
   query,
   error = null,
@@ -106,64 +103,62 @@ const TransactionsHeader = ({
           Transactions
         </Animated.Text>
 
-        {canSearch && (
-          // Unmeasured, the button would span the whole row for a frame.
-          <Animated.View style={[styles.field, fieldStyle, rowWidth === 0 && styles.unmeasured]}>
-            <TouchableOpacity
-              style={styles.fieldPress}
-              onPress={isSearching ? () => inputRef.current?.focus() : onOpen}
-              activeOpacity={isSearching ? 1 : 0.7}
-              accessibilityRole={isSearching ? undefined : 'button'}
-              accessibilityLabel={isSearching ? undefined : 'Search transactions'}
-            >
-              <Animated.View style={[styles.icon, iconStyle]}>
-                <Animated.View style={[styles.iconLayer, fadeOutStyle]}>
-                  <Icon name="search" size={ICON_SIZE} color={colors.text} strokeWidth={1.8} />
-                </Animated.View>
-                <Animated.View style={[styles.iconLayer, fadeInStyle]}>
-                  <Icon name="search" size={ICON_SIZE} color={colors.muted} strokeWidth={1.8} />
-                </Animated.View>
+        {/* Unmeasured, the button would span the whole row for a frame. */}
+        <Animated.View style={[styles.field, fieldStyle, rowWidth === 0 && styles.unmeasured]}>
+          <TouchableOpacity
+            style={styles.fieldPress}
+            onPress={isSearching ? () => inputRef.current?.focus() : onOpen}
+            activeOpacity={isSearching ? 1 : 0.7}
+            accessibilityRole={isSearching ? undefined : 'button'}
+            accessibilityLabel={isSearching ? undefined : 'Search transactions'}
+          >
+            <Animated.View style={[styles.icon, iconStyle]}>
+              <Animated.View style={[styles.iconLayer, fadeOutStyle]}>
+                <Icon name="search" size={ICON_SIZE} color={colors.text} strokeWidth={1.8} />
               </Animated.View>
-            </TouchableOpacity>
-
-            <Animated.View
-              style={[styles.inputBox, fadeInStyle]}
-              pointerEvents={isSearching ? 'auto' : 'none'}
-              {...hiddenWhen(!isSearching)}
-            >
-              <TextInput
-                keyboardAppearance={scheme}
-                ref={inputRef}
-                // The placeholder is set in Medium and typed text in SemiBold; a TextInput has one font for both.
-                style={[styles.input, query === '' && styles.inputEmpty]}
-                value={query}
-                onChangeText={onChangeQuery}
-                onSubmitEditing={onSubmit}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                placeholder="Description, category, wallet"
-                placeholderTextColor={colors.muted}
-                selectionColor={colors.accent}
-                returnKeyType="search"
-                autoCorrect={false}
-                editable={isSearching}
-                accessibilityLabel="Search transactions"
-              />
-
-              {query.length > 0 && (
-                <TouchableOpacity
-                  style={styles.clear}
-                  onPress={onClear}
-                  hitSlop={10}
-                  accessibilityRole="button"
-                  accessibilityLabel="Clear search"
-                >
-                  <Icon name="close" size={10} color={colors.muted} strokeWidth={2.6} />
-                </TouchableOpacity>
-              )}
+              <Animated.View style={[styles.iconLayer, fadeInStyle]}>
+                <Icon name="search" size={ICON_SIZE} color={colors.muted} strokeWidth={1.8} />
+              </Animated.View>
             </Animated.View>
+          </TouchableOpacity>
+
+          <Animated.View
+            style={[styles.inputBox, fadeInStyle]}
+            pointerEvents={isSearching ? 'auto' : 'none'}
+            {...hiddenWhen(!isSearching)}
+          >
+            <TextInput
+              keyboardAppearance={scheme}
+              ref={inputRef}
+              // The placeholder is set in Medium and typed text in SemiBold; a TextInput has one font for both.
+              style={[styles.input, query === '' && styles.inputEmpty]}
+              value={query}
+              onChangeText={onChangeQuery}
+              onSubmitEditing={onSubmit}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              placeholder="Description, category, wallet"
+              placeholderTextColor={colors.muted}
+              selectionColor={colors.accent}
+              returnKeyType="search"
+              autoCorrect={false}
+              editable={isSearching}
+              accessibilityLabel="Search transactions"
+            />
+
+            {query.length > 0 && (
+              <TouchableOpacity
+                style={styles.clear}
+                onPress={onClear}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
+              >
+                <Icon name="close" size={10} color={colors.muted} strokeWidth={2.6} />
+              </TouchableOpacity>
+            )}
           </Animated.View>
-        )}
+        </Animated.View>
 
         <Animated.View
           style={[styles.cancel, fadeInStyle]}
