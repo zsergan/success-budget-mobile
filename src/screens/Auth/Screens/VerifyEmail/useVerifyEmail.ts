@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { TextInput } from 'react-native';
+import { usePreventRemove, type NavigationAction } from '@react-navigation/native';
 
 import { useToast } from '@hooks';
 import useSecondsUntil from '@hooks/useSecondsUntil';
-import { useAppDispatch, useAppSelector } from '@redux/hooks';
+import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
 import { verificationAbandoned } from '@redux/state/auth/actions';
 import { verifyEmailMe } from '@redux/state/auth/thunks';
 import { selectAuth } from '@redux/state/auth/selectors';
@@ -20,10 +21,10 @@ type CodeBlock = Extract<VerifyEmailFailure, { kind: 'codeUnusable' }>;
 const useVerifyEmail = ({ navigation }: UseVerifyEmailProps) => {
   const dispatch = useAppDispatch();
   const toast = useToast();
-  const { userEmail, verification } = useAppSelector(selectAuth);
+  const store = useAppStore();
+  const { userEmail } = useAppSelector(selectAuth);
   // The address this screen opened for: signing in clears it from the store while the screen is still up.
   const [email] = useState(userEmail);
-  const isCommitting = verification?.isCommitting === true;
   const inputRef = useRef<TextInput>(null);
   // The attempt whose answer this screen acts on. Taps land before a re-render can disable the button, and an
   // answer to an attempt left behind must not touch the one running now.
@@ -36,6 +37,8 @@ const useVerifyEmail = ({ navigation }: UseVerifyEmailProps) => {
   const [failure, setFailure] = useState<VerifyEmailFailure | null>(null);
   // Why the code on screen can't be used any more; only another code moves on from here.
   const [block, setBlock] = useState<CodeBlock | null>(null);
+  // A removal the guard let through, replayed once the guard is down.
+  const [released, setReleased] = useState<NavigationAction | null>(null);
 
   const waitSeconds = useSecondsUntil(failure?.kind === 'rateLimited' ? failure.retryAt : undefined);
 
@@ -53,6 +56,7 @@ const useVerifyEmail = ({ navigation }: UseVerifyEmailProps) => {
       setCodeError(null);
       setIsPasted(false);
       setFailure(null);
+      setReleased(null);
     };
     const unsubscribe = navigation.addListener('blur', leave);
 
@@ -63,20 +67,25 @@ const useVerifyEmail = ({ navigation }: UseVerifyEmailProps) => {
     };
   }, [dispatch, navigation]);
 
-  // The token write and the sign-in that follows are one step: the screen stays until both are done.
-  const isCommittingRef = useRef(isCommitting);
+  // The token write and the sign-in that follows are one step: the screen stays until both are done. Read from the
+  // store, since a render may not have happened yet between the server's answer and a tap or a swipe.
+  const isCommitting = () => store.getState().auth.verification?.isCommitting === true;
+
+  // The guard is up for as long as the route lives, so a native swipe is stopped before it moves the screen, not after.
+  usePreventRemove(released === null, ({ data }) => {
+    if (isCommitting()) return;
+
+    // The attempt ends before the screen goes, so its late answer can no longer save a token.
+    currentRequestId.current = null;
+    dispatch(verificationAbandoned());
+    setReleased(data.action);
+  });
 
   useEffect(() => {
-    isCommittingRef.current = isCommitting;
-  }, [isCommitting]);
+    if (released === null) return;
 
-  useEffect(
-    () =>
-      navigation.addListener('beforeRemove', (event) => {
-        if (isCommittingRef.current) event.preventDefault();
-      }),
-    [navigation],
-  );
+    navigation.dispatch(released);
+  }, [navigation, released]);
 
   const applyCode = (next: string, isPaste: boolean) => {
     if (isVerifying || block) return;
@@ -148,7 +157,7 @@ const useVerifyEmail = ({ navigation }: UseVerifyEmailProps) => {
 
   // While the session is being committed nothing leaves the screen.
   const whenFree = (action: () => void) => () => {
-    if (!isCommitting) action();
+    if (!isCommitting()) action();
   };
 
   return {

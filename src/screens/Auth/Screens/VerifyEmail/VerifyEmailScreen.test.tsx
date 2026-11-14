@@ -1,4 +1,7 @@
+import { Text } from 'react-native';
 import { Provider } from 'react-redux';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -11,7 +14,7 @@ import { createAppStore } from '@redux/Store';
 import { registerMe } from '@redux/state/auth/thunks';
 import { AUTH_TOKEN_KEY } from '@shared/constants';
 import { ScreenNames } from '@shared/enums';
-import type { RootStackScreenProps } from '@shared/types';
+import type { RootStackParamList } from '@shared/types';
 import VerifyEmailScreen from './VerifyEmailScreen';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
@@ -47,19 +50,20 @@ const rejection = (statusCode: number, code: string, message: string, headers: R
   },
 });
 
+const Stack = createNativeStackNavigator<RootStackParamList>();
+const navigationRef = createNavigationContainerRef<RootStackParamList>();
+
+const Placeholder = () => <Text>Another screen</Text>;
+
+const routes = () =>
+  (navigationRef.getRootState()?.routes ?? []).map(({ name, params }) => (params ? { name, params } : name));
+
+const SIGN_UP = ScreenNames.SIGN_UP_SCREEN;
+const VERIFY_EMAIL = ScreenNames.VERIFY_EMAIL_SCREEN;
+const SIGN_IN = ScreenNames.SIGN_IN_SCREEN;
+
 const renderVerifyEmail = async ({ email = 'anna@kovalenko.co' as string | null } = {}) => {
   const store = createAppStore();
-  const listeners: Record<string, (event: { preventDefault: () => void }) => void> = {};
-  const navigation = {
-    navigate: jest.fn(),
-    popTo: jest.fn(),
-    isFocused: jest.fn(() => true),
-    addListener: jest.fn((event: string, listener: (typeof listeners)[string]) => {
-      listeners[event] = listener;
-
-      return () => delete listeners[event];
-    }),
-  };
 
   if (email !== null) {
     store.dispatch(registerMe.pending('req-register', {} as never));
@@ -69,22 +73,31 @@ const renderVerifyEmail = async ({ email = 'anna@kovalenko.co' as string | null 
   render(
     <SafeAreaProvider initialMetrics={metrics}>
       <Provider store={store}>
-        <VerifyEmailScreen
-          {...({ navigation, route: {} } as unknown as RootStackScreenProps<ScreenNames.VERIFY_EMAIL_SCREEN>)}
-        />
+        <NavigationContainer
+          ref={navigationRef}
+          initialState={{ index: 1, routes: [{ name: SIGN_UP }, { name: VERIFY_EMAIL }] }}
+        >
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name={SIGN_UP} component={Placeholder} />
+            <Stack.Screen name={SIGN_IN} component={Placeholder} />
+            <Stack.Screen name={VERIFY_EMAIL} component={VerifyEmailScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
       </Provider>
     </SafeAreaProvider>,
   );
   await act(async () => {});
 
-  const remove = () => {
-    const preventDefault = jest.fn();
-    listeners.beforeRemove({ preventDefault });
+  return { store };
+};
 
-    return preventDefault.mock.calls.length > 0 ? 'prevented' : 'allowed';
-  };
+// What the system Back and the iOS edge swipe ask the navigator for.
+const goBack = () => act(async () => navigationRef.goBack());
 
-  return { navigation, store, blur: () => act(async () => listeners.blur({ preventDefault: jest.fn() })), remove };
+// Sign In opens over the screen and closes again: the screen was left, yet it is still there to come back to.
+const leaveAndReturn = async () => {
+  await act(async () => navigationRef.navigate(SIGN_IN));
+  await goBack();
 };
 
 const codeField = () => screen.getByLabelText('6-digit code');
@@ -158,10 +171,10 @@ describe('code entry', () => {
   });
 
   it('empties the field when the screen is left', async () => {
-    const { blur } = await renderVerifyEmail();
+    await renderVerifyEmail();
     await enterCode('042917');
 
-    await blur();
+    await leaveAndReturn();
 
     expect(codeField().props.value).toBe('');
   });
@@ -169,36 +182,36 @@ describe('code entry', () => {
 
 describe('going back to Sign Up', () => {
   it('returns from Back', async () => {
-    const { navigation } = await renderVerifyEmail();
+    await renderVerifyEmail();
 
     await press('Back');
 
-    expect(navigation.popTo).toHaveBeenCalledWith(ScreenNames.SIGN_UP_SCREEN);
+    expect(routes()).toEqual([SIGN_UP]);
   });
 
   it('returns to the email field from Change', async () => {
-    const { navigation } = await renderVerifyEmail();
+    await renderVerifyEmail();
 
     await press('Change email');
 
-    expect(navigation.popTo).toHaveBeenCalledWith(ScreenNames.SIGN_UP_SCREEN, { focusEmail: true });
+    expect(routes()).toEqual([{ name: SIGN_UP, params: { focusEmail: true } }]);
   });
 
   it('returns to request another email, promising neither a new code nor a wait', async () => {
-    const { navigation } = await renderVerifyEmail();
+    await renderVerifyEmail();
 
     expect(screen.getByText('No email? Check spam, or request another code.')).toBeTruthy();
 
     await press('Request another code');
 
-    expect(navigation.popTo).toHaveBeenCalledWith(ScreenNames.SIGN_UP_SCREEN, { notice: 'requestAnotherCode' });
+    expect(routes()).toEqual([{ name: SIGN_UP, params: { notice: 'requestAnotherCode' } }]);
     expect(mockedVerifyEmail).not.toHaveBeenCalled();
   });
 
   it('returns at once, asking the server nothing, when no address is waiting for a code', async () => {
-    const { navigation } = await renderVerifyEmail({ email: null });
+    await renderVerifyEmail({ email: null });
 
-    expect(navigation.popTo).toHaveBeenCalledWith(ScreenNames.SIGN_UP_SCREEN);
+    expect(routes()).toEqual([SIGN_UP]);
     expect(screen.queryByLabelText('6-digit code')).toBeNull();
     expect(mockedVerifyEmail).not.toHaveBeenCalled();
   });
@@ -207,14 +220,14 @@ describe('going back to Sign Up', () => {
 describe('a code the server refuses', () => {
   it('keeps a wrong code under the field until it is edited', async () => {
     mockedVerifyEmail.mockRejectedValue(rejection(400, 'INVALID_CREDENTIALS', 'Invalid credentials'));
-    const { navigation } = await renderVerifyEmail();
+    await renderVerifyEmail();
 
     await submitCode('123456');
 
     expect(screen.getByText('That code doesn’t match. Check the email and try again.')).toBeTruthy();
     expect(codeField().props.value).toBe('123456');
     expect(isDisabled('Verify email')).toBe(true);
-    expect(navigation.navigate).not.toHaveBeenCalled();
+    expect(routes()).toEqual([SIGN_UP, VERIFY_EMAIL]);
     expect(mockToasts.shown).toEqual([]);
 
     await enterCode('12345');
@@ -231,7 +244,7 @@ describe('a code the server refuses', () => {
     ],
   ])('leads to Request another code after %s', async (_name, answer, title) => {
     mockedVerifyEmail.mockRejectedValue(answer);
-    const { navigation } = await renderVerifyEmail();
+    await renderVerifyEmail();
 
     await submitCode('123456');
 
@@ -241,7 +254,7 @@ describe('a code the server refuses', () => {
 
     await press('Request another code');
 
-    expect(navigation.popTo).toHaveBeenCalledWith(ScreenNames.SIGN_UP_SCREEN, { notice: 'requestAnotherCode' });
+    expect(routes()).toEqual([{ name: SIGN_UP, params: { notice: 'requestAnotherCode' } }]);
     expect(mockedVerifyEmail).toHaveBeenCalledTimes(1);
   });
 
@@ -261,11 +274,11 @@ describe('a code the server refuses', () => {
 
   it('sends an already verified account to sign in instead of asking for the code again', async () => {
     mockedVerifyEmail.mockRejectedValue(rejection(409, 'EMAIL_ALREADY_VERIFIED', 'Email is already verified'));
-    const { navigation } = await renderVerifyEmail();
+    await renderVerifyEmail();
 
     await submitCode('123456');
 
-    expect(navigation.navigate).toHaveBeenCalledWith(ScreenNames.SIGN_IN_SCREEN, undefined, { pop: true });
+    expect(routes()).toEqual([SIGN_UP, VERIFY_EMAIL, SIGN_IN]);
     // One message, on Sign In, and no error for the refusal that led there.
     expect(mockToasts.shown).toEqual([
       {
@@ -321,17 +334,34 @@ describe('signing in', () => {
     expect(store.getState().auth).toMatchObject({ isSignedIn: true, userToken: 'a-token' });
   });
 
-  it('neither saves a token nor signs in when the code is accepted after the user left', async () => {
+  it('lets the user go back while the server is asked, and then neither saves a token nor signs in', async () => {
     const answer = held();
-    const { store, blur, navigation } = await renderVerifyEmail();
+    const { store } = await renderVerifyEmail();
     await submitCode('042917');
 
-    await blur();
+    await goBack();
+
+    expect(routes()).toEqual([SIGN_UP]);
+
     await answer('a-token');
 
     expect(mockedSetItemAsync).not.toHaveBeenCalled();
     expect(store.getState().auth.isSignedIn).toBe(false);
-    expect(navigation.navigate).not.toHaveBeenCalled();
+    expect(routes()).toEqual([SIGN_UP]);
+    expect(mockToasts.shown).toEqual([]);
+  });
+
+  it('neither saves a token nor signs in when the code is accepted while another screen is open', async () => {
+    const answer = held();
+    const { store } = await renderVerifyEmail();
+    await submitCode('042917');
+
+    await leaveAndReturn();
+    await answer('a-token');
+
+    expect(mockedSetItemAsync).not.toHaveBeenCalled();
+    expect(store.getState().auth.isSignedIn).toBe(false);
+    expect(routes()).toEqual([SIGN_UP, VERIFY_EMAIL]);
     expect(mockToasts.shown).toEqual([]);
     expect(isDisabled('Verify email')).toBe(true);
     expect(codeField().props).toMatchObject({ editable: true, value: '' });
@@ -340,9 +370,9 @@ describe('signing in', () => {
   it('acts only on the new attempt when an older one answers during it', async () => {
     const answerOlder = held();
     const answerNewer = held();
-    const { store, blur } = await renderVerifyEmail();
+    const { store } = await renderVerifyEmail();
     await submitCode('111111');
-    await blur();
+    await leaveAndReturn();
     await submitCode('222222');
 
     await answerOlder('older-token');
@@ -357,34 +387,60 @@ describe('signing in', () => {
     expect(store.getState().auth.userToken).toBe('newer-token');
   });
 
-  it('holds the screen while the token is saved, so the session is never half made', async () => {
-    let saved: () => void = () => {};
+  const heldSave = () => {
+    let succeed: () => void = () => {};
+    let fail: (error: Error) => void = () => {};
     mockedVerifyEmail.mockResolvedValue('a-token');
-    mockedSetItemAsync.mockReturnValueOnce(new Promise<void>((resolve) => (saved = resolve)));
-    const { store, navigation, remove } = await renderVerifyEmail();
+    mockedSetItemAsync.mockReturnValueOnce(
+      new Promise<void>((resolve, reject) => {
+        succeed = resolve;
+        fail = reject;
+      }),
+    );
 
-    await submitCode('042917');
+    return {
+      succeed: () => act(async () => succeed()),
+      fail: () => act(async () => fail(new Error('keychain unavailable'))),
+    };
+  };
+
+  const tryToLeave = async () => {
+    await goBack();
     await press('Back');
-    fireEvent.press(screen.getByText('Sign In'));
+    await press('Change email');
+    await act(async () => void fireEvent.press(screen.getByText('Sign In')));
+  };
 
-    expect(remove()).toBe('prevented');
-    expect(navigation.popTo).not.toHaveBeenCalled();
-    expect(navigation.navigate).not.toHaveBeenCalled();
+  it('holds the screen while the token is saved, so the session is never half made', async () => {
+    const save = heldSave();
+    const { store } = await renderVerifyEmail();
+    await submitCode('042917');
 
-    await act(async () => saved());
+    await tryToLeave();
 
-    expect(store.getState().auth.isSignedIn).toBe(true);
+    expect(routes()).toEqual([SIGN_UP, VERIFY_EMAIL]);
+    expect(store.getState().auth.isSignedIn).toBe(false);
+
+    await save.succeed();
+
+    expect(store.getState().auth).toMatchObject({ isSignedIn: true, userToken: 'a-token' });
+    expect(mockedSetItemAsync).toHaveBeenCalledTimes(1);
+    expect(routes()).toEqual([SIGN_UP, VERIFY_EMAIL]);
   });
 
   it('sends a verified user to sign in when this device can’t save the session', async () => {
-    mockedVerifyEmail.mockResolvedValue('a-token');
-    mockedSetItemAsync.mockRejectedValueOnce(new Error('keychain unavailable'));
-    const { store, navigation } = await renderVerifyEmail();
-
+    const save = heldSave();
+    const { store } = await renderVerifyEmail();
     await submitCode('042917');
 
+    await tryToLeave();
+
+    expect(routes()).toEqual([SIGN_UP, VERIFY_EMAIL]);
+
+    await save.fail();
+
     expect(store.getState().auth.isSignedIn).toBe(false);
-    expect(navigation.navigate).toHaveBeenCalledWith(ScreenNames.SIGN_IN_SCREEN, undefined, { pop: true });
+    expect(routes()).toEqual([SIGN_UP, VERIFY_EMAIL, SIGN_IN]);
     expect(mockToasts.shown).toEqual([
       { when: 'afterNavigation', message: { tone: 'info', text: 'Your email is verified. Sign in to continue.' } },
     ]);
