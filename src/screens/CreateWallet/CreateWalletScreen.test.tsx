@@ -76,10 +76,43 @@ const renderFromStats = (addTransaction?: { spaceId: number }) => {
   );
 };
 
+const renderEdit = (balance: string) => {
+  const store = createAppStore();
+  store.dispatch(activateSpace(1));
+
+  render(
+    <Provider store={store}>
+      <NavigationContainer
+        ref={navigationRef}
+        initialState={{
+          routes: [
+            { name: ScreenNames.HOME_SCREEN },
+            {
+              name: ScreenNames.ADD_WALLET_SCREEN,
+              params: { id: 5, walletName: 'Cash', balance, design: AppColor.SLATE },
+            },
+          ],
+        }}
+      >
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name={ScreenNames.HOME_SCREEN} component={Tabs} />
+          <Stack.Screen name={ScreenNames.ADD_WALLET_SCREEN} component={CreateWalletScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </Provider>,
+  );
+};
+
+const sent = (method: string) =>
+  mockedRequest.mock.calls
+    .map(([config]) => config)
+    .filter((config) => config.method === method)
+    .map(({ url, data }) => ({ url, data }));
+
 const createWallet = async () => {
   fireEvent.changeText(screen.getByPlaceholderText('My Wallet'), 'Cash');
   fireEvent.changeText(screen.getByPlaceholderText('0'), '0');
-  await act(async () => fireEvent.press(screen.getByText('Create')));
+  await act(async () => fireEvent.press(screen.getByText('Create wallet')));
 };
 
 const statsParams = () => JSON.parse(String(screen.getByTestId('stats-params').props.children));
@@ -139,7 +172,7 @@ describe('a failed create', () => {
   it('names a missing field beside it and sends nothing', async () => {
     renderFromStats();
 
-    await act(async () => fireEvent.press(screen.getByText('Create')));
+    await act(async () => fireEvent.press(screen.getByText('Create wallet')));
 
     expect(screen.getByText('Enter a wallet name')).toBeTruthy();
     expect(screen.getByText('Enter an amount')).toBeTruthy();
@@ -158,9 +191,48 @@ describe('a failed create', () => {
     expect(screen.getByPlaceholderText('My Wallet').props.value).toBe('Cash');
     expect(routeNames()).toEqual([ScreenNames.HOME_SCREEN, ScreenNames.ADD_WALLET_SCREEN]);
 
-    await act(async () => fireEvent.press(screen.getByText('Create')));
+    await act(async () => fireEvent.press(screen.getByText('Create wallet')));
 
     expect(screen.queryByText('Wallet name already used')).toBeNull();
+    expect(routeNames()).toEqual([ScreenNames.HOME_SCREEN]);
+  });
+});
+
+describe('creating a wallet', () => {
+  it('sends the name, the starting balance and the colour', async () => {
+    renderFromStats();
+    fireEvent.changeText(screen.getByPlaceholderText('My Wallet'), 'Cash');
+    fireEvent.changeText(screen.getByLabelText('Starting balance'), '250,5');
+
+    await act(async () => fireEvent.press(screen.getByText('Create wallet')));
+
+    expect(sent('POST')).toEqual([
+      { url: '/spaces/1/wallets', data: { wallet_name: 'Cash', initial_balance: '250.5', design: AppColor.SLATE } },
+    ]);
+  });
+});
+
+describe('editing a wallet', () => {
+  it('shows the balance on the card only, not as a starting balance', () => {
+    renderEdit('1250.5');
+
+    expect(screen.queryByLabelText('Starting balance')).toBeNull();
+    expect(screen.queryByText(/How much is already in this wallet/)).toBeNull();
+    expect(screen.getByText('Save changes')).toBeTruthy();
+  });
+
+  it('saves the name and colour whatever the balance is', async () => {
+    mockedRequest.mockImplementation((config: { method?: string }) =>
+      config.method === 'PUT' ? Promise.resolve({ data: undefined }) : new Promise(() => {}),
+    );
+    renderEdit('not-a-number');
+    fireEvent.changeText(screen.getByPlaceholderText('My Wallet'), 'Everyday');
+
+    await act(async () => fireEvent.press(screen.getByText('Save changes')));
+
+    expect(sent('PUT')).toEqual([
+      { url: '/spaces/1/wallets/5', data: { wallet_name: 'Everyday', design: AppColor.SLATE } },
+    ]);
     expect(routeNames()).toEqual([ScreenNames.HOME_SCREEN]);
   });
 });
