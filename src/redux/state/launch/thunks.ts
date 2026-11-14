@@ -7,7 +7,9 @@ import { APP_FONTS } from '@shared/fonts';
 import { readStoredSession } from '../auth/thunks';
 import { profileApi } from '../profile/api';
 import { spaceApi } from '../space/api';
-import { selectCurrentSpaceId } from '../space/selectors';
+import { pickFallbackSpaceId, selectCurrentSpaceId, selectSpaces } from '../space/selectors';
+import { persistActiveSpace, readActiveSpace } from '../space/storage';
+import { activateSpace, dropSpaceData } from '../space/thunks';
 import { walletApi } from '../wallet/api';
 import { attemptFailed, attemptSettled, attemptStarted, stageReached } from './actions';
 import type { LaunchFailure, LaunchStage } from './initialState';
@@ -57,6 +59,7 @@ const classifyFailure = async (error: unknown): Promise<{ failure: LaunchFailure
 export const runLaunch = (): AppThunk<Promise<void>> => async (dispatch, getState) => {
   const attempt = getState().launch.attempt + 1;
   const running = new Set<Cancellable>();
+  let releaseSpaces: (() => void) | undefined;
   const isLive = () => getState().launch.attempt === attempt && getState().launch.phase === 'running';
 
   dispatch(attemptStarted({ attempt, startedAt: Date.now() }));
@@ -128,13 +131,33 @@ export const runLaunch = (): AppThunk<Promise<void>> => async (dispatch, getStat
 
     enter('requiredData');
 
-    const spaces = await fetch(dispatch(spaceApi.endpoints.getSpaces.initiate(undefined, { subscribe: false })));
+    const userId = profile.data?.id;
+    // Subscribed until the space is chosen: an invalidation while the saved space is read must not drop the list.
+    const spacesRequest = dispatch(spaceApi.endpoints.getSpaces.initiate());
+
+    releaseSpaces = spacesRequest.unsubscribe;
+
+    const [spaces, savedSpaceId] = await Promise.all([
+      fetch(spacesRequest),
+      userId === undefined ? null : readActiveSpace(userId),
+    ]);
 
     if (!isLive()) return;
     if (spaces.error) return await fail(spaces.error);
 
-    // The spaces list selects a space as it arrives (space/listeners.ts); with none there is no space data to wait for.
-    const spaceId = selectCurrentSpaceId(getState());
+    // The first selection is made here, not by the spaces list's listener, which would open and save the personal
+    // space before the saved one is read. A space selected earlier in this session (a repeated attempt) stays.
+    // The list is the cache's, not this answer's: a space lost while the saved one was read is already gone from it.
+    const available = selectSpaces(getState());
+    const selectedSpaceId = selectCurrentSpaceId(getState());
+    const spaceId =
+      [selectedSpaceId, savedSpaceId].find((id) => available.some((space) => space.id === id)) ??
+      pickFallbackSpaceId(available);
+
+    dispatch(activateSpace(spaceId));
+    if (selectedSpaceId !== null && selectedSpaceId !== spaceId) dispatch(dropSpaceData(selectedSpaceId));
+    // Nothing was selected, so nothing else clears a saved space the account no longer has.
+    if (userId !== undefined && selectedSpaceId === null && spaceId === null) void persistActiveSpace(userId, null);
 
     if (spaceId !== null) {
       const wallets = await fetch(dispatch(walletApi.endpoints.getWallets.initiate({ spaceId }, { subscribe: false })));
@@ -145,6 +168,7 @@ export const runLaunch = (): AppThunk<Promise<void>> => async (dispatch, getStat
 
     dispatch(attemptSettled({ attempt, phase: 'ready' }));
   } finally {
+    releaseSpaces?.();
     // An attempt left running (a 401 waiting for the client to end the session) still fails at the deadline.
     if (!isLive()) clearTimeout(deadline);
   }

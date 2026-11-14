@@ -8,7 +8,7 @@ import authReducer from './state/auth/slice';
 import { logoutMe } from './state/auth/thunks';
 import launchReducer from './state/launch/slice';
 import { selectIsLaunching } from './state/launch/selectors';
-import { startSpaceSelectionListener } from './state/space/listeners';
+import { startActiveSpacePersistence, startSpaceSelectionListener } from './state/space/listeners';
 import invitationReducer from './state/invitation/slice';
 import { startInvitationPersistence } from './state/invitation/listeners';
 import memberReducer from './state/member/slice';
@@ -53,6 +53,7 @@ export const createAppStore = (preloadedState?: Partial<RootState>) => {
   });
 
   startSpaceSelectionListener(sessionListener);
+  startActiveSpacePersistence(sessionListener);
   startInvitationPersistence(sessionListener);
 
   return configureStore({

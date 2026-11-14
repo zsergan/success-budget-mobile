@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Provider } from 'react-redux';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
@@ -197,8 +198,10 @@ const respond = (config: RequestConfig) =>
 // Lets a test hold chosen responses and settle them later, in any order.
 let intercept: (config: RequestConfig) => Promise<{ data: unknown }> | undefined;
 
-beforeEach(() => {
+beforeEach(async () => {
   jest.clearAllMocks();
+  // A space selected in one test is the saved space of the next launch.
+  await AsyncStorage.clear();
   backend = createBackend();
   intercept = () => undefined;
   mockedRequest.mockImplementation((config: RequestConfig) => intercept(config) ?? respond(config));

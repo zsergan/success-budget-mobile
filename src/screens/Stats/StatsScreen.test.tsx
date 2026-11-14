@@ -12,6 +12,7 @@ import focusedRoutePath from '@navigation/focusedRoutePath';
 import StatsNavigator from '@navigation/StatsNavigator';
 import { TransactionsScreen } from '@screens';
 import { createAppStore } from '@redux/Store';
+import launchInitialState from '@redux/state/launch/initialState';
 import { spaceApi } from '@redux/state/space/api';
 import { activateSpace } from '@redux/state/space/thunks';
 import { transactionApi } from '@redux/state/transaction/api';
@@ -161,7 +162,8 @@ const RoutedContainer = ({ children }: { children: ReactNode }) => {
 };
 
 const renderStats = ({ spaceId = 1 }: { spaceId?: number | null } = {}) => {
-  const store = createAppStore();
+  // An open app: while it launches, the launch makes the first selection.
+  const store = createAppStore({ launch: { ...launchInitialState, phase: 'ready' } });
   if (spaceId !== null) store.dispatch(activateSpace(spaceId));
   // The app keeps the spaces list subscribed from sign-in on.
   store.dispatch(spaceApi.endpoints.getSpaces.initiate());

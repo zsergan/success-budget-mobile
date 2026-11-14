@@ -34,7 +34,8 @@ currencies. Redux Toolkit + RTK Query, React Navigation, react-hook-form + yup.
   or cache selectors in that domain's `selectors.ts`. Tags and
   invalidation rules: `docs/server-data.md`.
 - **Slices hold client state only**: `auth` (session, `sessionKey`),
-  `space` (selected space), `member` (invite cooldown), `transactionFlow`
+  `space` (selected space; its id is saved per account and restored by
+  the launch, see `docs/launch.md`), `member` (invite cooldown), `transactionFlow`
   (the open transaction sheet; ends on logout or space switch),
   `pendingWrite` (transaction writes persisted per user before sending,
   until their outcome is known; see `transaction/operations.ts`),

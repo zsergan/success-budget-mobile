@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import * as Font from 'expo-font';
 import * as SecureStore from 'expo-secure-store';
@@ -7,7 +8,8 @@ import { baseApi } from '@redux/api/baseApi';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { profileApi } from '@redux/state/profile/api';
 import { selectProfileId } from '@redux/state/profile/selectors';
-import { activateSpace } from '@redux/state/space/thunks';
+import { ACTIVE_SPACE_READ_TIMEOUT_MS } from '@redux/state/space/storage';
+import { activateSpace, loseSpaceAccess } from '@redux/state/space/thunks';
 import { walletApi } from '@redux/state/wallet/api';
 import { createAppStore } from '@redux/Store';
 import { LAUNCH_ATTEMPT_DEADLINE_MS, LAUNCH_RATE_LIMIT_COOLDOWN_MS, retryLaunch, runLaunch } from './thunks';
@@ -62,8 +64,9 @@ const launch = async (store = createAppStore()) => {
   return store;
 };
 
-beforeEach(() => {
+beforeEach(async () => {
   jest.clearAllMocks();
+  await AsyncStorage.clear();
   mockedGetItemAsync.mockResolvedValue('a-token');
   answer();
 });
@@ -528,5 +531,268 @@ describe('once the app is open', () => {
     await store.dispatch(profileApi.endpoints.getProfile.initiate(undefined, { forceRefetch: true }));
 
     expect(store.getState().launch.phase).toBe('ready');
+  });
+});
+
+describe('the space the app opens in', () => {
+  const personal = space;
+  const shared = { ...space, id: 2, type: 'group' };
+  const SAVED_KEY = 'activeSpace.v1.1';
+
+  const withSpaces = (...spaces: (typeof space)[]) =>
+    answer((url) => (url === '/spaces' ? Promise.resolve({ data: spaces }) : undefined));
+
+  const walletRequests = () =>
+    mockedRequest.mock.calls.map(([config]) => config.url as string).filter((url) => url.endsWith('/wallets'));
+
+  const savedSpace = () => AsyncStorage.getItem(SAVED_KEY);
+
+  it('is the saved shared space, with one profile, one spaces and only that space’s wallets request', async () => {
+    await AsyncStorage.setItem(SAVED_KEY, '2');
+    withSpaces(personal, shared);
+
+    const store = createAppStore();
+    const selections: (number | null)[] = [];
+
+    store.subscribe(() => {
+      const { currentSpaceId } = store.getState().space;
+
+      if (selections.at(-1) !== currentSpaceId) selections.push(currentSpaceId);
+    });
+    await launch(store);
+
+    expect(store.getState().launch.phase).toBe('ready');
+    expect(selections).toEqual([null, 2]);
+    expect(['/users/profile', '/spaces'].map(requested)).toEqual([1, 1]);
+    expect(walletRequests()).toEqual(['/spaces/2/wallets']);
+    expect(await savedSpace()).toBe('2');
+  });
+
+  it('reads the saved space beside the spaces request, not after it', async () => {
+    const getItem = jest.spyOn(AsyncStorage, 'getItem');
+    let finishSpaces: (value: { data: unknown }) => void = () => {};
+
+    answer((url) => (url === '/spaces' ? new Promise((resolve) => (finishSpaces = resolve)) : undefined));
+
+    const store = createAppStore();
+    const running = store.dispatch(runLaunch());
+
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(requested('/spaces')).toBe(1);
+    expect(getItem).toHaveBeenCalledWith(SAVED_KEY);
+
+    finishSpaces({ data: [personal] });
+    await running;
+
+    expect(store.getState().launch.phase).toBe('ready');
+  });
+
+  it.each([
+    ['no saved space', null],
+    ['a malformed saved space', 'two'],
+  ])('is the personal space with %s, which is then saved', async (_, stored) => {
+    if (stored !== null) await AsyncStorage.setItem(SAVED_KEY, stored);
+    withSpaces(shared, personal);
+
+    const store = await launch();
+
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(store.getState().space.currentSpaceId).toBe(1);
+    expect(walletRequests()).toEqual(['/spaces/1/wallets']);
+    expect(await savedSpace()).toBe('1');
+  });
+
+  it('is the personal space when the saved one cannot be read', async () => {
+    jest.spyOn(AsyncStorage, 'getItem').mockRejectedValueOnce(new Error('Storage is corrupted'));
+    withSpaces(personal, shared);
+
+    const store = await launch();
+
+    expect(store.getState().launch.phase).toBe('ready');
+    expect(store.getState().space.currentSpaceId).toBe(1);
+  });
+
+  it('is the fallback when access to the saved space was revoked, and the fallback replaces it', async () => {
+    await AsyncStorage.setItem(SAVED_KEY, '9');
+    withSpaces(personal, shared);
+
+    const store = await launch();
+
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(store.getState().space.currentSpaceId).toBe(1);
+    expect(walletRequests()).toEqual(['/spaces/1/wallets']);
+    expect(await savedSpace()).toBe('1');
+  });
+
+  it('is none for an empty list: no wallets request, and the saved space is forgotten', async () => {
+    await AsyncStorage.setItem(SAVED_KEY, '2');
+    withSpaces();
+
+    const store = await launch();
+
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(store.getState().launch.phase).toBe('ready');
+    expect(store.getState().space.currentSpaceId).toBeNull();
+    expect(walletRequests()).toEqual([]);
+    expect(await savedSpace()).toBeNull();
+  });
+
+  it('keeps another account’s saved space out of it', async () => {
+    await AsyncStorage.setItem('activeSpace.v1.7', '2');
+    withSpaces(personal, shared);
+
+    const store = await launch();
+
+    expect(store.getState().space.currentSpaceId).toBe(1);
+  });
+
+  describe('with a slow storage', () => {
+    let finishRead: (value: string | null) => void;
+
+    beforeEach(() => {
+      jest
+        .spyOn(AsyncStorage, 'getItem')
+        .mockImplementationOnce(() => new Promise((resolve) => (finishRead = resolve)));
+      withSpaces(personal, shared);
+    });
+
+    it('waits a short while, opens the fallback and ignores the late answer', async () => {
+      const store = createAppStore();
+      const running = store.dispatch(runLaunch());
+
+      await jest.advanceTimersByTimeAsync(ACTIVE_SPACE_READ_TIMEOUT_MS - 1);
+      expect(store.getState().launch.phase).toBe('running');
+      expect(store.getState().space.currentSpaceId).toBeNull();
+      expect(walletRequests()).toEqual([]);
+
+      await jest.advanceTimersByTimeAsync(1);
+      await running;
+
+      expect(store.getState().launch.phase).toBe('ready');
+      expect(store.getState().space.currentSpaceId).toBe(1);
+
+      finishRead('2');
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(store.getState().space.currentSpaceId).toBe(1);
+      expect(walletRequests()).toEqual(['/spaces/1/wallets']);
+    });
+
+    it('opens the fallback when the saved space is lost while it reads, on the same attempt', async () => {
+      let spacesRequests = 0;
+
+      // The list asked for again after the loss never answers: only the cache knows the space is gone.
+      answer((url) => {
+        if (url !== '/spaces') return undefined;
+
+        return ++spacesRequests === 1 ? Promise.resolve({ data: [personal, shared] }) : new Promise(() => {});
+      });
+
+      const store = createAppStore();
+      const running = store.dispatch(runLaunch());
+
+      await jest.advanceTimersByTimeAsync(0);
+
+      const { attempt } = store.getState().launch;
+
+      store.dispatch(loseSpaceAccess(shared.id));
+      await jest.advanceTimersByTimeAsync(0);
+      expect(spacesRequests).toBe(2);
+
+      finishRead(String(shared.id));
+      await running;
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(store.getState().launch).toMatchObject({ attempt, phase: 'ready' });
+      expect(store.getState().space.currentSpaceId).toBe(personal.id);
+      expect(walletRequests()).toEqual(['/spaces/1/wallets']);
+      expect(await savedSpace()).toBe('1');
+    });
+
+    it('selects nothing when the session ends while it reads', async () => {
+      const store = createAppStore();
+      const running = store.dispatch(runLaunch());
+
+      await jest.advanceTimersByTimeAsync(0);
+      await store.dispatch(logoutMe());
+      finishRead('2');
+      await running;
+      await jest.advanceTimersByTimeAsync(ACTIVE_SPACE_READ_TIMEOUT_MS);
+
+      expect(store.getState().launch.phase).toBe('welcome');
+      expect(store.getState().space.currentSpaceId).toBeNull();
+      expect(walletRequests()).toEqual([]);
+      expect(await savedSpace()).toBeNull();
+    });
+
+    it('selects nothing for an attempt that a newer one replaced', async () => {
+      const store = createAppStore();
+      const first = store.dispatch(runLaunch());
+
+      await jest.advanceTimersByTimeAsync(0);
+      await AsyncStorage.setItem(SAVED_KEY, '2');
+
+      const second = store.dispatch(runLaunch());
+
+      await second;
+      expect(store.getState().space.currentSpaceId).toBe(2);
+
+      finishRead('1');
+      await first;
+
+      expect(store.getState().space.currentSpaceId).toBe(2);
+      expect(walletRequests()).toEqual(['/spaces/2/wallets']);
+    });
+  });
+
+  it('stays the restored space when Try again follows a failed wallets request', async () => {
+    await AsyncStorage.setItem(SAVED_KEY, '2');
+    answer((url) => {
+      if (url === '/spaces') return Promise.resolve({ data: [personal, shared] });
+      if (url.endsWith('/wallets')) return httpError(500);
+
+      return undefined;
+    });
+
+    const store = await launch();
+
+    expect(store.getState().launch).toMatchObject({ phase: 'failed', stage: 'requiredData', failure: 'server' });
+    expect(store.getState().space.currentSpaceId).toBe(2);
+
+    // Whatever the storage says by now, the session's own selection stands.
+    await AsyncStorage.setItem(SAVED_KEY, '1');
+    withSpaces(personal, shared);
+    store.dispatch(retryLaunch());
+    await jest.runOnlyPendingTimersAsync();
+
+    expect(store.getState().launch.phase).toBe('ready');
+    expect(store.getState().space.currentSpaceId).toBe(2);
+    expect(requested('/spaces')).toBe(1);
+    expect(walletRequests()).toEqual(['/spaces/2/wallets', '/spaces/2/wallets']);
+  });
+
+  it('moves off a space selected earlier in the session that a new list no longer has', async () => {
+    await AsyncStorage.setItem(SAVED_KEY, '2');
+    answer((url) => {
+      if (url === '/spaces') return Promise.resolve({ data: [personal, shared] });
+      if (url.endsWith('/wallets')) return httpError(500);
+
+      return undefined;
+    });
+
+    const store = await launch();
+
+    store.dispatch(baseApi.util.invalidateTags(['Spaces']));
+    withSpaces(personal);
+    await store.dispatch(runLaunch());
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(store.getState().launch.phase).toBe('ready');
+    expect(store.getState().space.currentSpaceId).toBe(1);
+    expect(await savedSpace()).toBe('1');
   });
 });
