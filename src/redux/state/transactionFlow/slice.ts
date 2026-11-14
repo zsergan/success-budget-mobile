@@ -22,7 +22,7 @@ export type FlowView =
   // The record was deleted elsewhere.
   | { name: 'gone' };
 
-// Creating a wallet or a category from the form hides the sheet; the draft waits here.
+// A wallet or a category being created from the form, over it; the draft waits here.
 export type FlowAway = 'wallet' | 'category';
 
 // Whether the record has been read again since the details opened from a list that may be behind the server.
@@ -434,7 +434,7 @@ const transactionFlowSlice = createSlice({
       if (!flow || flow.isSaving || !activeForm(flow)) return;
 
       flow.away = payload.target;
-      // The form comes back as from a panel, without the keyboard over it.
+      // The form comes back as from a picker, without the keyboard over it.
       if (flow.view.name === 'create') flow.view.focusAmount = false;
     },
     // The new wallet or category is saved on its own; discarding the draft later does not remove it.

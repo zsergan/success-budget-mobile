@@ -8,11 +8,11 @@ import CategoryEditorSheet from '@components/CategoryEditor/CategoryEditorSheet'
 import ConfirmationSheet from '@components/ConfirmationSheet/ConfirmationSheet';
 import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
 import ScreenFrame from '@components/ScreenFrame/ScreenFrame';
-import DateTimePanel from '@components/TransactionFlow/DateTimePanel/DateTimePanel';
+import DateTimePanel from '@screens/TransactionEditor/components/DateTimePanel/DateTimePanel';
 import useFlowClose from '@components/TransactionFlow/hooks/useFlowClose';
 import useFlowConfirmation from '@components/TransactionFlow/hooks/useFlowConfirmation';
-import useFlowSave from '@components/TransactionFlow/hooks/useFlowSave';
-import TransactionEditor from '@components/TransactionFlow/TransactionEditor/TransactionEditor';
+import useFlowSave from './hooks/useFlowSave';
+import TransactionEditor from '@screens/TransactionEditor/components/TransactionEditor/TransactionEditor';
 import useTransactionDelete from '@components/TransactionFlow/useTransactionDelete';
 import { useSheetPresence } from '@hooks';
 import { useAppDispatch } from '@redux/hooks';

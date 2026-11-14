@@ -52,28 +52,21 @@ const mockCategorySheet: { holdDismiss: boolean; finishDismiss?: () => void } = 
 const mockSheet: {
   props?: SheetProps;
   presents: number;
-  keptOpen: number;
   swipeDown?: () => void;
   holdDismiss: boolean;
   finishDismiss?: () => void;
 } = {
   presents: 0,
-  keptOpen: 0,
   holdDismiss: false,
 };
 
 // The confirmation sheet the flow pushes above itself.
 const mockConfirmation: { props?: SheetProps; swipeDown?: () => void } = {};
 
-// The flow sheet's way back into place runs on the UI thread; here a test says when it got there.
-const mockReturn: { finish?: () => void } = {};
-jest.mock('@components/Modals/BottomSheetModal/useReturnToRest', () => (onRest: () => void) => ({
-  animatedIndex: undefined,
-  watch: () => {
-    mockReturn.finish = onRest;
-  },
-  stop: () => {},
-}));
+jest.mock(
+  '@components/Modals/BottomSheetModal/useReturnToRest',
+  () => jest.requireActual('@components/ConfirmationSheet/testing').useReturnToRestMock,
+);
 
 // As the system: the handler added last answers first, and the next one only if that left the press alone.
 const backHandlers: ((event: never) => boolean | null | undefined)[] = [];
@@ -120,9 +113,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
         setOpen(true);
       },
       dismiss,
-      snapToIndex: () => {
-        if (isFlowSheet) mockSheet.keptOpen += 1;
-      },
+      snapToIndex: () => {},
     }));
 
     return isOpen ? (
@@ -362,7 +353,6 @@ beforeEach(() => {
   mockSheet.presents = 0;
   mockSheet.holdDismiss = false;
   mockSheet.finishDismiss = undefined;
-  mockReturn.finish = undefined;
   backHandlers.splice(0);
   jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_event, handler) => {
     backHandlers.push(handler);

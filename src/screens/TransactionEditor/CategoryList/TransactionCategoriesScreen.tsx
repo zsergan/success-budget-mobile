@@ -3,8 +3,8 @@ import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-nativ
 
 import Icon from '@components/Icon/Icon';
 import ScreenFrame from '@components/ScreenFrame/ScreenFrame';
-import CategoryTile, { useCategoryColumns } from '@components/TransactionFlow/CategoryTile/CategoryTile';
-import SectionLoad, { listLoad } from '@components/TransactionFlow/SectionLoad/SectionLoad';
+import CategoryTile, { useCategoryColumns } from '@screens/TransactionEditor/components/CategoryTile/CategoryTile';
+import SectionLoad, { listLoad } from '@screens/TransactionEditor/components/SectionLoad/SectionLoad';
 import { useTheme, useThemedStyles } from '@hooks';
 import { useAppDispatch, useSpaceArg } from '@redux/hooks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';

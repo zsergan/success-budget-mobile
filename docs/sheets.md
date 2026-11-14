@@ -32,12 +32,32 @@ do: it dismisses the keyboard and shows the sheet once it has gone.
 
 - `ConfirmationSheet` is the only sheet that opens over another one
   (`stackBehavior="push"`): the sheet below stays in place with its state,
-  e.g. a transaction draft. Only the top sheet takes a swipe or the
+  e.g. a record's details. Only the top sheet takes a swipe or the
   backdrop, and `useBackPress` gives Android Back to the most recently
   enabled handler alone.
 - Anything else a sheet leads to (another sheet, a screen) waits until that
   sheet has gone: close it, then act from its `onDismiss`
   (see `useWalletActions`).
+
+## The transaction flow: a sheet and a screen
+
+`transactionFlow` decides what is on screen; nothing navigates on its own.
+
+- `TransactionFlowSheet` shows the details, an unavailable record and a new
+  record's confirmation. The form (New and Edit) is the
+  `TransactionEditorScreen` route, with the full category list as a route
+  over it and Date & time and a new category as sheets it owns.
+- `useEditorRoute` pushes the editor once the flow has a form and the sheet
+  has finished closing. The editor route removes itself, with whatever was
+  pushed over it, when the flow lets the form go (a save, Back, a space
+  switch), and the sheet shows only after the route and the keyboard have
+  gone.
+- Every way out of the editor (header Back, Android Back, the back swipe)
+  is held by `usePreventRemove` and asks the flow (`useFlowClose`), so it
+  never leaves a draft behind or closes during a write.
+- A result that ends the flow from the editor (a delete, a create found
+  deleted) is a toast handed to the next screen with `showAfterNavigation`,
+  before the flow ends.
 
 ## Results and errors
 

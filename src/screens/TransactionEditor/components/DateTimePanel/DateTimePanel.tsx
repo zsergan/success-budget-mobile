@@ -12,7 +12,7 @@ import theme from '@shared/theme';
 import { addMonths } from '@shared/utils';
 import { compareDays } from '@shared/utils/compare';
 import { MIN_TIMESTAMP } from '@redux/state/transactionFlow/draft';
-import { formatDateTime } from '../format';
+import { formatDateTime } from '@components/TransactionFlow/format';
 import useBoundedHeight from '@components/Modals/BottomSheetModal/useBoundedHeight';
 import type { PickBounds } from './pickDateTime';
 import { pickDay, pickTime } from './pickDateTime';

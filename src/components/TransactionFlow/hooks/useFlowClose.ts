@@ -45,7 +45,8 @@ const leavingSaveConfirmation = (
   onCancel: settle,
 });
 
-// One set of rules for every view: ✕, a swipe and the backdrop close the whole flow; Back steps one view back.
+// One set of rules for the sheet and the editor screen: ✕, a swipe and the backdrop close the whole flow; Back (the
+// header's, Android's, the back swipe) steps one view back: the date picker to the form, an edit to its details.
 // Unsaved changes ask first, and nothing closes while a write runs or a confirmation is open.
 const useFlowClose = (confirmLock: ConfirmLock) => {
   const dispatch = useAppDispatch();

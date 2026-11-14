@@ -6,7 +6,7 @@ import { useRevealWhileFocused } from '@components/RootLayout/FieldReveal';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { DESCRIPTION_MAX_LENGTH, descriptionLength } from '@redux/state/transactionFlow/draft';
-import { formatDateTime } from '../../format';
+import { formatDateTime } from '@components/TransactionFlow/format';
 
 import createStyles from './style';
 

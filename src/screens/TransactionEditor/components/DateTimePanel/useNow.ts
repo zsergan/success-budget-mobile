@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-// The current time, kept fresh while the panel stays open so "now" never stops at the moment it opened.
+// The current time, kept fresh while the picker stays open so "now" never stops at the moment it opened.
 const useNow = (intervalMs = 15_000) => {
   const [now, setNow] = useState(() => new Date());
 

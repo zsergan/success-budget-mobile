@@ -2,8 +2,8 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import type { Wallet } from '@api/dto';
 import Icon from '@components/Icon/Icon';
-import type { ListLoad } from '@components/TransactionFlow/SectionLoad/SectionLoad';
-import SectionLoad from '@components/TransactionFlow/SectionLoad/SectionLoad';
+import type { ListLoad } from '@screens/TransactionEditor/components/SectionLoad/SectionLoad';
+import SectionLoad from '@screens/TransactionEditor/components/SectionLoad/SectionLoad';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { resolveAppColor } from '@shared/constants';

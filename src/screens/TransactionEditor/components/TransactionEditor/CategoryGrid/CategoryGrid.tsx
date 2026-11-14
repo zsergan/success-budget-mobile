@@ -1,9 +1,9 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
-import CategoryTile, { useCategoryColumns } from '@components/TransactionFlow/CategoryTile/CategoryTile';
-import type { ListLoad } from '@components/TransactionFlow/SectionLoad/SectionLoad';
-import SectionLoad from '@components/TransactionFlow/SectionLoad/SectionLoad';
+import CategoryTile, { useCategoryColumns } from '@screens/TransactionEditor/components/CategoryTile/CategoryTile';
+import type { ListLoad } from '@screens/TransactionEditor/components/SectionLoad/SectionLoad';
+import SectionLoad from '@screens/TransactionEditor/components/SectionLoad/SectionLoad';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { hexToRgba } from '@shared/utils';

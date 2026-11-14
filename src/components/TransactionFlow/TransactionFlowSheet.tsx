@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,12 +7,7 @@ import ConfirmationSheet from '@components/ConfirmationSheet/ConfirmationSheet';
 import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
 import { useBackPress, useSheetPresence } from '@hooks';
 import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
-import {
-  hasOpenForm,
-  hasOpenSave,
-  hasUnsavedChanges,
-  selectTransactionFlow,
-} from '@redux/state/transactionFlow/selectors';
+import { hasOpenForm, selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { anotherStarted, autoCloseRestarted, autoCloseStopped, closed } from '@redux/state/transactionFlow/slice';
 import { checkFlowRecord, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
@@ -69,7 +64,6 @@ const TransactionFlowSheet = () => {
   useEffect(() => {
     if (createdDraftId !== null) dispatch(autoCloseRestarted({ draftId: createdDraftId, now: Date.now() }));
   }, [dispatch, createdDraftId]);
-  const asksOnReturnRef = useRef(false);
 
   useBackPress(isVisible, back);
 
@@ -93,7 +87,6 @@ const TransactionFlowSheet = () => {
 
   // Only a swipe closes the sheet on its own; one we dismissed ourselves is not a close request.
   const handleDismiss = useCallback(() => {
-    asksOnReturnRef.current = false;
     setSheetUp(false);
     if (!settleDismiss()) return;
 
@@ -101,24 +94,13 @@ const TransactionFlowSheet = () => {
     if (current && !hasOpenForm(current)) dispatch(closed());
   }, [dispatch, store, settleDismiss]);
 
-  // A swipe follows the same rules as ✕ and the backdrop: it waits for a running write and asks before discarding,
-  // once the sheet is back in place.
+  // A swipe waits, like ✕ and the backdrop, for a running write or an open confirmation.
   const keepOpen = useCallback(() => {
     const current = selectTransactionFlow(store.getState());
     if (isDismissing() || !current || hasOpenForm(current)) return false;
-    if (current.isSaving || confirmLock.isLocked()) return true;
-    if (!hasUnsavedChanges(current) && !hasOpenSave(current)) return false;
 
-    asksOnReturnRef.current = true;
-    return true;
+    return current.isSaving || confirmLock.isLocked();
   }, [store, isDismissing, confirmLock]);
-
-  const handleKeptOpen = useCallback(() => {
-    if (!asksOnReturnRef.current) return;
-
-    asksOnReturnRef.current = false;
-    requestClose();
-  }, [requestClose]);
 
   // Undo deletes the record the create made, at the version it came back with.
   const undoCreate = () => {
@@ -188,7 +170,6 @@ const TransactionFlowSheet = () => {
         }}
         isDismissible={!flow?.isSaving}
         shouldKeepOpen={keepOpen}
-        onKeptOpen={handleKeptOpen}
         onBackdropPress={requestClose}
         onDismiss={handleDismiss}
       >
