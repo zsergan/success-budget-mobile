@@ -3,6 +3,7 @@ import { createAppStore } from '@redux/Store';
 import { SpaceType } from '@shared/enums';
 import { spaceApi } from './api';
 import { categoryApi } from '@redux/state/category/api';
+import launchInitialState from '@redux/state/launch/initialState';
 import { walletApi } from '@redux/state/wallet/api';
 import { feedSelection, transactionApi } from '@redux/state/transaction/api';
 import { activateSpace } from './thunks';
@@ -27,6 +28,9 @@ const space = (id: number, type = SpaceType.GROUP): Space => ({
   created_at: '2026-01-01T00:00:00.000Z',
 });
 
+// Once the app is open the list makes every selection; during a launch the first one is the launch's.
+const openApp = () => createAppStore({ launch: { ...launchInitialState, phase: 'ready' } });
+
 const respondWith = (spaces: Space[]) => mockedRequest.mockResolvedValue({ data: spaces });
 
 const loadSpaces = (store: ReturnType<typeof createAppStore>) =>
@@ -36,7 +40,7 @@ beforeEach(() => jest.clearAllMocks());
 
 describe('space selection from the spaces list', () => {
   it('picks the personal space when none is selected', async () => {
-    const store = createAppStore();
+    const store = openApp();
 
     respondWith([space(2), space(1, SpaceType.PERSONAL)]);
     await loadSpaces(store);
@@ -45,7 +49,7 @@ describe('space selection from the spaces list', () => {
   });
 
   it('picks the lowest id when there is no personal space', async () => {
-    const store = createAppStore();
+    const store = openApp();
 
     respondWith([space(5), space(3)]);
     await loadSpaces(store);
@@ -54,7 +58,7 @@ describe('space selection from the spaces list', () => {
   });
 
   it('selects nothing, without an error, for an empty list', async () => {
-    const store = createAppStore();
+    const store = openApp();
 
     respondWith([]);
     const result = await loadSpaces(store);
@@ -64,7 +68,7 @@ describe('space selection from the spaces list', () => {
   });
 
   it('keeps a selection that is still in a fresher list', async () => {
-    const store = createAppStore();
+    const store = openApp();
 
     store.dispatch(activateSpace(2));
     jest.advanceTimersByTime(1);
@@ -75,7 +79,7 @@ describe('space selection from the spaces list', () => {
   });
 
   it('moves off a selected space that a fresher list no longer contains', async () => {
-    const store = createAppStore();
+    const store = openApp();
 
     store.dispatch(activateSpace(9));
     jest.advanceTimersByTime(1);
@@ -86,7 +90,7 @@ describe('space selection from the spaces list', () => {
   });
 
   it('never lets a list requested before the selection undo it (e.g. a space created just now)', async () => {
-    const store = createAppStore();
+    const store = openApp();
     let finishOldList: (value: unknown) => void = () => {};
 
     mockedRequest.mockReturnValueOnce(new Promise((resolve) => (finishOldList = resolve)));
@@ -101,9 +105,31 @@ describe('space selection from the spaces list', () => {
   });
 });
 
+describe('the spaces list of a launch', () => {
+  it.each(['running', 'failed'] as const)('leaves the first selection to a %s launch', async (phase) => {
+    const store = createAppStore({ launch: { ...launchInitialState, attempt: 1, phase } });
+
+    respondWith([space(2), space(1, SpaceType.PERSONAL)]);
+    await loadSpaces(store);
+
+    expect(store.getState().space.currentSpaceId).toBeNull();
+  });
+
+  it('still moves off a selected space the list no longer contains', async () => {
+    const store = createAppStore();
+
+    store.dispatch(activateSpace(9));
+    jest.advanceTimersByTime(1);
+    respondWith([space(1, SpaceType.PERSONAL), space(2)]);
+    await loadSpaces(store);
+
+    expect(store.getState().space.currentSpaceId).toBe(1);
+  });
+});
+
 describe('a read or a write refused for a space', () => {
   const setUp = async () => {
-    const store = createAppStore();
+    const store = openApp();
 
     respondWith([space(1), space(2, SpaceType.PERSONAL)]);
     await loadSpaces(store);

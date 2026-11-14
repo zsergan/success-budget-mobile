@@ -156,9 +156,13 @@ describe('pending writes', () => {
   });
 
   it('sends nothing when the write cannot be stored first', async () => {
+    const store = signIn();
+
+    // The sign-in's own write (the active space) is out of the way first.
+    await jest.advanceTimersByTimeAsync(0);
     jest.spyOn(AsyncStorage, 'setItem').mockRejectedValueOnce(new Error('Disk full'));
 
-    const { outcome } = await submit(signIn());
+    const { outcome } = await submit(store);
 
     expect(outcome).toMatchObject({ status: 'failed', failure: { kind: 'notSent' } });
     expect(mockedRequest).not.toHaveBeenCalled();

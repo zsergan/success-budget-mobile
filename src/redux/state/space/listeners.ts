@@ -5,6 +5,7 @@ import { ApiErrorCode } from '@api/dto';
 import { baseApi, spaceIdOfArg } from '@redux/api/baseApi';
 import type { AppListener } from '@redux/Store';
 import { spaceApi } from './api';
+import { selectIsLaunching } from '../launch/selectors';
 import { selectProfileId } from '../profile/selectors';
 import { pickFallbackSpaceId, selectSpacesResult } from './selectors';
 import { persistActiveSpace } from './storage';
@@ -14,6 +15,7 @@ const TRANSACTION_WRITES = ['createTransaction', 'updateTransaction', 'deleteTra
 
 // Keeps a valid space selected as the spaces list arrives: picks one when
 // none is selected, and moves off a space the user no longer belongs to.
+// A launch makes the first selection itself, once it has read the saved one (launch/thunks.ts).
 export const startSpaceSelectionListener = (listener: AppListener) => {
   listener.startListening({
     matcher: spaceApi.endpoints.getSpaces.matchFulfilled,
@@ -23,6 +25,8 @@ export const startSpaceSelectionListener = (listener: AppListener) => {
       const { requestId, startedTimeStamp = 0 } = selectSpacesResult(state);
 
       if (requestId !== action.meta.requestId) return;
+
+      if (currentSpaceId === null && selectIsLaunching(state)) return;
 
       if (currentSpaceId !== null) {
         // A list requested before this selection was made (e.g. just before a
