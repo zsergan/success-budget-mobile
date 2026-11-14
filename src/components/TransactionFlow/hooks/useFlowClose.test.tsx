@@ -9,7 +9,7 @@ import { activateSpace } from '@redux/state/space/thunks';
 import { transactionDto } from '@redux/state/transaction/fixtures';
 import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import {
-  categoriesOpened,
+  dateTimeOpened,
   closed,
   createOpened,
   detailsOpened,
@@ -98,7 +98,7 @@ it.each([
   [
     'across renders',
     (store: ReturnType<typeof createAppStore>) => {
-      act(() => void store.dispatch(categoriesOpened()));
+      act(() => void store.dispatch(dateTimeOpened()));
       act(() => void store.dispatch(panelClosed()));
     },
   ],
@@ -106,7 +106,7 @@ it.each([
     'within one update',
     (store: ReturnType<typeof createAppStore>) =>
       act(() => {
-        store.dispatch(categoriesOpened());
+        store.dispatch(dateTimeOpened());
         store.dispatch(panelClosed());
       }),
   ],

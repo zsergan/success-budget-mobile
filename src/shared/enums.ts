@@ -33,6 +33,8 @@ export enum ScreenNames {
   LIMITS_TAB = 'Limits',
   HOME_SCREEN = 'HomeScreen',
   ADD_WALLET_SCREEN = 'AddWalletScreen',
+  TRANSACTION_EDITOR_SCREEN = 'TransactionEditorScreen',
+  TRANSACTION_CATEGORIES_SCREEN = 'TransactionCategoriesScreen',
   TRANSACTIONS_TAB = 'Transactions',
   STATS_TAB = 'Stats',
   STATS_OVERVIEW_SCREEN = 'StatsOverviewScreen',

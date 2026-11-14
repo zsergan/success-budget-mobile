@@ -16,15 +16,14 @@ export type FlowView =
   | { name: 'create'; focusAmount: boolean }
   | { name: 'details' }
   | { name: 'edit' }
-  | { name: 'categories'; form: FlowForm }
   // `pending` is the date and time picked but not applied yet.
   | { name: 'dateTime'; form: FlowForm; pending: string }
   | { name: 'created' }
   // The record was deleted elsewhere.
   | { name: 'gone' };
 
-// Creating a wallet or a category from the form hides the sheet; the draft waits here.
-export type FlowAway = 'wallet' | 'category';
+// A wallet being created from the form, on a screen over it; the draft waits here.
+export type FlowAway = 'wallet';
 
 // Whether the record has been read again since the details opened from a list that may be behind the server.
 export type FlowCheck = 'pending' | 'done' | 'failed';
@@ -97,12 +96,8 @@ type DraftScoped<T = object> = PayloadAction<T & { draftId: number }>;
 const formView = (form: FlowForm): FlowView =>
   form === 'create' ? { name: 'create', focusAmount: false } : { name: 'edit' };
 
-const activeForm = ({ view }: TransactionFlow): FlowForm | null =>
-  view.name === 'create' || view.name === 'edit'
-    ? view.name
-    : view.name === 'categories' || view.name === 'dateTime'
-      ? view.form
-      : null;
+export const activeForm = ({ view }: TransactionFlow): FlowForm | null =>
+  view.name === 'create' || view.name === 'edit' ? view.name : view.name === 'dateTime' ? view.form : null;
 
 // Only the draft a late answer belongs to may take it.
 const flowOf = (state: TransactionFlowState, draftId: number) => (state.flow?.draftId === draftId ? state.flow : null);
@@ -284,19 +279,13 @@ const transactionFlowSlice = createSlice({
         flow.refusal = null;
       }
     },
-    categoriesOpened: (state) => {
-      const flow = idleFlow(state);
-      if (flow?.view.name !== 'create' && flow?.view.name !== 'edit') return;
-
-      flow.view = { name: 'categories', form: flow.view.name };
-    },
-    categoryPicked: (state, { payload }: PayloadAction<{ categoryId: number }>) => {
-      const flow = idleFlow(state);
-      if (flow?.view.name !== 'categories' || !flow.draft) return;
+    // A pick from the full list, which is a screen over the form; it reaches only the draft it was opened for.
+    categoryPicked: (state, { payload }: DraftScoped<{ categoryId: number }>) => {
+      const flow = flowOf(state, payload.draftId);
+      if (!flow?.draft || flow.isSaving || (flow.view.name !== 'create' && flow.view.name !== 'edit')) return;
 
       flow.draft.categoryId = payload.categoryId;
       flow.promotedCategoryId = payload.categoryId;
-      flow.view = formView(flow.view.form);
     },
     dateTimeOpened: (state) => {
       const flow = idleFlow(state);
@@ -318,10 +307,10 @@ const transactionFlowSlice = createSlice({
       flow.draft.timestamp = flow.view.pending;
       flow.view = formView(flow.view.form);
     },
-    // Back or Cancel from a panel: the form as it was, an unapplied date dropped.
+    // Cancel, Back or a swipe from the date picker: the form as it was, the unapplied date dropped.
     panelClosed: (state) => {
       const flow = idleFlow(state);
-      if (flow?.view.name !== 'categories' && flow?.view.name !== 'dateTime') return;
+      if (flow?.view.name !== 'dateTime') return;
 
       flow.view = formView(flow.view.form);
     },
@@ -356,7 +345,7 @@ const transactionFlowSlice = createSlice({
       flow.notice = 'saveRecovered';
       flow.refusal = null;
       if (flow.view.name === 'create') flow.view = { name: 'edit' };
-      else if (flow.view.name === 'categories' || flow.view.name === 'dateTime') flow.view.form = 'edit';
+      else if (flow.view.name === 'dateTime') flow.view.form = 'edit';
     },
     // An earlier attempt of this create had applied: the form gives way to the record, or ends when it is deleted.
     createFound: (state, { payload }: DraftScoped<{ transaction: TransactionModel | null }>) => {
@@ -415,6 +404,13 @@ const transactionFlowSlice = createSlice({
 
       state.flow = { ...next, followsNow: flow.followsNow };
     },
+    // The confirmation shows once the form has left the screen; its time to close by itself counts from then.
+    autoCloseRestarted: (state, { payload }: DraftScoped<{ now: number }>) => {
+      const flow = flowOf(state, payload.draftId);
+      if (flow?.view.name === 'created' && flow.autoCloseAt !== null) {
+        flow.autoCloseAt = payload.now + CREATED_AUTO_CLOSE_MS;
+      }
+    },
     // The user touched the confirmation, so it stays until they close it.
     autoCloseStopped: (state, { payload }: DraftScoped) => {
       const flow = flowOf(state, payload.draftId);
@@ -438,10 +434,10 @@ const transactionFlowSlice = createSlice({
       if (!flow || flow.isSaving || !activeForm(flow)) return;
 
       flow.away = payload.target;
-      // The form comes back as from a panel, without the keyboard over it.
+      // The form comes back as from a picker, without the keyboard over it.
       if (flow.view.name === 'create') flow.view.focusAmount = false;
     },
-    // The new wallet or category is saved on its own; discarding the draft later does not remove it.
+    // The new wallet is saved on its own; discarding the draft later does not remove it.
     // The form comes back with awayEnded, once the wallet screen has gone.
     walletCreated: (state, { payload }: DraftScoped<{ walletId: number }>) => {
       const flow = flowOf(state, payload.draftId);
@@ -449,17 +445,14 @@ const transactionFlowSlice = createSlice({
 
       flow.draft.walletId = payload.walletId;
     },
+    // From a category sheet over the form or its full list; the screen that owns the sheet answers for the opening.
     categoryCreated: (state, { payload }: DraftScoped<{ categoryId: number; transactionType: TransactionType }>) => {
       const flow = flowOf(state, payload.draftId);
-      if (flow?.away !== 'category' || !flow.draft) return;
+      if (!flow?.draft || flow.isSaving || (flow.view.name !== 'create' && flow.view.name !== 'edit')) return;
+      if (payload.transactionType !== flow.draft.transactionType) return;
 
-      if (payload.transactionType === flow.draft.transactionType) {
-        flow.draft.categoryId = payload.categoryId;
-        flow.promotedCategoryId = payload.categoryId;
-      }
-
-      if (flow.view.name === 'categories') flow.view = formView(flow.view.form);
-      flow.away = null;
+      flow.draft.categoryId = payload.categoryId;
+      flow.promotedCategoryId = payload.categoryId;
     },
     awayEnded: (state, { payload }: DraftScoped) => {
       const flow = flowOf(state, payload.draftId);
@@ -524,7 +517,6 @@ export const {
   editStarted,
   editLeft,
   draftChanged,
-  categoriesOpened,
   categoryPicked,
   dateTimeOpened,
   pendingDateChanged,
@@ -537,6 +529,7 @@ export const {
   createSucceeded,
   editSucceeded,
   anotherStarted,
+  autoCloseRestarted,
   autoCloseStopped,
   autoClosed,
   walletDefaulted,

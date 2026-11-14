@@ -13,8 +13,9 @@ import { deleteMessage, deleteSubject } from './deleteMessage';
 
 // One delete for a list row, the details and the form: the same confirmation, asked through its owner's lock, then a
 // write the row or the sheet waits for. A sheet still waiting on it when the answer comes explains a failure in place;
-// otherwise a toast does, with the next step. What the delete did shows once the sheets it closed have gone.
-const useTransactionDelete = (confirmLock: ConfirmLock) => {
+// otherwise a toast does, with the next step. What the delete did shows once the sheets it closed have gone; where the
+// record's own screen closes with it (`leavesScreen`, the editor), on the screen that is left for.
+const useTransactionDelete = (confirmLock: ConfirmLock, { leavesScreen = false }: { leavesScreen?: boolean } = {}) => {
   const dispatch = useAppDispatch();
   const store = useAppStore();
   const toast = useToast();
@@ -36,11 +37,12 @@ const useTransactionDelete = (confirmLock: ConfirmLock) => {
 
       if (result === 'stale') return;
       ticket.resolve(subject);
+      const showDone = leavesScreen && isShownInFlow ? ticket.showAfterNavigation : ticket.showAfterSheetsClose;
 
       if (result === 'deleted') {
-        ticket.showAfterSheetsClose({ tone: 'success', text: doneText, subject });
+        showDone({ tone: 'success', text: doneText, subject });
       } else if (result === 'gone') {
-        ticket.showAfterSheetsClose({ tone: 'info', text: 'This transaction is no longer available', subject });
+        showDone({ tone: 'info', text: 'This transaction is no longer available', subject });
       } else if (isShownInFlow) {
         return;
       } else if (result === 'conflict') {
@@ -66,7 +68,7 @@ const useTransactionDelete = (confirmLock: ConfirmLock) => {
         });
       }
     },
-    [dispatch],
+    [dispatch, leavesScreen],
   );
 
   // The ticket is taken as the delete starts: its toast, and the actions on it, belong to the screen, space and
@@ -76,8 +78,14 @@ const useTransactionDelete = (confirmLock: ConfirmLock) => {
       if (spaceId === null) return;
 
       const ticket = toast.begin();
-      const outcome = await dispatch(deleteTransaction({ spaceId, transaction }));
-      report(ticket, outcome, transaction, spaceId, doneText);
+      // Reported before the flow takes the outcome: a delete that closes the record's screen shows on the next one.
+      await dispatch(
+        deleteTransaction({
+          spaceId,
+          transaction,
+          beforeSettled: (outcome) => report(ticket, outcome, transaction, spaceId, doneText),
+        }),
+      );
     },
     [dispatch, toast, report, currentSpaceId],
   );

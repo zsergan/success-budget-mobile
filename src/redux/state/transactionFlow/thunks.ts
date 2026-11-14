@@ -128,8 +128,18 @@ export interface DeleteOutcome {
 // The one delete behind a list row and the sheet. One that got no answer is asked about again with its own key,
 // through the stored write, before anything new is sent; a delete that already applied answers 404, so the record is
 // gone either way.
+// `beforeSettled` hears the outcome while the flow still shows the record, so a result that ends the flow can be handed
+// to the screen it leaves for.
 export const deleteTransaction =
-  ({ spaceId, transaction }: { spaceId: number; transaction: TransactionModel }): AppThunk<Promise<DeleteOutcome>> =>
+  ({
+    spaceId,
+    transaction,
+    beforeSettled,
+  }: {
+    spaceId: number;
+    transaction: TransactionModel;
+    beforeSettled?: (outcome: DeleteOutcome) => void;
+  }): AppThunk<Promise<DeleteOutcome>> =>
   async (dispatch, getState) => {
     const transactionId = transaction.id;
     if (selectIsDeleting(getState(), transactionId)) return { result: 'stale', isShownInFlow: false };
@@ -180,6 +190,7 @@ export const deleteTransaction =
 
     const isShownInFlow = selectIsFlowDeleting(getState(), transactionId);
     if (result === 'deleted' || result === 'gone') dispatch(dropFromLists(spaceId, transactionId));
+    beforeSettled?.({ result, isShownInFlow });
     dispatch(deleteSettled({ transactionId, result }));
 
     return { result, isShownInFlow };

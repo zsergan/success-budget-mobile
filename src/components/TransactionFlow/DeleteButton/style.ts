@@ -12,6 +12,12 @@ const createStyles = ({ colors }: ColorTheme) =>
       justifyContent: 'center',
       columnGap: theme.spacing.sm,
     },
+    outlined: {
+      height: 48,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+    },
     buttonLocked: {
       opacity: 0.4,
     },

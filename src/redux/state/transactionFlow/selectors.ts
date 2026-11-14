@@ -1,9 +1,12 @@
 import type { RootState } from '@redux/Store';
 import { isDraftChanged } from './draft';
 import type { TransactionFlow } from './slice';
-import { recordIdOf } from './slice';
+import { activeForm, recordIdOf } from './slice';
 
 export const selectTransactionFlow = (state: RootState) => state.transactionFlow.flow;
+
+// The form and its date picker show on the editor screen; every other view belongs to the sheet.
+export const hasOpenForm = (flow: TransactionFlow | null) => !!flow && activeForm(flow) !== null;
 
 // A picked but unapplied date is not a change yet, and a created draft is kept only for Add another.
 export const hasUnsavedChanges = (flow: TransactionFlow | null) =>
