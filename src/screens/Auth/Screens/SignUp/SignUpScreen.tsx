@@ -18,17 +18,27 @@ const MAX_TEXT_LENGTH = 255;
 // Lets iOS suggest a strong password that already meets the rule checked below the field.
 const PASSWORD_RULES = 'minlength: 8; required: lower, upper; required: digit;';
 
-const SignUpScreen = ({ navigation }: Props) => {
-  const { control, onSubmit, isSubmitting, isSubmitDisabled, submitError, isEmailWellFormed, focusField } =
-    useSignUpForm({
-      navigation,
-    });
+const SignUpScreen = ({ navigation, route }: Props) => {
+  const {
+    control,
+    onSubmit,
+    isSubmitting,
+    isSubmitDisabled,
+    submitError,
+    isRequestingAnotherCode,
+    isEmailWellFormed,
+    focusField,
+  } = useSignUpForm({ navigation, route });
   const currencies = useCurrencyOptions();
 
   return (
     <AuthFormLayout
       title="Create your account"
-      description="Name, email, password and the currency of your personal space."
+      description={
+        isRequestingAnotherCode
+          ? 'Check your details, then create the account again to request another email. A code you already received may still work.'
+          : 'Name, email, password and the currency of your personal space.'
+      }
       headerAccessory={<PendingInvitationNotice />}
       onBackButtonPress={() => navigation.goBack()}
       action={
