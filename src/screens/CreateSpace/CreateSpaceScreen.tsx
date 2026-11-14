@@ -1,8 +1,8 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import { Banner, Button, Icon, Input, InputPicker, RootLayout, SectionTitle } from '@components';
-import { useTheme, useThemedStyles } from '@hooks';
+import { Banner, Button, Icon, Input, InputPicker, RootLayout, SectionTitle, TextLink } from '@components';
+import { useCurrencyOptions, useTheme, useThemedStyles } from '@hooks';
 import type { IconType, RootStackScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
 import { SpaceType } from '@shared/enums';
@@ -21,9 +21,10 @@ interface Props extends RootStackScreenProps<ScreenNames.CREATE_SPACE_SCREEN> {}
 const CreateSpaceScreen = ({ navigation }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
-  const { currencies, control, watch, onSubmit, isSubmitDisabled, submitError, pendingNotice } = useCreateSpaceForm({
+  const { control, watch, willInvite, onSubmit, isSubmitDisabled, submitError, pendingNotice } = useCreateSpaceForm({
     navigation,
   });
+  const currencies = useCurrencyOptions();
 
   const selectedType = watch('type');
   const isGroup = selectedType === SpaceType.GROUP;
@@ -67,12 +68,12 @@ const CreateSpaceScreen = ({ navigation }: Props) => {
             control={control}
             render={({ field: { onChange, value }, fieldState: { error } }) => (
               <Input
+                variant="outlined"
                 label="Space name"
                 placeholder="Family budget"
                 value={value}
                 onChangeText={onChange}
                 error={error?.message}
-                withShadow
               />
             )}
           />
@@ -84,18 +85,31 @@ const CreateSpaceScreen = ({ navigation }: Props) => {
             control={control}
             render={({ field: { onChange, value }, fieldState: { error } }) => (
               <InputPicker
-                error={error?.message}
-                items={currencies}
+                variant="outlined"
+                label="Currency"
+                iconLeft="currency"
+                items={currencies.options}
                 selectedValue={value}
                 onValueChange={(v) => onChange(v as number)}
-                label="Currency"
-                placeholder="Pick a currency"
-                withShadow
+                placeholder={currencies.isLoading ? 'Loading currencies…' : 'Pick a currency'}
+                isLoading={currencies.isLoading}
+                disabled={currencies.hasError}
+                hint="Chosen once, at creation — it cannot be changed later."
+                error={currencies.hasError ? 'Couldn’t load the currencies.' : error?.message}
               />
             )}
           />
 
-          <Text style={styles.hint}>Chosen once, at creation — it cannot be changed later.</Text>
+          {currencies.hasError && (
+            <View style={styles.retryCurrencies}>
+              <TextLink
+                title="Try again"
+                onPress={currencies.retry}
+                accessibilityRole="button"
+                accessibilityLabel="Load the currencies again"
+              />
+            </View>
+          )}
         </View>
 
         {isGroup ? (
@@ -116,7 +130,11 @@ const CreateSpaceScreen = ({ navigation }: Props) => {
         {pendingNotice && <Banner tone="warn" text={pendingNotice} />}
       </View>
 
-      <Button title={isGroup ? 'Create and invite' : 'Create space'} onPress={onSubmit} disabled={isSubmitDisabled} />
+      <Button
+        title={willInvite ? 'Create and invite' : 'Create space'}
+        onPress={onSubmit}
+        disabled={isSubmitDisabled}
+      />
     </RootLayout>
   );
 };

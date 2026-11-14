@@ -2,10 +2,10 @@ import { View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
 import { Banner, Button, Input, InputPicker, PasswordInput, PendingInvitationNotice, TextLink } from '@components';
+import { useCurrencyOptions } from '@hooks';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import AuthFormLayout from '@screens/Auth/AuthFormLayout/AuthFormLayout';
-import useCurrencyOptions from './useCurrencyOptions';
 import useSignUpForm from './useSignUpForm';
 
 import styles from './style';
