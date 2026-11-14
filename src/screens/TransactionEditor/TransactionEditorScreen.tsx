@@ -45,7 +45,7 @@ const TransactionEditorScreen = ({ navigation, route }: Props) => {
   const save = useFlowSave();
   const { lock: confirmLock, confirmation } = useFlowConfirmation();
   const { back } = useFlowClose(confirmLock);
-  const { requestDelete, retryDelete } = useTransactionDelete(confirmLock);
+  const { requestDelete, retryDelete } = useTransactionDelete(confirmLock, { leavesScreen: true });
 
   // The form stays on screen while the route animates away after the flow left it.
   const [lastFlow, setLastFlow] = useState(flow);

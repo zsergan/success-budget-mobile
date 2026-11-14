@@ -16,7 +16,13 @@ import { transactionApi } from '@redux/state/transaction/api';
 import { createTransactionResponseDto, transactionDto } from '@redux/state/transaction/fixtures';
 import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import { mapTransaction } from '@api/models';
-import { awayEnded, awayStarted, createOpened, walletCreated } from '@redux/state/transactionFlow/slice';
+import {
+  awayEnded,
+  awayStarted,
+  CREATED_AUTO_CLOSE_MS,
+  createOpened,
+  walletCreated,
+} from '@redux/state/transactionFlow/slice';
 import type { ViewSelection } from '@redux/state/transactionFlow/selection';
 import { checkFlowRecord, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { baseApi, spaceTags } from '@redux/api/baseApi';
@@ -219,7 +225,7 @@ const refusal = (statusCode: number, code: string) => ({
 
 let stored = transactionDto({ amount: '50.00', version: 2 });
 
-let answerOperation = () =>
+let answerOperation: () => Promise<unknown> = () =>
   Promise.resolve({
     data: {
       operation_id: 'key-1',
@@ -810,6 +816,36 @@ describe('TransactionFlowSheet', () => {
     expect(mockedRequest.mock.calls.filter(([config]) => config.method === 'POST')).toHaveLength(1);
   });
 
+  it('closes the form with a toast when the record an earlier attempt saved has been deleted since', async () => {
+    const { open, flow } = renderFlow();
+    answerOperation = () =>
+      Promise.resolve({
+        data: {
+          operation_id: 'key-1',
+          status: 'applied',
+          transaction_id: 'tx-1',
+          created_at: stored.timestamp,
+          deleted_at: stored.timestamp,
+          transaction: null,
+        },
+      });
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('Save expense'));
+    await act(async () => failWrite(refusal(409, 'TRANSACTION_OPERATION_EXISTS')));
+    await settle();
+
+    expect(flow()).toBeNull();
+    expect(routeNames()).toEqual(HOME_ONLY);
+    expect(mockToasts.shown).toEqual([
+      {
+        when: 'afterNavigation',
+        message: { tone: 'info', text: 'This transaction was saved earlier and has since been deleted' },
+      },
+    ]);
+  });
+
   it('sends one create for a double tap on Save', async () => {
     const { open } = renderFlow();
     open();
@@ -855,6 +891,9 @@ describe('TransactionFlowSheet', () => {
 
     expect(screen.getByText(/^Food · Cash · Jan 5, \d\d:00$/)).toBeTruthy();
     expect(screen.getByText('Cash balance 90 · was 100')).toBeTruthy();
+    // Its time counts from when it showed, with the form gone.
+    expect(routeNames()).toEqual(HOME_ONLY);
+    expect(flow()?.autoCloseAt).toBe(Date.now() + CREATED_AUTO_CLOSE_MS);
 
     await act(async () => jest.advanceTimersByTime(3000));
     act(() => {
@@ -1521,9 +1560,11 @@ describe('TransactionFlowSheet', () => {
       ],
     ]);
     expect(flow()).toBeNull();
+    expect(routeNames()).toEqual(HOME_ONLY);
+    // The editor closes with its record, so the result is handed to the screen it leaves for.
     expect(mockToasts.shown).toEqual([
       {
-        when: 'afterSheetsClose',
+        when: 'afterNavigation',
         message: { tone: 'success', text: 'Transaction deleted', subject: 'transaction-delete:tx-1' },
       },
     ]);
@@ -1832,6 +1873,37 @@ describe('TransactionFlowSheet', () => {
 
     expect(screen.getByText('Categories didn’t load')).toBeTruthy();
     expect(screen.getByText('Save changes')).toBeEnabled();
+  });
+
+  it('saves an edit of the description alone while the lists fail to load, and returns to the details', async () => {
+    mockedRequest.mockImplementation((config: { url: string; method: string }) =>
+      config.method === 'GET' && (config.url.endsWith('/categories') || config.url.endsWith('/wallets'))
+        ? Promise.reject(new Error('Network Error'))
+        : respond(config),
+    );
+    const { openDetails, flow } = renderFlow();
+
+    openDetails();
+    await settle();
+    fireEvent.press(screen.getByText('Edit'));
+    await settle();
+    expect(screen.getByText('No changes yet')).toBeTruthy();
+    expect(screen.getByText('Save changes')).toBeDisabled();
+
+    fireEvent.changeText(screen.getByLabelText('Description'), 'Lunch with Sam');
+    expect(screen.getByText('Wallets didn’t load')).toBeTruthy();
+    fireEvent.press(screen.getByText('Save changes'));
+
+    stored = transactionDto({ amount: '50.00', version: 3, description: 'Lunch with Sam' });
+    await act(async () =>
+      answerWrite({ data: { transaction: stored, wallets: [{ id: 1, balance: 50, is_deleted: false }] } }),
+    );
+    await settle();
+
+    const [patch] = mockedRequest.mock.calls.filter(([config]) => config.method === 'PATCH');
+    expect(patch[0]).toMatchObject({ data: { description: 'Lunch with Sam' }, headers: { 'If-Match': '"2"' } });
+    expect(flow()).toMatchObject({ view: { name: 'details' }, saved: { description: 'Lunch with Sam', version: 3 } });
+    expect(routeNames()).toEqual(HOME_ONLY);
   });
 
   it('starts on an active wallet when none or a gone one was asked for, with nothing to discard', async () => {

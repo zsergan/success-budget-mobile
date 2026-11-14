@@ -64,15 +64,16 @@ const useFlowSave = () => {
 
     if (outcome.status === 'ignored') return;
 
-    // A record found stays in the sheet, which says why; one deleted since ends the flow, so a toast says it.
+    // A record found opens in the details, which say why; one deleted since ends the flow and closes the form, so a
+    // toast on the screen it leaves for says it.
     if (outcome.status === 'found') {
-      dispatch(createFound({ ...scope, transaction: outcome.transaction }));
       if (!outcome.transaction) {
-        ticket.showAfterSheetsClose({
+        ticket.showAfterNavigation({
           tone: 'info',
           text: 'This transaction was saved earlier and has since been deleted',
         });
       }
+      dispatch(createFound({ ...scope, transaction: outcome.transaction }));
       return;
     }
 

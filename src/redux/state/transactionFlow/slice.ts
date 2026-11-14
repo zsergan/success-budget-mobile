@@ -404,6 +404,13 @@ const transactionFlowSlice = createSlice({
 
       state.flow = { ...next, followsNow: flow.followsNow };
     },
+    // The confirmation shows once the form has left the screen; its time to close by itself counts from then.
+    autoCloseRestarted: (state, { payload }: DraftScoped<{ now: number }>) => {
+      const flow = flowOf(state, payload.draftId);
+      if (flow?.view.name === 'created' && flow.autoCloseAt !== null) {
+        flow.autoCloseAt = payload.now + CREATED_AUTO_CLOSE_MS;
+      }
+    },
     // The user touched the confirmation, so it stays until they close it.
     autoCloseStopped: (state, { payload }: DraftScoped) => {
       const flow = flowOf(state, payload.draftId);
@@ -524,6 +531,7 @@ export const {
   createSucceeded,
   editSucceeded,
   anotherStarted,
+  autoCloseRestarted,
   autoCloseStopped,
   autoClosed,
   walletDefaulted,

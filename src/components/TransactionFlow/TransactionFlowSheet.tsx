@@ -14,7 +14,7 @@ import {
   selectTransactionFlow,
 } from '@redux/state/transactionFlow/selectors';
 import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
-import { anotherStarted, autoCloseStopped, closed } from '@redux/state/transactionFlow/slice';
+import { anotherStarted, autoCloseRestarted, autoCloseStopped, closed } from '@redux/state/transactionFlow/slice';
 import { checkFlowRecord, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackParamList } from '@shared/types';
@@ -63,6 +63,12 @@ const TransactionFlowSheet = () => {
   const isVisible = canShow && isKeyboardGone;
   if (isVisible && !isSheetUp) setSheetUp(true);
   const { ref: sheetRef, settleDismiss, isDismissing } = useSheetPresence(isVisible);
+
+  // A new record's confirmation waited for the form to leave; it gets its whole time on screen, once per record.
+  const createdDraftId = isVisible && flow?.view.name === 'created' ? flow.draftId : null;
+  useEffect(() => {
+    if (createdDraftId !== null) dispatch(autoCloseRestarted({ draftId: createdDraftId, now: Date.now() }));
+  }, [dispatch, createdDraftId]);
   const asksOnReturnRef = useRef(false);
 
   useBackPress(isVisible, back);
