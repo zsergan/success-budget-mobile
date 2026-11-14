@@ -18,7 +18,7 @@ import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import { mapTransaction } from '@api/models';
 import {
   awayEnded,
-  awayStarted,
+  closed,
   CREATED_AUTO_CLOSE_MS,
   createOpened,
   walletCreated,
@@ -209,6 +209,7 @@ const writeAnswer = (index: number) => {
 const answerWrite = (value: unknown) => writeAnswer(answeredWrites++).resolve(value);
 const failWrite = (reason: unknown) => writeAnswer(answeredWrites++).reject(reason);
 let answerRead: (() => Promise<unknown>) | null = null;
+let answerCategory: (() => Promise<unknown>) | null = null;
 
 const refusal = (statusCode: number, code: string) => ({
   response: { status: statusCode, data: { statusCode, code, message: code } },
@@ -231,7 +232,7 @@ const defaultAnswerOperation = answerOperation;
 
 const respond = ({ url, method }: { url: string; method: string }) => {
   if (method === 'POST' && url.endsWith('/categories')) {
-    return Promise.resolve({ data: category(30, 'Bonus', TransactionType.INCOME) });
+    return answerCategory ? answerCategory() : Promise.resolve({ data: category(30, 'Bonus', TransactionType.INCOME) });
   }
   if (method === 'POST' || method === 'PATCH' || method === 'DELETE') {
     return writeAnswer(sentWrites++).promise;
@@ -255,6 +256,7 @@ const renderHome = () => (
   </>
 );
 const renderWallet = () => <Text>Add Wallet</Text>;
+const renderInvite = () => <Text>Join a space</Text>;
 
 // The sheet over the app's first route, with the routes its form opens.
 const flowTree = (store: ReturnType<typeof createAppStore>) => (
@@ -271,6 +273,7 @@ const flowTree = (store: ReturnType<typeof createAppStore>) => (
           <Stack.Screen name={ScreenNames.TRANSACTION_EDITOR_SCREEN} component={TransactionEditorScreen} />
           <Stack.Screen name={ScreenNames.TRANSACTION_CATEGORIES_SCREEN} component={TransactionCategoriesScreen} />
           <Stack.Screen name={ScreenNames.ADD_WALLET_SCREEN}>{renderWallet}</Stack.Screen>
+          <Stack.Screen name={ScreenNames.ACCEPT_INVITE_SCREEN}>{renderInvite}</Stack.Screen>
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
@@ -346,6 +349,8 @@ beforeEach(() => {
   mockSheet.props = undefined;
   stored = transactionDto({ amount: '50.00', version: 2 });
   answerRead = null;
+  answerCategory = null;
+  jest.spyOn(Keyboard, 'isVisible').mockReturnValue(false);
   answerOperation = defaultAnswerOperation;
   walletsResponse = wallets;
   categoriesResponse = categories;
@@ -563,16 +568,14 @@ describe('TransactionFlowSheet', () => {
 
     fireEvent.press(screen.getByText('More'));
     fireEvent.press(screen.getByText('New'));
-    expect(flow()?.away).toBe('category');
-    // The editor below the list owns the category sheet; on a device it is drawn above both.
-    const hidden = { includeHiddenElements: true };
-    fireEvent.changeText(screen.getByPlaceholderText('My category', hidden), 'Bonus');
-    fireEvent.press(screen.getByText('Create category', hidden));
+    fireEvent.changeText(screen.getByPlaceholderText('My category'), 'Bonus');
+    fireEvent.press(screen.getByText('Create category'));
     await settle();
 
     // The new category is an income one, so the expense draft keeps its pick; the form is back either way.
     expect(routeNames()).toEqual(WITH_EDITOR);
-    expect(flow()).toMatchObject({ away: null, draft: { amount: '12', categoryId: 9 } });
+    expect(screen.queryByPlaceholderText('My category', { includeHiddenElements: true })).toBeNull();
+    expect(flow()?.draft).toMatchObject({ amount: '12', categoryId: 9 });
   });
 
   it('closes the amount keyboard when a category is picked, and drops a category the new type does not have', async () => {
@@ -1759,15 +1762,13 @@ describe('TransactionFlowSheet', () => {
     expect(flow()?.draft).toMatchObject({ amount: '12', categoryId: 1, walletId: 8 });
   });
 
-  it('creates a category from an empty grid and comes back with it picked, or unchanged on cancel', async () => {
+  it('creates a category from an empty grid and comes back with it picked', async () => {
     const { open, flow } = renderFlow();
 
     open(TransactionType.INCOME);
     await settle();
     fireEvent.changeText(screen.getByLabelText('Amount'), '500');
     fireEvent.press(screen.getByText('Create category'));
-
-    expect(flow()?.away).toBe('category');
     expect(screen.getByPlaceholderText('My category')).toBeTruthy();
 
     fireEvent.changeText(screen.getByPlaceholderText('My category'), 'Bonus');
@@ -1775,37 +1776,212 @@ describe('TransactionFlowSheet', () => {
     fireEvent.press(screen.getAllByText('Create category').at(-1)!);
     await settle();
 
-    expect(flow()).toMatchObject({ away: null, draft: { amount: '500', categoryId: 30 } });
+    expect(flow()?.draft).toMatchObject({ amount: '500', categoryId: 30 });
     expect(screen.queryByPlaceholderText('My category')).toBeNull();
     expect(screen.getByText('Save income')).toBeTruthy();
   });
 
-  it('returns to the form unchanged when the new category is not saved', async () => {
-    const { store, open, flow } = renderFlow();
+  describe.each([
+    ['Android Back', pressBack],
+    ['the back swipe', swipeBack],
+  ])('with the category sheet open, %s', (_name, leave) => {
+    it.each([
+      ['an empty', ''],
+      ['a changed', '500'],
+    ])('closes only the sheet over the form with %s draft', async (_draft, amount) => {
+      const { open, flow } = renderFlow();
+      open(TransactionType.INCOME);
+      await settle();
+      if (amount) fireEvent.changeText(screen.getByLabelText('Amount'), amount);
+      const before = flow()!.draft;
 
-    open(TransactionType.INCOME);
-    await settle();
-    fireEvent.press(screen.getByText('Create category'));
-    act(() => {
-      store.dispatch(awayEnded({ draftId: flow()!.draftId }));
+      fireEvent.press(screen.getByText('Create category'));
+      expect(screen.getByPlaceholderText('My category')).toBeTruthy();
+      leave();
+      await settle();
+
+      expect(screen.queryByPlaceholderText('My category')).toBeNull();
+      expect(routeNames()).toEqual(WITH_EDITOR);
+      expect(asked()).toEqual([]);
+      expect(flow()?.draft).toEqual(before);
+
+      // The next one is the form's own.
+      leave();
+      await settle();
+      expect(asked()).toEqual(amount ? ['Discard transaction?'] : []);
+      expect(routeNames()).toEqual(amount ? WITH_EDITOR : HOME_ONLY);
     });
 
-    expect(flow()).toMatchObject({ away: null, draft: { categoryId: null } });
-    expect(screen.getByText('New transaction')).toBeTruthy();
+    it('closes only the sheet over the full list, then the list', async () => {
+      const { open, flow } = renderFlow();
+      open();
+      await settle();
+      fillExpense();
+      const before = flow()!.draft;
+      const withList = [...WITH_EDITOR, ScreenNames.TRANSACTION_CATEGORIES_SCREEN];
+
+      fireEvent.press(screen.getByText('More'));
+      fireEvent.press(screen.getByText('New'));
+      expect(screen.getByPlaceholderText('My category')).toBeTruthy();
+      leave();
+      await settle();
+
+      expect(screen.queryByPlaceholderText('My category')).toBeNull();
+      expect(routeNames()).toEqual(withList);
+      expect(asked()).toEqual([]);
+      expect(flow()?.draft).toEqual(before);
+
+      leave();
+      await settle();
+      expect(routeNames()).toEqual(WITH_EDITOR);
+      expect(asked()).toEqual([]);
+      expect(flow()?.draft).toEqual(before);
+    });
   });
 
-  it('keeps a reopened category editor when its previous dismissal finishes late', async () => {
+  it('takes the full list and its category sheet off the stack when the space changes', async () => {
     const { store, open, flow } = renderFlow();
+    open();
+    await settle();
+    fireEvent.press(screen.getByText('More'));
+    fireEvent.press(screen.getByText('New'));
+    expect(screen.getByPlaceholderText('My category')).toBeTruthy();
+
+    act(() => {
+      store.dispatch(activateSpace(2));
+    });
+    await settle();
+
+    expect(flow()).toBeNull();
+    expect(routeNames()).toEqual(HOME_ONLY);
+    expect(screen.queryByPlaceholderText('My category')).toBeNull();
+  });
+
+  it('leaves a newer category sheet and the draft alone when an earlier sheet’s request is answered late', async () => {
+    let answer: (value: unknown) => void = () => {};
+    answerCategory = () => new Promise((resolve) => (answer = resolve));
+    const { open, flow } = renderFlow();
     open(TransactionType.INCOME);
     await settle();
+
     fireEvent.press(screen.getByText('Create category'));
-    mockCategorySheet.holdDismiss = true;
-    act(() => store.dispatch(awayEnded({ draftId: flow()!.draftId })));
-    act(() => store.dispatch(awayStarted({ draftId: flow()!.draftId, target: 'category' })));
-    expect(flow()?.away).toBe('category');
-    act(() => mockCategorySheet.finishDismiss?.());
-    expect(flow()?.away).toBe('category');
-    expect(screen.getByPlaceholderText('My category')).toBeTruthy();
+    fireEvent.changeText(screen.getByPlaceholderText('My category'), 'Bonus');
+    fireEvent.press(screen.getAllByText('Create category').at(-1)!);
+    await settle();
+    pressBack();
+    await settle();
+    expect(screen.queryByPlaceholderText('My category')).toBeNull();
+
+    fireEvent.press(screen.getByText('Create category'));
+    fireEvent.changeText(screen.getByPlaceholderText('My category'), 'Gifts');
+    await act(async () => answer({ data: category(30, 'Bonus', TransactionType.INCOME) }));
+    await settle();
+
+    expect(screen.getByPlaceholderText('My category').props.value).toBe('Gifts');
+    expect(flow()?.draft?.categoryId).toBeNull();
+    expect(routeNames()).toEqual(WITH_EDITOR);
+  });
+
+  it('stays on the full list with the draft as it was when a dismissed sheet’s request is answered late', async () => {
+    let answer: (value: unknown) => void = () => {};
+    answerCategory = () => new Promise((resolve) => (answer = resolve));
+    const { open, flow } = renderFlow();
+    open();
+    await settle();
+    fillExpense();
+    const withList = [...WITH_EDITOR, ScreenNames.TRANSACTION_CATEGORIES_SCREEN];
+
+    fireEvent.press(screen.getByText('More'));
+    fireEvent.press(screen.getByText('New'));
+    fireEvent.changeText(screen.getByPlaceholderText('My category'), 'Pets');
+    fireEvent.press(screen.getByText('Create category'));
+    await settle();
+    pressBack();
+    await settle();
+    await act(async () => answer({ data: category(31, 'Pets') }));
+    await settle();
+
+    expect(routeNames()).toEqual(withList);
+    expect(flow()?.draft).toMatchObject({ amount: '12', categoryId: 1 });
+
+    // A category made while its sheet is still open goes to the draft and returns to the form.
+    fireEvent.press(screen.getByText('New'));
+    fireEvent.changeText(screen.getByPlaceholderText('My category'), 'Vet');
+    fireEvent.press(screen.getByText('Create category'));
+    await settle();
+    await act(async () => answer({ data: category(32, 'Vet') }));
+    await settle();
+
+    expect(routeNames()).toEqual(WITH_EDITOR);
+    expect(flow()).toMatchObject({ promotedCategoryId: 32, draft: { amount: '12', categoryId: 32 } });
+  });
+
+  it('opens only the picker asked for last once the keyboard has gone, and none for a draft that was replaced', async () => {
+    jest.spyOn(Keyboard, 'isVisible').mockReturnValue(true);
+    const { store, open, flow } = renderFlow();
+    open();
+    await settle();
+    fireEvent.changeText(screen.getByLabelText('Amount'), '12');
+
+    fireEvent.press(screen.getByText(/, \d{2}:\d{2}$/));
+    fireEvent.press(screen.getByText('More'));
+    await act(async () => jest.advanceTimersByTime(1000));
+
+    expect(routeNames()).toEqual([...WITH_EDITOR, ScreenNames.TRANSACTION_CATEGORIES_SCREEN]);
+    expect(flow()?.view.name).toBe('create');
+    expect(screen.queryByText('Apply', { includeHiddenElements: true })).toBeNull();
+
+    swipeBack();
+    await settle();
+    fireEvent.press(screen.getByText(/, \d{2}:\d{2}$/));
+    act(() => {
+      store.dispatch(closed());
+      store.dispatch(
+        createOpened({
+          spaceId: 1,
+          transactionType: TransactionType.EXPENSE,
+          walletId: 7,
+          now: new Date().toISOString(),
+        }),
+      );
+    });
+    await act(async () => jest.advanceTimersByTime(1000));
+
+    expect(flow()).toMatchObject({ view: { name: 'create' }, draft: { amount: '' } });
+    expect(screen.queryByText('Apply')).toBeNull();
+
+    // Asked for and left alone, it opens.
+    fireEvent.press(screen.getByText(/, \d{2}:\d{2}$/));
+    await act(async () => jest.advanceTimersByTime(1000));
+    expect(flow()?.view.name).toBe('dateTime');
+  });
+
+  it('keeps a screen opened over the editor in front when a save completes, and shows the result after it', async () => {
+    const { open, flow } = renderFlow();
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('Save expense'));
+    act(() => navigationRef.navigate(ScreenNames.ACCEPT_INVITE_SCREEN));
+    const inviteKey = routes()[2].key;
+
+    await act(async () => answerWrite({ data: createTransactionResponseDto() }));
+    await settle();
+
+    expect(flow()?.view.name).toBe('created');
+    expect(routes().map(({ name, key }) => [name, key])).toEqual([
+      [ScreenNames.HOME_SCREEN, routes()[0].key],
+      [ScreenNames.ACCEPT_INVITE_SCREEN, inviteKey],
+    ]);
+    expect(screen.getByText('Join a space')).toBeTruthy();
+    expect(mockSheet.presents).toBe(0);
+
+    // The completed editor is gone for good; the result shows over the app's own screen, with its whole time to read.
+    swipeBack();
+
+    expect(routeNames()).toEqual(HOME_ONLY);
+    expect(screen.getByText('Transaction saved')).toBeTruthy();
+    expect(flow()?.autoCloseAt).toBe(Date.now() + CREATED_AUTO_CLOSE_MS);
   });
 
   it('tells lists that are loading or failed from empty ones, retries each, and saves only once they are there', async () => {

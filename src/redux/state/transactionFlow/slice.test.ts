@@ -292,11 +292,11 @@ describe('transaction flow', () => {
     store.dispatch(awayEnded({ draftId }));
     expect(flow()).toMatchObject({ away: null, view: { name: 'create', focusAmount: false } });
 
-    store.dispatch(awayStarted({ draftId, target: 'category' }));
+    store.dispatch(categoryCreated({ draftId: draftId + 1, categoryId: 10, transactionType: TransactionType.EXPENSE }));
+    expect(flow()?.draft?.categoryId).toBeNull();
     store.dispatch(categoryCreated({ draftId, categoryId: 11, transactionType: TransactionType.EXPENSE }));
-    expect(flow()).toMatchObject({ away: null, view: { name: 'create' }, draft: { categoryId: 11 } });
+    expect(flow()).toMatchObject({ view: { name: 'create' }, promotedCategoryId: 11, draft: { categoryId: 11 } });
 
-    store.dispatch(awayStarted({ draftId, target: 'category' }));
     store.dispatch(categoryCreated({ draftId, categoryId: 12, transactionType: TransactionType.INCOME }));
     store.dispatch(awayStarted({ draftId, target: 'wallet' }));
     store.dispatch(awayEnded({ draftId }));

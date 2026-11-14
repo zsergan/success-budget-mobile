@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { usePreventRemove } from '@react-navigation/native';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
@@ -9,12 +10,15 @@ import { useTheme, useThemedStyles } from '@hooks';
 import { useAppDispatch, useSpaceArg } from '@redux/hooks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
 import { getActiveCategories } from '@redux/state/category/selectors';
-import { awayStarted, categoryPicked } from '@redux/state/transactionFlow/slice';
+import { categoryPicked } from '@redux/state/transactionFlow/slice';
 import type { ScreenNames } from '@shared/enums';
 import { TransactionType } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
-import { afterKeyboardHides } from '@shared/utils';
+import CategoryCreationSheet from '../components/CategoryCreation/CategoryCreationSheet';
+import useCategoryCreation from '../components/CategoryCreation/useCategoryCreation';
+import removeRoute from '../hooks/removeRoute';
 import useEditorFlow from '../hooks/useEditorFlow';
+import usePickerDelay from '../hooks/usePickerDelay';
 
 import createStyles from './style';
 
@@ -23,7 +27,7 @@ const SEARCH_THRESHOLD = 16;
 interface Props extends RootStackScreenProps<ScreenNames.TRANSACTION_CATEGORIES_SCREEN> {}
 
 // Every active category of the draft's type, over the form. A tap picks it for that draft and goes back; Back leaves
-// the draft as it was. The editor route below owns the flow and takes this screen with it when the flow ends.
+// the draft as it was. The route leaves by itself once a category made here went to the draft, or the flow ended.
 const TransactionCategoriesScreen = ({ navigation, route }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
@@ -49,23 +53,32 @@ const TransactionCategoriesScreen = ({ navigation, route }: Props) => {
   const shown = needle ? categories.filter(({ name }) => name.toLowerCase().includes(needle)) : categories;
 
   // A second tap, or one landing as the screen leaves, must not act on the form below.
-  const getOwnFlow = () => (navigation.isFocused() ? getFlow() : null);
+  const getIdleFlow = useCallback(() => {
+    const current = getFlow();
+    return current && !current.isSaving && !current.away && navigation.isFocused() ? current : null;
+  }, [getFlow, navigation]);
+
+  const delay = usePickerDelay(flow?.draftId);
+  const [isCreated, setCreated] = useState(false);
+  const markCreated = useCallback(() => setCreated(true), []);
+  const category = useCategoryCreation({ getIdleFlow, runDelayed: delay.run, onCreated: markCreated });
+
+  // Back, however it is asked for, closes the category sheet over the list before it leaves the list.
+  usePreventRemove(category.opening !== null && !!flow, category.close);
+
+  // After the guard above has let go.
+  const isLeaving = !flow || isCreated;
+  useEffect(() => {
+    if (isLeaving) removeRoute(navigation, route.key);
+  }, [isLeaving, navigation, route.key]);
 
   const pick = (categoryId: number) => {
-    const current = getOwnFlow();
-    if (!current || current.isSaving) return;
+    const current = category.isOpen() ? null : getIdleFlow();
+    if (!current) return;
 
+    delay.cancel();
     dispatch(categoryPicked({ draftId: current.draftId, categoryId }));
     navigation.goBack();
-  };
-
-  // The editor below shows the category sheet and comes back into view once the new category is saved.
-  const create = () => {
-    const current = getOwnFlow();
-    if (!current || current.isSaving || current.away) return;
-
-    const { draftId } = current;
-    afterKeyboardHides(() => dispatch(awayStarted({ draftId, target: 'category' })));
   };
 
   return (
@@ -129,7 +142,14 @@ const TransactionCategoriesScreen = ({ navigation, route }: Props) => {
             ))}
 
             {needle === '' && (
-              <CategoryTile name="New" icon="plus" columns={columns} typeColor={typeColor} isAction onPress={create} />
+              <CategoryTile
+                name="New"
+                icon="plus"
+                columns={columns}
+                typeColor={typeColor}
+                isAction
+                onPress={category.open}
+              />
             )}
           </View>
         )}
@@ -138,6 +158,8 @@ const TransactionCategoriesScreen = ({ navigation, route }: Props) => {
           <Text style={styles.note}>Only {typeWord} categories are shown. Archived ones stay hidden here.</Text>
         )}
       </ScrollView>
+
+      <CategoryCreationSheet creation={category} />
     </ScreenFrame>
   );
 };

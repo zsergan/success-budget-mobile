@@ -1,10 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
-import { StackActions, usePreventRemove } from '@react-navigation/native';
+import { usePreventRemove } from '@react-navigation/native';
 import type { Edge } from 'react-native-safe-area-context';
 
-import type { CategoryModel } from '@api/models';
-import CategoryEditorSheet from '@components/CategoryEditor/CategoryEditorSheet';
 import ConfirmationSheet from '@components/ConfirmationSheet/ConfirmationSheet';
 import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
 import ScreenFrame from '@components/ScreenFrame/ScreenFrame';
@@ -16,18 +14,14 @@ import TransactionEditor from '@screens/TransactionEditor/components/Transaction
 import useTransactionDelete from '@components/TransactionFlow/useTransactionDelete';
 import { useSheetPresence } from '@hooks';
 import { useAppDispatch } from '@redux/hooks';
-import type { FlowAway } from '@redux/state/transactionFlow/slice';
-import {
-  awayEnded,
-  awayStarted,
-  categoryCreated,
-  dateTimeOpened,
-  panelClosed,
-} from '@redux/state/transactionFlow/slice';
+import { awayStarted, dateTimeOpened, panelClosed } from '@redux/state/transactionFlow/slice';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
-import { afterKeyboardHides } from '@shared/utils';
+import CategoryCreationSheet from './components/CategoryCreation/CategoryCreationSheet';
+import useCategoryCreation from './components/CategoryCreation/useCategoryCreation';
+import removeRoute from './hooks/removeRoute';
 import useEditorFlow from './hooks/useEditorFlow';
+import usePickerDelay from './hooks/usePickerDelay';
 
 import styles from './style';
 
@@ -52,80 +46,78 @@ const TransactionEditorScreen = ({ navigation, route }: Props) => {
   if (flow && flow !== lastFlow) setLastFlow(flow);
   const shown = flow ?? lastFlow;
 
-  const isCreatingCategory = flow?.away === 'category';
-  const { ref: categorySheetRef, settleDismiss: settleCategoryDismiss } = useSheetPresence(isCreatingCategory);
-
   // The date picker is a sheet over the form; what it showed stays in it while it closes.
   const picking = flow?.view.name === 'dateTime' ? flow.view.pending : null;
   const [lastPicking, setLastPicking] = useState(picking);
   if (picking !== null && picking !== lastPicking) setLastPicking(picking);
   const { ref: dateSheetRef, settleDismiss: settleDateDismiss } = useSheetPresence(picking !== null);
 
-  // Header Back, Android Back and the swipe all ask the flow; the route goes only once the flow has let the form go.
-  usePreventRemove(!!flow, back);
+  // The form acts on a tap only while nothing covers it and no write runs.
+  const getIdleFlow = useCallback(() => {
+    const current = getOwnFlow();
+    const isIdle = current && !current.isSaving && !current.away && current.view.name !== 'dateTime';
 
-  // After the guard above has let go: a flow that ended or left the form takes the route with it, and whatever was
-  // pushed over it (a new wallet), also when that was not the user's doing (a space switch, lost access).
+    return isIdle && navigation.isFocused() ? current : null;
+  }, [getOwnFlow, navigation]);
+
+  const delay = usePickerDelay(flow?.draftId);
+  const category = useCategoryCreation({ getIdleFlow, runDelayed: delay.run });
+  const getFreeFlow = () => (category.isOpen() ? null : getIdleFlow());
+
+  // Header Back, Android Back and the swipe all ask the flow, after the category sheet over the form; the route goes
+  // only once the flow has let the form go.
+  usePreventRemove(!!flow, () => {
+    if (category.isOpen()) category.close();
+    else back();
+  });
+
+  // After the guard above has let go: a flow that ended or left the form takes this route with it, and a wallet
+  // screen it opened, also when that was not the user's doing (a space switch, lost access). Whatever else is on
+  // the stack stays, in focus if it was.
   useEffect(() => {
     if (flow) return;
 
-    const { routes } = navigation.getState();
-    const index = routes.findIndex(({ key }) => key === route.key);
-    if (index !== -1) navigation.dispatch(StackActions.pop(routes.length - index));
+    navigation
+      .getState()
+      .routes.filter(
+        ({ key, params }) => key === route.key || (params as { forEditor?: string })?.forEditor === route.key,
+      )
+      .reverse()
+      .forEach(({ key }) => removeRoute(navigation, key));
   }, [flow, navigation, route.key]);
 
-  // A handler acts for the form only while nothing covers it and no write runs.
-  const getIdleFlow = () => {
-    const current = getOwnFlow();
-    return current && !current.isSaving && !current.away && navigation.isFocused() ? current : null;
-  };
-
-  // The draft waits in the flow while a wallet or a category is created, and comes back with the new pick.
-  const leaveFor = (target: FlowAway) => {
-    const current = getIdleFlow();
+  // The draft waits in the flow while a wallet is created, and comes back with it.
+  const createWallet = () => {
+    const current = getFreeFlow();
     if (!current) return;
 
-    const { draftId } = current;
-    if (target === 'wallet') {
-      dispatch(awayStarted({ draftId, target }));
-      navigation.navigate(ScreenNames.ADD_WALLET_SCREEN, { id: 'new', forDraft: draftId });
-    } else {
-      afterKeyboardHides(() => dispatch(awayStarted({ draftId, target })));
-    }
+    delay.cancel();
+    dispatch(awayStarted({ draftId: current.draftId, target: 'wallet' }));
+    navigation.navigate(ScreenNames.ADD_WALLET_SCREEN, { id: 'new', forDraft: current.draftId, forEditor: route.key });
   };
 
   // The full list goes with the keyboard closed, so the form comes back without it.
   const openCategories = () => {
-    if (!getIdleFlow()) return;
+    if (!getFreeFlow()) return;
 
+    delay.cancel();
     Keyboard.dismiss();
     navigation.navigate(ScreenNames.TRANSACTION_CATEGORIES_SCREEN, { spaceId });
   };
 
+  // Opens for the draft it was asked on, if the form is still the one in front once the keyboard has gone.
   const openDate = () => {
-    if (getIdleFlow()) afterKeyboardHides(() => dispatch(dateTimeOpened()));
+    const draftId = getFreeFlow()?.draftId;
+    if (draftId === undefined) return;
+
+    delay.run(() => {
+      if (getFreeFlow()?.draftId === draftId) dispatch(dateTimeOpened());
+    });
   };
 
   // A swipe or the backdrop is a Cancel: the draft keeps its date.
   const handleDateDismiss = () => {
     if (settleDateDismiss() && getOwnFlow()?.view.name === 'dateTime') dispatch(panelClosed());
-  };
-
-  // A category created from the full list brings the form back into view with it.
-  const handleCategorySaved = (category: CategoryModel) => {
-    if (!flow) return;
-
-    dispatch(
-      categoryCreated({ draftId: flow.draftId, categoryId: category.id, transactionType: category.transactionType }),
-    );
-    if (!navigation.isFocused()) navigation.popTo(ScreenNames.TRANSACTION_EDITOR_SCREEN, route.params);
-  };
-
-  // Closing the category sheet without saving returns to the form as it was.
-  const handleCategoryDismiss = () => {
-    if (!settleCategoryDismiss()) return;
-    const current = getOwnFlow();
-    if (current?.away === 'category') dispatch(awayEnded({ draftId: current.draftId }));
   };
 
   return (
@@ -138,8 +130,8 @@ const TransactionEditorScreen = ({ navigation, route }: Props) => {
             onBack={back}
             onOpenCategories={openCategories}
             onOpenDate={openDate}
-            onCreateWallet={() => leaveFor('wallet')}
-            onCreateCategory={() => leaveFor('category')}
+            onCreateWallet={createWallet}
+            onCreateCategory={category.open}
             onDelete={() => shown.saved && requestDelete(shown.saved)}
             onRetryDelete={() => shown.saved && retryDelete(shown.saved)}
           />
@@ -156,11 +148,7 @@ const TransactionEditorScreen = ({ navigation, route }: Props) => {
         )}
       </BottomModal>
 
-      <BottomModal ref={categorySheetRef} fitContent onDismiss={handleCategoryDismiss}>
-        {shown?.draft && (
-          <CategoryEditorSheet defaultTransactionType={shown.draft.transactionType} onSaved={handleCategorySaved} />
-        )}
-      </BottomModal>
+      <CategoryCreationSheet creation={category} />
 
       <ConfirmationSheet confirmation={confirmation} />
     </ScreenFrame>

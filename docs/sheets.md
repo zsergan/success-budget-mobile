@@ -44,17 +44,28 @@ do: it dismisses the keyboard and shows the sheet once it has gone.
 `transactionFlow` decides what is on screen; nothing navigates on its own.
 
 - `TransactionFlowSheet` shows the details, an unavailable record and a new
-  record's confirmation. The form (New and Edit) is the
-  `TransactionEditorScreen` route, with the full category list as a route
-  over it and Date & time and a new category as sheets it owns.
+  record's confirmation, and only while the app's own screen is in front:
+  a screen pushed over it (an invitation) holds the sheet back.
+- The form (New and Edit) is the `TransactionEditorScreen` route, with the
+  full category list as a route over it. Date & time is a sheet the editor
+  owns; a new category is a sheet of whichever of the two screens it was
+  opened from (`useCategoryCreation`).
 - `useEditorRoute` pushes the editor once the flow has a form and the sheet
-  has finished closing. The editor route removes itself, with whatever was
-  pushed over it, when the flow lets the form go (a save, Back, a space
-  switch), and the sheet shows only after the route and the keyboard have
-  gone.
+  has finished closing. When the flow lets the form go (a save, Back, a
+  space switch) the editor removes exactly its own route and a wallet
+  screen it opened (`forEditor`), and the category list removes itself;
+  any other route on the stack stays, in focus if it was.
+- A picker that waits for the keyboard (`usePickerDelay`) opens only if it
+  is still the last one asked for, on the same draft, with its screen in
+  front.
+- An opening of the category sheet answers for itself: once it has ended
+  (Cancel, a swipe, Back, its screen going) a late answer to its request
+  still creates the category but changes neither the draft, the stack nor
+  a sheet opened since.
 - Every way out of the editor (header Back, Android Back, the back swipe)
   is held by `usePreventRemove` and asks the flow (`useFlowClose`), so it
-  never leaves a draft behind or closes during a write.
+  never leaves a draft behind or closes during a write. With the category
+  sheet open, Back closes that sheet alone and its screen stays.
 - A result that ends the flow from the editor (a delete, a create found
   deleted) is a toast handed to the next screen with `showAfterNavigation`,
   before the flow ends.

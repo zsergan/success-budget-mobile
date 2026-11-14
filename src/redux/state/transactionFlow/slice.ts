@@ -22,8 +22,8 @@ export type FlowView =
   // The record was deleted elsewhere.
   | { name: 'gone' };
 
-// A wallet or a category being created from the form, over it; the draft waits here.
-export type FlowAway = 'wallet' | 'category';
+// A wallet being created from the form, on a screen over it; the draft waits here.
+export type FlowAway = 'wallet';
 
 // Whether the record has been read again since the details opened from a list that may be behind the server.
 export type FlowCheck = 'pending' | 'done' | 'failed';
@@ -437,7 +437,7 @@ const transactionFlowSlice = createSlice({
       // The form comes back as from a picker, without the keyboard over it.
       if (flow.view.name === 'create') flow.view.focusAmount = false;
     },
-    // The new wallet or category is saved on its own; discarding the draft later does not remove it.
+    // The new wallet is saved on its own; discarding the draft later does not remove it.
     // The form comes back with awayEnded, once the wallet screen has gone.
     walletCreated: (state, { payload }: DraftScoped<{ walletId: number }>) => {
       const flow = flowOf(state, payload.draftId);
@@ -445,16 +445,14 @@ const transactionFlowSlice = createSlice({
 
       flow.draft.walletId = payload.walletId;
     },
+    // From a category sheet over the form or its full list; the screen that owns the sheet answers for the opening.
     categoryCreated: (state, { payload }: DraftScoped<{ categoryId: number; transactionType: TransactionType }>) => {
       const flow = flowOf(state, payload.draftId);
-      if (flow?.away !== 'category' || !flow.draft) return;
+      if (!flow?.draft || flow.isSaving || (flow.view.name !== 'create' && flow.view.name !== 'edit')) return;
+      if (payload.transactionType !== flow.draft.transactionType) return;
 
-      if (payload.transactionType === flow.draft.transactionType) {
-        flow.draft.categoryId = payload.categoryId;
-        flow.promotedCategoryId = payload.categoryId;
-      }
-
-      flow.away = null;
+      flow.draft.categoryId = payload.categoryId;
+      flow.promotedCategoryId = payload.categoryId;
     },
     awayEnded: (state, { payload }: DraftScoped) => {
       const flow = flowOf(state, payload.draftId);

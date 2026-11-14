@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import ConfirmationSheet from '@components/ConfirmationSheet/ConfirmationSheet';
@@ -42,7 +42,9 @@ const TransactionFlowSheet = () => {
 
   const [isSheetUp, setSheetUp] = useState(false);
   const isEditorOpen = useEditorRoute(isSheetUp);
-  const canShow = !!sheetFlow && !isEditorOpen;
+  // Another screen over the app's own (an invitation) keeps the sheet back until the app's screen is in front again.
+  const isFocused = useIsFocused();
+  const canShow = !!sheetFlow && !isEditorOpen && isFocused;
   // The editor may leave with the keyboard still up; a sheet presented as it goes would stay risen.
   const [isKeyboardGone, setKeyboardGone] = useState(false);
   useEffect(() => {

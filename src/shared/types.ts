@@ -8,7 +8,8 @@ export type AddTransactionIntent = { returnTo: ScreenNames.STATS_TAB; spaceId: n
 
 type AddWalletParams =
   // `forDraft`: the transaction draft waiting for this wallet; it gets it on save, and its form back on leaving.
-  | { id: 'new'; addTransaction?: AddTransactionIntent; forDraft?: number }
+  // `forEditor`: the key of the editor route that opened it, which takes it along when its flow ends.
+  | { id: 'new'; addTransaction?: AddTransactionIntent; forDraft?: number; forEditor?: string }
   | { id: number; walletName: string; balance: string; design: AppColor };
 
 // A one-time request to open the composer on a wallet that was just created.
