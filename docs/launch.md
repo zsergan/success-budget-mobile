@@ -63,6 +63,9 @@ space is the first of:
 3. `pickFallbackSpaceId`: the personal space, else the lowest id, else
    none.
 
+"The list" is the cached one at that moment, not the answer the launch got:
+a space lost while the saved id was being read is no longer in it.
+
 Wallets are asked for only then, for that space alone. An empty list
 selects nothing, asks for no wallets and removes the saved id.
 

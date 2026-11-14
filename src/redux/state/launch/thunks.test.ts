@@ -9,7 +9,7 @@ import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { profileApi } from '@redux/state/profile/api';
 import { selectProfileId } from '@redux/state/profile/selectors';
 import { ACTIVE_SPACE_READ_TIMEOUT_MS } from '@redux/state/space/storage';
-import { activateSpace } from '@redux/state/space/thunks';
+import { activateSpace, loseSpaceAccess } from '@redux/state/space/thunks';
 import { walletApi } from '@redux/state/wallet/api';
 import { createAppStore } from '@redux/Store';
 import { LAUNCH_ATTEMPT_DEADLINE_MS, LAUNCH_RATE_LIMIT_COOLDOWN_MS, retryLaunch, runLaunch } from './thunks';
@@ -680,6 +680,37 @@ describe('the space the app opens in', () => {
 
       expect(store.getState().space.currentSpaceId).toBe(1);
       expect(walletRequests()).toEqual(['/spaces/1/wallets']);
+    });
+
+    it('opens the fallback when the saved space is lost while it reads, on the same attempt', async () => {
+      let spacesRequests = 0;
+
+      // The list asked for again after the loss never answers: only the cache knows the space is gone.
+      answer((url) => {
+        if (url !== '/spaces') return undefined;
+
+        return ++spacesRequests === 1 ? Promise.resolve({ data: [personal, shared] }) : new Promise(() => {});
+      });
+
+      const store = createAppStore();
+      const running = store.dispatch(runLaunch());
+
+      await jest.advanceTimersByTimeAsync(0);
+
+      const { attempt } = store.getState().launch;
+
+      store.dispatch(loseSpaceAccess(shared.id));
+      await jest.advanceTimersByTimeAsync(0);
+      expect(spacesRequests).toBe(2);
+
+      finishRead(String(shared.id));
+      await running;
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(store.getState().launch).toMatchObject({ attempt, phase: 'ready' });
+      expect(store.getState().space.currentSpaceId).toBe(personal.id);
+      expect(walletRequests()).toEqual(['/spaces/1/wallets']);
+      expect(await savedSpace()).toBe('1');
     });
 
     it('selects nothing when the session ends while it reads', async () => {
