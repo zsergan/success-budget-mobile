@@ -46,7 +46,10 @@ interface SheetProps {
   enablePanDownToClose?: boolean;
 }
 
-const mockCategorySheet: { holdDismiss: boolean; finishDismiss?: () => void } = { holdDismiss: false };
+// A swipe on the category sheet in two steps: startSwipe() begins its closing animation, finishDismiss() ends it.
+const mockCategorySheet: { holdDismiss: boolean; startSwipe?: () => void; finishDismiss?: () => void } = {
+  holdDismiss: false,
+};
 
 // While held, the flow sheet's close stays on screen, as during its animation, until finishDismiss().
 const mockSheet: {
@@ -103,6 +106,13 @@ jest.mock('@gorhom/bottom-sheet', () => {
 
     if (isFlowSheet) mockSheet.swipeDown = dismiss;
     const isConfirmation = props.stackBehavior === 'push';
+    if (!isFlowSheet && !isConfirmation && isOpen) {
+      mockCategorySheet.startSwipe = () => {
+        props.onAnimate?.(0, -1);
+        mockCategorySheet.holdDismiss = true;
+        dismiss();
+      };
+    }
     if (isConfirmation) Object.assign(mockConfirmation, { props, swipeDown: dismiss });
 
     React.useImperativeHandle(ref, () => ({
@@ -343,6 +353,7 @@ beforeEach(() => {
   mockToasts.clear();
   mockCategorySheet.holdDismiss = false;
   mockCategorySheet.finishDismiss = undefined;
+  mockCategorySheet.startSwipe = undefined;
   writeAnswers = [];
   sentWrites = 0;
   answeredWrites = 0;
@@ -1914,6 +1925,78 @@ describe('TransactionFlowSheet', () => {
 
     expect(routeNames()).toEqual(WITH_EDITOR);
     expect(flow()).toMatchObject({ promotedCategoryId: 32, draft: { amount: '12', categoryId: 32 } });
+  });
+
+  it('leaves the full list and the draft alone when the answer comes while a swipe closes the category sheet', async () => {
+    let answer: (value: unknown) => void = () => {};
+    answerCategory = () => new Promise((resolve) => (answer = resolve));
+    const { open, flow } = renderFlow();
+    open();
+    await settle();
+    fillExpense();
+    const withList = [...WITH_EDITOR, ScreenNames.TRANSACTION_CATEGORIES_SCREEN];
+
+    fireEvent.press(screen.getByText('More'));
+    fireEvent.press(screen.getByText('New'));
+    fireEvent.changeText(screen.getByPlaceholderText('My category'), 'Pets');
+    fireEvent.press(screen.getByText('Create category'));
+    await settle();
+
+    // The swipe has started and its animation has not ended.
+    act(() => mockCategorySheet.startSwipe?.());
+    expect(screen.getByPlaceholderText('My category')).toBeTruthy();
+    await act(async () => answer({ data: category(31, 'Pets') }));
+    await settle();
+
+    expect(routeNames()).toEqual(withList);
+    expect(flow()?.draft).toMatchObject({ amount: '12', categoryId: 1 });
+    expect(flow()?.promotedCategoryId ?? null).toBeNull();
+
+    act(() => mockCategorySheet.finishDismiss?.());
+    await settle();
+
+    expect(screen.queryByPlaceholderText('My category')).toBeNull();
+    expect(routeNames()).toEqual(withList);
+    expect(flow()?.draft).toMatchObject({ amount: '12', categoryId: 1 });
+
+    // The list is still the one to pick from, and a new sheet opens over it.
+    mockCategorySheet.holdDismiss = false;
+    fireEvent.press(screen.getByText('New'));
+    expect(screen.getByPlaceholderText('My category').props.value).toBe('');
+  });
+
+  it.each([
+    ['the form', false],
+    ['the full list', true],
+  ])('gives Android Back to a screen opened above %s with the category sheet open', async (_name, fromList) => {
+    const { open, flow } = renderFlow();
+    open(fromList ? TransactionType.EXPENSE : TransactionType.INCOME);
+    await settle();
+    fireEvent.changeText(screen.getByLabelText('Amount'), '12');
+    const before = flow()!.draft;
+    const owner = fromList ? [...WITH_EDITOR, ScreenNames.TRANSACTION_CATEGORIES_SCREEN] : WITH_EDITOR;
+
+    if (fromList) fireEvent.press(screen.getByText('More'));
+    fireEvent.press(screen.getByText(fromList ? 'New' : 'Create category'));
+    expect(screen.getByPlaceholderText('My category')).toBeTruthy();
+    act(() => navigationRef.navigate(ScreenNames.ACCEPT_INVITE_SCREEN));
+    expect(routeNames()).toEqual([...owner, ScreenNames.ACCEPT_INVITE_SCREEN]);
+
+    pressBack();
+    await settle();
+
+    expect(routeNames()).toEqual(owner);
+    expect(screen.getByPlaceholderText('My category')).toBeTruthy();
+    expect(flow()?.draft).toEqual(before);
+    expect(asked()).toEqual([]);
+
+    pressBack();
+    await settle();
+
+    expect(screen.queryByPlaceholderText('My category')).toBeNull();
+    expect(routeNames()).toEqual(owner);
+    expect(flow()?.draft).toEqual(before);
+    expect(asked()).toEqual([]);
   });
 
   it('opens only the picker asked for last once the keyboard has gone, and none for a draft that was replaced', async () => {

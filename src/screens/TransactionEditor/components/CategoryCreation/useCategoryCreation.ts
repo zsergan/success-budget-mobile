@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { Keyboard } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 
 import type { CategoryModel } from '@api/models';
 import { useBackPress, useSheetPresence } from '@hooks';
@@ -32,6 +32,7 @@ interface Options {
 const useCategoryCreation = ({ getIdleFlow, runDelayed, onCreated }: Options) => {
   const dispatch = useAppDispatch();
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
   const [opening, setOpening] = useState<Opening | null>(null);
   const openingRef = useRef<Opening | null>(null);
   const { ref: sheetRef, settleDismiss } = useSheetPresence(opening !== null);
@@ -67,7 +68,8 @@ const useCategoryCreation = ({ getIdleFlow, runDelayed, onCreated }: Options) =>
     end(openingRef.current?.id);
   }, [end]);
 
-  useBackPress(opening !== null, close);
+  // Only under its own screen: Back on a route opened above belongs to that route.
+  useBackPress(opening !== null && isFocused, close);
 
   // A swipe, the backdrop or the sheet's own ✕.
   const handleDismiss = useCallback(() => {

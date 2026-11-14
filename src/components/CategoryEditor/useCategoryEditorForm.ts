@@ -90,9 +90,12 @@ const useCategoryEditorForm = ({ category, defaultTransactionType, onSaved }: Us
       return updateCategory({ spaceId: requireSpaceId(spaceId), categoryId: category.id, data: payload }).unwrap();
     },
     onSuccess: (saved) => {
+      // An answer that comes once this showing is closing or gone is not its result: the sheet's next one stays open.
+      const now = presentation?.current();
+      if (now && (now.id !== submittedInRef.current || now.isClosing)) return;
+
       onSaved?.(saved);
-      // An answer that comes after this showing has closed must not close the sheet's next one.
-      if (!presentation || presentation.current().id === submittedInRef.current) close();
+      close();
     },
     reset,
   });
