@@ -45,9 +45,9 @@ interface FormData {
   passwordConfirm: string;
 }
 
-type UseSignUpFormProps = Pick<RootStackScreenProps<ScreenNames.SIGN_UP_SCREEN>, 'navigation'>;
+type UseSignUpFormProps = Pick<RootStackScreenProps<ScreenNames.SIGN_UP_SCREEN>, 'navigation' | 'route'>;
 
-const useSignUpForm = ({ navigation }: UseSignUpFormProps) => {
+const useSignUpForm = ({ navigation, route }: UseSignUpFormProps) => {
   const dispatch = useAppDispatch();
   // Why the last registration failed; the form keeps what was typed.
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -80,6 +80,17 @@ const useSignUpForm = ({ navigation }: UseSignUpFormProps) => {
     }
   }, [password, getFieldState, trigger]);
 
+  const shouldFocusEmail = route.params?.focusEmail === true;
+
+  useEffect(() => {
+    if (!shouldFocusEmail) return;
+
+    setFocus('email');
+    navigation.setParams({ focusEmail: undefined });
+  }, [shouldFocusEmail, setFocus, navigation]);
+
+  const isRequestingAnotherCode = route.params?.notice === 'requestAnotherCode';
+
   // The registration this screen is waiting for; cleared when the screen goes, so a late answer is no longer its own.
   const currentRequestId = useRef<string | null>(null);
 
@@ -109,6 +120,7 @@ const useSignUpForm = ({ navigation }: UseSignUpFormProps) => {
     if (currentRequestId.current !== request.requestId || !navigation.isFocused()) return;
 
     if (registerMe.fulfilled.match(result)) {
+      if (isRequestingAnotherCode) navigation.setParams({ notice: undefined });
       navigation.navigate(ScreenNames.VERIFY_EMAIL_SCREEN);
     } else {
       setSubmitError(getErrorMessage(result.payload));
@@ -123,6 +135,7 @@ const useSignUpForm = ({ navigation }: UseSignUpFormProps) => {
     isSubmitting,
     isSubmitDisabled: !isValid,
     submitError,
+    isRequestingAnotherCode,
     // Only the address's format: whether it is free or real is for the server to say.
     isEmailWellFormed: emailSchema.isValidSync(email),
     focusField: setFocus,

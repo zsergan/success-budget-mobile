@@ -2,7 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 
 import { createAppStore } from '@redux/Store';
 import { attemptFailed, attemptStarted } from '@redux/state/launch/actions';
-import { registrationAbandoned } from './actions';
+import { registrationAbandoned, verificationAbandoned } from './actions';
 import { login, register, verifyEmail } from '@api/auth.api';
 import { AUTH_TOKEN_KEY } from '@shared/constants';
 import type authReducer from './slice';
@@ -202,7 +202,8 @@ describe('verifyEmailMe', () => {
 
   it('rejects with the server error body on an invalid code', async () => {
     const invalidCodeError = {
-      message: 'Invalid or expired code',
+      message: 'Invalid credentials',
+      code: 'INVALID_CREDENTIALS',
       statusCode: 400,
       path: '/users/verify-email',
       timestamp: '2026-01-01T00:00:00.000Z',
@@ -214,7 +215,7 @@ describe('verifyEmailMe', () => {
     const action = await store.dispatch(verifyEmailMe({ email: 'a@b.com', code: '000000' }));
 
     expect(action.type).toBe('auth/verifyEmailMe/rejected');
-    expect(action.payload).toEqual(invalidCodeError);
+    expect(action.payload).toEqual({ reason: 'api', error: invalidCodeError });
     expect(store.getState().auth.isSignedIn).toBe(false);
   });
 
@@ -234,6 +235,81 @@ describe('verifyEmailMe', () => {
     expect(action.type).toBe('auth/verifyEmailMe/rejected');
     expect(mockedSetItemAsync).not.toHaveBeenCalled();
     expect(store.getState().auth.isSignedIn).toBe(false);
+  });
+
+  const heldAnswer = () => {
+    let settle: (token: string) => void = () => {};
+    const answer = new Promise<string>((resolve) => (settle = resolve));
+
+    return { answer, settle };
+  };
+
+  it('neither saves a token nor signs in when the screen was left before the answer', async () => {
+    const held = heldAnswer();
+    mockedVerifyEmail.mockReturnValue(held.answer);
+
+    const store = createTestStore();
+    const request = store.dispatch(verifyEmailMe({ email: 'a@b.com', code: '123456' }));
+    store.dispatch(verificationAbandoned());
+    held.settle('a-token');
+    const action = await request;
+
+    expect(action.payload).toEqual({ reason: 'abandoned' });
+    expect(mockedSetItemAsync).not.toHaveBeenCalled();
+    expect(store.getState().auth.isSignedIn).toBe(false);
+  });
+
+  it('lets only the newest attempt sign in when an older one answers during it', async () => {
+    const older = heldAnswer();
+    const newer = heldAnswer();
+    mockedVerifyEmail.mockReturnValueOnce(older.answer).mockReturnValueOnce(newer.answer);
+
+    const store = createTestStore();
+    const first = store.dispatch(verifyEmailMe({ email: 'a@b.com', code: '111111' }));
+    store.dispatch(verificationAbandoned());
+    const second = store.dispatch(verifyEmailMe({ email: 'a@b.com', code: '222222' }));
+
+    older.settle('older-token');
+    expect((await first).payload).toEqual({ reason: 'abandoned' });
+    expect(mockedSetItemAsync).not.toHaveBeenCalled();
+    expect(store.getState().auth.isSignedIn).toBe(false);
+
+    newer.settle('newer-token');
+    await second;
+
+    expect(mockedSetItemAsync).toHaveBeenCalledTimes(1);
+    expect(mockedSetItemAsync).toHaveBeenCalledWith(AUTH_TOKEN_KEY, 'newer-token');
+    expect(store.getState().auth.userToken).toBe('newer-token');
+  });
+
+  it('finishes signing in once the token is being saved, even if the screen goes meanwhile', async () => {
+    let saved: () => void = () => {};
+    mockedVerifyEmail.mockResolvedValue('a-token');
+    mockedSetItemAsync.mockReturnValueOnce(new Promise<void>((resolve) => (saved = resolve)));
+
+    const store = createTestStore();
+    const request = store.dispatch(verifyEmailMe({ email: 'a@b.com', code: '123456' }));
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(store.getState().auth.verification).toMatchObject({ isCommitting: true });
+
+    store.dispatch(verificationAbandoned());
+    saved();
+    await request;
+
+    expect(store.getState().auth.isSignedIn).toBe(true);
+    expect(store.getState().auth.verification).toBeNull();
+  });
+
+  it('does not sign in when the token can’t be saved, and says so apart from a server failure', async () => {
+    mockedVerifyEmail.mockResolvedValue('a-token');
+    mockedSetItemAsync.mockRejectedValueOnce(new Error('keychain unavailable'));
+
+    const store = createTestStore();
+    const action = await store.dispatch(verifyEmailMe({ email: 'a@b.com', code: '123456' }));
+
+    expect(action.payload).toEqual({ reason: 'sessionNotSaved' });
+    expect(store.getState().auth.isSignedIn).toBe(false);
+    expect(store.getState().auth.verification).toBeNull();
   });
 });
 
@@ -376,6 +452,7 @@ describe('logoutMe', () => {
         userToken: 'a-token',
         userEmail: null,
         registrationRequestId: null,
+        verification: null,
         sessionKey: 0,
       },
     });
@@ -396,6 +473,7 @@ describe('logoutMe', () => {
         userToken: 'a-token',
         userEmail: null,
         registrationRequestId: null,
+        verification: null,
         sessionKey: 3,
       },
     });

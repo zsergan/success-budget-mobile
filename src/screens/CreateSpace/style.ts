@@ -48,6 +48,10 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
     typeTabTextActive: {
       color: colors.text,
     },
+    retryCurrencies: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+    },
     hint: {
       fontFamily: theme.fonts.medium,
       fontSize: theme.fontSizes.caption,

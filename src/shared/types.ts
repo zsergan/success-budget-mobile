@@ -62,7 +62,8 @@ export type RootStackParamList = {
   [ScreenNames.LAUNCH_SCREEN]: undefined;
   [ScreenNames.WELCOME_SCREEN]: undefined;
   [ScreenNames.SIGN_IN_SCREEN]: { passwordReset?: PasswordResetOutcome } | undefined;
-  [ScreenNames.SIGN_UP_SCREEN]: undefined;
+  // Set by Verify Email on the way back to the filled form.
+  [ScreenNames.SIGN_UP_SCREEN]: { focusEmail?: boolean; notice?: 'requestAnotherCode' } | undefined;
   [ScreenNames.VERIFY_EMAIL_SCREEN]: undefined;
   // Recovery state (code, cooldown, reset authorization) lives in the passwordReset slice, never in params.
   [ScreenNames.FORGOT_PASSWORD_SCREEN]: { email?: string } | undefined;

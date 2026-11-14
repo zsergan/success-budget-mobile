@@ -1,4 +1,4 @@
-import { Text } from 'react-native';
+import { Text, TextInput } from 'react-native';
 import { Provider } from 'react-redux';
 import { NavigationContainer, createNavigationContainerRef, type InitialState } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -59,6 +59,23 @@ const renderAuthStack = (initialState?: InitialState, store = createAppStore()) 
   );
 };
 
+const VERIFYING: InitialState = {
+  index: 2,
+  routes: [
+    { name: ScreenNames.WELCOME_SCREEN },
+    { name: ScreenNames.SIGN_UP_SCREEN },
+    { name: ScreenNames.VERIFY_EMAIL_SCREEN },
+  ],
+};
+
+const storeAwaitingCode = () => {
+  const store = createAppStore();
+  store.dispatch(registerMe.pending('earlier', {} as never));
+  store.dispatch(registerMe.fulfilled({ email: 'anna@kovalenko.co' }, 'earlier', {} as never));
+
+  return store;
+};
+
 const pressLast = (text: string) => {
   const matches = screen.getAllByText(text);
   fireEvent.press(matches[matches.length - 1]);
@@ -87,17 +104,20 @@ describe('auth stack', () => {
   });
 
   it('pops Verify Email back to an existing Sign in', () => {
-    renderAuthStack({
-      index: 3,
-      routes: [
-        { name: ScreenNames.WELCOME_SCREEN },
-        { name: ScreenNames.SIGN_IN_SCREEN },
-        { name: ScreenNames.SIGN_UP_SCREEN },
-        { name: ScreenNames.VERIFY_EMAIL_SCREEN },
-      ],
-    });
+    renderAuthStack(
+      {
+        index: 3,
+        routes: [
+          { name: ScreenNames.WELCOME_SCREEN },
+          { name: ScreenNames.SIGN_IN_SCREEN },
+          { name: ScreenNames.SIGN_UP_SCREEN },
+          { name: ScreenNames.VERIFY_EMAIL_SCREEN },
+        ],
+      },
+      storeAwaitingCode(),
+    );
 
-    pressLast('Sign in');
+    pressLast('Sign In');
 
     expect(routeNames()).toEqual([ScreenNames.WELCOME_SCREEN, ScreenNames.SIGN_IN_SCREEN]);
   });
@@ -114,16 +134,9 @@ describe('auth stack', () => {
   });
 
   it('pushes Sign in from Verify Email when it is not in the stack yet', () => {
-    renderAuthStack({
-      index: 2,
-      routes: [
-        { name: ScreenNames.WELCOME_SCREEN },
-        { name: ScreenNames.SIGN_UP_SCREEN },
-        { name: ScreenNames.VERIFY_EMAIL_SCREEN },
-      ],
-    });
+    renderAuthStack(VERIFYING, storeAwaitingCode());
 
-    pressLast('Sign in');
+    pressLast('Sign In');
 
     expect(routeNames()).toEqual([
       ScreenNames.WELCOME_SCREEN,
@@ -131,6 +144,78 @@ describe('auth stack', () => {
       ScreenNames.VERIFY_EMAIL_SCREEN,
       ScreenNames.SIGN_IN_SCREEN,
     ]);
+  });
+
+  it('comes back from Sign in to an empty code field', () => {
+    renderAuthStack(VERIFYING, storeAwaitingCode());
+    fireEvent.changeText(screen.getByLabelText('6-digit code'), '042917');
+
+    pressLast('Sign In');
+    act(() => navigationRef.goBack());
+
+    expect(routeNames()).toEqual([
+      ScreenNames.WELCOME_SCREEN,
+      ScreenNames.SIGN_UP_SCREEN,
+      ScreenNames.VERIFY_EMAIL_SCREEN,
+    ]);
+    expect(screen.getByLabelText('6-digit code').props.value).toBe('');
+  });
+
+  it('returns from Verify Email to the Sign up form as it was filled', () => {
+    renderAuthStack(undefined, storeAwaitingCode());
+    fireEvent.press(screen.getByText('Create account'));
+    fireEvent.changeText(screen.getByLabelText('Name'), 'Anna');
+    fireEvent.changeText(screen.getByLabelText('Email'), 'anna@kovalenko.co');
+    act(() => navigationRef.navigate(ScreenNames.VERIFY_EMAIL_SCREEN));
+
+    fireEvent.press(screen.getByRole('button', { name: 'Back' }));
+
+    expect(routeNames()).toEqual([ScreenNames.WELCOME_SCREEN, ScreenNames.SIGN_UP_SCREEN]);
+    expect(screen.getByLabelText('Name').props.value).toBe('Anna');
+    expect(screen.getByLabelText('Email').props.value).toBe('anna@kovalenko.co');
+  });
+
+  it('returns from Change to the filled form with the email field focused, once', async () => {
+    const focus = jest.spyOn(TextInput.prototype, 'focus');
+    renderAuthStack(undefined, storeAwaitingCode());
+    fireEvent.press(screen.getByText('Create account'));
+    fireEvent.changeText(screen.getByLabelText('Email'), 'anna@kovalenko.co');
+    act(() => navigationRef.navigate(ScreenNames.VERIFY_EMAIL_SCREEN));
+    focus.mockClear();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Change email' }));
+    // react-hook-form focuses on the next tick.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+
+    expect(routeNames()).toEqual([ScreenNames.WELCOME_SCREEN, ScreenNames.SIGN_UP_SCREEN]);
+    expect(screen.getByLabelText('Email').props.value).toBe('anna@kovalenko.co');
+    expect(focus.mock.contexts.map((input) => (input as TextInput).props.accessibilityLabel)).toEqual(['Email']);
+    expect(rootRoutes()[1].params).toEqual({ focusEmail: undefined });
+    focus.mockRestore();
+  });
+
+  it('returns from Request another code to the filled form, which says how to ask for another email', () => {
+    renderAuthStack(undefined, storeAwaitingCode());
+    fireEvent.press(screen.getByText('Create account'));
+    fireEvent.changeText(screen.getByLabelText('Email'), 'anna@kovalenko.co');
+    expect(screen.queryByText(/request another email/)).toBeNull();
+    act(() => navigationRef.navigate(ScreenNames.VERIFY_EMAIL_SCREEN));
+
+    fireEvent.press(screen.getByRole('button', { name: 'Request another code' }));
+
+    expect(routeNames()).toEqual([ScreenNames.WELCOME_SCREEN, ScreenNames.SIGN_UP_SCREEN]);
+    expect(screen.getByLabelText('Email').props.value).toBe('anna@kovalenko.co');
+    expect(
+      screen.getByText(
+        'Check your details, then create the account again to request another email. A code you already received may still work.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('opens Sign up instead of Verify Email when no address is waiting for a code', () => {
+    renderAuthStack(VERIFYING);
+
+    expect(routeNames()).toEqual([ScreenNames.WELCOME_SCREEN, ScreenNames.SIGN_UP_SCREEN]);
   });
 });
 

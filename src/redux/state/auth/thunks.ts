@@ -1,10 +1,11 @@
 import * as SecureStore from 'expo-secure-store';
 
-import type { LoginPayload, RegisterPayload, VerifyEmailPayload } from '@api/dto';
+import type { ErrorResponse, LoginPayload, RegisterPayload, VerifyEmailPayload } from '@api/dto';
 import { isConfirmationAlreadyRequested, login, register, verifyEmail } from '@api/auth.api';
 import { AUTH_TOKEN_KEY } from '@shared/constants';
 import { getRejectValue } from '@api/errors';
 import { createAppAsyncThunk } from '@redux/createAppAsyncThunk';
+import { verificationCommitStarted } from './actions';
 
 export const registerMe = createAppAsyncThunk('auth/registerMe', async (payload: RegisterPayload, thunkAPI) => {
   try {
@@ -23,20 +24,37 @@ export const registerMe = createAppAsyncThunk('auth/registerMe', async (payload:
   }
 });
 
-export const verifyEmailMe = createAppAsyncThunk(
+export type VerifyEmailRejection =
+  | { reason: 'api'; error: ErrorResponse }
+  // The screen was left, or a newer attempt started, before the server answered.
+  | { reason: 'abandoned' }
+  // The server verified the email, but this device could not save the session.
+  | { reason: 'sessionNotSaved' };
+
+export const verifyEmailMe = createAppAsyncThunk.withTypes<{ rejectValue: VerifyEmailRejection }>()(
   'auth/verifyEmailMe',
   async (payload: VerifyEmailPayload, thunkAPI) => {
+    let accessToken: string;
+
     try {
-      const accessToken = await verifyEmail(payload);
-
-      if (accessToken) {
-        await SecureStore.setItemAsync(AUTH_TOKEN_KEY, accessToken);
-      }
-
-      return accessToken;
+      accessToken = await verifyEmail(payload);
     } catch (error: unknown) {
-      return thunkAPI.rejectWithValue(getRejectValue(error));
+      return thunkAPI.rejectWithValue({ reason: 'api', error: getRejectValue(error) });
     }
+
+    if (thunkAPI.getState().auth.verification?.requestId !== thunkAPI.requestId) {
+      return thunkAPI.rejectWithValue({ reason: 'abandoned' });
+    }
+
+    thunkAPI.dispatch(verificationCommitStarted(thunkAPI.requestId));
+
+    try {
+      await SecureStore.setItemAsync(AUTH_TOKEN_KEY, accessToken);
+    } catch {
+      return thunkAPI.rejectWithValue({ reason: 'sessionNotSaved' });
+    }
+
+    return accessToken;
   },
 );
 

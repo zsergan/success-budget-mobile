@@ -5,7 +5,6 @@ import { yupResolver } from '@hookform/resolvers/yup';
 
 import type { CreateSpaceRequest } from '@api/dto';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
-import { useGetCurrenciesQuery } from '@redux/state/currency/api';
 import { selectProfileId } from '@redux/state/profile/selectors';
 import { createSpaceAndSelect } from '@redux/state/space/thunks';
 import { selectSpaceCreationAttempt } from '@redux/state/spaceCreation/selectors';
@@ -51,7 +50,6 @@ const PENDING_NOTICES: Partial<Record<SpaceCreationStatus, string>> = {
 type UseCreateSpaceFormProps = Pick<RootStackScreenProps<ScreenNames.CREATE_SPACE_SCREEN>, 'navigation'>;
 
 const useCreateSpaceForm = ({ navigation }: UseCreateSpaceFormProps) => {
-  const { currentData: currencies = [] } = useGetCurrenciesQuery();
   const dispatch = useAppDispatch();
   const userId = useAppSelector(selectProfileId);
   const attempt = useAppSelector(selectSpaceCreationAttempt);
@@ -105,9 +103,10 @@ const useCreateSpaceForm = ({ navigation }: UseCreateSpaceFormProps) => {
   const isUnresolvedShown = unresolved !== null && isSameCreateSpaceRequest(unresolved.request, toRequest(values));
 
   return {
-    currencies: currencies.map((c) => ({ label: c.code, value: c.id })),
     control,
     watch,
+    // Only a group with at least one address added sends invitations.
+    willInvite: toRequest(values).invites !== undefined,
     onSubmit,
     isSubmitDisabled,
     submitError,

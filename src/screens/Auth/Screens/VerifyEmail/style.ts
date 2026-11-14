@@ -5,30 +5,16 @@ import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme) =>
   StyleSheet.create({
-    root: {
-      flex: 1,
-      width: '100%',
-      justifyContent: 'center',
-      alignItems: 'center',
-      rowGap: 32,
+    failure: {
+      marginTop: -2,
+      marginBottom: 22,
     },
-    container: {
-      width: '100%',
-      rowGap: theme.spacing.lg,
-    },
-    bottomContainer: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    bottomText: {
+    note: {
+      marginBottom: 2,
+      textAlign: 'center',
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodyLg,
-      lineHeight: theme.lineHeights.bodyLg,
+      fontSize: 12.5,
+      lineHeight: 18,
       color: colors.muted,
     },
   });

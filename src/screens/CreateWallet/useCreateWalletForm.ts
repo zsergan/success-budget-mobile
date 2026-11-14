@@ -20,11 +20,13 @@ interface CreateWalletFormData {
   design: AppColor;
 }
 
-const schema = yup.object().shape({
-  walletName: yup.string().trim().required('Enter a wallet name'),
-  initialBalance: amountSchema,
-  design: yup.mixed<AppColor>().oneOf(Object.values(AppColor)).required(),
-});
+// An edit sends no balance: the one it holds only feeds the preview, so whatever it is can't block the save.
+const createSchema = (isNewWallet: boolean) =>
+  yup.object().shape({
+    walletName: yup.string().trim().required('Enter a wallet name'),
+    initialBalance: isNewWallet ? amountSchema : yup.string().defined(),
+    design: yup.mixed<AppColor>().oneOf(Object.values(AppColor)).required(),
+  });
 
 interface UseCreateWalletFormProps extends RootStackScreenProps<ScreenNames.ADD_WALLET_SCREEN> {}
 
@@ -44,7 +46,7 @@ const useCreateWalletForm = ({ navigation, route }: UseCreateWalletFormProps) =>
     watch,
     formState: { isSubmitting, isSubmitSuccessful },
   } = useForm({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(createSchema(isNewWallet)),
     defaultValues: {
       walletName: isNewWallet ? '' : route.params.walletName,
       initialBalance: isNewWallet ? '' : route.params.balance,

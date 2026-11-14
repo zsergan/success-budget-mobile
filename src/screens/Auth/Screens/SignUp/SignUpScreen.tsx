@@ -2,10 +2,10 @@ import { View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
 import { Banner, Button, Input, InputPicker, PasswordInput, PendingInvitationNotice, TextLink } from '@components';
+import { useCurrencyOptions } from '@hooks';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import AuthFormLayout from '@screens/Auth/AuthFormLayout/AuthFormLayout';
-import useCurrencyOptions from './useCurrencyOptions';
 import useSignUpForm from './useSignUpForm';
 
 import styles from './style';
@@ -18,17 +18,27 @@ const MAX_TEXT_LENGTH = 255;
 // Lets iOS suggest a strong password that already meets the rule checked below the field.
 const PASSWORD_RULES = 'minlength: 8; required: lower, upper; required: digit;';
 
-const SignUpScreen = ({ navigation }: Props) => {
-  const { control, onSubmit, isSubmitting, isSubmitDisabled, submitError, isEmailWellFormed, focusField } =
-    useSignUpForm({
-      navigation,
-    });
+const SignUpScreen = ({ navigation, route }: Props) => {
+  const {
+    control,
+    onSubmit,
+    isSubmitting,
+    isSubmitDisabled,
+    submitError,
+    isRequestingAnotherCode,
+    isEmailWellFormed,
+    focusField,
+  } = useSignUpForm({ navigation, route });
   const currencies = useCurrencyOptions();
 
   return (
     <AuthFormLayout
       title="Create your account"
-      description="Name, email, password and the currency of your personal space."
+      description={
+        isRequestingAnotherCode
+          ? 'Check your details, then create the account again to request another email. A code you already received may still work.'
+          : 'Name, email, password and the currency of your personal space.'
+      }
       headerAccessory={<PendingInvitationNotice />}
       onBackButtonPress={() => navigation.goBack()}
       action={

@@ -50,41 +50,35 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
               control={control}
               render={({ field: { onChange, value }, fieldState: { error } }) => (
                 <Input
+                  variant="outlined"
                   label="Wallet Name"
                   placeholder="My Wallet"
                   value={value}
                   onChangeText={onChange}
                   error={error?.message}
-                  withShadow
                 />
               )}
             />
 
-            <View style={styles.fieldGroup}>
+            {isNewWallet && (
               <Controller
                 name="initialBalance"
                 control={control}
                 render={({ field: { onChange, value }, fieldState: { error } }) => (
                   <Input
+                    variant="outlined"
                     label="Starting balance"
                     error={error?.message}
+                    hint={`How much is already in this wallet. Amounts are in ${spaceCurrencyCode}, the currency of this space.`}
                     placeholder="0"
                     value={value}
                     onChangeText={onChange}
                     keyboardType="numeric"
                     returnKeyType="done"
-                    editable={isNewWallet}
-                    withShadow
                   />
                 )}
               />
-
-              {isNewWallet && (
-                <Text style={styles.hint}>
-                  {`How much is already in this wallet. Amounts are in ${spaceCurrencyCode}, the currency of this space.`}
-                </Text>
-              )}
-            </View>
+            )}
           </View>
 
           <View style={styles.section}>
@@ -130,7 +124,7 @@ const CreateWalletScreen = ({ navigation, route }: Props) => {
           {submitError && <Banner tone="danger" text={submitError} />}
         </View>
 
-        <Button title={isNewWallet ? 'Create' : 'Save changes'} onPress={onSubmit} disabled={isSubmitDisabled} />
+        <Button title={isNewWallet ? 'Create wallet' : 'Save changes'} onPress={onSubmit} disabled={isSubmitDisabled} />
       </RootLayout>
     </>
   );

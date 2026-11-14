@@ -5,11 +5,11 @@ import { useThemedStyles } from '@hooks';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import AuthFormLayout from '@screens/Auth/AuthFormLayout/AuthFormLayout';
+import CodeInput from '@screens/Auth/components/CodeInput/CodeInput';
+import SentToChip from '@screens/Auth/components/SentToChip/SentToChip';
 import type { PasswordResetFailure } from '@screens/Auth/passwordReset/passwordResetFailure';
 import PasswordResetFailureBanner from '@screens/Auth/passwordReset/PasswordResetFailureBanner';
-import useKeyboardLayout from '@screens/Auth/passwordReset/useKeyboardLayout';
-import CodeInput from './components/CodeInput/CodeInput';
-import SentToChip from './components/SentToChip/SentToChip';
+import useKeyboardLayout from '@screens/Auth/hooks/useKeyboardLayout';
 import type { CodeBlock } from './useResetCode';
 import useResetCode from './useResetCode';
 
