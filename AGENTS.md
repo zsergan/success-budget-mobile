@@ -36,7 +36,9 @@ currencies. Redux Toolkit + RTK Query, React Navigation, react-hook-form + yup.
 - **Slices hold client state only**: `auth` (session, `sessionKey`),
   `space` (selected space; its id is saved per account and restored by
   the launch, see `docs/launch.md`), `member` (invite cooldown), `transactionFlow`
-  (the open transaction sheet; ends on logout or space switch),
+  (the open transaction: its form on the editor route, the details and
+  the saved confirmation in one sheet; the route and the sheet follow
+  this state, see `docs/sheets.md`; ends on logout or space switch),
   `pendingWrite` (transaction writes persisted per user before sending,
   until their outcome is known; see `transaction/operations.ts`),
   `spaceCreation` (the unanswered space creation's `Idempotency-Key`

@@ -8,7 +8,8 @@ import { createOpened } from '@redux/state/transactionFlow/slice';
 import { openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { TransactionType } from '@shared/enums';
 
-// Opens the one transaction sheet for the active space; a flow that is already open stays as it is.
+// Starts the one transaction flow of the active space: a new transaction's form opens as a screen and a record's
+// details as a sheet, once the flow has taken the step. A flow that is already open stays as it is.
 // `selection` is what the calling screen shows, so a new record's confirmation can say when it is not there.
 const useTransactionFlow = (selection: ViewSelection | null = null) => {
   const dispatch = useAppDispatch();

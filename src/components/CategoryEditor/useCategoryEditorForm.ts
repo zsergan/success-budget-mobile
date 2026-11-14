@@ -1,4 +1,5 @@
 import * as yup from 'yup';
+import { useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useBottomSheet } from '@gorhom/bottom-sheet';
@@ -13,6 +14,7 @@ import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { AppColor, TransactionType } from '@shared/enums';
 import type { IconType } from '@shared/types';
 import { CATEGORY_ICON_LIST } from '@shared/icons';
+import { useSheetPresentation } from '@components/Modals/BottomSheetModal/sheetPresentation';
 import { useFormSubmitHandler } from '@hooks';
 
 export const NAME_MAX_LENGTH = 20;
@@ -43,6 +45,8 @@ const useCategoryEditorForm = ({ category, defaultTransactionType, onSaved }: Us
   const [createCategory] = useCreateCategoryMutation();
   const [updateCategory] = useUpdateCategoryMutation();
   const { close } = useBottomSheet();
+  const presentation = useSheetPresentation();
+  const submittedInRef = useRef<number | undefined>(undefined);
 
   const {
     control,
@@ -64,6 +68,8 @@ const useCategoryEditorForm = ({ category, defaultTransactionType, onSaved }: Us
     handleSubmit,
     formState: { isSubmitting, isSubmitSuccessful },
     onSubmit: async (formData) => {
+      submittedInRef.current = presentation?.current().id;
+
       if (isNewCategory) {
         const payload: CreateCategoryRequest = {
           name: formData.name.trim(),
@@ -85,7 +91,8 @@ const useCategoryEditorForm = ({ category, defaultTransactionType, onSaved }: Us
     },
     onSuccess: (saved) => {
       onSaved?.(saved);
-      close();
+      // An answer that comes after this showing has closed must not close the sheet's next one.
+      if (!presentation || presentation.current().id === submittedInRef.current) close();
     },
     reset,
   });
