@@ -5,8 +5,14 @@ import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme) =>
   StyleSheet.create({
-    root: {
-      flex: 1,
+    title: {
+      paddingHorizontal: theme.spacing.xl,
+      paddingTop: theme.spacing.sm,
+      fontFamily: theme.fonts.bold,
+      fontSize: theme.fontSizes.titleSm,
+      lineHeight: theme.lineHeights.titleSm,
+      letterSpacing: theme.letterSpacing.titleSm,
+      color: colors.text,
     },
     body: {
       paddingHorizontal: theme.spacing.xl,
@@ -87,34 +93,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     footer: {
       paddingTop: theme.spacing.md,
       paddingHorizontal: theme.spacing.xl,
-      flexDirection: 'row',
-      columnGap: theme.spacing.sm,
-    },
-    cancelButton: {
-      flex: 1,
-      height: 52,
-      borderRadius: theme.radius.md,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.track,
-    },
-    cancelText: {
-      fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
-      color: colors.text,
-    },
-    applyButton: {
-      flex: 1,
-      height: 52,
-      borderRadius: theme.radius.md,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.text,
-    },
-    applyText: {
-      fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
-      color: colors.bg,
+      rowGap: theme.spacing.xs,
     },
   });
 

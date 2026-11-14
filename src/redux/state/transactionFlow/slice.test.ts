@@ -8,7 +8,6 @@ import {
   anotherStarted,
   awayEnded,
   awayStarted,
-  categoriesOpened,
   categoryCreated,
   categoryPicked,
   closed,
@@ -89,18 +88,19 @@ describe('transaction flow', () => {
     });
   });
 
-  it('keeps the draft through the categories panel and a date that is only applied with Apply', () => {
+  it('takes a pick from the full list for its own draft only, and a date only with Apply', () => {
     const { store, flow } = setUp();
 
     openCreate(store);
+    const { draftId } = flow()!;
     store.dispatch(draftChanged({ amount: '12' }));
-    store.dispatch(categoriesOpened());
-    store.dispatch(categoryPicked({ categoryId: 7 }));
-    expect(flow()).toMatchObject({ view: { name: 'create', focusAmount: false }, draft: { categoryId: 7 } });
+    store.dispatch(categoryPicked({ draftId: draftId + 1, categoryId: 9 }));
+    expect(flow()?.draft?.categoryId).toBeNull();
+    store.dispatch(categoryPicked({ draftId, categoryId: 7 }));
+    expect(flow()).toMatchObject({ view: { name: 'create' }, promotedCategoryId: 7, draft: { categoryId: 7 } });
 
-    store.dispatch(categoriesOpened());
-    store.dispatch(panelClosed());
     store.dispatch(dateTimeOpened());
+    store.dispatch(categoryPicked({ draftId, categoryId: 9 }));
     store.dispatch(pendingDateChanged({ timestamp: '2026-10-01T08:00:00.000Z' }));
     store.dispatch(panelClosed());
     expect(flow()?.draft).toMatchObject({ amount: '12', categoryId: 7, timestamp: NOW });
@@ -162,7 +162,8 @@ describe('transaction flow', () => {
 
     store.dispatch(saveStarted({ draftId }));
     store.dispatch(draftChanged({ amount: '99' }));
-    store.dispatch(categoriesOpened());
+    store.dispatch(categoryPicked({ draftId, categoryId: 7 }));
+    store.dispatch(dateTimeOpened());
     store.dispatch(closed());
     store.dispatch(saveFailed({ draftId: draftId + 1 }));
     expect(flow()).toMatchObject({ isSaving: true, view: { name: 'create' }, draft: { amount: '' } });
@@ -291,7 +292,6 @@ describe('transaction flow', () => {
     store.dispatch(awayEnded({ draftId }));
     expect(flow()).toMatchObject({ away: null, view: { name: 'create', focusAmount: false } });
 
-    store.dispatch(categoriesOpened());
     store.dispatch(awayStarted({ draftId, target: 'category' }));
     store.dispatch(categoryCreated({ draftId, categoryId: 11, transactionType: TransactionType.EXPENSE }));
     expect(flow()).toMatchObject({ away: null, view: { name: 'create' }, draft: { categoryId: 11 } });

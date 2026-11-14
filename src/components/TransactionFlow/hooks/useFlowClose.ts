@@ -76,7 +76,7 @@ const useFlowClose = (confirmLock: ConfirmLock) => {
     const flow = getFlow();
     if (!flow) return;
 
-    if (flow.view.name === 'categories' || flow.view.name === 'dateTime') {
+    if (flow.view.name === 'dateTime') {
       dispatch(panelClosed());
     } else if (flow.view.name === 'edit') {
       const leave = () => {

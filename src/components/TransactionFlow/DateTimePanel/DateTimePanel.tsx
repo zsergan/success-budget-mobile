@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
-import { Keyboard, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
+import Button from '@components/Buttons/Button/Button';
 import CalendarGrid from '@components/Period/RangePicker/CalendarGrid';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { useAppDispatch } from '@redux/hooks';
@@ -11,7 +13,7 @@ import { addMonths } from '@shared/utils';
 import { compareDays } from '@shared/utils/compare';
 import { MIN_TIMESTAMP } from '@redux/state/transactionFlow/draft';
 import { formatDateTime } from '../format';
-import PanelHeader from '../PanelHeader/PanelHeader';
+import useBoundedHeight from '@components/Modals/BottomSheetModal/useBoundedHeight';
 import type { PickBounds } from './pickDateTime';
 import { pickDay, pickTime } from './pickDateTime';
 import TimeField from './TimeField';
@@ -25,16 +27,16 @@ interface Props {
   pending: string;
   // The date the draft started from, whose seconds a pick on the same minute keeps.
   original: string;
-  onBack: () => void;
-  onClose: () => void;
+  onCancel: () => void;
 }
 
-// Picks into the flow's pending value; only Apply moves it into the draft, Back and Cancel drop it.
-const DateTimePanel = ({ pending, original, onBack, onClose }: Props) => {
+// The date picker's sheet over the form. It picks into the flow's pending value; only Apply moves it into the draft,
+// while Cancel, Back and a swipe drop it.
+const DateTimePanel = ({ pending, original, onCancel }: Props) => {
   const styles = useThemedStyles(createStyles);
   const dispatch = useAppDispatch();
-  useEffect(() => Keyboard.dismiss(), []);
   const insets = useSafeAreaInsets();
+  const { height } = useBoundedHeight();
   const now = useNow();
   const picked = new Date(pending);
   const [month, setMonth] = useState(() => new Date(picked.getFullYear(), picked.getMonth(), 1));
@@ -58,10 +60,12 @@ const DateTimePanel = ({ pending, original, onBack, onClose }: Props) => {
   ];
 
   return (
-    <View style={styles.root}>
-      <PanelHeader title="Date & time" onBack={onBack} onClose={onClose} />
+    <View style={{ maxHeight: height }}>
+      <Text style={styles.title} accessibilityRole="header">
+        Date & time
+      </Text>
 
-      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+      <BottomSheetScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         <View style={styles.quickRow}>
           {quickDays.map(({ label, day }) => {
             const isActive = compareDays(picked, day);
@@ -100,16 +104,11 @@ const DateTimePanel = ({ pending, original, onBack, onClose }: Props) => {
           maximumDate={isToday ? now : undefined}
           onChange={(time) => change((bounds) => pickTime(pending, time, bounds))}
         />
-      </ScrollView>
+      </BottomSheetScrollView>
 
       <View style={[styles.footer, { paddingBottom: theme.spacing.xl + insets.bottom }]}>
-        <TouchableOpacity style={styles.cancelButton} onPress={onBack} activeOpacity={0.8}>
-          <Text style={styles.cancelText}>Cancel</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.applyButton} onPress={() => dispatch(dateTimeApplied())} activeOpacity={0.8}>
-          <Text style={styles.applyText}>Apply</Text>
-        </TouchableOpacity>
+        <Button title="Apply" onPress={() => dispatch(dateTimeApplied())} />
+        <Button title="Cancel" variant="tertiary" onPress={onCancel} />
       </View>
     </View>
   );

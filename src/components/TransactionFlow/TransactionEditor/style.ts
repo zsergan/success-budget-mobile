@@ -8,90 +8,57 @@ const createStyles = ({ colors }: ColorTheme) =>
     root: {
       flex: 1,
     },
-    topBlock: {
-      paddingTop: theme.spacing.sm,
-      rowGap: theme.spacing.md + 2,
-    },
-    topFields: {
-      marginTop: theme.spacing.md + 2,
-      rowGap: theme.spacing.md + 2,
-    },
-    fields: {
-      flex: 1,
-    },
-    fieldsLocked: {
-      opacity: 0.55,
-    },
-    limitHint: {
-      marginHorizontal: theme.spacing.xl,
-    },
     header: {
       paddingHorizontal: theme.spacing.xl,
+      paddingTop: theme.spacing.sm,
+      paddingBottom: 10,
       flexDirection: 'row',
       alignItems: 'center',
       columnGap: theme.spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: 'transparent',
+    },
+    headerScrolled: {
+      borderBottomColor: colors.hairline,
+    },
+    headerButton: {
+      width: 34,
+      height: 34,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.track,
+    },
+    headerButtonLocked: {
+      opacity: 0.35,
     },
     headerTitle: {
       flex: 1,
-      fontFamily: theme.fonts.semiBold,
+      minWidth: 0,
+      fontFamily: theme.fonts.bold,
       fontSize: theme.fontSizes.titleSm,
       lineHeight: theme.lineHeights.titleSm,
       letterSpacing: theme.letterSpacing.titleSm,
       color: colors.text,
     },
-    headerButton: {
-      width: 32,
-      height: 32,
-      borderRadius: 11,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.track,
+    fields: {
+      flex: 1,
+    },
+    fieldsLocked: {
+      opacity: 0.5,
     },
     body: {
       flex: 1,
     },
-    container: {
-      marginHorizontal: theme.spacing.xl,
-      paddingTop: theme.spacing.lg,
-      paddingBottom: theme.spacing.md,
+    content: {
+      paddingHorizontal: theme.spacing.xl,
+      paddingTop: 10,
+      paddingBottom: 28,
       rowGap: theme.spacing.xl,
     },
-    section: {
-      rowGap: theme.spacing.md - 2,
-    },
-    sectionLabelRow: {
-      flexDirection: 'row',
-      alignItems: 'baseline',
-      justifyContent: 'space-between',
-    },
-    sectionLabel: {
-      fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
-      letterSpacing: 0.3,
-      color: colors.muted,
-    },
-    sectionHint: {
-      fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
-      color: colors.muted,
-    },
-    sectionHintError: {
-      color: colors.danger,
-    },
-    note: {
-      minHeight: 64,
-      borderRadius: theme.radius.md,
-      padding: theme.spacing.md + 1,
-      fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.label,
-      lineHeight: theme.lineHeights.label,
-      color: colors.text,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.hairline,
-      textAlignVertical: 'top',
+    // The limit depends on the picked category, so its hint sits right under the grid.
+    categoryBlock: {
+      rowGap: 10,
     },
   });
 

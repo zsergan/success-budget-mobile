@@ -2,98 +2,110 @@ import { StyleSheet } from 'react-native';
 
 import type { ColorTheme } from '@shared/theme';
 import theme from '@shared/theme';
+import { sectionLabel, sectionNote } from '../sectionStyle';
 
 const createStyles = ({ colors }: ColorTheme) =>
   StyleSheet.create({
     section: {
-      rowGap: theme.spacing.md - 2,
+      rowGap: 10,
     },
-    sectionLabelRow: {
+    labelRow: {
+      minHeight: 24,
       flexDirection: 'row',
-      alignItems: 'baseline',
+      alignItems: 'center',
       justifyContent: 'space-between',
+      columnGap: 10,
     },
-    sectionLabel: {
-      fontFamily: theme.fonts.semiBold,
+    label: sectionLabel(colors),
+    pill: {
+      maxWidth: '72%',
+      height: 24,
+      borderRadius: 8,
+      paddingHorizontal: 9,
+      justifyContent: 'center',
+    },
+    // Plus Jakarta Sans under-measures its own width and clips the last glyph (see cde3346).
+    pillText: {
+      paddingRight: 2,
+      fontFamily: theme.fonts.bold,
       fontSize: theme.fontSizes.caption,
       lineHeight: theme.lineHeights.caption,
-      letterSpacing: 0.3,
       color: colors.muted,
     },
-    sectionHint: {
-      fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
-      color: colors.muted,
-    },
-    categoryGrid: {
-      marginHorizontal: -5,
+    // The tiles' own bottom margin is the gap between rows; the last row's is taken back.
+    grid: {
+      marginHorizontal: -theme.spacing.xs,
+      marginBottom: -theme.spacing.md,
       flexDirection: 'row',
       flexWrap: 'wrap',
     },
-    categoryCell: {
-      width: '25%',
-      paddingHorizontal: 5,
-      marginBottom: 14,
+    ghostCell: {
+      marginBottom: theme.spacing.md,
       alignItems: 'center',
-      rowGap: 6,
+      rowGap: 7,
     },
-    categoryIconBox: {
-      width: 52,
-      height: 52,
-      borderRadius: 16,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.surface,
-      borderWidth: 1.5,
-      borderColor: colors.hairline,
+    ghostBox: {
+      width: 54,
+      height: 54,
+      borderRadius: 17,
+      backgroundColor: colors.track,
     },
-    categoryName: {
-      fontFamily: theme.fonts.semiBold,
-      fontSize: 10,
-      lineHeight: 13,
-      textAlign: 'center',
-      color: colors.muted,
-    },
-    archivedBadge: {
-      fontFamily: theme.fonts.semiBold,
-      fontSize: 9,
-      lineHeight: 12,
-      letterSpacing: 0.3,
-      textTransform: 'uppercase',
-      color: colors.muted,
+    ghostName: {
+      width: 44,
+      height: 9,
+      marginVertical: 3,
+      borderRadius: 5,
+      backgroundColor: colors.track,
     },
     empty: {
-      borderRadius: theme.radius.md,
-      padding: theme.spacing.lg,
+      borderRadius: 18,
+      paddingVertical: 18,
+      paddingHorizontal: theme.spacing.lg,
       alignItems: 'center',
-      rowGap: theme.spacing.md,
-      borderWidth: 1,
+      rowGap: theme.spacing.sm,
+      backgroundColor: colors.surface,
+      borderWidth: 1.5,
       borderStyle: 'dashed',
       borderColor: colors.hairline,
     },
+    emptyTitle: {
+      alignSelf: 'stretch',
+      textAlign: 'center',
+      fontFamily: theme.fonts.bold,
+      fontSize: 15,
+      lineHeight: theme.lineHeights.label,
+      color: colors.text,
+    },
     emptyText: {
+      textAlign: 'center',
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodySm,
-      lineHeight: theme.lineHeights.bodySm,
+      fontSize: theme.fontSizes.caption,
+      lineHeight: 17,
       color: colors.muted,
     },
     createButton: {
-      height: 36,
-      borderRadius: 11,
-      paddingHorizontal: theme.spacing.md,
+      marginTop: theme.spacing.xs,
+      height: 40,
+      borderRadius: 13,
+      paddingHorizontal: theme.spacing.lg,
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 6,
-      backgroundColor: colors.track,
+      columnGap: 7,
+      backgroundColor: colors.secondary,
     },
-    // SemiBold under-measures its width in a content-sized chip (see cde3346).
+    // Plus Jakarta Sans under-measures its own width and clips the last glyph (see cde3346).
     createButtonText: {
       paddingRight: 2,
-      fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
-      color: colors.text,
+      fontFamily: theme.fonts.bold,
+      fontSize: theme.fontSizes.label,
+      color: colors.onSecondary,
     },
+    noteRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      columnGap: theme.spacing.sm,
+    },
+    note: sectionNote(colors),
   });
 
 export default createStyles;

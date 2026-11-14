@@ -17,6 +17,7 @@ import {
   ResetCodeScreen,
   SignInScreen,
   SignUpScreen,
+  TransactionCategoriesScreen,
   TransactionEditorScreen,
   VerifyEmailScreen,
   LaunchScreen,
@@ -111,6 +112,11 @@ const RootNavigator = () => {
                 <Stack.Screen
                   name={ScreenNames.TRANSACTION_EDITOR_SCREEN}
                   component={TransactionEditorScreen}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name={ScreenNames.TRANSACTION_CATEGORIES_SCREEN}
+                  component={TransactionCategoriesScreen}
                   options={{ headerShown: false }}
                 />
                 <Stack.Screen

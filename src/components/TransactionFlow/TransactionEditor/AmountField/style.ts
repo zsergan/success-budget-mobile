@@ -2,17 +2,19 @@ import { StyleSheet } from 'react-native';
 
 import type { ColorTheme } from '@shared/theme';
 import theme from '@shared/theme';
+import { sectionLabel } from '../sectionStyle';
 
-export const AMOUNT_FONT = { max: 40, min: 28 };
+// The digits step down as they grow, so the largest amount still fits on one line beside the currency.
+export const amountFontSize = (value: string) => (value.length > 9 ? 30 : value.length > 6 ? 36 : 44);
 
 const createStyles = ({ colors }: ColorTheme) =>
   StyleSheet.create({
     root: {
-      marginHorizontal: theme.spacing.xl,
       rowGap: theme.spacing.xs,
     },
+    label: sectionLabel(colors),
     row: {
-      height: 68,
+      height: 64,
       flexDirection: 'row',
       alignItems: 'center',
       columnGap: 3,
@@ -23,17 +25,17 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     // SemiBold under-measures its width in a content-sized text (see cde3346).
     sign: {
-      fontFamily: theme.fonts.semiBold,
-      letterSpacing: -1.2,
+      fontFamily: theme.fonts.bold,
+      letterSpacing: -1.3,
       paddingRight: 2,
     },
     input: {
       flex: 1,
       minWidth: 0,
-      height: 52,
+      height: 54,
       padding: 0,
-      fontFamily: theme.fonts.semiBold,
-      letterSpacing: -1.2,
+      fontFamily: theme.fonts.bold,
+      letterSpacing: -1.3,
     },
     currency: {
       fontFamily: theme.fonts.semiBold,

@@ -1,23 +1,29 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
+import CategoryTile, { useCategoryColumns } from '@components/TransactionFlow/CategoryTile/CategoryTile';
+import type { ListLoad } from '@components/TransactionFlow/SectionLoad/SectionLoad';
+import SectionLoad from '@components/TransactionFlow/SectionLoad/SectionLoad';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { hexToRgba } from '@shared/utils';
-import type { ListLoad } from '@components/TransactionFlow/SectionLoad/SectionLoad';
-import SectionLoad from '@components/TransactionFlow/SectionLoad/SectionLoad';
 import type { GridCategory } from './categoryLayout';
+import { GRID_SLOTS } from './categoryLayout';
 
 import createStyles from './style';
+
+const GHOSTS = Array.from({ length: GRID_SLOTS }, (_, index) => index);
 
 interface Props {
   load: ListLoad;
   tiles: GridCategory[];
   hasMore: boolean;
   selectedId: number | null;
-  archivedId: number | null;
+  // The record's own archived category, offered while it fits the draft's type.
+  archived: GridCategory | null;
   typeColor: string;
-  emptyLabel: string;
+  // "income" or "expense", as the empty state names it.
+  typeWord: string;
   onSelect: (categoryId: number) => void;
   onMore: () => void;
   onCreate: () => void;
@@ -29,9 +35,9 @@ const CategoryGrid = ({
   tiles,
   hasMore,
   selectedId,
-  archivedId,
+  archived,
   typeColor,
-  emptyLabel,
+  typeWord,
   onSelect,
   onMore,
   onCreate,
@@ -39,68 +45,81 @@ const CategoryGrid = ({
 }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
+  const columns = useCategoryColumns();
   const selected = tiles.find(({ id }) => id === selectedId);
-  const hint =
-    selected && selected.id === archivedId ? 'Archived — you can keep it' : (selected?.name ?? 'Choose category');
+  const keepsArchived = !!archived && selected?.id === archived.id;
+  // The tile cuts a long name short; the pill has room for it.
+  const pill = selected ? (keepsArchived ? `${selected.name} · archived` : selected.name) : 'Required';
 
   return (
     <View style={styles.section}>
-      <View style={styles.sectionLabelRow}>
-        <Text style={styles.sectionLabel}>Category</Text>
-        <Text style={[styles.sectionHint, selected && { color: typeColor }]}>{hint}</Text>
+      <View style={styles.labelRow}>
+        <Text style={styles.label}>Category</Text>
+
+        {load === 'ready' && tiles.length > 0 && (
+          <View style={[styles.pill, selected && { backgroundColor: hexToRgba(typeColor, 0.1) }]}>
+            <Text style={[styles.pillText, selected && { color: typeColor }]} numberOfLines={1}>
+              {pill}
+            </Text>
+          </View>
+        )}
       </View>
 
-      {load !== 'ready' ? (
-        <SectionLoad load={load} name="categories" onRetry={onRetry} />
+      {load === 'loading' ? (
+        <View style={styles.grid} accessibilityLabel="Loading categories">
+          {GHOSTS.map((ghost) => (
+            <View key={ghost} style={[styles.ghostCell, { width: `${100 / columns}%` }]}>
+              <View style={styles.ghostBox} />
+              <View style={styles.ghostName} />
+            </View>
+          ))}
+        </View>
+      ) : load === 'failed' ? (
+        <SectionLoad load={load} name="categories" icon="grid" onRetry={onRetry} />
       ) : tiles.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyText}>{emptyLabel}</Text>
+          <Text style={styles.emptyTitle}>No {typeWord} categories yet</Text>
+          <Text style={styles.emptyText}>Create one — you’ll come back to this transaction.</Text>
 
-          <TouchableOpacity style={styles.createButton} onPress={onCreate} activeOpacity={0.7}>
-            <Icon name="plus" size={14} color={colors.text} strokeWidth={2.1} />
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={onCreate}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+          >
+            <Icon name="plus" size={14} color={colors.onSecondary} strokeWidth={2.3} />
             <Text style={styles.createButtonText}>Create category</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <View style={styles.categoryGrid}>
-          {tiles.map((category) => {
-            const isSelected = category.id === selectedId;
-
-            return (
-              <TouchableOpacity
-                key={category.id}
-                style={styles.categoryCell}
-                onPress={() => onSelect(category.id)}
-                activeOpacity={0.6}
-                accessibilityState={{ selected: isSelected }}
-              >
-                <View
-                  style={[
-                    styles.categoryIconBox,
-                    isSelected && { backgroundColor: hexToRgba(typeColor, 0.1), borderColor: typeColor },
-                  ]}
-                >
-                  <Icon name={category.icon} size={22} color={isSelected ? typeColor : colors.text} />
-                </View>
-
-                <Text style={[styles.categoryName, isSelected && { color: typeColor }]} numberOfLines={2}>
-                  {category.name}
-                </Text>
-
-                {category.id === archivedId && <Text style={styles.archivedBadge}>Archived</Text>}
-              </TouchableOpacity>
-            );
-          })}
+        <View style={styles.grid}>
+          {tiles.map((category) => (
+            <CategoryTile
+              key={category.id}
+              name={category.name}
+              icon={category.icon}
+              columns={columns}
+              typeColor={typeColor}
+              isSelected={category.id === selectedId}
+              isArchived={category.id === archived?.id}
+              onPress={() => onSelect(category.id)}
+            />
+          ))}
 
           {hasMore && (
-            <TouchableOpacity style={styles.categoryCell} onPress={onMore} activeOpacity={0.6}>
-              <View style={styles.categoryIconBox}>
-                <Icon name="more" size={22} color={colors.text} />
-              </View>
-
-              <Text style={styles.categoryName}>More</Text>
-            </TouchableOpacity>
+            <CategoryTile name="More" icon="more" columns={columns} typeColor={typeColor} isAction onPress={onMore} />
           )}
+        </View>
+      )}
+
+      {archived && load === 'ready' && (
+        <View style={styles.noteRow}>
+          <Icon name="info" size={14} color={colors.muted} strokeWidth={1.9} />
+          <Text style={styles.note}>
+            {keepsArchived
+              ? 'Archived category. You can keep it, or pick an active one — the archived tile stays until you save.'
+              : `${archived.name} is archived. Your new choice replaces it on save.`}
+          </Text>
         </View>
       )}
     </View>

@@ -6,8 +6,7 @@ import theme from '@shared/theme';
 const createStyles = ({ colors, elevation }: ColorTheme) =>
   StyleSheet.create({
     typeSwitch: {
-      marginHorizontal: theme.spacing.xl,
-      height: 46,
+      height: 44,
       borderRadius: 15,
       padding: 4,
       flexDirection: 'row',
@@ -27,7 +26,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       ...elevation.segment,
     },
     typeTabText: {
-      fontFamily: theme.fonts.semiBold,
+      fontFamily: theme.fonts.bold,
       fontSize: theme.fontSizes.label,
       lineHeight: theme.lineHeights.label,
     },

@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { Keyboard, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
+import { FieldRevealProvider, useFieldRevealScroll } from '@components/RootLayout/FieldReveal';
 import useKeyboardHeight from '@hooks/useKeyboardHeight';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
@@ -11,16 +12,10 @@ import { getActiveCategories } from '@redux/state/category/selectors';
 import { useGetLimitsQuery } from '@redux/state/limit/api';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import type { TransactionDraft } from '@redux/state/transactionFlow/draft';
-import {
-  changedFields,
-  DESCRIPTION_MAX_LENGTH,
-  descriptionLength,
-  getDraftErrors,
-  hasDraftErrors,
-} from '@redux/state/transactionFlow/draft';
+import { changedFields, getDraftErrors, hasDraftErrors } from '@redux/state/transactionFlow/draft';
 import { hasUnsavedChanges, selectIsDeleting } from '@redux/state/transactionFlow/selectors';
 import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
-import { categoriesOpened, dateTimeOpened, draftChanged } from '@redux/state/transactionFlow/slice';
+import { draftChanged } from '@redux/state/transactionFlow/slice';
 import { loadLatestRecord } from '@redux/state/transactionFlow/thunks';
 import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { TransactionType } from '@shared/enums';
@@ -33,7 +28,7 @@ import ActionRow from './ActionRow/ActionRow';
 import AmountField from './AmountField/AmountField';
 import CategoryGrid from './CategoryGrid/CategoryGrid';
 import { buildCategoryGrid } from './CategoryGrid/categoryLayout';
-import DateChip from './DateChip/DateChip';
+import DetailsCard from './DetailsCard/DetailsCard';
 import { forecastLimit } from './LimitHint/limitForecast';
 import LimitHint from './LimitHint/LimitHint';
 import TypeToggle from './TypeToggle/TypeToggle';
@@ -46,6 +41,8 @@ interface Props {
   flow: TransactionFlow & { draft: TransactionDraft };
   onSave: () => void;
   onBack: () => void;
+  onOpenCategories: () => void;
+  onOpenDate: () => void;
   onCreateWallet: () => void;
   onCreateCategory: () => void;
   onDelete: () => void;
@@ -56,18 +53,20 @@ const TransactionEditor = ({
   flow,
   onSave,
   onBack,
+  onOpenCategories,
+  onOpenDate,
   onCreateWallet,
   onCreateCategory,
   onDelete,
   onRetryDelete,
 }: Props) => {
-  const { scheme, colorTheme } = useTheme();
-  const { colors } = colorTheme;
+  const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const dispatch = useAppDispatch();
   const keyboardHeight = useKeyboardHeight();
   const scrollRef = useRef<ScrollView>(null);
-  const [isNoteFocused, setNoteFocused] = useState(false);
+  const fieldReveal = useFieldRevealScroll(scrollRef);
+  const [isScrolled, setScrolled] = useState(false);
   const [isLoadingLatest, setLoadingLatest] = useState(false);
   const [hasLatestFailed, setLatestFailed] = useState(false);
   const spaceArg = useSpaceArg();
@@ -85,7 +84,6 @@ const TransactionEditor = ({
   const isDeleting = useAppSelector((state) => !!saved && selectIsDeleting(state, saved.id));
   const isIncome = draft.transactionType === TransactionType.INCOME;
   const typeColor = isIncome ? colors.ok : colors.danger;
-  const onTypeColor = isIncome ? colors.onOk : colors.onDanger;
   const now = new Date();
 
   const wallets = useMemo(() => walletsOverview?.wallets.map(({ wallet }) => wallet) ?? [], [walletsOverview]);
@@ -150,7 +148,7 @@ const TransactionEditor = ({
     walletsNote ?? errors.wallet,
     errors.description,
   ];
-  const helperText = isEdit && !isChanged ? undefined : missing.find(Boolean);
+  const helperText = hasConflict ? undefined : isEdit && !isChanged ? 'No changes yet' : missing.find(Boolean);
 
   const limitForecast = forecastLimit({
     limits,
@@ -167,13 +165,7 @@ const TransactionEditor = ({
       : 'This wallet was deleted. You can keep it or move the transaction to another wallet.'
     : isEdit && draft.walletId === null
       ? errors.wallet
-      : !isEdit && hasNoWallets
-        ? 'Create a wallet to save this transaction.'
-        : undefined;
-
-  useEffect(() => {
-    if (isNoteFocused && keyboardHeight > 0) scrollRef.current?.scrollToEnd({ animated: true });
-  }, [isNoteFocused, keyboardHeight]);
+      : undefined;
 
   const loadLatest = async () => {
     setLoadingLatest(true);
@@ -187,38 +179,39 @@ const TransactionEditor = ({
 
   return (
     <View style={styles.root}>
-      <View style={styles.topBlock}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={onBack}
-            disabled={isSaving}
-            activeOpacity={0.6}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={isEdit ? 'Back to details' : 'Back'}
-          >
-            <Icon name="back" size={14} color={colors.text} strokeWidth={2.1} />
-          </TouchableOpacity>
+      <View style={[styles.header, isScrolled && styles.headerScrolled]}>
+        <TouchableOpacity
+          style={[styles.headerButton, isSaving && styles.headerButtonLocked]}
+          onPress={onBack}
+          disabled={isSaving}
+          activeOpacity={0.6}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={isEdit ? 'Back to details' : 'Back'}
+        >
+          <Icon name="back" size={16} color={colors.text} strokeWidth={2} />
+        </TouchableOpacity>
 
-          <Text style={styles.headerTitle}>{isEdit ? 'Edit transaction' : 'New transaction'}</Text>
-        </View>
+        <Text style={styles.headerTitle} numberOfLines={1} accessibilityRole="header">
+          {isEdit ? 'Edit transaction' : 'New transaction'}
+        </Text>
       </View>
 
       <View style={[styles.fields, isSaving && styles.fieldsLocked]} pointerEvents={isSaving ? 'none' : 'auto'}>
         <ScrollView
           ref={scrollRef}
           style={styles.body}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          onLayout={() => {
-            if (isNoteFocused) scrollRef.current?.scrollToEnd({ animated: true });
+          scrollEventThrottle={16}
+          onScroll={(event) => {
+            fieldReveal.onScroll(event);
+            setScrolled(event.nativeEvent.contentOffset.y > 0);
           }}
-          onContentSizeChange={() => {
-            if (isNoteFocused) scrollRef.current?.scrollToEnd({ animated: true });
-          }}
+          onLayout={fieldReveal.onLayout}
         >
-          <View style={styles.topFields}>
+          <FieldRevealProvider value={fieldReveal.value}>
             <TypeToggle value={draft.transactionType} onChange={changeType} />
 
             <AmountField
@@ -231,27 +224,27 @@ const TransactionEditor = ({
               error={amountError}
             />
 
-            {limitForecast && (
-              <View style={styles.limitHint}>
-                <LimitHint forecast={limitForecast} currencyCode={currencyCode} />
-              </View>
-            )}
-          </View>
+            <View style={styles.categoryBlock}>
+              <CategoryGrid
+                load={categoriesLoad}
+                tiles={grid.tiles}
+                hasMore={grid.hasMore}
+                selectedId={draft.categoryId}
+                archived={ownArchived}
+                typeColor={typeColor}
+                typeWord={isIncome ? 'income' : 'expense'}
+                onSelect={(categoryId) => {
+                  // The number pad has no Return: picking a category is how the amount is done with.
+                  Keyboard.dismiss();
+                  change({ categoryId });
+                }}
+                onMore={onOpenCategories}
+                onCreate={onCreateCategory}
+                onRetry={categoriesQuery.refetch}
+              />
 
-          <View style={styles.container}>
-            <CategoryGrid
-              load={categoriesLoad}
-              tiles={grid.tiles}
-              hasMore={grid.hasMore}
-              selectedId={draft.categoryId}
-              archivedId={archived?.id ?? null}
-              typeColor={typeColor}
-              emptyLabel={`No ${isIncome ? 'income' : 'expense'} categories yet`}
-              onSelect={(categoryId) => change({ categoryId })}
-              onMore={() => dispatch(categoriesOpened())}
-              onCreate={onCreateCategory}
-              onRetry={categoriesQuery.refetch}
-            />
+              {limitForecast && <LimitHint forecast={limitForecast} currencyCode={currencyCode} />}
+            </View>
 
             <WalletPicker
               load={walletsLoad}
@@ -265,32 +258,19 @@ const TransactionEditor = ({
               onRetry={walletsQuery.refetch}
             />
 
-            <DateChip timestamp={draft.timestamp} error={errors.timestamp} onPress={() => dispatch(dateTimeOpened())} />
+            <DetailsCard
+              timestamp={draft.timestamp}
+              dateError={errors.timestamp}
+              description={draft.description}
+              descriptionError={errors.description}
+              onOpenDate={onOpenDate}
+              onChangeDescription={(description) => change({ description })}
+            />
 
-            <View style={styles.section}>
-              <View style={styles.sectionLabelRow}>
-                <Text style={styles.sectionLabel}>Note</Text>
-                <Text style={[styles.sectionHint, errors.description && styles.sectionHintError]}>
-                  {draft.description ? `${descriptionLength(draft.description)}/${DESCRIPTION_MAX_LENGTH}` : 'optional'}
-                </Text>
-              </View>
-
-              <TextInput
-                keyboardAppearance={scheme}
-                style={styles.note}
-                value={draft.description}
-                onChangeText={(description) => change({ description })}
-                onFocus={() => setNoteFocused(true)}
-                onBlur={() => setNoteFocused(false)}
-                placeholder="Add a note…"
-                placeholderTextColor={colors.muted}
-                multiline
-                blurOnSubmit
-                returnKeyType="done"
-                accessibilityLabel="Note"
-              />
-            </View>
-          </View>
+            {isEdit && (
+              <DeleteButton isOutlined isDeleting={isDeleting} disabled={isSaving || hasConflict} onPress={onDelete} />
+            )}
+          </FieldRevealProvider>
         </ScrollView>
       </View>
 
@@ -300,8 +280,6 @@ const TransactionEditor = ({
         ready={ready}
         isSaving={isSaving && !isDeleting}
         isAboveKeyboard={keyboardHeight > 0}
-        typeColor={typeColor}
-        onTypeColor={onTypeColor}
         banner={
           hasConflict ? (
             <Banner
@@ -361,12 +339,6 @@ const TransactionEditor = ({
                 onAction={onRetryDelete}
               />
             )
-          )
-        }
-        footer={
-          isEdit &&
-          keyboardHeight === 0 && (
-            <DeleteButton isDeleting={isDeleting} disabled={isSaving || hasConflict} onPress={onDelete} />
           )
         }
         onPress={onSave}

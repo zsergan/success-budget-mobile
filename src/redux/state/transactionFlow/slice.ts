@@ -16,7 +16,6 @@ export type FlowView =
   | { name: 'create'; focusAmount: boolean }
   | { name: 'details' }
   | { name: 'edit' }
-  | { name: 'categories'; form: FlowForm }
   // `pending` is the date and time picked but not applied yet.
   | { name: 'dateTime'; form: FlowForm; pending: string }
   | { name: 'created' }
@@ -98,11 +97,7 @@ const formView = (form: FlowForm): FlowView =>
   form === 'create' ? { name: 'create', focusAmount: false } : { name: 'edit' };
 
 export const activeForm = ({ view }: TransactionFlow): FlowForm | null =>
-  view.name === 'create' || view.name === 'edit'
-    ? view.name
-    : view.name === 'categories' || view.name === 'dateTime'
-      ? view.form
-      : null;
+  view.name === 'create' || view.name === 'edit' ? view.name : view.name === 'dateTime' ? view.form : null;
 
 // Only the draft a late answer belongs to may take it.
 const flowOf = (state: TransactionFlowState, draftId: number) => (state.flow?.draftId === draftId ? state.flow : null);
@@ -284,19 +279,13 @@ const transactionFlowSlice = createSlice({
         flow.refusal = null;
       }
     },
-    categoriesOpened: (state) => {
-      const flow = idleFlow(state);
-      if (flow?.view.name !== 'create' && flow?.view.name !== 'edit') return;
-
-      flow.view = { name: 'categories', form: flow.view.name };
-    },
-    categoryPicked: (state, { payload }: PayloadAction<{ categoryId: number }>) => {
-      const flow = idleFlow(state);
-      if (flow?.view.name !== 'categories' || !flow.draft) return;
+    // A pick from the full list, which is a screen over the form; it reaches only the draft it was opened for.
+    categoryPicked: (state, { payload }: DraftScoped<{ categoryId: number }>) => {
+      const flow = flowOf(state, payload.draftId);
+      if (!flow?.draft || flow.isSaving || (flow.view.name !== 'create' && flow.view.name !== 'edit')) return;
 
       flow.draft.categoryId = payload.categoryId;
       flow.promotedCategoryId = payload.categoryId;
-      flow.view = formView(flow.view.form);
     },
     dateTimeOpened: (state) => {
       const flow = idleFlow(state);
@@ -318,10 +307,10 @@ const transactionFlowSlice = createSlice({
       flow.draft.timestamp = flow.view.pending;
       flow.view = formView(flow.view.form);
     },
-    // Back or Cancel from a panel: the form as it was, an unapplied date dropped.
+    // Cancel, Back or a swipe from the date picker: the form as it was, the unapplied date dropped.
     panelClosed: (state) => {
       const flow = idleFlow(state);
-      if (flow?.view.name !== 'categories' && flow?.view.name !== 'dateTime') return;
+      if (flow?.view.name !== 'dateTime') return;
 
       flow.view = formView(flow.view.form);
     },
@@ -356,7 +345,7 @@ const transactionFlowSlice = createSlice({
       flow.notice = 'saveRecovered';
       flow.refusal = null;
       if (flow.view.name === 'create') flow.view = { name: 'edit' };
-      else if (flow.view.name === 'categories' || flow.view.name === 'dateTime') flow.view.form = 'edit';
+      else if (flow.view.name === 'dateTime') flow.view.form = 'edit';
     },
     // An earlier attempt of this create had applied: the form gives way to the record, or ends when it is deleted.
     createFound: (state, { payload }: DraftScoped<{ transaction: TransactionModel | null }>) => {
@@ -458,7 +447,6 @@ const transactionFlowSlice = createSlice({
         flow.promotedCategoryId = payload.categoryId;
       }
 
-      if (flow.view.name === 'categories') flow.view = formView(flow.view.form);
       flow.away = null;
     },
     awayEnded: (state, { payload }: DraftScoped) => {
@@ -524,7 +512,6 @@ export const {
   editStarted,
   editLeft,
   draftChanged,
-  categoriesOpened,
   categoryPicked,
   dateTimeOpened,
   pendingDateChanged,

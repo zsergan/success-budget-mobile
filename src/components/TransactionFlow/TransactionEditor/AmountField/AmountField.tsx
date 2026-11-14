@@ -3,11 +3,7 @@ import useThemedStyles from '@hooks/useThemedStyles';
 import { useEffect, useRef, useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
-import createStyles, { AMOUNT_FONT } from './style';
-
-// The digits shrink from 40 to 28 pt as they grow, so the largest amount still fits on one line.
-const fontSizeFor = (value: string) =>
-  Math.max(AMOUNT_FONT.min, Math.min(AMOUNT_FONT.max, AMOUNT_FONT.max - (value.length - 8) * 2));
+import createStyles, { amountFontSize } from './style';
 
 interface Props {
   value: string;
@@ -28,17 +24,19 @@ const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currency
   const inputRef = useRef<TextInput>(null);
   const [isFocused, setFocused] = useState(false);
 
-  // Focused once, on the open of a new transaction; never on Edit or on the way back from a panel.
+  // Focused once, on the open of a new transaction; never on Edit or on the way back from a picker.
   useEffect(() => {
     if (autoFocus) inputRef.current?.focus();
   }, [autoFocus]);
 
   const hasValue = value.trim() !== '';
-  const fontSize = fontSizeFor(value);
+  const fontSize = amountFontSize(value.trim());
   const lineColor = error ? colors.danger : isFocused ? typeColor : colors.hairline;
 
   return (
     <View style={styles.root}>
+      <Text style={styles.label}>Amount</Text>
+
       <View style={[styles.row, { borderBottomColor: lineColor }, (isFocused || !!error) && styles.rowActive]}>
         {hasValue && (
           <Text style={[styles.sign, { color: typeColor, fontSize }]} accessibilityElementsHidden>
