@@ -122,6 +122,7 @@ const AcceptInviteScreen = ({ navigation }: Props) => {
               control={form.control}
               render={({ field: { onChange, value }, fieldState: { error } }) => (
                 <Input
+                  variant="outlined"
                   label="Invite code"
                   accessibilityLabel="Invite code"
                   error={error?.message}
@@ -131,7 +132,6 @@ const AcceptInviteScreen = ({ navigation }: Props) => {
                   keyboardType="number-pad"
                   autoCorrect={false}
                   maxLength={6}
-                  withShadow
                 />
               )}
             />
