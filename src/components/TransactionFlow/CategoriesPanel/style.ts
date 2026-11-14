@@ -5,6 +5,9 @@ import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme) =>
   StyleSheet.create({
+    root: {
+      flex: 1,
+    },
     body: {
       paddingHorizontal: theme.spacing.xl,
       paddingTop: theme.spacing.lg,

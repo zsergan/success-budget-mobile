@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Keyboard, Text, TouchableOpacity, View } from 'react-native';
+import { Keyboard, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
 import CalendarGrid from '@components/Period/RangePicker/CalendarGrid';
 import useThemedStyles from '@hooks/useThemedStyles';
@@ -13,7 +12,6 @@ import { compareDays } from '@shared/utils/compare';
 import { MIN_TIMESTAMP } from '@redux/state/transactionFlow/draft';
 import { formatDateTime } from '../format';
 import PanelHeader from '../PanelHeader/PanelHeader';
-import useBoundedHeight from '@components/Modals/BottomSheetModal/useBoundedHeight';
 import type { PickBounds } from './pickDateTime';
 import { pickDay, pickTime } from './pickDateTime';
 import TimeField from './TimeField';
@@ -37,7 +35,6 @@ const DateTimePanel = ({ pending, original, onBack, onClose }: Props) => {
   const dispatch = useAppDispatch();
   useEffect(() => Keyboard.dismiss(), []);
   const insets = useSafeAreaInsets();
-  const { height } = useBoundedHeight();
   const now = useNow();
   const picked = new Date(pending);
   const [month, setMonth] = useState(() => new Date(picked.getFullYear(), picked.getMonth(), 1));
@@ -61,10 +58,10 @@ const DateTimePanel = ({ pending, original, onBack, onClose }: Props) => {
   ];
 
   return (
-    <View style={{ height }}>
+    <View style={styles.root}>
       <PanelHeader title="Date & time" onBack={onBack} onClose={onClose} />
 
-      <BottomSheetScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         <View style={styles.quickRow}>
           {quickDays.map(({ label, day }) => {
             const isActive = compareDays(picked, day);
@@ -103,7 +100,7 @@ const DateTimePanel = ({ pending, original, onBack, onClose }: Props) => {
           maximumDate={isToday ? now : undefined}
           onChange={(time) => change((bounds) => pickTime(pending, time, bounds))}
         />
-      </BottomSheetScrollView>
+      </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: theme.spacing.xl + insets.bottom }]}>
         <TouchableOpacity style={styles.cancelButton} onPress={onBack} activeOpacity={0.8}>

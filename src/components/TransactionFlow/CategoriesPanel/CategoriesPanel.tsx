@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Keyboard, Text, TouchableOpacity, View } from 'react-native';
-import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
 import useTheme from '@hooks/useTheme';
@@ -13,7 +12,6 @@ import { TransactionType } from '@shared/enums';
 import { hexToRgba } from '@shared/utils';
 import PanelHeader from '../PanelHeader/PanelHeader';
 import SectionLoad, { listLoad } from '../SectionLoad/SectionLoad';
-import useBoundedHeight from '@components/Modals/BottomSheetModal/useBoundedHeight';
 
 import createStyles from './style';
 
@@ -31,7 +29,6 @@ const CategoriesPanel = ({ transactionType, selectedId, onBack, onClose }: Props
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const dispatch = useAppDispatch();
-  const { height } = useBoundedHeight();
   const categoriesQuery = useGetCategoriesQuery(useSpaceArg());
   const { currentData } = categoriesQuery;
   const load = listLoad(categoriesQuery);
@@ -47,14 +44,14 @@ const CategoriesPanel = ({ transactionType, selectedId, onBack, onClose }: Props
   const shown = needle ? categories.filter(({ name }) => name.toLowerCase().includes(needle)) : categories;
 
   return (
-    <View style={{ height }}>
+    <View style={styles.root}>
       <PanelHeader title="Categories" subtitle="Your transaction is kept" onBack={onBack} onClose={onClose} />
 
-      <BottomSheetScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         {load !== 'ready' && <SectionLoad load={load} name="categories" onRetry={categoriesQuery.refetch} />}
 
         {categories.length > SEARCH_THRESHOLD && (
-          <BottomSheetTextInput
+          <TextInput
             style={styles.search}
             value={query}
             onChangeText={setQuery}
@@ -98,7 +95,7 @@ const CategoriesPanel = ({ transactionType, selectedId, onBack, onClose }: Props
             );
           })}
         </View>
-      </BottomSheetScrollView>
+      </ScrollView>
     </View>
   );
 };

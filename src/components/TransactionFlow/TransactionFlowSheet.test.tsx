@@ -3,6 +3,8 @@ import { useState } from 'react';
 import type { AppStateStatus } from 'react-native';
 import { AccessibilityInfo, AppState, BackHandler, PixelRatio, Text } from 'react-native';
 import { Provider } from 'react-redux';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 
@@ -24,6 +26,8 @@ import { createToastRecorder } from '@components/Toast/testing';
 import { colorThemes } from '@shared/theme';
 import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
 import { useBackPress, useSheetPresence } from '@hooks';
+import TransactionEditorScreen from '@screens/TransactionEditor/TransactionEditorScreen';
+import type { RootStackParamList } from '@shared/types';
 import TransactionFlowSheet from './TransactionFlowSheet';
 
 interface SheetProps {
@@ -38,9 +42,18 @@ interface SheetProps {
 
 const mockCategorySheet: { holdDismiss: boolean; finishDismiss?: () => void } = { holdDismiss: false };
 
-const mockSheet: { props?: SheetProps; presents: number; keptOpen: number; swipeDown?: () => void } = {
+// While held, the flow sheet's close stays on screen, as during its animation, until finishDismiss().
+const mockSheet: {
+  props?: SheetProps;
+  presents: number;
+  keptOpen: number;
+  swipeDown?: () => void;
+  holdDismiss: boolean;
+  finishDismiss?: () => void;
+} = {
   presents: 0,
   keptOpen: 0,
+  holdDismiss: false,
 };
 
 // The confirmation sheet the flow pushes above itself.
@@ -56,22 +69,9 @@ jest.mock('@components/Modals/BottomSheetModal/useReturnToRest', () => (onRest: 
   stop: () => {},
 }));
 
-const finishReturn = () => {
-  const finish = mockReturn.finish;
-  mockReturn.finish = undefined;
-  act(() => finish?.());
-};
-
-// A swipe starting to close the flow sheet; true when the sheet snapped back into place instead.
-const startSwipeClose = () => {
-  const before = mockSheet.keptOpen;
-  act(() => mockSheet.props?.onAnimate?.(0, -1));
-  finishReturn();
-  return mockSheet.keptOpen > before;
-};
-
-const mockBack: { press?: () => boolean | null | undefined } = {};
-const pressBack = () => act(() => void mockBack.press?.());
+// As the system: the handler added last answers first, and the next one only if that left the press alone.
+const backHandlers: ((event: never) => boolean | null | undefined)[] = [];
+const pressBack = () => act(() => void [...backHandlers].reverse().some((handler) => handler({} as never)));
 
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = jest.requireActual('react');
@@ -97,7 +97,8 @@ jest.mock('@gorhom/bottom-sheet', () => {
         setOpen(false);
         props.onDismiss?.();
       };
-      if (!isFlowSheet && mockCategorySheet.holdDismiss) mockCategorySheet.finishDismiss = finish;
+      if (isFlowSheet && mockSheet.holdDismiss) mockSheet.finishDismiss = finish;
+      else if (!isFlowSheet && mockCategorySheet.holdDismiss) mockCategorySheet.finishDismiss = finish;
       else finish();
     };
 
@@ -135,12 +136,6 @@ jest.mock('@gorhom/bottom-sheet', () => {
     useBottomSheet: () => React.useContext(SheetContext),
   };
 });
-
-const mockNavigate = jest.fn();
-jest.mock('@react-navigation/native', () => ({
-  ...jest.requireActual('@react-navigation/native'),
-  useNavigation: () => ({ navigate: mockNavigate }),
-}));
 
 jest.mock('@react-native-community/datetimepicker', () => () => null);
 
@@ -253,6 +248,18 @@ const respond = ({ url, method }: { url: string; method: string }) => {
   return Promise.resolve({ data: [] });
 };
 
+const Stack = createNativeStackNavigator<RootStackParamList>();
+const navigationRef = createNavigationContainerRef<RootStackParamList>();
+
+const renderHome = () => (
+  <>
+    <TransactionFlowSheet />
+    <Text>Home</Text>
+  </>
+);
+const renderWallet = () => <Text>Add Wallet</Text>;
+
+// The sheet over the app's first route, with the routes its form opens.
 const flowTree = (store: ReturnType<typeof createAppStore>) => (
   <Provider store={store}>
     <SafeAreaProvider
@@ -261,10 +268,23 @@ const flowTree = (store: ReturnType<typeof createAppStore>) => (
         insets: { top: 0, right: 0, bottom: 0, left: 0 },
       }}
     >
-      <TransactionFlowSheet />
+      <NavigationContainer ref={navigationRef}>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name={ScreenNames.HOME_SCREEN}>{renderHome}</Stack.Screen>
+          <Stack.Screen name={ScreenNames.TRANSACTION_EDITOR_SCREEN} component={TransactionEditorScreen} />
+          <Stack.Screen name={ScreenNames.ADD_WALLET_SCREEN}>{renderWallet}</Stack.Screen>
+        </Stack.Navigator>
+      </NavigationContainer>
     </SafeAreaProvider>
   </Provider>
 );
+
+const routes = () => navigationRef.getRootState()?.routes ?? [];
+const routeNames = () => routes().map(({ name }) => name);
+const HOME_ONLY = [ScreenNames.HOME_SCREEN];
+const WITH_EDITOR = [ScreenNames.HOME_SCREEN, ScreenNames.TRANSACTION_EDITOR_SCREEN];
+// The back swipe, like any other removal of the top route.
+const swipeBack = () => act(() => navigationRef.goBack());
 
 const renderFlow = () => {
   const store = createAppStore();
@@ -333,10 +353,13 @@ beforeEach(() => {
   categoriesResponse = categories;
   limitsResponse = noLimits;
   mockSheet.presents = 0;
+  mockSheet.holdDismiss = false;
+  mockSheet.finishDismiss = undefined;
   mockReturn.finish = undefined;
+  backHandlers.splice(0);
   jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_event, handler) => {
-    mockBack.press = () => handler({} as never);
-    return { remove: () => {} };
+    backHandlers.push(handler);
+    return { remove: () => void backHandlers.splice(backHandlers.indexOf(handler), 1) };
   });
   mockedRequest.mockImplementation(respond);
   jest.spyOn(PixelRatio, 'getFontScale').mockReturnValue(1);
@@ -366,20 +389,24 @@ describe('TransactionFlowSheet', () => {
     await setTheme('dark');
     await settle();
 
-    expect(mockSheet.presents).toBe(1);
+    expect(routeNames()).toEqual(WITH_EDITOR);
     expect(screen.getByLabelText('Amount').props.value).toBe('12');
     expect(selectTransactionFlow(store.getState())?.draft).toMatchObject({ amount: '12' });
     expect(screen.getByText('Save expense')).toHaveStyle({ color: colorThemes.dark.colors.onDanger });
   });
 
-  it('opens one sheet and keeps it when asked to open again', async () => {
+  it('opens one editor screen, never the sheet, and keeps it when asked to open again', async () => {
     const { open } = renderFlow();
 
     open();
     open(TransactionType.INCOME);
     await settle();
+    open(TransactionType.INCOME);
+    await settle();
 
-    expect(mockSheet.presents).toBe(1);
+    expect(routeNames()).toEqual(WITH_EDITOR);
+    expect(routes()[1].params).toEqual({ spaceId: 1 });
+    expect(mockSheet.presents).toBe(0);
     expect(screen.getAllByText('New transaction')).toHaveLength(1);
     expect(screen.getByText('Save expense')).toBeTruthy();
   });
@@ -389,9 +416,10 @@ describe('TransactionFlowSheet', () => {
 
     open();
     await settle();
-    fireEvent.press(screen.getByLabelText('Close'));
+    fireEvent.press(screen.getByLabelText('Back'));
     await settle();
     expect(flow()).toBeNull();
+    expect(routeNames()).toEqual(HOME_ONLY);
 
     openDetails();
     await settle();
@@ -404,33 +432,29 @@ describe('TransactionFlowSheet', () => {
     open();
     await settle();
     expect(screen.getByText('Save expense')).toBeTruthy();
+    expect(routeNames()).toEqual(WITH_EDITOR);
   });
 
-  it('asks before a swipe discards entered values, and lets an untouched form go', async () => {
-    const { open } = renderFlow();
-    open();
-    await settle();
-    expect(startSwipeClose()).toBe(false);
-
-    fillExpense();
-
-    expect(startSwipeClose()).toBe(true);
-    expect(asked()).toEqual(['Discard transaction?']);
-  });
-
-  it('asks before a swipe discards only once the sheet is back in place', async () => {
+  it.each([
+    ['Android Back', pressBack],
+    ['the back swipe', swipeBack],
+  ])('lets an untouched form go on %s, and asks before it discards entered values', async (_name, leave) => {
     const { open, flow } = renderFlow();
     open();
     await settle();
+    leave();
+    await settle();
+    expect(flow()).toBeNull();
+    expect(routeNames()).toEqual(HOME_ONLY);
+
+    open();
+    await settle();
     fillExpense();
-
-    act(() => mockSheet.props?.onAnimate?.(0, -1));
-    expect(asked()).toEqual([]);
-
-    finishReturn();
+    leave();
 
     expect(asked()).toEqual(['Discard transaction?']);
     expect(flow()?.draft).toMatchObject({ amount: '12' });
+    expect(routeNames()).toEqual(WITH_EDITOR);
   });
 
   it('opens one confirmation at a time, whichever way it is asked for', async () => {
@@ -439,10 +463,9 @@ describe('TransactionFlowSheet', () => {
     await settle();
     fillExpense();
 
-    fireEvent.press(screen.getByLabelText('Close'));
-    pressBackdrop();
-    expect(startSwipeClose()).toBe(true);
-    fireEvent.press(screen.getByLabelText('Close'));
+    fireEvent.press(screen.getByLabelText('Back'));
+    swipeBack();
+    fireEvent.press(screen.getByLabelText('Back'));
     expect(asked()).toEqual(['Discard transaction?']);
 
     // Back answers the confirmation first, then asks again from the form.
@@ -465,12 +488,7 @@ describe('TransactionFlowSheet', () => {
     fireEvent.press(screen.getByText('Apply'));
     const before = flow();
 
-    const requests = [
-      () => fireEvent.press(screen.getByLabelText('Close')),
-      pressBackdrop,
-      () => expect(startSwipeClose()).toBe(true),
-      pressBack,
-    ];
+    const requests = [() => fireEvent.press(screen.getByLabelText('Back')), swipeBack, pressBack];
     const cancels = [
       () => answer('Keep editing'),
       () => backdropOf(mockConfirmation.props)(),
@@ -508,14 +526,16 @@ describe('TransactionFlowSheet', () => {
     pressBack();
     fireEvent.press(screen.getByText(/, \d{2}:\d{2}$/));
     fireEvent.press(screen.getByText('Yesterday'));
-    pressBackdrop();
+    fireEvent.press(screen.getByLabelText('Close'));
     expect(asked()).toEqual(['Discard transaction?']);
     pressBack();
     expect(flow()).toMatchObject({ view: { name: 'dateTime' }, draft: { amount: '12' } });
 
     fireEvent.press(screen.getByLabelText('Close'));
     answer('Discard transaction');
+    await settle();
     expect(flow()).toBeNull();
+    expect(routeNames()).toEqual(HOME_ONLY);
   });
 
   it('opens and closes a sheet pushed above the form, leaving the form as it was', async () => {
@@ -572,7 +592,7 @@ describe('TransactionFlowSheet', () => {
 
     expect(screen.queryByText('Stacked above')).toBeNull();
     expect(asked()).toEqual([]);
-    expect(mockSheet.presents).toBe(1);
+    expect(routeNames()).toEqual(WITH_EDITOR);
     expect(screen.getAllByText('New transaction')).toHaveLength(1);
     expect(screen.getByLabelText('Amount').props.value).toBe('12');
 
@@ -581,7 +601,7 @@ describe('TransactionFlowSheet', () => {
     expect(asked()).toEqual(['Discard transaction?']);
   });
 
-  it('confirms only after the API answers, locking the sheet meanwhile', async () => {
+  it('confirms only after the API answers, keeping the form in place meanwhile', async () => {
     const { open, flow } = renderFlow();
 
     open();
@@ -591,16 +611,19 @@ describe('TransactionFlowSheet', () => {
 
     expect(screen.getByText('Saving…')).toBeTruthy();
     expect(screen.queryByText('Transaction saved')).toBeNull();
-    expect(mockSheet.props?.enablePanDownToClose).toBe(false);
-    expect(startSwipeClose()).toBe(true);
+    expect(screen.getByLabelText('Back')).toBeDisabled();
 
-    fireEvent.press(screen.getByLabelText('Close'));
-    pressBackdrop();
+    pressBack();
+    swipeBack();
     expect(asked()).toEqual([]);
     expect(flow()?.isSaving).toBe(true);
+    expect(routeNames()).toEqual(WITH_EDITOR);
+    expect(mockSheet.presents).toBe(0);
 
     await act(async () => answerWrite({ data: createTransactionResponseDto() }));
 
+    expect(routeNames()).toEqual(HOME_ONLY);
+    expect(mockSheet.presents).toBe(1);
     expect(screen.getByText('Transaction saved')).toBeTruthy();
     expect(mockedRequest).toHaveBeenCalledWith(
       expect.objectContaining({ method: 'POST', data: expect.objectContaining({ amount: '12.00', category_id: 1 }) }),
@@ -640,11 +663,13 @@ describe('TransactionFlowSheet', () => {
     await act(async () => failWrite(new Error('Network Error')));
     await settle();
 
+    const editorKey = routes()[1].key;
     fireEvent.changeText(screen.getByLabelText('Amount'), '25');
     fireEvent.press(screen.getByText('Save expense'));
     await act(async () => answerWrite({ data: createTransactionResponseDto({ amount: '12.00', version: 1 }) }));
     await settle();
 
+    expect(routes().map(({ key }) => key)).toEqual([routes()[0].key, editorKey]);
     expect(screen.getByText('Edit transaction')).toBeTruthy();
     expect(screen.getByText('Your earlier save went through')).toBeTruthy();
     expect(flow()).toMatchObject({
@@ -674,7 +699,7 @@ describe('TransactionFlowSheet', () => {
     await act(async () => failWrite(new Error('Network Error')));
     await settle();
 
-    expect(startSwipeClose()).toBe(true);
+    pressBack();
     expect(asked()).toEqual(['Close without confirmation?']);
 
     answer('Close');
@@ -943,10 +968,15 @@ describe('TransactionFlowSheet', () => {
     fireEvent.press(screen.getByText('Show'));
 
     expect(flow()).toBeNull();
-    expect(mockNavigate).toHaveBeenCalledWith(ScreenNames.HOME_SCREEN, {
-      screen: ScreenNames.TRANSACTIONS_TAB,
-      params: { reveal: { spaceId: 1, transactionId: 'tx-9', timestamp: '2026-01-05T10:00:00.000Z' } },
-    });
+    expect(routes()).toMatchObject([
+      {
+        name: ScreenNames.HOME_SCREEN,
+        params: {
+          screen: ScreenNames.TRANSACTIONS_TAB,
+          params: { reveal: { spaceId: 1, transactionId: 'tx-9', timestamp: '2026-01-05T10:00:00.000Z' } },
+        },
+      },
+    ]);
   });
 
   it('asks before discarding entered values, and closes at once without them', async () => {
@@ -954,21 +984,24 @@ describe('TransactionFlowSheet', () => {
 
     open();
     await settle();
-    fireEvent.press(screen.getByLabelText('Close'));
+    fireEvent.press(screen.getByLabelText('Back'));
+    await settle();
     expect(asked()).toEqual([]);
     expect(flow()).toBeNull();
 
     open();
     await settle();
     fillExpense();
-    pressBackdrop();
+    fireEvent.press(screen.getByLabelText('Back'));
 
     expect(asked()).toEqual(['Discard transaction?']);
     expect(confirmation().getByText('The amount and details you entered will be lost.')).toBeTruthy();
     expect(flow()).not.toBeNull();
 
     answer('Discard transaction');
+    await settle();
     expect(flow()).toBeNull();
+    expect(routeNames()).toEqual(HOME_ONLY);
   });
 
   it('drops the flow of a space the user left mid-save, and shows nothing for its answer', async () => {
@@ -985,8 +1018,38 @@ describe('TransactionFlowSheet', () => {
     await act(async () => answerWrite({ data: createTransactionResponseDto() }));
 
     expect(flow()).toBeNull();
+    expect(routeNames()).toEqual(HOME_ONLY);
     expect(screen.queryByText('Transaction saved')).toBeNull();
     expect(mockToasts.shown).toEqual([]);
+  });
+
+  it('takes the editor and a wallet screen opened from it off the stack when the space changes', async () => {
+    const { store, open, flow } = renderFlow();
+
+    open();
+    await settle();
+    fillExpense();
+    fireEvent.press(screen.getByText('New wallet'));
+    const { draftId } = flow()!;
+    expect(routeNames()).toEqual([...WITH_EDITOR, ScreenNames.ADD_WALLET_SCREEN]);
+
+    act(() => {
+      store.dispatch(activateSpace(2));
+    });
+    await settle();
+
+    expect(flow()).toBeNull();
+    expect(routeNames()).toEqual(HOME_ONLY);
+
+    // The wallet saved for the draft that is gone picks nothing in a form opened since.
+    act(() => {
+      store.dispatch(createOpened({ spaceId: 2, transactionType: TransactionType.EXPENSE, walletId: null, now: '' }));
+      store.dispatch(walletCreated({ draftId, walletId: 8 }));
+    });
+    await settle();
+
+    expect(flow()?.draft?.walletId).not.toBe(8);
+    expect(routes()).toMatchObject([{}, { name: ScreenNames.TRANSACTION_EDITOR_SCREEN, params: { spaceId: 2 } }]);
   });
 
   it('starts another transaction on the same type and wallet', async () => {
@@ -1028,6 +1091,7 @@ describe('TransactionFlowSheet', () => {
     await act(async () => {
       store.dispatch(walletCreated({ draftId, walletId: 8 }));
       store.dispatch(baseApi.util.invalidateTags(spaceTags(1, 'Wallets')));
+      navigationRef.goBack();
       store.dispatch(awayEnded({ draftId }));
     });
     await settle();
@@ -1087,6 +1151,8 @@ describe('TransactionFlowSheet', () => {
     await settle();
     fireEvent.press(screen.getByText('Edit'));
 
+    expect(routeNames()).toEqual(WITH_EDITOR);
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
     expect(screen.getByText('Edit transaction')).toBeTruthy();
     expect(screen.getByText('Save changes')).toBeDisabled();
 
@@ -1100,7 +1166,42 @@ describe('TransactionFlowSheet', () => {
     expect(asked()).toEqual(['Discard changes?']);
 
     answer('Discard changes');
+    await settle();
     expect(flow()).toMatchObject({ view: { name: 'details' }, draft: null });
+    expect(routeNames()).toEqual(HOME_ONLY);
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeTruthy();
+  });
+
+  it('opens the editor once for repeated taps on Edit, and only after the details sheet has gone', async () => {
+    const { openDetails, flow } = renderFlow();
+
+    openDetails();
+    await settle();
+    mockSheet.holdDismiss = true;
+    const edit = screen.getByText('Edit');
+    fireEvent.press(edit);
+    fireEvent.press(edit);
+
+    expect(flow()?.view.name).toBe('edit');
+    expect(routeNames()).toEqual(HOME_ONLY);
+    // The closing sheet still shows the details, never the form.
+    expect(screen.queryByText('Edit transaction')).toBeNull();
+
+    act(() => mockSheet.finishDismiss?.());
+    await settle();
+
+    expect(routeNames()).toEqual(WITH_EDITOR);
+    expect(screen.getByText('Edit transaction')).toBeTruthy();
+
+    // An untouched edit goes back to the details without asking.
+    mockSheet.holdDismiss = false;
+    pressBack();
+    await settle();
+
+    expect(asked()).toEqual([]);
+    expect(flow()).toMatchObject({ view: { name: 'details' }, saved: { id: 'tx-1' } });
+    expect(routeNames()).toEqual(HOME_ONLY);
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeTruthy();
   });
 
   it('saves an edit at the version it read and returns to the details', async () => {
@@ -1127,6 +1228,8 @@ describe('TransactionFlowSheet', () => {
       }),
     );
     expect(flow()).toMatchObject({ view: { name: 'details' }, saved: { amount: '70.00', version: 3 } });
+    expect(routeNames()).toEqual(HOME_ONLY);
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeTruthy();
     // The details show the new values, so no toast says they were saved.
     expect(mockToasts.shown).toEqual([]);
   });
@@ -1259,6 +1362,8 @@ describe('TransactionFlowSheet', () => {
     expect(screen.getByText('Save changes')).toBeDisabled();
     expect(mockedRequest.mock.calls.filter(([config]) => config.method === 'PATCH')).toHaveLength(1);
 
+    const editorKey = routes()[1].key;
+    const { draftId } = flow()!;
     stored = transactionDto({ amount: '80.00', version: 3 });
     fireEvent.press(screen.getByText('Load latest'));
     await settle();
@@ -1266,6 +1371,9 @@ describe('TransactionFlowSheet', () => {
     expect(screen.queryByText('This transaction was changed')).toBeNull();
     expect(screen.getByLabelText('Amount').props.value).toBe('80.00');
     expect(flow()).toMatchObject({ view: { name: 'edit' }, saved: { version: 3 } });
+    // The new draft stays on the route the old one was on.
+    expect(flow()!.draftId).not.toBe(draftId);
+    expect(routes().map(({ key }) => key)).toEqual([routes()[0].key, editorKey]);
   });
 
   it('says the record no longer exists when the details find it deleted elsewhere', async () => {
@@ -1338,7 +1446,7 @@ describe('TransactionFlowSheet', () => {
 
     expect(asked()).toEqual([]);
     expect(screen.getByText('Deleting…')).toBeTruthy();
-    expect(screen.getByLabelText('Close')).toBeDisabled();
+    expect(screen.getByLabelText('Back to details')).toBeDisabled();
     expect(flow()?.isSaving).toBe(true);
 
     await act(async () => answerWrite({ data: true }));
@@ -1542,15 +1650,21 @@ describe('TransactionFlowSheet', () => {
     const { draftId } = flow()!;
     expect(flow()?.away).toBe('wallet');
     expect(screen.queryByText('New transaction')).toBeNull();
-    expect(mockNavigate).toHaveBeenCalledWith('AddWalletScreen', { id: 'new', forDraft: draftId });
+    fireEvent.press(screen.getByText('New wallet', { includeHiddenElements: true }));
+    expect(routes()).toMatchObject([
+      { name: ScreenNames.HOME_SCREEN },
+      { name: ScreenNames.TRANSACTION_EDITOR_SCREEN },
+      { name: ScreenNames.ADD_WALLET_SCREEN, params: { id: 'new', forDraft: draftId } },
+    ]);
 
     act(() => {
       store.dispatch(walletCreated({ draftId, walletId: 8 }));
+      navigationRef.goBack();
       store.dispatch(awayEnded({ draftId }));
     });
 
     expect(screen.getByText('New transaction')).toBeTruthy();
-    expect(mockSheet.presents).toBe(2);
+    expect(routeNames()).toEqual(WITH_EDITOR);
     expect(flow()?.draft).toMatchObject({ amount: '12', categoryId: 1, walletId: 8 });
   });
 
@@ -1566,7 +1680,8 @@ describe('TransactionFlowSheet', () => {
     expect(screen.getByPlaceholderText('My category')).toBeTruthy();
 
     fireEvent.changeText(screen.getByPlaceholderText('My category'), 'Bonus');
-    fireEvent.press(screen.getByText('Create category'));
+    // The sheet's own button, over the form's.
+    fireEvent.press(screen.getAllByText('Create category').at(-1)!);
     await settle();
 
     expect(flow()).toMatchObject({ away: null, draft: { amount: '500', categoryId: 30 } });
@@ -1666,7 +1781,7 @@ describe('TransactionFlowSheet', () => {
     await settle();
 
     expect(flow()?.draft?.walletId).toBe(7);
-    fireEvent.press(screen.getByLabelText('Close'));
+    fireEvent.press(screen.getByLabelText('Back'));
     expect(asked()).toEqual([]);
     expect(flow()).toBeNull();
   });
@@ -1792,6 +1907,7 @@ describe('TransactionFlowSheet', () => {
     await act(async () => {
       store.dispatch(walletCreated({ draftId, walletId: 8 }));
       store.dispatch(baseApi.util.invalidateTags(spaceTags(1, 'Wallets')));
+      navigationRef.goBack();
       store.dispatch(awayEnded({ draftId }));
     });
     await settle();

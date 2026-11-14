@@ -54,6 +54,8 @@ export type MainTabParamList = {
 export type RootStackParamList = {
   [ScreenNames.HOME_SCREEN]: NavigatorScreenParams<MainTabParamList>;
   [ScreenNames.ADD_WALLET_SCREEN]: AddWalletParams;
+  // The draft lives in the transaction flow; the route only says which space's flow it shows.
+  [ScreenNames.TRANSACTION_EDITOR_SCREEN]: { spaceId: number };
   [ScreenNames.CATEGORIES_SCREEN]: undefined;
   [ScreenNames.CREATE_SPACE_SCREEN]: undefined;
   [ScreenNames.MEMBERS_SCREEN]: undefined;

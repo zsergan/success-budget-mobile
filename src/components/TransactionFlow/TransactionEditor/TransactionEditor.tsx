@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
-import type { BottomSheetScrollViewMethods } from '@gorhom/bottom-sheet';
-import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
+import useKeyboardHeight from '@hooks/useKeyboardHeight';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
@@ -39,7 +38,6 @@ import { forecastLimit } from './LimitHint/limitForecast';
 import LimitHint from './LimitHint/LimitHint';
 import TypeToggle from './TypeToggle/TypeToggle';
 import useDefaultWallet from './useDefaultWallet';
-import useBoundedHeight from '@components/Modals/BottomSheetModal/useBoundedHeight';
 import WalletPicker from './WalletPicker/WalletPicker';
 
 import createStyles from './style';
@@ -48,7 +46,6 @@ interface Props {
   flow: TransactionFlow & { draft: TransactionDraft };
   onSave: () => void;
   onBack: () => void;
-  onClose: () => void;
   onCreateWallet: () => void;
   onCreateCategory: () => void;
   onDelete: () => void;
@@ -59,7 +56,6 @@ const TransactionEditor = ({
   flow,
   onSave,
   onBack,
-  onClose,
   onCreateWallet,
   onCreateCategory,
   onDelete,
@@ -69,8 +65,8 @@ const TransactionEditor = ({
   const { colors } = colorTheme;
   const styles = useThemedStyles(createStyles);
   const dispatch = useAppDispatch();
-  const { height, keyboardHeight } = useBoundedHeight();
-  const scrollRef = useRef<BottomSheetScrollViewMethods>(null);
+  const keyboardHeight = useKeyboardHeight();
+  const scrollRef = useRef<ScrollView>(null);
   const [isNoteFocused, setNoteFocused] = useState(false);
   const [isLoadingLatest, setLoadingLatest] = useState(false);
   const [hasLatestFailed, setLatestFailed] = useState(false);
@@ -190,39 +186,27 @@ const TransactionEditor = ({
   const saveLabel = isEdit ? 'Save changes' : isIncome ? 'Save income' : 'Save expense';
 
   return (
-    <View style={[styles.root, { height }]}>
+    <View style={styles.root}>
       <View style={styles.topBlock}>
         <View style={styles.header}>
-          {isEdit && (
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={onBack}
-              disabled={isSaving}
-              activeOpacity={0.6}
-              hitSlop={8}
-              accessibilityLabel="Back to details"
-            >
-              <Icon name="back" size={14} color={colors.text} strokeWidth={2.1} />
-            </TouchableOpacity>
-          )}
-
-          <Text style={styles.headerTitle}>{isEdit ? 'Edit transaction' : 'New transaction'}</Text>
-
           <TouchableOpacity
             style={styles.headerButton}
-            onPress={onClose}
+            onPress={onBack}
             disabled={isSaving}
             activeOpacity={0.6}
             hitSlop={8}
-            accessibilityLabel="Close"
+            accessibilityRole="button"
+            accessibilityLabel={isEdit ? 'Back to details' : 'Back'}
           >
-            <Icon name="close" size={14} color={colors.text} strokeWidth={2.1} />
+            <Icon name="back" size={14} color={colors.text} strokeWidth={2.1} />
           </TouchableOpacity>
+
+          <Text style={styles.headerTitle}>{isEdit ? 'Edit transaction' : 'New transaction'}</Text>
         </View>
       </View>
 
       <View style={[styles.fields, isSaving && styles.fieldsLocked]} pointerEvents={isSaving ? 'none' : 'auto'}>
-        <BottomSheetScrollView
+        <ScrollView
           ref={scrollRef}
           style={styles.body}
           keyboardShouldPersistTaps="handled"
@@ -291,7 +275,7 @@ const TransactionEditor = ({
                 </Text>
               </View>
 
-              <BottomSheetTextInput
+              <TextInput
                 keyboardAppearance={scheme}
                 style={styles.note}
                 value={draft.description}
@@ -307,7 +291,7 @@ const TransactionEditor = ({
               />
             </View>
           </View>
-        </BottomSheetScrollView>
+        </ScrollView>
       </View>
 
       <ActionRow

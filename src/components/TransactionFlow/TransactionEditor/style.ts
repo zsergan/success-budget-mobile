@@ -5,9 +5,8 @@ import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme) =>
   StyleSheet.create({
-    // The height comes from useBoundedHeight; a flex here would let the measured sheet collapse it.
     root: {
-      width: '100%',
+      flex: 1,
     },
     topBlock: {
       paddingTop: theme.spacing.sm,
@@ -48,7 +47,6 @@ const createStyles = ({ colors }: ColorTheme) =>
       justifyContent: 'center',
       backgroundColor: colors.track,
     },
-    // Without an explicit flex the ScrollView sizes to content instead of the sheet's remaining height, breaking the keyboard inset.
     body: {
       flex: 1,
     },

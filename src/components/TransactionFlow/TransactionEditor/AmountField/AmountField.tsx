@@ -1,9 +1,7 @@
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
-import type { ComponentRef } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { Text, TextInput, View } from 'react-native';
 
 import createStyles, { AMOUNT_FONT } from './style';
 
@@ -27,7 +25,7 @@ const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currency
   const { scheme, colorTheme } = useTheme();
   const { colors } = colorTheme;
   const styles = useThemedStyles(createStyles);
-  const inputRef = useRef<ComponentRef<typeof BottomSheetTextInput>>(null);
+  const inputRef = useRef<TextInput>(null);
   const [isFocused, setFocused] = useState(false);
 
   // Focused once, on the open of a new transaction; never on Edit or on the way back from a panel.
@@ -48,7 +46,7 @@ const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currency
           </Text>
         )}
 
-        <BottomSheetTextInput
+        <TextInput
           keyboardAppearance={scheme}
           ref={inputRef}
           value={value}

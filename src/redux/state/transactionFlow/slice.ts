@@ -97,7 +97,7 @@ type DraftScoped<T = object> = PayloadAction<T & { draftId: number }>;
 const formView = (form: FlowForm): FlowView =>
   form === 'create' ? { name: 'create', focusAmount: false } : { name: 'edit' };
 
-const activeForm = ({ view }: TransactionFlow): FlowForm | null =>
+export const activeForm = ({ view }: TransactionFlow): FlowForm | null =>
   view.name === 'create' || view.name === 'edit'
     ? view.name
     : view.name === 'categories' || view.name === 'dateTime'

@@ -17,6 +17,7 @@ import {
   ResetCodeScreen,
   SignInScreen,
   SignUpScreen,
+  TransactionEditorScreen,
   VerifyEmailScreen,
   LaunchScreen,
   WelcomeScreen,
@@ -105,6 +106,11 @@ const RootNavigator = () => {
                 <Stack.Screen
                   name={ScreenNames.ADD_WALLET_SCREEN}
                   component={CreateWalletScreen}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name={ScreenNames.TRANSACTION_EDITOR_SCREEN}
+                  component={TransactionEditorScreen}
                   options={{ headerShown: false }}
                 />
                 <Stack.Screen
