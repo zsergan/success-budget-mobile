@@ -6,9 +6,9 @@ import { Platform, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { Icon } from '@components';
 import { useTheme, useThemedStyles } from '@hooks';
 
-import createStyles from './style';
+import { CODE_LENGTH } from './code';
 
-export const CODE_LENGTH = 6;
+import createStyles from './style';
 
 // Six fixed boxes share the width: a digit grown further than this no longer fits its box.
 const DIGIT_SCALE_LIMIT = 1.3;

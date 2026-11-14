@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import type { TextInput } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
 
 import { useToast } from '@hooks';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
@@ -12,10 +11,7 @@ import type { PasswordResetFailure } from '@screens/Auth/passwordReset/passwordR
 import { getPasswordResetFailure } from '@screens/Auth/passwordReset/passwordResetFailure';
 import useLatestRequest from '@screens/Auth/passwordReset/useLatestRequest';
 import useSecondsUntil from '@hooks/useSecondsUntil';
-import { CODE_LENGTH } from './components/CodeInput/CodeInput';
-
-// Paste and code autofill may bring spaces or dashes; only the digits count, leading zeros included.
-const toCode = (text: string) => text.replace(/\D/g, '').slice(0, CODE_LENGTH);
+import { CODE_LENGTH, isFilledAtOnce, readClipboardCode, toCode } from '@screens/Auth/components/CodeInput/code';
 
 // Why the code on screen can't be used any more; only a new code moves on from here.
 export type CodeBlock = 'expired' | 'attempts' | 'unknown' | 'authorizationExpired';
@@ -77,21 +73,16 @@ const useResetCode = ({ navigation, route }: UseResetCodeProps) => {
     setFailure((current) => (current?.failure.kind === 'rateLimited' ? current : null));
   };
 
-  // More than one digit arriving at once is a paste or an autofill, never typing.
   const changeCode = (text: string) => {
     const next = toCode(text);
 
-    applyCode(next, next.length - code.length > 1);
+    applyCode(next, isFilledAtOnce(code, next));
   };
 
   const pasteCode = async () => {
-    try {
-      const pasted = toCode(await Clipboard.getStringAsync());
+    const pasted = await readClipboardCode();
 
-      if (pasted !== '') applyCode(pasted, true);
-    } catch {
-      // Nothing readable on the clipboard: the field is still there to type in.
-    }
+    if (pasted !== '') applyCode(pasted, true);
 
     inputRef.current?.focus();
   };

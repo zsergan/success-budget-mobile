@@ -6,7 +6,7 @@ import type { RootStackScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
 import AuthFormLayout from '@screens/Auth/AuthFormLayout/AuthFormLayout';
 import PasswordResetFailureBanner from '@screens/Auth/passwordReset/PasswordResetFailureBanner';
-import useKeyboardLayout from '@screens/Auth/passwordReset/useKeyboardLayout';
+import useKeyboardLayout from '@screens/Auth/hooks/useKeyboardLayout';
 import PasswordRules from './components/PasswordRules/PasswordRules';
 import useNewPasswordForm from './useNewPasswordForm';
 
