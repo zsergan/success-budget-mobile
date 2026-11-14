@@ -2,51 +2,90 @@ import { useEffect, useRef, useState } from 'react';
 import type { TextInput } from 'react-native';
 
 import { useToast } from '@hooks';
+import useSecondsUntil from '@hooks/useSecondsUntil';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
+import { verificationAbandoned } from '@redux/state/auth/actions';
 import { verifyEmailMe } from '@redux/state/auth/thunks';
 import { selectAuth } from '@redux/state/auth/selectors';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
-import { getErrorMessage, isApiError } from '@shared/utils';
 import { CODE_LENGTH, isFilledAtOnce, readClipboardCode, toCode } from '@screens/Auth/components/CodeInput/code';
+import type { VerifyEmailFailure } from './verifyEmailFailure';
+import { getVerifyEmailFailure } from './verifyEmailFailure';
 
 type UseVerifyEmailProps = Pick<RootStackScreenProps<ScreenNames.VERIFY_EMAIL_SCREEN>, 'navigation'>;
+
+type CodeBlock = Extract<VerifyEmailFailure, { kind: 'codeUnusable' }>;
 
 const useVerifyEmail = ({ navigation }: UseVerifyEmailProps) => {
   const dispatch = useAppDispatch();
   const toast = useToast();
+  const { userEmail, verification } = useAppSelector(selectAuth);
   // The address this screen opened for: signing in clears it from the store while the screen is still up.
-  const [email] = useState(useAppSelector(selectAuth).userEmail);
+  const [email] = useState(userEmail);
+  const isCommitting = verification?.isCommitting === true;
   const inputRef = useRef<TextInput>(null);
-  // Taps land before a re-render can disable the button; this one request at a time doesn't wait for it.
-  const isBusy = useRef(false);
+  // The attempt whose answer this screen acts on. Taps land before a re-render can disable the button, and an
+  // answer to an attempt left behind must not touch the one running now.
+  const currentRequestId = useRef<string | null>(null);
 
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
   const [isPasted, setIsPasted] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [failure, setFailure] = useState<VerifyEmailFailure | null>(null);
+  // Why the code on screen can't be used any more; only another code moves on from here.
+  const [block, setBlock] = useState<CodeBlock | null>(null);
+
+  const waitSeconds = useSecondsUntil(failure?.kind === 'rateLimited' ? failure.retryAt : undefined);
 
   useEffect(() => {
     if (email === null) navigation.popTo(ScreenNames.SIGN_UP_SCREEN);
   }, [email, navigation]);
 
-  // A code typed before leaving is not waiting on the way back.
+  useEffect(() => {
+    // Leaving ends the attempt still waiting for its answer, and a code typed before is not waiting on the way back.
+    const leave = () => {
+      currentRequestId.current = null;
+      dispatch(verificationAbandoned());
+      setIsVerifying(false);
+      setCode('');
+      setCodeError(null);
+      setIsPasted(false);
+      setFailure(null);
+    };
+    const unsubscribe = navigation.addListener('blur', leave);
+
+    return () => {
+      unsubscribe();
+      currentRequestId.current = null;
+      dispatch(verificationAbandoned());
+    };
+  }, [dispatch, navigation]);
+
+  // The token write and the sign-in that follows are one step: the screen stays until both are done.
+  const isCommittingRef = useRef(isCommitting);
+
+  useEffect(() => {
+    isCommittingRef.current = isCommitting;
+  }, [isCommitting]);
+
   useEffect(
     () =>
-      navigation.addListener('blur', () => {
-        setCode('');
-        setCodeError(null);
-        setIsPasted(false);
+      navigation.addListener('beforeRemove', (event) => {
+        if (isCommittingRef.current) event.preventDefault();
       }),
     [navigation],
   );
 
   const applyCode = (next: string, isPaste: boolean) => {
-    if (isVerifying) return;
+    if (isVerifying || block) return;
 
     setCode(next);
     setIsPasted(isPaste);
     setCodeError(null);
+    // A wait set by the server outlives typing; anything else was about the code that was there before.
+    setFailure((current) => (current?.kind === 'rateLimited' ? current : null));
   };
 
   const changeCode = (text: string) => {
@@ -63,29 +102,53 @@ const useVerifyEmail = ({ navigation }: UseVerifyEmailProps) => {
     inputRef.current?.focus();
   };
 
-  // A success signs in and the app takes over. An already verified account goes to Sign In, which says so once; any
-  // other failure stays under the code. An answer after the user left changes nothing.
-  const verify = async () => {
-    if (isBusy.current || email === null || code.length !== CODE_LENGTH) return;
+  const goToSignIn = (text: string) => {
+    toast.begin().showAfterNavigation({ tone: 'info', text });
+    navigation.navigate(ScreenNames.SIGN_IN_SCREEN, undefined, { pop: true });
+  };
 
-    isBusy.current = true;
+  // A success signs in and the app takes over; every failure names its next step here or on Sign In.
+  const verify = async () => {
+    if (currentRequestId.current || email === null || block || code.length !== CODE_LENGTH || waitSeconds > 0) return;
+
+    const request = dispatch(verifyEmailMe({ email, code }));
+
+    currentRequestId.current = request.requestId;
     setIsVerifying(true);
     setIsPasted(false);
-    const ticket = toast.begin();
+    setFailure(null);
 
-    const result = await dispatch(verifyEmailMe({ email, code }));
+    const result = await request;
 
-    isBusy.current = false;
+    if (currentRequestId.current !== request.requestId) return;
+
+    currentRequestId.current = null;
     setIsVerifying(false);
 
-    if (!verifyEmailMe.rejected.match(result) || !navigation.isFocused()) return;
+    if (!verifyEmailMe.rejected.match(result)) return;
 
-    if (isApiError(result.payload, 409)) {
-      ticket.showAfterNavigation({ tone: 'info', text: 'This email is already verified. Sign in to continue.' });
-      navigation.navigate(ScreenNames.SIGN_IN_SCREEN, undefined, { pop: true });
-    } else {
-      setCodeError(getErrorMessage(result.payload));
+    const next = getVerifyEmailFailure(result.payload);
+
+    switch (next?.kind) {
+      case undefined:
+        return;
+      case 'codeInvalid':
+        return setCodeError('That code doesn’t match. Check the email and try again.');
+      case 'codeUnusable':
+        setCode('');
+        return setBlock(next);
+      case 'alreadyVerified':
+        return goToSignIn('This email is already verified. Sign in to continue.');
+      case 'sessionNotSaved':
+        return goToSignIn('Your email is verified. Sign in to continue.');
+      default:
+        return setFailure(next);
     }
+  };
+
+  // While the session is being committed nothing leaves the screen.
+  const whenFree = (action: () => void) => () => {
+    if (!isCommitting) action();
   };
 
   return {
@@ -97,8 +160,14 @@ const useVerifyEmail = ({ navigation }: UseVerifyEmailProps) => {
     codeError,
     hint: isVerifying ? 'Checking the code…' : isPasted ? 'Pasted from clipboard.' : undefined,
     isVerifying,
-    isVerifyDisabled: code.length !== CODE_LENGTH || !!codeError || isVerifying,
+    isVerifyDisabled: code.length !== CODE_LENGTH || !!codeError || isVerifying || waitSeconds > 0,
     verify,
+    failure: block ?? failure,
+    isBlocked: block !== null,
+    goBack: whenFree(() => navigation.popTo(ScreenNames.SIGN_UP_SCREEN)),
+    changeEmail: whenFree(() => navigation.popTo(ScreenNames.SIGN_UP_SCREEN, { focusEmail: true })),
+    requestAnotherCode: whenFree(() => navigation.popTo(ScreenNames.SIGN_UP_SCREEN, { notice: 'requestAnotherCode' })),
+    openSignIn: whenFree(() => navigation.navigate(ScreenNames.SIGN_IN_SCREEN, undefined, { pop: true })),
   };
 };
 

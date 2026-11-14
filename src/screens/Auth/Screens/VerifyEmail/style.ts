@@ -5,6 +5,10 @@ import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme) =>
   StyleSheet.create({
+    failure: {
+      marginTop: -2,
+      marginBottom: 22,
+    },
     note: {
       marginBottom: 2,
       textAlign: 'center',

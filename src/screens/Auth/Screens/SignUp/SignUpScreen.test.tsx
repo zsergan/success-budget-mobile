@@ -485,10 +485,14 @@ describe('a failed registration', () => {
         'earlier',
         { email: 'anna@kovalenko.co', code: '000000' },
         {
-          statusCode: 400,
-          message: 'Invalid verification code',
-          path: '/users/verify-email',
-          timestamp: '2026-01-01T00:00:00.000Z',
+          reason: 'api',
+          error: {
+            statusCode: 400,
+            code: 'INVALID_CREDENTIALS',
+            message: 'Invalid credentials',
+            path: '/users/verify-email',
+            timestamp: '2026-01-01T00:00:00.000Z',
+          },
         },
       ),
     );

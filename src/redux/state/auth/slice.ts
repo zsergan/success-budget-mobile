@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 import { attemptFailed, attemptStarted } from '../launch/actions';
-import { registrationAbandoned } from './actions';
+import { registrationAbandoned, verificationAbandoned, verificationCommitStarted } from './actions';
 import initialState from './initialState';
 import { readStoredSession, registerMe, loginMe, logoutMe, verifyEmailMe } from './thunks';
 
@@ -13,6 +13,7 @@ const login = (state: typeof initialState, action: string) => {
   state.userToken = action;
   state.userEmail = null;
   state.registrationRequestId = null;
+  state.verification = null;
 };
 
 const logout = (state: typeof initialState) => {
@@ -21,6 +22,7 @@ const logout = (state: typeof initialState) => {
   state.storedSessionRead = null;
   state.userToken = null;
   state.registrationRequestId = null;
+  state.verification = null;
   state.sessionKey += 1;
 };
 
@@ -51,7 +53,27 @@ const authSlice = createSlice({
       state.registrationRequestId = null;
     });
 
-    builder.addCase(verifyEmailMe.fulfilled, (state, action) => login(state, action.payload));
+    builder.addCase(verifyEmailMe.pending, (state, action) => {
+      if (state.verification?.isCommitting) return;
+
+      state.verification = { requestId: action.meta.requestId, isCommitting: false };
+    });
+
+    builder.addCase(verificationAbandoned, (state) => {
+      if (!state.verification?.isCommitting) state.verification = null;
+    });
+
+    builder.addCase(verificationCommitStarted, (state, action) => {
+      if (state.verification?.requestId === action.payload) state.verification.isCommitting = true;
+    });
+
+    builder.addCase(verifyEmailMe.fulfilled, (state, action) => {
+      if (state.verification?.requestId === action.meta.requestId) login(state, action.payload);
+    });
+
+    builder.addCase(verifyEmailMe.rejected, (state, action) => {
+      if (state.verification?.requestId === action.meta.requestId) state.verification = null;
+    });
 
     builder.addCase(loginMe.fulfilled, (state, action) => login(state, action.payload));
 

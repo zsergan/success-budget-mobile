@@ -3,10 +3,13 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import * as Clipboard from 'expo-clipboard';
 
+import * as SecureStore from 'expo-secure-store';
+
 import { verifyEmail } from '@api/auth.api';
 import { createToastRecorder } from '@components/Toast/testing';
 import { createAppStore } from '@redux/Store';
 import { registerMe } from '@redux/state/auth/thunks';
+import { AUTH_TOKEN_KEY } from '@shared/constants';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
 import VerifyEmailScreen from './VerifyEmailScreen';
@@ -28,27 +31,30 @@ jest.mock('@hooks', () => ({
 }));
 
 const mockedVerifyEmail = jest.mocked(verifyEmail);
+const mockedSetItemAsync = jest.mocked(SecureStore.setItemAsync);
 
 const metrics = {
   frame: { x: 0, y: 0, width: 402, height: 874 },
   insets: { top: 62, right: 0, bottom: 34, left: 0 },
 };
 
-const rejection = (message: string, statusCode: number) => ({
+// The API's error body, with the code the backend sends for this status.
+const rejection = (statusCode: number, code: string, message: string, headers: Record<string, string> = {}) => ({
   response: {
     status: statusCode,
-    data: { message, statusCode, path: '/users/verify-email', timestamp: '2026-01-01T00:00:00.000Z' },
+    headers,
+    data: { code, message, statusCode, path: '/users/verify-email', timestamp: '2026-01-01T00:00:00.000Z' },
   },
 });
 
 const renderVerifyEmail = async ({ email = 'anna@kovalenko.co' as string | null } = {}) => {
   const store = createAppStore();
-  const listeners: Record<string, () => void> = {};
+  const listeners: Record<string, (event: { preventDefault: () => void }) => void> = {};
   const navigation = {
     navigate: jest.fn(),
     popTo: jest.fn(),
     isFocused: jest.fn(() => true),
-    addListener: jest.fn((event: string, listener: () => void) => {
+    addListener: jest.fn((event: string, listener: (typeof listeners)[string]) => {
       listeners[event] = listener;
 
       return () => delete listeners[event];
@@ -71,7 +77,14 @@ const renderVerifyEmail = async ({ email = 'anna@kovalenko.co' as string | null 
   );
   await act(async () => {});
 
-  return { navigation, store, blur: () => act(async () => listeners.blur()) };
+  const remove = () => {
+    const preventDefault = jest.fn();
+    listeners.beforeRemove({ preventDefault });
+
+    return preventDefault.mock.calls.length > 0 ? 'prevented' : 'allowed';
+  };
+
+  return { navigation, store, blur: () => act(async () => listeners.blur({ preventDefault: jest.fn() })), remove };
 };
 
 const codeField = () => screen.getByLabelText('6-digit code');
@@ -87,7 +100,7 @@ const submitCode = async (code: string) => {
 };
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  jest.resetAllMocks();
   mockToasts.clear();
 });
 
@@ -191,9 +204,63 @@ describe('going back to Sign Up', () => {
   });
 });
 
-describe('the answer', () => {
+describe('a code the server refuses', () => {
+  it('keeps a wrong code under the field until it is edited', async () => {
+    mockedVerifyEmail.mockRejectedValue(rejection(400, 'INVALID_CREDENTIALS', 'Invalid credentials'));
+    const { navigation } = await renderVerifyEmail();
+
+    await submitCode('123456');
+
+    expect(screen.getByText('That code doesn’t match. Check the email and try again.')).toBeTruthy();
+    expect(codeField().props.value).toBe('123456');
+    expect(isDisabled('Verify email')).toBe(true);
+    expect(navigation.navigate).not.toHaveBeenCalled();
+    expect(mockToasts.shown).toEqual([]);
+
+    await enterCode('12345');
+
+    expect(screen.queryByText('That code doesn’t match. Check the email and try again.')).toBeNull();
+  });
+
+  it.each([
+    ['a missing or expired code', rejection(404, 'NOT_FOUND', 'Not found'), 'This code no longer works'],
+    [
+      'exhausted attempts',
+      rejection(429, 'TOO_MANY_ATTEMPTS', 'Too many attempts, request a new confirmation code'),
+      'Too many wrong attempts',
+    ],
+  ])('leads to Request another code after %s', async (_name, answer, title) => {
+    mockedVerifyEmail.mockRejectedValue(answer);
+    const { navigation } = await renderVerifyEmail();
+
+    await submitCode('123456');
+
+    expect(screen.getByText(title)).toBeTruthy();
+    expect(codeField().props).toMatchObject({ editable: false, value: '' });
+    expect(screen.queryByRole('button', { name: 'Verify email' })).toBeNull();
+
+    await press('Request another code');
+
+    expect(navigation.popTo).toHaveBeenCalledWith(ScreenNames.SIGN_UP_SCREEN, { notice: 'requestAnotherCode' });
+    expect(mockedVerifyEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits out a request throttle for as long as Retry-After says, keeping the code', async () => {
+    mockedVerifyEmail.mockRejectedValue(
+      rejection(429, 'TOO_MANY_REQUESTS', 'ThrottlerException: Too Many Requests', { 'retry-after': '30' }),
+    );
+    await renderVerifyEmail();
+
+    await submitCode('123456');
+
+    expect(screen.getByText('Too many attempts')).toBeTruthy();
+    expect(screen.getByText(/^Try again in (30|29) seconds\.$/)).toBeTruthy();
+    expect(codeField().props.value).toBe('123456');
+    expect(isDisabled('Verify email')).toBe(true);
+  });
+
   it('sends an already verified account to sign in instead of asking for the code again', async () => {
-    mockedVerifyEmail.mockRejectedValue(rejection('Email is already verified', 409));
+    mockedVerifyEmail.mockRejectedValue(rejection(409, 'EMAIL_ALREADY_VERIFIED', 'Email is already verified'));
     const { navigation } = await renderVerifyEmail();
 
     await submitCode('123456');
@@ -208,34 +275,118 @@ describe('the answer', () => {
     ]);
     expect(screen.queryByText('Email is already verified')).toBeNull();
   });
+});
 
-  it('keeps a wrong code under the field until it is edited', async () => {
-    mockedVerifyEmail.mockRejectedValue(rejection('Invalid credentials', 400));
-    const { navigation } = await renderVerifyEmail();
+describe('a request that fails', () => {
+  it.each([
+    ['the network', { code: 'ERR_NETWORK', message: 'Network Error' }, 'Couldn’t reach the server', 'Retry'],
+    [
+      'the service',
+      rejection(503, 'SERVICE_UNAVAILABLE', 'Service Unavailable'),
+      'Verification is temporarily unavailable',
+      'Try again',
+    ],
+  ])('keeps the code after a failure of %s and sends it again on retry', async (_name, answer, title, retry) => {
+    mockedVerifyEmail.mockRejectedValueOnce(answer).mockReturnValue(new Promise(() => {}));
+    await renderVerifyEmail();
 
-    await submitCode('123456');
+    await submitCode('042917');
 
-    expect(screen.getByText('Invalid credentials')).toBeTruthy();
-    expect(codeField().props.value).toBe('123456');
-    expect(isDisabled('Verify email')).toBe(true);
-    expect(navigation.navigate).not.toHaveBeenCalled();
-    expect(mockToasts.shown).toEqual([]);
+    expect(screen.getByText(title)).toBeTruthy();
+    expect(codeField().props.value).toBe('042917');
+    expect(isDisabled('Verify email')).toBe(false);
 
-    await enterCode('12345');
+    await press(retry);
 
-    expect(screen.queryByText('Invalid credentials')).toBeNull();
+    expect(mockedVerifyEmail).toHaveBeenCalledTimes(2);
+    expect(mockedVerifyEmail).toHaveBeenLastCalledWith({ email: 'anna@kovalenko.co', code: '042917' });
+  });
+});
+
+describe('signing in', () => {
+  const held = () => {
+    let settle: (token: string) => void = () => {};
+    mockedVerifyEmail.mockReturnValueOnce(new Promise<string>((resolve) => (settle = resolve)));
+
+    return (token: string) => act(async () => settle(token));
+  };
+
+  it('signs in with the token the server gave for the code', async () => {
+    mockedVerifyEmail.mockResolvedValue('a-token');
+    const { store } = await renderVerifyEmail();
+
+    await submitCode('042917');
+
+    expect(mockedSetItemAsync).toHaveBeenCalledWith(AUTH_TOKEN_KEY, 'a-token');
+    expect(store.getState().auth).toMatchObject({ isSignedIn: true, userToken: 'a-token' });
   });
 
-  it('does nothing with an answer that comes after the user left', async () => {
-    let answer: (reason: unknown) => void = () => {};
-    mockedVerifyEmail.mockReturnValue(new Promise((_, reject) => (answer = reject)));
-    const { navigation } = await renderVerifyEmail();
+  it('neither saves a token nor signs in when the code is accepted after the user left', async () => {
+    const answer = held();
+    const { store, blur, navigation } = await renderVerifyEmail();
+    await submitCode('042917');
 
-    await submitCode('123456');
-    navigation.isFocused.mockReturnValue(false);
-    await act(async () => answer(rejection('Email is already verified', 409)));
+    await blur();
+    await answer('a-token');
 
+    expect(mockedSetItemAsync).not.toHaveBeenCalled();
+    expect(store.getState().auth.isSignedIn).toBe(false);
     expect(navigation.navigate).not.toHaveBeenCalled();
     expect(mockToasts.shown).toEqual([]);
+    expect(isDisabled('Verify email')).toBe(true);
+    expect(codeField().props).toMatchObject({ editable: true, value: '' });
+  });
+
+  it('acts only on the new attempt when an older one answers during it', async () => {
+    const answerOlder = held();
+    const answerNewer = held();
+    const { store, blur } = await renderVerifyEmail();
+    await submitCode('111111');
+    await blur();
+    await submitCode('222222');
+
+    await answerOlder('older-token');
+
+    expect(mockedSetItemAsync).not.toHaveBeenCalled();
+    expect(store.getState().auth.isSignedIn).toBe(false);
+    expect(button('Checking…').props.accessibilityState).toMatchObject({ busy: true });
+
+    await answerNewer('newer-token');
+
+    expect(mockedSetItemAsync).toHaveBeenCalledTimes(1);
+    expect(store.getState().auth.userToken).toBe('newer-token');
+  });
+
+  it('holds the screen while the token is saved, so the session is never half made', async () => {
+    let saved: () => void = () => {};
+    mockedVerifyEmail.mockResolvedValue('a-token');
+    mockedSetItemAsync.mockReturnValueOnce(new Promise<void>((resolve) => (saved = resolve)));
+    const { store, navigation, remove } = await renderVerifyEmail();
+
+    await submitCode('042917');
+    await press('Back');
+    fireEvent.press(screen.getByText('Sign In'));
+
+    expect(remove()).toBe('prevented');
+    expect(navigation.popTo).not.toHaveBeenCalled();
+    expect(navigation.navigate).not.toHaveBeenCalled();
+
+    await act(async () => saved());
+
+    expect(store.getState().auth.isSignedIn).toBe(true);
+  });
+
+  it('sends a verified user to sign in when this device can’t save the session', async () => {
+    mockedVerifyEmail.mockResolvedValue('a-token');
+    mockedSetItemAsync.mockRejectedValueOnce(new Error('keychain unavailable'));
+    const { store, navigation } = await renderVerifyEmail();
+
+    await submitCode('042917');
+
+    expect(store.getState().auth.isSignedIn).toBe(false);
+    expect(navigation.navigate).toHaveBeenCalledWith(ScreenNames.SIGN_IN_SCREEN, undefined, { pop: true });
+    expect(mockToasts.shown).toEqual([
+      { when: 'afterNavigation', message: { tone: 'info', text: 'Your email is verified. Sign in to continue.' } },
+    ]);
   });
 });

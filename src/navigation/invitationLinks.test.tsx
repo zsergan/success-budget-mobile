@@ -1,6 +1,7 @@
 import 'react-native-gesture-handler/jestSetup';
 import { act, fireEvent, screen } from '@testing-library/react-native';
 
+import { verifyEmail } from '@api/auth.api';
 import { logoutMe, registerMe, verifyEmailMe } from '@redux/state/auth/thunks';
 import {
   button,
@@ -42,6 +43,7 @@ jest.mock('expo-secure-store', () => ({
   setItemAsync: jest.fn(async (key: string, value: string) => void mockSecureStore.set(key, value)),
   deleteItemAsync: jest.fn(async (key: string) => void mockSecureStore.delete(key)),
 }));
+jest.mock('@api/auth.api', () => ({ ...jest.requireActual('@api/auth.api'), verifyEmail: jest.fn() }));
 jest.mock('expo-font', () => ({ loadAsync: jest.fn(() => Promise.resolve()) }));
 
 jest.useFakeTimers();
@@ -136,12 +138,14 @@ describe('an invitation link', () => {
     server.previews[token(87)] = [previewOf('Family')];
     const store = await openApp();
     expect(isOnWelcome()).toBe(true);
+    jest.mocked(verifyEmail).mockResolvedValue('a-token');
 
     await act(async () => {
-      store.dispatch(verifyEmailMe.fulfilled('a-token', 'verify', { email: payload.email, code: '123456' }));
+      await store.dispatch(verifyEmailMe({ email: payload.email, code: '123456' }));
     });
     await settle();
 
+    expect(mockSecureStore.get(AUTH_TOKEN_KEY)).toBe('a-token');
     expect(screen.getByText('Family')).toBeTruthy();
   });
 
