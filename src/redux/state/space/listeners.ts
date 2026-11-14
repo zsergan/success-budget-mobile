@@ -5,8 +5,10 @@ import { ApiErrorCode } from '@api/dto';
 import { baseApi, spaceIdOfArg } from '@redux/api/baseApi';
 import type { AppListener } from '@redux/Store';
 import { spaceApi } from './api';
+import { selectProfileId } from '../profile/selectors';
 import { pickFallbackSpaceId, selectSpacesResult } from './selectors';
-import { activateSpace, dropSpaceData, loseSpaceAccess } from './thunks';
+import { persistActiveSpace } from './storage';
+import { activateSpace, dropSpaceData, loseSpaceAccess, spaceSelected } from './thunks';
 
 const TRANSACTION_WRITES = ['createTransaction', 'updateTransaction', 'deleteTransaction'];
 
@@ -62,6 +64,19 @@ export const startSpaceSelectionListener = (listener: AppListener) => {
       if (spaceId === undefined) return;
       if (code === ApiErrorCode.FORBIDDEN_SPACE) dispatch(loseSpaceAccess(spaceId));
       else if (spaceId === getState().space.currentSpaceId) dispatch(spaceApi.util.invalidateTags(['Spaces']));
+    },
+  });
+};
+
+// Remembers the active space for the account that chose it. A logout resets the slice without this action, so the
+// preference outlives the session; a failed write is left alone, the selection itself never waits for storage.
+export const startActiveSpacePersistence = (listener: AppListener) => {
+  listener.startListening({
+    actionCreator: spaceSelected,
+    effect: ({ payload }, { getState }) => {
+      const userId = selectProfileId(getState());
+
+      if (userId !== undefined) void persistActiveSpace(userId, payload.spaceId);
     },
   });
 };
