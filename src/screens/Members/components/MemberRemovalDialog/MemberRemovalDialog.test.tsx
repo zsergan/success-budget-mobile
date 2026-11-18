@@ -41,7 +41,11 @@ it('removes a member, saying they lose access to the space', async () => {
   const { onConfirm, onCancel } = renderDialog({ kind: 'remove', userId: 4, label: 'Sam' });
 
   expect(screen.getByRole('header', { name: 'Remove Sam?' })).toBeTruthy();
-  expect(screen.getByText('Sam loses access to “Flat”.')).toBeTruthy();
+  expect(
+    screen.getByText(
+      'Sam loses access to “Flat”. What they added or what’s assigned to them stays in this space’s history, labelled Former member; shared operations aren’t redistributed.',
+    ),
+  ).toBeTruthy();
   pressSheetBackdrop();
   await act(async () => fireEvent.press(screen.getByRole('button', { name: 'Remove member' })));
 

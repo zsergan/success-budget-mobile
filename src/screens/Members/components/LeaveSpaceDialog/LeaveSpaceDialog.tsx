@@ -12,15 +12,19 @@ interface Props {
   onCancel: () => void;
 }
 
+// The space and its history stay with the other members.
+const STAYS =
+  ' The space and its history stay with the other members; what you added or what’s assigned to you remains, labelled Former member.';
+
 // A member just leaves; an owner hands the space to the next member, or deletes it as its last one.
 const leaveCopy = (spaceName: string, isOwner: boolean, memberCount: number) => {
   if (!isOwner) {
-    return { title: 'Leave this space?', description: `You lose access to “${spaceName}”.`, isDeleting: false };
+    return { title: 'Leave this space?', description: `You lose access to “${spaceName}”.${STAYS}`, isDeleting: false };
   }
   if (memberCount > 1) {
     return {
       title: 'Leave this space?',
-      description: `You’re the owner, so leaving hands “${spaceName}” to the next member.`,
+      description: `You’re the owner, so leaving hands “${spaceName}” to the next member.${STAYS}`,
       isDeleting: false,
     };
   }

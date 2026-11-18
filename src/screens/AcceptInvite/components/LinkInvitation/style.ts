@@ -34,6 +34,12 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       lineHeight: theme.lineHeights.bodySm,
       color: colors.muted,
     },
+    note: {
+      fontFamily: theme.fonts.medium,
+      fontSize: theme.fontSizes.caption,
+      lineHeight: 17,
+      color: colors.muted,
+    },
     rowValue: {
       flexShrink: 1,
       fontFamily: theme.fonts.semiBold,

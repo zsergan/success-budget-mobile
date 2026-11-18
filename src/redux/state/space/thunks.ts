@@ -40,7 +40,7 @@ export const refreshSpaceData =
     if (currentSpaceId === null || (!force && now - refreshedAt < SPACE_REFRESH_AFTER_MS)) return;
 
     dispatch(spaceDataRefreshed(now));
-    dispatch(baseApi.util.invalidateTags(spaceTags(currentSpaceId, 'Transactions', 'Wallets', 'Limits', 'Categories')));
+    dispatch(baseApi.util.invalidateTags(spaceTags(currentSpaceId, 'Transactions', 'Limits', 'Categories', 'Members')));
   };
 
 export const spaceAccessLost = createAction<{ spaceId: number }>('space/accessLost');

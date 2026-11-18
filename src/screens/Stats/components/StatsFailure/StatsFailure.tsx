@@ -42,14 +42,14 @@ const CONTENT: Record<Variant, { icon: IconType; title: string; text: string; ac
     noSpaces: {
       icon: 'users',
       title: 'No space yet',
-      text: 'Stats belong to a space with its own wallets and currency. Create one to start.',
+      text: 'Stats belong to a space with its own currency, history and limits. Create one to start.',
       action: 'Create a space',
       actionIcon: 'plus',
     },
     noSpaceSelected: {
       icon: 'users',
       title: 'No space selected',
-      text: 'Stats belong to a space with its own wallets and currency. Choose one to see them.',
+      text: 'Stats belong to a space with its own currency, history and limits. Choose one to see them.',
       action: 'Choose a space',
       actionIcon: 'users',
     },

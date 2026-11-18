@@ -36,7 +36,6 @@ const DeleteAccountDialog = ({ isVisible, onClose }: Props) => {
             tone: 'danger',
             title: 'What gets deleted',
             items: [
-              'Your wallets and their balances',
               'Your full transaction history',
               'Your limits and their history',
               'Your categories, archived ones included',

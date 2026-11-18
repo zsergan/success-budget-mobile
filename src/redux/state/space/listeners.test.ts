@@ -4,7 +4,6 @@ import { SpaceType } from '@shared/enums';
 import { spaceApi } from './api';
 import { categoryApi } from '@redux/state/category/api';
 import launchInitialState from '@redux/state/launch/initialState';
-import { walletApi } from '@redux/state/wallet/api';
 import { feedSelection, transactionApi } from '@redux/state/transaction/api';
 import { activateSpace } from './thunks';
 
@@ -145,7 +144,7 @@ describe('a read or a write refused for a space', () => {
     mockedRequest.mockImplementationOnce(() =>
       Promise.reject({ response: { status: 403, data: { statusCode: 403, code, message: code } } }),
     );
-    return store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId: 1 }, { forceRefetch: true }));
+    return store.dispatch(categoryApi.endpoints.getCategories.initiate({ spaceId: 1 }, { forceRefetch: true }));
   };
 
   it('ends the space at once on FORBIDDEN_SPACE: its data, its place in the list and the selection', async () => {
@@ -159,7 +158,7 @@ describe('a read or a write refused for a space', () => {
         .select()(store.getState())
         .data?.map(({ id }) => id),
     ).toEqual([2]);
-    expect(walletApi.endpoints.getWallets.select({ spaceId: 1 })(store.getState()).data).toBeUndefined();
+    expect(categoryApi.endpoints.getCategories.select({ spaceId: 1 })(store.getState()).data).toBeUndefined();
   });
 
   it('ends the space at once when a write is refused with FORBIDDEN_SPACE, and only then', async () => {

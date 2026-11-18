@@ -10,7 +10,6 @@ import {
   AcceptInviteScreen,
   CategoriesScreen,
   CreateSpaceScreen,
-  CreateWalletScreen,
   ForgotPasswordScreen,
   MembersScreen,
   NewPasswordScreen,
@@ -104,11 +103,6 @@ const RootNavigator = () => {
             {isReady ? (
               <>
                 <Stack.Screen name={ScreenNames.HOME_SCREEN} component={MainNavigator} options={phaseScreenOptions} />
-                <Stack.Screen
-                  name={ScreenNames.ADD_WALLET_SCREEN}
-                  component={CreateWalletScreen}
-                  options={{ headerShown: false }}
-                />
                 <Stack.Screen
                   name={ScreenNames.TRANSACTION_EDITOR_SCREEN}
                   component={TransactionEditorScreen}

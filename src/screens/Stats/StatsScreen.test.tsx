@@ -860,41 +860,6 @@ describe('StatsScreen', () => {
     });
   });
 
-  it('opens the composer once with a wallet created for Add transaction, delivered to the nested overview', async () => {
-    const wallet = { id: 9, wallet_name: 'Cash', design: 'slate', balance: 0 };
-    const answerRequest = mockedRequest.getMockImplementation()!;
-    mockedRequest.mockImplementation((config: RequestConfig) =>
-      config.url === '/spaces/1/wallets'
-        ? Promise.resolve({
-            data: {
-              total_balance: 0,
-              total_balance_currency: 'USD',
-              wallets: [{ wallet, total_spend: 0, total_income: 0 }],
-            },
-          })
-        : answerRequest(config),
-    );
-    const { store } = renderStats();
-    await settle();
-
-    act(() =>
-      navigationRef.navigate(ScreenNames.STATS_TAB, {
-        screen: ScreenNames.STATS_OVERVIEW_SCREEN,
-        params: { composeWith: { spaceId: 1, walletId: 9 } },
-      }),
-    );
-    await settle();
-
-    expect(statsStack()).toEqual([ScreenNames.STATS_OVERVIEW_SCREEN]);
-    expect(navigationRef.getCurrentRoute()?.params).toEqual({ composeWith: undefined });
-    expect(store.getState().transactionFlow.flow).toMatchObject({ spaceId: 1, view: { name: 'create' } });
-    const { draftId } = store.getState().transactionFlow.flow!;
-
-    await settle();
-
-    expect(store.getState().transactionFlow.flow?.draftId).toBe(draftId);
-  });
-
   describe('without a space', () => {
     it('waits on placeholders while the spaces list is on its way', async () => {
       respondSpaces = () => new Promise(() => {});

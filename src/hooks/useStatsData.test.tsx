@@ -796,7 +796,7 @@ describe('after a mutation', () => {
     await loaded(result);
 
     act(() => {
-      store.dispatch(baseApi.util.invalidateTags(spaceTags(2, 'Transactions', 'Wallets', 'Categories')));
+      store.dispatch(baseApi.util.invalidateTags(spaceTags(2, 'Transactions', 'Categories')));
     });
     await act(async () => {
       jest.advanceTimersByTime(1000);

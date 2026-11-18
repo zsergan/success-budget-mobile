@@ -7,7 +7,7 @@ import { bindHttpSession } from '@api/session';
 import { withSheetHost } from '@components/ConfirmationSheet/testing';
 import { toastCount, withToasts } from '@components/Toast/testing';
 import { memberApi } from '@redux/state/member/api';
-import { walletApi } from '@redux/state/wallet/api';
+import { categoryApi } from '@redux/state/category/api';
 import { createAppStore } from '@redux/Store';
 import { RATE_LIMITED_MESSAGE } from '@shared/utils/error';
 
@@ -53,7 +53,7 @@ it('leaves a write’s 429 to the place that asked for it, the invite cooldown i
   const store = renderApp();
 
   await act(async () => {
-    await store.dispatch(walletApi.endpoints.deleteWallet.initiate({ spaceId: 1, walletId: 3 }));
+    await store.dispatch(categoryApi.endpoints.deleteCategory.initiate({ spaceId: 1, categoryId: 3 }));
     await store.dispatch(memberApi.endpoints.inviteMember.initiate({ spaceId: 1, email: 'a@b.co' }));
   });
 
@@ -67,7 +67,7 @@ it('explains a read nothing on screen explains with one generic error and no Ret
 
   await act(async () => {
     await Promise.all([
-      store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId: 1 }, { subscribe: false })),
+      store.dispatch(categoryApi.endpoints.getCategories.initiate({ spaceId: 1 }, { subscribe: false })),
       store.dispatch(memberApi.endpoints.getMembers.initiate({ spaceId: 1 }, { subscribe: false })),
     ]);
   });

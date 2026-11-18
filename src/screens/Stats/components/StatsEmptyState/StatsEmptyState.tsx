@@ -25,7 +25,7 @@ const StatsEmptyState = (props: Props) => {
       <EmptyState
         icon="chart"
         title="Nothing to report yet"
-        description="Stats appear after your first transaction: totals, a trend by week and a breakdown by category."
+        description="Stats appear after your first transaction: totals, a trend by week and a breakdown by category and by who it's assigned to."
         actionLabel="Add transaction"
         actionIcon="plus"
         onActionPress={props.onAddTransaction}

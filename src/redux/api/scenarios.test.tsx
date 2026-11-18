@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Provider } from 'react-redux';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
-import type { Category, LimitView, Space, Transaction, WalletWithBalance } from '@api/dto';
+import type { Category, LimitView, Space, Transaction } from '@api/dto';
 import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useRecentArg, useSpaceArg } from '@redux/hooks';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
@@ -11,7 +11,6 @@ import { useGetCategoriesQuery, categoryApi } from '@redux/state/category/api';
 import { useGetLimitsQuery, limitApi } from '@redux/state/limit/api';
 import { activateSpace, refreshSpaceData } from '@redux/state/space/thunks';
 import { transactionApi, useGetRecentTransactionsQuery } from '@redux/state/transaction/api';
-import { useGetWalletsQuery, walletApi } from '@redux/state/wallet/api';
 import { runLaunch } from '@redux/state/launch/thunks';
 import { createAppStore } from '@redux/Store';
 import useTransactionsData from '@screens/Transactions/hooks/useTransactionsData';
@@ -40,7 +39,6 @@ interface RequestConfig {
 interface SpaceDb {
   categories: Category[];
   limits: LimitView[];
-  wallets: WalletWithBalance[];
   // Stored with their ids, like the backend's table; responses expose only the joined relations.
   transactions: (Omit<Transaction, 'category' | 'author' | 'assignment'> & { category_id: number })[];
 }
@@ -77,7 +75,6 @@ const createBackend = () => {
     (dbs[spaceId] ??= {
       categories: [category(5, 'Food', 10), category(6, 'Taxi', null)],
       limits: [{ id: 10, name: null, amount: '100', spent: 0, in_percent: 0, categories: [] }],
-      wallets: [{ id: 1, wallet_name: `Wallet of space ${spaceId}`, design: AppColor.SLATE, balance: 0 }],
       transactions: [],
     });
 
@@ -102,21 +99,6 @@ const createBackend = () => {
     const spaceDb = db(Number(rawSpaceId));
     const id = Number(rawId);
 
-    if (resource === 'wallets' && method === 'GET')
-      return {
-        total_balance: 0,
-        total_balance_currency: 'USD',
-        delta_percent: 0,
-        wallets: spaceDb.wallets.map((wallet) => ({ wallet, total_spend: 0, total_income: 0 })),
-      };
-    if (resource === 'wallets' && method === 'PUT') {
-      Object.assign(
-        spaceDb.wallets.find((wallet) => wallet.id === id)!,
-        data,
-      );
-
-      return null;
-    }
     if (resource === 'categories' && method === 'GET') {
       const active = spaceDb.categories.filter((item) => item.is_active === 1);
 
@@ -219,7 +201,6 @@ const useMountedScreens = () => {
     gate: useAppSelector((state) => state.launch.phase),
     home: useGetRecentTransactionsQuery(useRecentArg()),
     history: useTransactionsData({ range: getCurrentMonthRange() }),
-    wallets: useGetWalletsQuery(spaceArg),
     categories: useGetCategoriesQuery(spaceArg),
     limits: useGetLimitsQuery(spaceArg),
   };
@@ -365,25 +346,26 @@ describe('server data scenarios', () => {
     const { store, result, unmount } = await renderApp();
     const held: (() => void)[] = [];
 
+    backend.db(2).categories[0].name = 'Food of space 2';
     intercept = (config) =>
-      config.url === '/spaces/2/wallets'
+      config.url === '/spaces/2/categories'
         ? new Promise((resolve) => held.push(() => respond(config).then(resolve)))
         : undefined;
 
     act(() => {
       store.dispatch(activateSpace(2));
     });
-    expect(result.current.wallets.currentData).toBeUndefined();
+    expect(result.current.categories.currentData).toBeUndefined();
 
     act(() => {
       store.dispatch(activateSpace(1));
     });
-    expect(result.current.wallets.currentData?.wallets[0].wallet.wallet_name).toBe('Wallet of space 1');
+    expect(result.current.categories.currentData?.expenses[0].name).toBe('Food');
 
     await act(async () => held.forEach((release) => release()));
     await settle(store);
 
-    expect(result.current.wallets.currentData?.wallets[0].wallet.wallet_name).toBe('Wallet of space 1');
+    expect(result.current.categories.currentData?.expenses[0].name).toBe('Food');
 
     unmount();
   });
@@ -392,13 +374,13 @@ describe('server data scenarios', () => {
     const { store, result, unmount } = await renderApp();
     let releaseOld: () => void = () => {};
 
-    backend.db(1).wallets[0].wallet_name = 'Old session';
+    backend.db(1).categories[0].name = 'Old session';
     intercept = (config) =>
-      config.url === '/spaces/1/wallets'
+      config.url === '/spaces/1/categories'
         ? new Promise((resolve) => (releaseOld = () => respond(config).then(resolve)))
         : undefined;
     act(() => {
-      store.dispatch(walletApi.util.invalidateTags([{ type: 'Wallets', id: 1 }]));
+      store.dispatch(categoryApi.util.invalidateTags([{ type: 'Categories', id: 1 }]));
     });
 
     await act(async () => {
@@ -406,16 +388,16 @@ describe('server data scenarios', () => {
     });
 
     intercept = () => undefined;
-    backend.db(1).wallets[0].wallet_name = 'New session';
+    backend.db(1).categories[0].name = 'New session';
     act(() => {
       signIn(store);
     });
-    await waitFor(() => expect(result.current.wallets.currentData).toBeDefined());
+    await waitFor(() => expect(result.current.categories.currentData).toBeDefined());
 
     await act(async () => releaseOld());
     await settle(store);
 
-    expect(result.current.wallets.currentData?.wallets[0].wallet.wallet_name).toBe('New session');
+    expect(result.current.categories.currentData?.expenses[0].name).toBe('New session');
 
     unmount();
   });
@@ -540,18 +522,18 @@ describe('server data scenarios', () => {
     );
     await act(async () => {
       await store.dispatch(
-        walletApi.endpoints.updateWallet.initiate({
-          spaceId: 1,
-          walletId: 1,
-          data: { wallet_name: 'Card', design: AppColor.SLATE },
-        }),
+        categoryApi.endpoints.updateCategory.initiate({ spaceId: 1, categoryId: 5, data: { name: 'Groceries' } }),
       );
     });
     await settle(store);
 
-    expect(result.current.wallets.isError).toBe(true);
-    expect(result.current.wallets.currentData?.wallets).toHaveLength(1);
-    expect(getLoadState(result.current.wallets)).toEqual({ isLoading: false, hasError: false, hasRefreshError: true });
+    expect(result.current.categories.isError).toBe(true);
+    expect(result.current.categories.currentData?.expenses).toHaveLength(2);
+    expect(getLoadState(result.current.categories)).toEqual({
+      isLoading: false,
+      hasError: false,
+      hasRefreshError: true,
+    });
     expect(result.current.history.viewState).toBe('trueEmpty');
     expect(gateLog.slice(openedAt)).not.toContain(true);
 

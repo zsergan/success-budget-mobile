@@ -6,7 +6,6 @@ import { limitApi } from '@redux/state/limit/api';
 import { memberApi } from '@redux/state/member/api';
 import { spaceApi } from '@redux/state/space/api';
 import { feedSelection, transactionApi } from '@redux/state/transaction/api';
-import { walletApi } from '@redux/state/wallet/api';
 import { AppColor, SpaceType, TransactionType } from '@shared/enums';
 import { baseApi } from './baseApi';
 import { createTransactionResponseDto, feedDto, transactionDto } from '@redux/state/transaction/fixtures';
@@ -35,8 +34,6 @@ const respond = ({ url, method }: RequestConfig) => {
   if (method !== 'GET' && mutationFails)
     throw { response: { status: (mutationError as { statusCode: number }).statusCode, data: mutationError } };
   if (method !== 'GET') return { data: mutationResponse };
-  if (url.endsWith('/wallets'))
-    return { data: { wallets: [], total_balance: 0, total_balance_currency: 'USD', delta_percent: 0 } };
   if (url.endsWith('/categories')) return { data: { incomes: [], expenses: [], archived: [] } };
   if (url.endsWith('/limits')) return { data: { total: null, categories: [], over_allocation: null } };
   if (url.endsWith('/latest')) return { data: null };
@@ -58,7 +55,6 @@ const resourceOf = ({ url, params }: RequestConfig) => {
 const ALL_HISTORY = ['1:feed:2026-01', '1:latest'];
 
 const subscribeToSpace = (store: ReturnType<typeof createAppStore>, spaceId: number) => {
-  store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId }));
   store.dispatch(categoryApi.endpoints.getCategories.initiate({ spaceId }));
   store.dispatch(limitApi.endpoints.getLimits.initiate({ spaceId }));
   store.dispatch(
@@ -114,8 +110,6 @@ const transactionData: CreateTransactionRequest = {
   amount: '10',
   timestamp: '2026-01-05T00:00:00.000Z',
 };
-
-const walletData = { wallet_name: 'Cash', initial_balance: '0', design: AppColor.SLATE };
 
 const rules = [
   {
@@ -220,40 +214,6 @@ const rules = [
     mutate: (store: ReturnType<typeof createAppStore>) =>
       store.dispatch(limitApi.endpoints.deleteLimit.initiate({ spaceId: 1, limitId: 1 })),
     expected: ['1:categories', '1:limits'],
-  },
-  {
-    name: 'create wallet without a starting balance',
-    mutate: (store: ReturnType<typeof createAppStore>) =>
-      store.dispatch(walletApi.endpoints.createWallet.initiate({ spaceId: 1, data: walletData })),
-    response: { wallet: { id: 1 }, transaction: null },
-    expected: ['1:wallets'],
-  },
-  {
-    name: 'create wallet with a starting balance',
-    mutate: (store: ReturnType<typeof createAppStore>) =>
-      store.dispatch(
-        walletApi.endpoints.createWallet.initiate({ spaceId: 1, data: { ...walletData, initial_balance: '50' } }),
-      ),
-    response: { wallet: { id: 1 }, transaction: { id: 'tx' } },
-    expected: [...ALL_HISTORY, '1:wallets'],
-  },
-  {
-    name: 'edit wallet',
-    mutate: (store: ReturnType<typeof createAppStore>) =>
-      store.dispatch(
-        walletApi.endpoints.updateWallet.initiate({
-          spaceId: 1,
-          walletId: 1,
-          data: { wallet_name: 'Card', design: AppColor.SLATE },
-        }),
-      ),
-    expected: [...ALL_HISTORY, '1:wallets'],
-  },
-  {
-    name: 'delete wallet',
-    mutate: (store: ReturnType<typeof createAppStore>) =>
-      store.dispatch(walletApi.endpoints.deleteWallet.initiate({ spaceId: 1, walletId: 1 })),
-    expected: [...ALL_HISTORY, '1:wallets'],
   },
 ];
 

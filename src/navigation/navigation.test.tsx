@@ -232,7 +232,7 @@ const HomeTab = ({ navigation }: MainTabScreenProps<ScreenNames.HOME_TAB>) => (
 );
 
 const SettingsTab = ({ navigation }: MainTabScreenProps<ScreenNames.SETTINGS_TAB>) => (
-  <ManagementSettingsSection navigation={navigation} categoriesLabel="3 categories" walletsLabel="1 wallet" />
+  <ManagementSettingsSection navigation={navigation} categoriesLabel="3 categories" />
 );
 
 const TransactionsTab = () => <Text>Transactions tab</Text>;

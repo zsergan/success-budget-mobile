@@ -37,4 +37,3 @@ export * from './Toast';
 export { default as TransactionCard } from './TransactionCard/TransactionCard';
 export * from './TransactionFlow';
 export * from './Typography';
-export * from './Wallets';

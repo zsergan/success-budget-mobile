@@ -6,7 +6,7 @@ import { act, renderHook } from '@testing-library/react-native';
 
 import { createAppStore } from '@redux/Store';
 import { activateSpace, SPACE_REFRESH_AFTER_MS } from '@redux/state/space/thunks';
-import { walletApi } from '@redux/state/wallet/api';
+import { categoryApi } from '@redux/state/category/api';
 import useSpaceRefresh from './useSpaceRefresh';
 
 const mockedRequest = jest.fn();
@@ -31,15 +31,15 @@ jest.mock('@react-navigation/native', () => ({
 
 let appStateListener: ((state: AppStateStatus) => void) | undefined;
 
-const overview = { total_balance: 0, total_balance_currency: 'USD', delta_percent: 0, wallets: [] };
+const overview = { incomes: [], expenses: [], archived: [] };
 
-const walletRequests = () =>
-  mockedRequest.mock.calls.filter(([config]: [{ url: string }]) => config.url === '/spaces/1/wallets').length;
+const spaceDataRequests = () =>
+  mockedRequest.mock.calls.filter(([config]: [{ url: string }]) => config.url === '/spaces/1/categories').length;
 
 const renderRefresh = async () => {
   const store = createAppStore();
   store.dispatch(activateSpace(1));
-  store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId: 1 }));
+  store.dispatch(categoryApi.endpoints.getCategories.initiate({ spaceId: 1 }));
 
   const wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
   const counter = { renders: 0 };
@@ -73,11 +73,11 @@ afterEach(() => {
 describe('useSpaceRefresh', () => {
   it('asks again for the space data on a return, at most every 30 s', async () => {
     await renderRefresh();
-    expect(walletRequests()).toBe(1);
+    expect(spaceDataRequests()).toBe(1);
 
     act(() => focusListener?.());
     await act(async () => jest.advanceTimersByTimeAsync(10));
-    expect(walletRequests()).toBe(1);
+    expect(spaceDataRequests()).toBe(1);
 
     await act(async () => jest.advanceTimersByTimeAsync(SPACE_REFRESH_AFTER_MS));
     act(() => {
@@ -85,7 +85,7 @@ describe('useSpaceRefresh', () => {
       appStateListener?.('active');
     });
     await act(async () => jest.advanceTimersByTimeAsync(10));
-    expect(walletRequests()).toBe(2);
+    expect(spaceDataRequests()).toBe(2);
   });
 
   it('renders again and refreshes once a new month begins', async () => {
@@ -96,6 +96,6 @@ describe('useSpaceRefresh', () => {
     await act(async () => jest.advanceTimersByTimeAsync(2 * 60 * 1000));
 
     expect(counter.renders).toBeGreaterThan(renders);
-    expect(walletRequests()).toBe(2);
+    expect(spaceDataRequests()).toBe(2);
   });
 });

@@ -121,9 +121,17 @@ const CreateSpaceScreen = ({ navigation }: Props) => {
               control={control}
               render={({ field: { onChange, value } }) => <InviteChips emails={value} onChange={onChange} />}
             />
+
+            <Text style={styles.hint}>
+              People join after accepting. Until then they can&apos;t be assigned to transactions. Each transaction
+              shows who added it and who it&apos;s assigned to.
+            </Text>
           </View>
         ) : (
-          <Text style={styles.hint}>Only you can see a personal space — there&apos;s nobody to invite.</Text>
+          <Text style={styles.hint}>
+            Only you can see a personal space — there&apos;s nobody to invite. You can start adding transactions right
+            away.
+          </Text>
         )}
 
         {submitError && <Banner tone="danger" text={submitError} />}

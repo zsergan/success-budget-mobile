@@ -10,6 +10,10 @@ interface Props {
   onCancel: () => void;
 }
 
+// The history is the space's: authorship and assignment stay on the records when a membership ends.
+const KEEP =
+  ' What they added or what’s assigned to them stays in this space’s history, labelled Former member; shared operations aren’t redistributed.';
+
 const MemberRemovalDialog = ({ target, spaceName, isPending, error, onConfirm, onCancel }: Props) => {
   const isRevoke = target?.kind === 'revoke';
 
@@ -20,7 +24,7 @@ const MemberRemovalDialog = ({ target, spaceName, isPending, error, onConfirm, o
           title: isRevoke ? 'Revoke this invite?' : `Remove ${target.label}?`,
           description: isRevoke
             ? `The invite sent to ${target.label} stops working.`
-            : `${target.label} loses access to “${spaceName}”.`,
+            : `${target.label} loses access to “${spaceName}”.${KEEP}`,
           primaryAction: {
             label: isRevoke ? 'Revoke invite' : 'Remove member',
             tone: 'danger',

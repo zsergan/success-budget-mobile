@@ -35,7 +35,7 @@ const SpaceSettingsSection = ({ navigation, currentSpace }: Props) => {
       <SettingsRow
         icon="plus"
         label="Create new space"
-        sub="Its own wallets, limits and currency"
+        sub="Its own currency, history, categories and limits"
         onPress={() => navigation.navigate(ScreenNames.CREATE_SPACE_SCREEN)}
       />
     </SettingsSection>

@@ -6,10 +6,9 @@ import SettingsSection from '../SettingsSection/SettingsSection';
 interface Props {
   navigation: MainTabNavigationProp<ScreenNames.SETTINGS_TAB>;
   categoriesLabel: string;
-  walletsLabel: string;
 }
 
-const ManagementSettingsSection = ({ navigation, categoriesLabel, walletsLabel }: Props) => (
+const ManagementSettingsSection = ({ navigation, categoriesLabel }: Props) => (
   <SettingsSection label="Management">
     <SettingsRow
       icon="other"
@@ -17,8 +16,6 @@ const ManagementSettingsSection = ({ navigation, categoriesLabel, walletsLabel }
       sub={categoriesLabel}
       onPress={() => navigation.navigate(ScreenNames.CATEGORIES_SCREEN)}
     />
-
-    <SettingsRow icon="wallet" label="Wallets" sub={walletsLabel} chevron={false} />
   </SettingsSection>
 );
 

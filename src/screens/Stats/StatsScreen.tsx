@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -20,15 +20,12 @@ import { rangeSelection } from '@redux/state/transactionFlow/selection';
 import { ScreenNames, TransactionType } from '@shared/enums';
 import type { StatsStackNavigationProp, StatsStackScreenProps } from '@shared/types';
 import { formatRangeLabel, hasComparison, isCurrentMonth, monthPeriodOf } from '@shared/utils';
-import CreateWalletSheet from './components/CreateWalletSheet/CreateWalletSheet';
 import StatsEmptyState from './components/StatsEmptyState/StatsEmptyState';
 import StatsFailure from './components/StatsFailure/StatsFailure';
 import StatsHeader from './components/StatsHeader/StatsHeader';
 import StatsList from './components/StatsList/StatsList';
 import { parseDateKey } from './format';
 import { toHistoryFilter } from './historyFilter';
-import useAddTransaction from './hooks/useAddTransaction';
-import useComposeWithNewWallet from './hooks/useComposeWithNewWallet';
 import useSpaceStatus from './hooks/useSpaceStatus';
 import useStatsData from '@hooks/useStatsData';
 import useStatsSelection from './hooks/useStatsSelection';
@@ -41,7 +38,6 @@ import styles from './style';
 const StatsScreen = () => {
   const navigation = useNavigation<StatsStackNavigationProp<ScreenNames.STATS_OVERVIEW_SCREEN>>();
   const rangePickerRef = useRef<BottomSheetModal>(null);
-  const walletSheetRef = useRef<BottomSheetModal>(null);
   const spacesSheetRef = useRef<BottomSheetModal>(null);
   const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod } = usePeriod();
   const { openCreate } = useTransactionFlow(rangeSelection(range));
@@ -87,21 +83,8 @@ const StatsScreen = () => {
     navigation.navigate(ScreenNames.CREATE_SPACE_SCREEN);
   };
 
-  const addTransaction = useAddTransaction({
-    onHasWallets: () => openCreate(TransactionType.EXPENSE),
-    onNoWallets: () => walletSheetRef.current?.present(),
-  });
-
-  const openCreateWallet = () => {
-    if (spaceId === null) return;
-
-    navigation.navigate(ScreenNames.ADD_WALLET_SCREEN, {
-      id: 'new',
-      addTransaction: { returnTo: ScreenNames.STATS_TAB, spaceId },
-    });
-  };
-
-  useComposeWithNewWallet(useCallback(() => openCreate(TransactionType.EXPENSE), [openCreate]));
+  // A space needs no setup before its first transaction: the form opens at once.
+  const addTransaction = () => openCreate(TransactionType.EXPENSE);
 
   // Without a space the stats are skipped, so they could never leave their placeholders.
   const failure =
@@ -171,10 +154,6 @@ const StatsScreen = () => {
     <>
       <BottomModal ref={rangePickerRef} dynamicSizing>
         <RangePickerSheet period={period} onApply={applyPeriod} />
-      </BottomModal>
-
-      <BottomModal ref={walletSheetRef} dynamicSizing>
-        <CreateWalletSheet onCreateWallet={openCreateWallet} />
       </BottomModal>
 
       <BottomModal ref={spacesSheetRef} dynamicSizing>

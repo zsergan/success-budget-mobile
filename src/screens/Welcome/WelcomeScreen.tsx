@@ -11,9 +11,9 @@ import createStyles, { BOTTOM_GAP, TOP_GAP } from './style';
 interface Props extends RootStackScreenProps<ScreenNames.WELCOME_SCREEN> {}
 
 const FEATURE_POINTS: { icon: IconType; label: string }[] = [
-  { icon: 'wallet', label: 'Wallets and transfers between them' },
-  { icon: 'limit', label: 'Limits with an alert at 80%' },
-  { icon: 'list', label: 'History with filters and search' },
+  { icon: 'plus', label: 'Start right away: no wallets or accounts to set up' },
+  { icon: 'users', label: 'Share a space and see who each transaction is for' },
+  { icon: 'limit', label: 'Monthly limits for the whole space or a category' },
 ];
 
 // Already display-sized: grown further, single words no longer fit the width and break mid-word.
@@ -43,8 +43,8 @@ const WelcomeScreen = ({ navigation }: Props) => {
           </Text>
 
           <Text style={styles.description}>
-            Wallets, limits and spending history in one place. One currency per budget space, picked once, and no setup
-            before your first entry.
+            Record income and expenses in seconds and see where each month went. One currency per space, picked once,
+            and no setup before your first entry.
           </Text>
 
           <View style={styles.points}>

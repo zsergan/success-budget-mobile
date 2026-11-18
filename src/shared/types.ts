@@ -4,16 +4,6 @@ import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-n
 import type { AssignmentKey } from '@api/models';
 import type { ScreenNames, AppColor, TransactionKind, TransactionType } from '@shared/enums';
 
-// Plain data, never a callback: where to go once the wallet is saved, and for which space.
-export type AddTransactionIntent = { returnTo: ScreenNames.STATS_TAB; spaceId: number };
-
-type AddWalletParams =
-  | { id: 'new'; addTransaction?: AddTransactionIntent }
-  | { id: number; walletName: string; balance: string; design: AppColor };
-
-// A one-time request to open the composer on a wallet that was just created.
-export type ComposeWithWallet = { spaceId: number; walletId: number };
-
 // The transactions behind a Stats row, as a route's params: the period's own instants and zone, as the statistics
 // API returned them.
 export type HistoryFilter = {
@@ -59,7 +49,7 @@ export type PasswordResetOutcome = { email: string; outcome: 'updated' | 'unknow
 
 // The Stats tab's own stack: the overview stays mounted under the transactions of one of its rows.
 export type StatsStackParamList = {
-  [ScreenNames.STATS_OVERVIEW_SCREEN]: { composeWith?: ComposeWithWallet; focus?: StatsFocus } | undefined;
+  [ScreenNames.STATS_OVERVIEW_SCREEN]: { focus?: StatsFocus } | undefined;
   [ScreenNames.STATS_TRANSACTIONS_SCREEN]: { filter: HistoryFilter };
 };
 
@@ -74,7 +64,6 @@ export type MainTabParamList = {
 
 export type RootStackParamList = {
   [ScreenNames.HOME_SCREEN]: NavigatorScreenParams<MainTabParamList>;
-  [ScreenNames.ADD_WALLET_SCREEN]: AddWalletParams;
   // The draft lives in the transaction flow; the route only says which space's flow it shows.
   [ScreenNames.TRANSACTION_EDITOR_SCREEN]: { spaceId: number };
   // The full category list over the editor, for the same flow.

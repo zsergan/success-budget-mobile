@@ -6,8 +6,6 @@ import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
 import { logoutMe } from '@redux/state/auth/thunks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
 import { EMPTY_CATEGORIES } from '@redux/state/category/selectors';
-import { useGetWalletsQuery } from '@redux/state/wallet/api';
-import { getTotalBalance } from '@redux/state/wallet/selectors';
 import { selectCurrentSpace } from '@redux/state/space/selectors';
 import { useThemePreference, useToast } from '@hooks';
 import type { MainTabScreenProps } from '@shared/types';
@@ -35,7 +33,6 @@ const SettingsScreen = ({ navigation }: Props) => {
   const currentSpace = useAppSelector(selectCurrentSpace);
   const spaceArg = useSpaceArg();
   const { incomes, expenses, archived } = useGetCategoriesQuery(spaceArg).currentData ?? EMPTY_CATEGORIES;
-  const { walletsCount } = getTotalBalance(useGetWalletsQuery(spaceArg).currentData);
 
   const [isLogoutConfirmVisible, setIsLogoutConfirmVisible] = useState(false);
   const [isDeleteAccountVisible, setIsDeleteAccountVisible] = useState(false);
@@ -48,7 +45,6 @@ const SettingsScreen = ({ navigation }: Props) => {
   const showComingSoon = () => toast.show({ tone: 'info', text: 'Coming soon.' });
 
   const categoriesLabel = `${incomes.length + expenses.length} active · ${archived.length} archived`;
-  const walletsLabel = `${walletsCount} wallet${walletsCount === 1 ? '' : 's'} in this space`;
 
   return (
     <RootLayout style={styles.root} edges={['top', 'left', 'right']} scrollable blurredStatusBar>
@@ -67,11 +63,7 @@ const SettingsScreen = ({ navigation }: Props) => {
 
         <SpaceSettingsSection navigation={navigation} currentSpace={currentSpace} />
 
-        <ManagementSettingsSection
-          navigation={navigation}
-          categoriesLabel={categoriesLabel}
-          walletsLabel={walletsLabel}
-        />
+        <ManagementSettingsSection navigation={navigation} categoriesLabel={categoriesLabel} />
 
         <AccountSettingsSection
           navigation={navigation}

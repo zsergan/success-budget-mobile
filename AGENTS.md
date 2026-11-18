@@ -7,11 +7,12 @@ conversation is in.
 ## Project
 
 `success-budget-mobile`: a React Native personal-finance app (Expo SDK 58,
-React 19, RN 0.88, TypeScript strict) with wallets, transactions,
-categories, spending limits and shared spaces with members. Each space has
-one currency (picked at sign-up for the personal space, or when a space is
-created); wallets and transactions use it, and nothing converts between
-currencies. Redux Toolkit + RTK Query, React Navigation, react-hook-form + yup.
+React 19, RN 0.88, TypeScript strict) with transactions, categories,
+spending limits and shared spaces with members. A transaction belongs to
+its space, records its author and is assigned to a member, the whole space
+or nobody; there are no wallets. Each space has one currency (picked at
+sign-up for the personal space, or when a space is created); transactions
+use it, and nothing converts between currencies. Redux Toolkit + RTK Query, React Navigation, react-hook-form + yup.
 
 ## Commands
 
@@ -107,7 +108,7 @@ relying on or changing them.
   `useTransactionsData`, not one `useTransactionsScreen`).
 - **Barrels**: add an `index.ts` only to a folder grouping more than one
   thing imported from outside it (e.g. `screens/Auth/`,
-  `components/Wallets/`). A single-component folder gets none; the parent
+  `components/TransactionFlow/`). A single-component folder gets none; the parent
   barrel (`@screens`, `@components`) imports its file directly.
 - **Imports**: always use the `@<segment>/...` alias for anything under
   `src/` (maps to `src/<segment>/...`); no deep `../../..` paths.

@@ -7,7 +7,7 @@ import { memberApi } from '../member/api';
 import { profileApi } from '../profile/api';
 import { withProfile } from '../profile/fixtures';
 import { spaceApi } from './api';
-import { walletApi } from '../wallet/api';
+import { categoryApi } from '@redux/state/category/api';
 import {
   acceptInviteAndSelect,
   activateSpace,
@@ -330,16 +330,16 @@ describe('a request from before a logout and a new login', () => {
 describe('loseSpaceAccess', () => {
   it("drops the lost space's cached data and moves to a space the refreshed list still has", async () => {
     const store = signedInStore();
-    const overview = { total_balance: 0, total_balance_currency: 'USD', delta_percent: 0, wallets: [] };
+    const overview = { incomes: [], expenses: [], archived: [] };
 
     mockedRequest.mockResolvedValue({ data: [space({ id: 10, type: SpaceType.GROUP }), space({ id: 20 })] });
     store.dispatch(spaceApi.endpoints.getSpaces.initiate());
     await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
     store.dispatch(activateSpace(10));
     store.dispatch(
-      walletApi.util.upsertQueryEntries([
-        { endpointName: 'getWallets', arg: { spaceId: 10 }, value: overview },
-        { endpointName: 'getWallets', arg: { spaceId: 20 }, value: overview },
+      categoryApi.util.upsertQueryEntries([
+        { endpointName: 'getCategories', arg: { spaceId: 10 }, value: overview },
+        { endpointName: 'getCategories', arg: { spaceId: 20 }, value: overview },
       ]),
     );
 
@@ -347,8 +347,8 @@ describe('loseSpaceAccess', () => {
     jest.advanceTimersByTime(1);
     store.dispatch(loseSpaceAccess(10));
 
-    expect(walletApi.endpoints.getWallets.select({ spaceId: 10 })(store.getState()).data).toBeUndefined();
-    expect(walletApi.endpoints.getWallets.select({ spaceId: 20 })(store.getState()).data).toBe(overview);
+    expect(categoryApi.endpoints.getCategories.select({ spaceId: 10 })(store.getState()).data).toBeUndefined();
+    expect(categoryApi.endpoints.getCategories.select({ spaceId: 20 })(store.getState()).data).toBe(overview);
 
     await jest.runOnlyPendingTimersAsync();
     await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
@@ -357,11 +357,11 @@ describe('loseSpaceAccess', () => {
 
   it('starts from any read the server refuses for the current space, and clears that space once the list drops it', async () => {
     const store = signedInStore();
-    const overview = { total_balance: 0, total_balance_currency: 'USD', delta_percent: 0, wallets: [] };
+    const overview = { incomes: [], expenses: [], archived: [] };
     let isMember = true;
     mockedRequest.mockImplementation(async ({ url }: { url: string }) => {
       if (url === '/spaces') return { data: isMember ? [space({ id: 10 }), space({ id: 20 })] : [space({ id: 20 })] };
-      if (url === '/spaces/10/wallets' && !isMember) {
+      if (url === '/spaces/10/categories' && !isMember) {
         throw { response: { status: 403, data: { statusCode: 403, code: 'FORBIDDEN_SPACE', message: 'No access' } } };
       }
       return { data: overview };
@@ -370,17 +370,17 @@ describe('loseSpaceAccess', () => {
     store.dispatch(spaceApi.endpoints.getSpaces.initiate());
     await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
     store.dispatch(activateSpace(10));
-    store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId: 10 }));
+    store.dispatch(categoryApi.endpoints.getCategories.initiate({ spaceId: 10 }));
     await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
 
     isMember = false;
     jest.advanceTimersByTime(1);
-    store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId: 10 }, { forceRefetch: true }));
+    store.dispatch(categoryApi.endpoints.getCategories.initiate({ spaceId: 10 }, { forceRefetch: true }));
     await jest.runOnlyPendingTimersAsync();
     await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
     await jest.runOnlyPendingTimersAsync();
 
     expect(store.getState().space.currentSpaceId).toBe(20);
-    expect(walletApi.endpoints.getWallets.select({ spaceId: 10 })(store.getState()).data).toBeUndefined();
+    expect(categoryApi.endpoints.getCategories.select({ spaceId: 10 })(store.getState()).data).toBeUndefined();
   });
 });
