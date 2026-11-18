@@ -1,6 +1,6 @@
 import { AppColor } from '@shared/enums';
 import theme from '@shared/theme';
-import { resolveApiBaseUrl } from '@shared/utils/apiBaseUrl';
+import { resolveApiBaseUrl, withApiVersion } from '@shared/utils/apiBaseUrl';
 import { originOf } from '@shared/utils/inviteLink';
 
 const API_BASE_URLS = {
@@ -16,6 +16,8 @@ export const BASE_API_URL = resolveApiBaseUrl({
   overrideUrl: process.env.EXPO_PUBLIC_API_BASE_URL,
   isDevBuild: __DEV__,
 });
+// Transactions and statistics: space-owned records with an author and an assignment, no wallets.
+export const API_V2_BASE_URL = withApiVersion(BASE_API_URL, 2);
 // The backend serves invitation links from the root of its API host (PUBLIC_WEB_ORIGIN).
 export const INVITE_LINK_ORIGIN = originOf(BASE_API_URL);
 export const AUTH_TOKEN_KEY = 'sbm-AUTH_TOKEN_KEY';
