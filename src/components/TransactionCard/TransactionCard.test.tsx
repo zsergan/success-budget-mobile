@@ -1,7 +1,8 @@
 import { Provider } from 'react-redux';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { mapTransaction } from '@api/models';
+import { baseApi } from '@redux/api/baseApi';
 import { createAppStore } from '@redux/Store';
 import { transactionDto } from '@redux/state/transaction/fixtures';
 import { deleteStarted } from '@redux/state/transactionFlow/slice';
@@ -31,8 +32,21 @@ jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
   });
 });
 
+// Unmounting leaves each store's cache-removal and subscription-sync timers running past the test; the reset
+// clears the first, and fake timers keep the sync one, which the reset leaves, from outliving the test.
+jest.useFakeTimers();
+
+const stores: ReturnType<typeof createAppStore>[] = [];
+
+afterEach(() => {
+  cleanup();
+  stores.splice(0).forEach((store) => store.dispatch(baseApi.util.resetApiState()));
+  jest.clearAllTimers();
+});
+
 const renderCard = (overrides = {}, spaceType?: SpaceType) => {
   const store = createAppStore();
+  stores.push(store);
   if (spaceType) {
     withProfile(store, 7);
     store.dispatch(
