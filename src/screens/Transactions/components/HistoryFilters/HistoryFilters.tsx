@@ -13,6 +13,8 @@ import createStyles from './style';
 
 interface Props {
   filters: Filters;
+  onOpenType: () => void;
+  onOpenAssignment: () => void;
   onClearType: () => void;
   onClearAssignment: () => void;
 }
@@ -24,40 +26,59 @@ const subjectOf = (key: NonNullable<Filters['assignment']>, name: string | undef
   return { kind: 'member', userId: Number(key.slice('member:'.length)), name: name ?? null, status: 'member' };
 };
 
-// What History is narrowed to besides its period; each chip takes its filter off.
-const HistoryFilters = ({ filters, onClearType, onClearAssignment }: Props) => {
+// How History is narrowed besides its period: by type and by whom a record is assigned to. A chip opens its choices;
+// a set one also takes its filter off with ✕.
+const HistoryFilters = ({ filters, onOpenType, onOpenAssignment, onClearType, onClearAssignment }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const selfId = useAppSelector(selectProfileId);
   const { transactionType, assignment, assignmentName } = filters;
 
-  if (!transactionType && !assignment) return null;
+  const chip = (label: string, isSet: boolean, onOpen: () => void, onClear: () => void, leading?: ReactNode) => (
+    <View style={[styles.chip, isSet && styles.chipSet]}>
+      <TouchableOpacity
+        style={styles.chipBody}
+        onPress={onOpen}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}. Change filter`}
+      >
+        {leading}
+        <Text style={[styles.chipText, isSet && styles.chipTextSet]} numberOfLines={1}>
+          {label}
+        </Text>
+        {!isSet && <Icon name="chevron-down" size={12} color={colors.muted} strokeWidth={2.2} />}
+      </TouchableOpacity>
 
-  const chip = (label: string, onPress: () => void, leading?: ReactNode) => (
-    <TouchableOpacity
-      style={styles.chip}
-      onPress={onPress}
-      activeOpacity={0.7}
-      accessibilityRole="button"
-      accessibilityLabel={`${label}. Remove filter`}
-    >
-      {leading}
-      <Text style={styles.chipText} numberOfLines={1}>
-        {label}
-      </Text>
-      <Icon name="close" size={11} color={colors.onSecondary} strokeWidth={2.4} />
-    </TouchableOpacity>
+      {isSet && (
+        <TouchableOpacity
+          style={styles.clear}
+          onPress={onClear}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Remove the ${label} filter`}
+        >
+          <Icon name="close" size={11} color={colors.onSecondary} strokeWidth={2.4} />
+        </TouchableOpacity>
+      )}
+    </View>
   );
 
   return (
     <View style={styles.row}>
-      {transactionType && chip(transactionType === TransactionType.EXPENSE ? 'Expenses' : 'Income', onClearType)}
-      {assignment &&
-        chip(
-          assignmentName ?? 'Assigned',
-          onClearAssignment,
-          <AssignmentAvatar subject={subjectOf(assignment, assignmentName)} selfId={selfId} size={18} />,
-        )}
+      {chip(
+        transactionType === TransactionType.EXPENSE ? 'Expenses' : transactionType ? 'Income' : 'All types',
+        !!transactionType,
+        onOpenType,
+        onClearType,
+      )}
+      {chip(
+        assignment ? (assignmentName ?? 'Assigned') : 'All transactions',
+        !!assignment,
+        onOpenAssignment,
+        onClearAssignment,
+        assignment && <AssignmentAvatar subject={subjectOf(assignment, assignmentName)} selfId={selfId} size={18} />,
+      )}
     </View>
   );
 };

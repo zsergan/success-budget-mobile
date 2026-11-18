@@ -37,9 +37,9 @@ describe('TransactionsHeader', () => {
     expect(screen.getByText('Transactions')).toBeTruthy();
     expect(screen.queryByLabelText('Search transactions', { includeHiddenElements: false })).toBeTruthy();
     expect(screen.queryByText('Cancel', { includeHiddenElements: false })).toBeNull();
-    expect(screen.queryByPlaceholderText('Description, category, wallet')).toBeNull();
+    expect(screen.queryByPlaceholderText('Search description or category')).toBeNull();
     expect(
-      screen.getByPlaceholderText('Description, category, wallet', { includeHiddenElements: true }).props.editable,
+      screen.getByPlaceholderText('Search description or category', { includeHiddenElements: true }).props.editable,
     ).toBe(false);
 
     fireEvent.press(screen.getByRole('button', { name: 'Search transactions' }));
@@ -48,7 +48,7 @@ describe('TransactionsHeader', () => {
 
   it('turns into a field with Cancel while searching, and hides the title from screen readers', () => {
     const { onCancel, onChangeQuery, onSubmit } = renderHeader({ isSearching: true });
-    const field = screen.getByPlaceholderText('Description, category, wallet');
+    const field = screen.getByPlaceholderText('Search description or category');
 
     expect(field.props.editable).toBe(true);
     expect(field.props.returnKeyType).toBe('search');

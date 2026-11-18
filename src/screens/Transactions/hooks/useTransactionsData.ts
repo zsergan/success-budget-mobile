@@ -3,6 +3,7 @@ import type { SkipToken } from '@reduxjs/toolkit/query';
 import { skipToken } from '@reduxjs/toolkit/query';
 
 import type { Money } from '@api/dto';
+import { ApiErrorCode } from '@api/dto';
 import { useTransactionsFeed } from '@hooks';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/state/space/selectors';
@@ -167,6 +168,8 @@ const useTransactionsData = (props: UseTransactionsDataProps) => {
     hasPreviousPageError: feed.hasPreviousPageError,
     loadPreviousPage: feed.loadPreviousPage,
     missedAroundId: feed.missedAroundId,
+    // A member filter of someone the space no longer knows is refused; the screen drops it.
+    isMemberFilterRefused: feed.error?.statusCode === 403 && feed.error.code === ApiErrorCode.FORBIDDEN_MEMBER,
     // What is listed stays, but a refresh, e.g. after a saved change, could not bring it up to date.
     refreshFailed: feed.hasRefreshError,
     retryRefresh: feed.retry,

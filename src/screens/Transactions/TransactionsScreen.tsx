@@ -15,7 +15,10 @@ import {
   useTransactionFlow,
 } from '@components';
 import { usePeriod, useConfirmation, useSpaceRefresh } from '@hooks';
-import { useAppSelector } from '@redux/hooks';
+import type { AssignmentKey } from '@api/models';
+import { useAppSelector, useSpaceArg } from '@redux/hooks';
+import { selectProfileId } from '@redux/state/profile/selectors';
+import { useGetTransactionAssigneesQuery } from '@redux/state/transaction/api';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { rangeSelection } from '@redux/state/transactionFlow/selection';
 import { monthPeriodOf, toDateRange } from '@shared/utils';
@@ -30,7 +33,10 @@ import TransactionsEmptyState from './components/TransactionsEmptyState/Transact
 import TransactionsHeader from './components/TransactionsHeader/TransactionsHeader';
 import TransactionsList from './components/TransactionsList/TransactionsList';
 import useSearch from './hooks/useSearch';
+import FilterSheet from './components/FilterSheet/FilterSheet';
+import type { FilterSheetContent } from './components/FilterSheet/FilterSheet';
 import HistoryFilters from './components/HistoryFilters/HistoryFilters';
+import { assigneeOptions, TYPE_OPTIONS } from './historyFilterOptions';
 import type { HistoryFilters as Filters } from './hooks/useTransactionsData';
 import useTransactionsData from './hooks/useTransactionsData';
 import { feedListProps } from './feedListProps';
@@ -73,6 +79,9 @@ const TransactionsScreen = () => {
   const q = search.submitted;
   // The type and assignment the list is narrowed to, as Home or the user set them; they belong to the space.
   const [filters, setFilters] = useState<Filters>({});
+  const [openFilter, setOpenFilter] = useState<'type' | 'assignment' | null>(null);
+  const selfId = useAppSelector(selectProfileId);
+  const assigneesQuery = useGetTransactionAssigneesQuery(useSpaceArg());
 
   // Show from a confirmation: the record's month with no search, its row scrolled to and lit for a moment.
   // The user's period changes only on this explicit request.
@@ -166,7 +175,43 @@ const TransactionsScreen = () => {
     retry,
     retryLatest,
     missedAroundId,
+    isMemberFilterRefused,
   } = data;
+
+  // Someone the space no longer knows: the filter goes, and its choices are read again.
+  if (isMemberFilterRefused && filters.assignment) {
+    setFilters(({ assignment: _assignment, assignmentName: _name, ...rest }) => rest);
+    assigneesQuery.refetch();
+  }
+
+  // Another selection starts from its first page, not around a row of the previous one.
+  const changeFilters = (change: (current: Filters) => Filters) => {
+    setFilters(change);
+    setAnchor(null);
+    setRestoreId(null);
+  };
+
+  const typeSheet: FilterSheetContent<TransactionType> = {
+    title: 'Type',
+    options: TYPE_OPTIONS,
+    selected: filters.transactionType,
+    onSelect: (transactionType) => {
+      changeFilters((current) => ({ ...current, transactionType }));
+      setOpenFilter(null);
+    },
+  };
+  const assignmentChoices = assigneeOptions(assigneesQuery.currentData, selfId);
+  const assignmentSheet: FilterSheetContent<AssignmentKey> = {
+    title: 'Assigned to',
+    description: 'Show transactions for one person or a shared bucket.',
+    options: assignmentChoices,
+    selected: filters.assignment,
+    onSelect: (assignment) => {
+      const option = assignmentChoices.find(({ value }) => value === assignment);
+      changeFilters((current) => ({ ...current, assignment, assignmentName: assignment ? option?.label : undefined }));
+      setOpenFilter(null);
+    },
+  };
 
   // A record already listed is only scrolled to; any other opens its month around it.
   if (reveal && reveal !== revealed) {
@@ -290,9 +335,11 @@ const TransactionsScreen = () => {
 
               <HistoryFilters
                 filters={filters}
-                onClearType={() => setFilters(({ transactionType: _type, ...rest }) => rest)}
+                onOpenType={() => setOpenFilter('type')}
+                onOpenAssignment={() => setOpenFilter('assignment')}
+                onClearType={() => changeFilters(({ transactionType: _type, ...rest }) => rest)}
                 onClearAssignment={() =>
-                  setFilters(({ assignment: _assignment, assignmentName: _name, ...rest }) => rest)
+                  changeFilters(({ assignment: _assignment, assignmentName: _name, ...rest }) => rest)
                 }
               />
 
@@ -346,7 +393,7 @@ const TransactionsScreen = () => {
                 <TransactionsEmptyState
                   variant="noFilterMatches"
                   activeRange={range}
-                  onClearFilters={() => setFilters({})}
+                  onClearFilters={() => changeFilters(() => ({}))}
                 />
               )}
 
@@ -385,6 +432,13 @@ const TransactionsScreen = () => {
           onIncome={() => openCreate(TransactionType.INCOME)}
         />
       )}
+
+      <FilterSheet content={openFilter === 'type' ? typeSheet : null} onClose={() => setOpenFilter(null)} />
+      <FilterSheet
+        content={openFilter === 'assignment' ? assignmentSheet : null}
+        selfId={selfId}
+        onClose={() => setOpenFilter(null)}
+      />
 
       <ConfirmationSheet confirmation={deleteConfirmation} />
     </>

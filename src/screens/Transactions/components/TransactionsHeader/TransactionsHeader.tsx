@@ -137,7 +137,7 @@ const TransactionsHeader = ({
               onSubmitEditing={onSubmit}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
-              placeholder="Description, category, wallet"
+              placeholder="Search description or category"
               placeholderTextColor={colors.muted}
               selectionColor={colors.accent}
               returnKeyType="search"

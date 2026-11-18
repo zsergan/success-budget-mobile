@@ -85,7 +85,7 @@ const TransactionsEmptyState = (props: Props) => (
         variant="solid"
         icon="search"
         title={`No matches for “${quote(props.query)}”`}
-        description={`Nothing in descriptions, categories or wallet names between ${formatRangeLabel(props.activeRange)}. You can change the period above.`}
+        description={`Nothing in descriptions or categories between ${formatRangeLabel(props.activeRange)}. To see what’s assigned to someone, use the Assigned to filter.`}
         actionLabel="Clear search"
         onActionPress={props.onClearSearch}
       />
