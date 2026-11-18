@@ -213,12 +213,14 @@ const TransactionsScreen = () => {
     },
   };
 
-  // A record already listed is only scrolled to; any other opens its month around it.
+  // A record already listed is only scrolled to; any other opens its month around it. A list narrowed by a search or a
+  // filter is not the one the reveal shows, so its rows say nothing about where the record is in the plain month.
   if (reveal && reveal !== revealed) {
     setRevealed(reveal);
     if (reveal.spaceId === spaceId) {
+      const isNarrowed = !!q || filters.transactionType !== undefined || filters.assignment !== undefined;
       const isListed =
-        !q && isShownMonth(reveal.timestamp) && transactions.some(({ id }) => id === reveal.transactionId);
+        !isNarrowed && isShownMonth(reveal.timestamp) && transactions.some(({ id }) => id === reveal.transactionId);
 
       setFilters({});
       if (!isListed) {

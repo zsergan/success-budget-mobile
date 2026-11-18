@@ -197,6 +197,39 @@ describe('TransactionsScreen', () => {
       expect(listRequests().at(-1)?.params).toMatchObject({ assignment: 'member:40' });
     });
 
+    it('opens a record shown from elsewhere around it, unfiltered, even when the filtered list had it', async () => {
+      const newer = transactionDto({ id: 'tx-newer', timestamp: new Date(2026, 7, 30, 9).toISOString() });
+      mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
+        if (url.endsWith('/assignees')) return Promise.resolve({ data: assignees });
+        if (url !== FEED) return Promise.resolve({ data: null });
+        // Unfiltered, the month's first page ends before the record.
+        const rows = params?.assignment || params?.around_id ? [taxi] : [newer];
+        return Promise.resolve({ data: feedDto(rows) });
+      });
+      renderTransactions({ focus: { spaceId: 1, month: august, assignment: 'member:31', assignmentName: 'Lena' } });
+      await settle();
+      expect(screen.getByText('Taxi')).toBeTruthy();
+
+      const { landings, restore } = spyLandings();
+      act(() =>
+        navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB, {
+          reveal: { spaceId: 1, transactionId: 'tx-aug', timestamp: august },
+        }),
+      );
+      await settle();
+
+      expect(listRequests().at(-1)?.params).toEqual({
+        from: new Date(2026, 7, 1).toISOString(),
+        to: new Date(2026, 7, 31, 23, 59, 59, 999).toISOString(),
+        time_zone: ZONE,
+        around_id: 'tx-aug',
+      });
+      expect(screen.queryByLabelText('Remove the Lena filter')).toBeNull();
+      expect(screen.getByText('Taxi')).toBeTruthy();
+      expect(landings.at(-1)).toEqual({ id: 'tx-aug', viewPosition: 0.4 });
+      restore();
+    });
+
     it('says nothing matches the filters, and clears them', async () => {
       mockedRequest.mockImplementation(({ url }: RequestConfig) =>
         Promise.resolve({ data: url.endsWith('/assignees') ? assignees : url === FEED ? feedDto([]) : null }),
