@@ -17,6 +17,7 @@ import { createTransactionResponseDto, transactionDto } from '@redux/state/trans
 import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import { mapTransaction } from '@api/models';
 import { closed, CREATED_AUTO_CLOSE_MS, createOpened, restoredOpened } from '@redux/state/transactionFlow/slice';
+import { writesRestored } from '@redux/state/pendingWrite/slice';
 import type { DraftAssignment } from '@redux/state/transactionFlow/draft';
 import type { ViewSelection } from '@redux/state/transactionFlow/selection';
 import { checkFlowRecord, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
@@ -1371,6 +1372,46 @@ describe('TransactionFlowSheet', () => {
     expect(screen.getByRole('button', { name: 'Edit' })).toBeTruthy();
     // The details show the new values, so no toast says they were saved.
     expect(mockToasts.shown).toEqual([]);
+  });
+
+  it('keeps an edit unsent while an earlier edit of the record is unconfirmed, and keeps the draft', async () => {
+    const { store, openDetails, flow } = renderFlow();
+    act(() => {
+      store.dispatch(
+        writesRestored({
+          userId: 1,
+          writes: [
+            {
+              status: 'unknown',
+              operation: {
+                type: 'update',
+                spaceId: 1,
+                transactionId: 'tx-1',
+                version: 2,
+                data: { amount: '60.00' },
+                idempotencyKey: 'earlier-key',
+                firstSentAt: Date.now(),
+              },
+            },
+          ],
+        }),
+      );
+    });
+
+    openDetails();
+    await settle();
+    fireEvent.press(screen.getByText('Edit'));
+    fireEvent.changeText(screen.getByLabelText('Amount'), '70');
+    fireEvent.press(screen.getByText('Save changes'));
+    await act(async () => failWrite(new Error('Network Error')));
+    await settle();
+
+    const patches = mockedRequest.mock.calls.filter(([config]) => config.method === 'PATCH');
+    expect(patches).toEqual([
+      [expect.objectContaining({ headers: expect.objectContaining({ 'Idempotency-Key': 'earlier-key' }) })],
+    ]);
+    expect(screen.getByText('An earlier change isn’t confirmed yet')).toBeTruthy();
+    expect(flow()).toMatchObject({ isSaving: false, draft: { amount: '70' } });
   });
 
   it('shows the record the list had, and offers Edit only once it is read again', async () => {

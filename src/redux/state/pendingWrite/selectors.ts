@@ -14,6 +14,16 @@ export const selectUnconfirmedDelete = (state: RootState, transactionId: string)
       status === 'unknown' && operation.type === 'delete' && operation.transactionId === transactionId,
   );
 
+// Edits and deletes of this record whose outcome is not known yet: one going out now, or one that got no answer.
+export const selectUnsettledRecordWrites = (state: RootState, spaceId: number, transactionId: string) =>
+  state.pendingWrite.writes.filter(
+    ({ operation, status }) =>
+      (status === 'sending' || status === 'unknown') &&
+      operation.type !== 'create' &&
+      operation.spaceId === spaceId &&
+      operation.transactionId === transactionId,
+  );
+
 export const selectSpacePendingWrites = createSelector(
   [selectPendingWrites, (_state: RootState, spaceId: number | null) => spaceId],
   (writes, spaceId) => writes.filter(({ operation }) => operation.spaceId === spaceId),

@@ -18,16 +18,24 @@ export const inSession = (operation: StoredOperation, sessionKey: number): Trans
 // older build left that only changed a wallet come back so the user can be told they were not kept.
 export const restorePendingWrites =
   (userId: number): AppThunk<Promise<RetiredEdit[]>> =>
-  async (dispatch, getState) => {
-    const { writes, retiredEdits } = await readPendingWrites(userId);
-    if (selectProfileId(getState()) !== userId) return [];
+  (dispatch, getState, { restoringWrites }) => {
+    const run = (async () => {
+      const { writes, retiredEdits } = await readPendingWrites(userId);
+      if (selectProfileId(getState()) !== userId) return [];
 
-    dispatch(writesRestored({ userId, writes }));
-    retiredEdits.forEach(({ spaceId }) =>
-      dispatch(transactionApi.util.invalidateTags(spaceTags(spaceId, ...TRANSACTION_WRITE_TAGS))),
-    );
+      dispatch(writesRestored({ userId, writes }));
+      retiredEdits.forEach(({ spaceId }) =>
+        dispatch(transactionApi.util.invalidateTags(spaceTags(spaceId, ...TRANSACTION_WRITE_TAGS))),
+      );
 
-    return retiredEdits;
+      return retiredEdits;
+    })();
+
+    restoringWrites.set(userId, run);
+
+    return run.finally(() => {
+      if (restoringWrites.get(userId) === run) restoringWrites.delete(userId);
+    });
   };
 
 export interface ResumedWrite {

@@ -28,6 +28,7 @@ const SAVE_NOTICES: Partial<Record<TransactionFailureKind, SaveNotice>> = {
   uncertain: 'saveUnknown',
   expired: 'saveExpired',
   notSent: 'saveNotSent',
+  blocked: 'saveBlocked',
 };
 
 // Named as the save starts: a refusal refreshes the members, and the list that comes back no longer has them.

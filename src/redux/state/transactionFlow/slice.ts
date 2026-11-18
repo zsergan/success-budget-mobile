@@ -30,6 +30,7 @@ export type FlowCheck = 'pending' | 'done' | 'failed';
 // `deleteUncertain`: no answer, so the delete may have applied; repeating it is safe.
 // `saveUnknown`: no answer, so the save may have applied; repeating it never applies it twice.
 // `saveRefused`: the server refused it, as `refusal` says. `saveNotSent`: it could not be stored, so it never went out.
+// `saveBlocked`: not sent, as an earlier change of the record still has no known outcome.
 // `saveExpired`: a create the server never got before its key ran out; only the user sends it again.
 // `saveRecovered`: an unconfirmed earlier save turned out to have applied; later changes wait for a new save.
 // `saveFound`: an earlier attempt of this create had applied, so the details show that record instead.
@@ -43,6 +44,7 @@ export type FlowNotice =
   | 'saveUnknown'
   | 'saveRefused'
   | 'saveNotSent'
+  | 'saveBlocked'
   | 'saveExpired'
   | 'saveRecovered'
   | 'saveFound'

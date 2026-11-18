@@ -70,8 +70,11 @@ const signIn = (userId = 1) => {
   return store;
 };
 
-const submit = (store: ReturnType<typeof signIn>, request = create, memory: OperationMemory | null = null) =>
-  store.dispatch(submitTransactionRequest(request, memory));
+const submit = (
+  store: ReturnType<typeof signIn>,
+  request: TransactionRequest = create,
+  memory: OperationMemory | null = null,
+) => store.dispatch(submitTransactionRequest(request, memory));
 
 const results = async (store: ReturnType<typeof signIn>) =>
   (await store.dispatch(resumePendingWrites())).map(({ result }) => result);
@@ -292,6 +295,112 @@ describe('pending writes', () => {
       { kind: 'refused', error: expect.objectContaining({ code: 'CATEGORY_ARCHIVED' }) },
     ]);
     expect(await stored()).toEqual([]);
+  });
+});
+
+describe('a record with an unsettled edit or delete', () => {
+  const edit = (transactionId = 'tx-1', version = 3, amount = '20.00'): TransactionRequest => ({
+    type: 'update',
+    spaceId: 1,
+    transactionId,
+    version,
+    data: { amount },
+  });
+  const remove: TransactionRequest = { type: 'delete', spaceId: 1, transactionId: 'tx-1', version: 3 };
+  const mutations = () => sent().filter(({ method }) => method !== 'GET');
+  const edited = answers({ transaction: transactionDto({ version: 4 }) });
+
+  // An edit that got no answer, read back after a restart.
+  const leftUnsettled = async (request = edit()) => {
+    mockedRequest.mockImplementationOnce(noAnswer);
+    await submit(signIn(), request);
+
+    return restart();
+  };
+
+  it('sends nothing new while its replay is in flight, and keeps it pending when that gets no answer', async () => {
+    const store = await leftUnsettled();
+    let failReplay!: (error: unknown) => void;
+    let replaySent!: () => void;
+    const isReplaySent = new Promise<void>((resolve) => (replaySent = resolve));
+    mockedRequest.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          failReplay = reject;
+          replaySent();
+        }),
+    );
+
+    const replay = store.dispatch(resumePendingWrites());
+    await isReplaySent;
+    const newEdit = submit(store, edit('tx-1', 3));
+    const newDelete = submit(store, remove);
+    failReplay(new Error('timeout of 20000ms exceeded'));
+    await replay;
+
+    expect((await newEdit).outcome).toMatchObject({ status: 'failed', failure: { kind: 'blocked' } });
+    expect((await newDelete).outcome).toMatchObject({ status: 'failed', failure: { kind: 'blocked' } });
+    expect(mutations()).toEqual([
+      expect.objectContaining({ method: 'PATCH', headers: expect.objectContaining({ 'Idempotency-Key': 'key-1' }) }),
+    ]);
+    expect(await stored()).toMatchObject([{ status: 'unknown', operation: { idempotencyKey: 'key-1' } }]);
+  });
+
+  it('waits for the stored writes to be read back before anything is sent for the record', async () => {
+    mockedRequest.mockImplementationOnce(noAnswer);
+    await submit(signIn(), edit());
+    mockedRequest.mockClear();
+    const store = signIn();
+    mockedRequest.mockImplementationOnce(noAnswer);
+
+    const restoring = store.dispatch(restorePendingWrites(1));
+    const { outcome } = await submit(store, edit('tx-1', 3));
+    await restoring;
+
+    expect(outcome).toMatchObject({ status: 'failed', failure: { kind: 'blocked' } });
+    expect(mutations()).toEqual([
+      expect.objectContaining({ headers: expect.objectContaining({ 'Idempotency-Key': 'key-1' }) }),
+    ]);
+  });
+
+  it('lets another record be edited at once', async () => {
+    const store = await leftUnsettled();
+    mockedRequest.mockImplementationOnce(edited);
+
+    expect((await submit(store, edit('tx-2', 1))).outcome).toMatchObject({ status: 'succeeded' });
+    expect(mutations()).toEqual([expect.objectContaining({ method: 'PATCH', url: '/spaces/1/transactions/tx-2' })]);
+    expect(await stored()).toMatchObject([{ status: 'unknown', operation: { transactionId: 'tx-1' } }]);
+  });
+
+  it('settles the earlier edit first, then sends the new one at its version for the server to compare', async () => {
+    const store = await leftUnsettled();
+    mockedRequest.mockImplementationOnce(edited).mockImplementationOnce(refusal(409, 'TRANSACTION_VERSION_CONFLICT'));
+
+    const { outcome } = await submit(store, edit('tx-1', 3, '30.00'));
+
+    expect(outcome).toMatchObject({ status: 'failed', failure: { kind: 'conflict' } });
+    expect(mutations().map(({ headers }) => headers?.['Idempotency-Key'])).toEqual(['key-1', 'key-2']);
+    expect(await stored()).toEqual([]);
+  });
+
+  it('finds the record gone when the earlier delete went through', async () => {
+    const store = await leftUnsettled(remove);
+    mockedRequest.mockImplementationOnce(answers(true)).mockImplementationOnce(refusal(404, 'TRANSACTION_NOT_FOUND'));
+
+    const { outcome } = await submit(store, edit('tx-1', 3));
+
+    expect(outcome).toMatchObject({ status: 'failed', failure: { kind: 'notFound' } });
+    expect(mutations().map(({ method }) => method)).toEqual(['DELETE', 'PATCH']);
+  });
+
+  it('keeps one account’s unsettled edit from another account', async () => {
+    await leftUnsettled();
+    const other = await restart(2);
+    mockedRequest.mockImplementationOnce(edited);
+
+    expect((await submit(other, edit('tx-1', 3))).outcome).toMatchObject({ status: 'succeeded' });
+    expect(mutations()).toHaveLength(1);
+    expect(await stored(1)).toHaveLength(1);
   });
 });
 

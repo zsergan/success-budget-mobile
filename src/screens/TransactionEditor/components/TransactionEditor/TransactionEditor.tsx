@@ -364,6 +364,14 @@ const TransactionEditor = ({
               actionLabel="Try again"
               onAction={onSave}
             />
+          ) : flow.notice === 'saveBlocked' ? (
+            <Banner
+              tone="warn"
+              title="An earlier change isn’t confirmed yet"
+              text="It must reach the server before this one can be saved. Your edits are still here; trying again checks it first."
+              actionLabel="Try again"
+              onAction={onSave}
+            />
           ) : flow.notice === 'saveExpired' ? (
             <Banner
               tone="danger"

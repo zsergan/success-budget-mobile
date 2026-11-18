@@ -6,7 +6,7 @@ import type { TransactionModel, TransactionWriteResult } from '@api/models';
 import { spaceTags } from '@redux/api/baseApi';
 import type { AppThunk, RootState } from '@redux/Store';
 import { IDEMPOTENCY_KEY_LIFETIME_MS } from '@shared/constants';
-import { selectPendingWrite } from '../pendingWrite/selectors';
+import { selectPendingWrite, selectUnsettledRecordWrites } from '../pendingWrite/selectors';
 import type { PendingWriteStatus } from '../pendingWrite/slice';
 import { writeRecorded, writeSettled } from '../pendingWrite/slice';
 import { forgetPendingWrite, persistPendingWrites } from '../pendingWrite/storage';
@@ -47,8 +47,9 @@ interface OperationResults {
 // `uncertain`: no answer, or a server failure; the write may or may not have applied.
 // `expired`: a create whose key ran out with no trace of it on the server; only the user sends it again.
 // `notSent`: it could not be stored first, so it never went out.
+// `blocked`: not sent, as an earlier edit or delete of the same record still has no known outcome.
 export type TransactionFailureKind =
-  'validation' | 'conflict' | 'notFound' | 'accessLost' | 'uncertain' | 'rejected' | 'expired' | 'notSent';
+  'validation' | 'conflict' | 'notFound' | 'accessLost' | 'uncertain' | 'rejected' | 'expired' | 'notSent' | 'blocked';
 
 export interface TransactionFailure {
   kind: TransactionFailureKind;
@@ -375,6 +376,30 @@ const recordOf = (outcome: OperationOutcome): TransactionModel | null => {
   return (outcome.result as TransactionWriteResult).transaction;
 };
 
+// An edit or a delete of a record waits for the earlier ones of it whose outcome is unknown, those not read back yet
+// after a restart included: each is settled first with its own key and version. One still unknown blocks this one.
+const settleEarlierWrites =
+  (request: TransactionRequest, ownKey: string | undefined): AppThunk<Promise<WriteResult | null>> =>
+  async (dispatch, getState, { restoringWrites }) => {
+    if (request.type === 'create') return null;
+
+    const userId = selectProfileId(getState());
+    const restoring = userId === undefined ? undefined : restoringWrites.get(userId);
+    if (restoring) await restoring.catch(() => undefined);
+
+    const { sessionKey } = getState().auth;
+    const earlier = selectUnsettledRecordWrites(getState(), request.spaceId, request.transactionId).filter(
+      ({ operation }) => operation.idempotencyKey !== ownKey,
+    );
+
+    for (const { operation } of earlier) {
+      const result = await dispatch(settleWrite(Object.freeze({ ...operation, sessionKey })));
+      if (result.kind === 'stale' || result.kind === 'unknown') return result;
+    }
+
+    return null;
+  };
+
 export interface Submission<T extends RequestType> {
   outcome: OperationOutcome<T>;
   memory: OperationMemory | null;
@@ -394,6 +419,14 @@ export const submitTransactionRequest =
     const isSameScope = previous?.sessionKey === sessionKey && previous.spaceId === spaceId;
     let memory: OperationMemory = isSameScope ? previous : { sessionKey, spaceId, unresolved: null };
     const pending = memory.unresolved;
+
+    const earlier = await dispatch(settleEarlierWrites(request, pending?.operation.idempotencyKey));
+    if (earlier?.kind === 'stale' || !isInScope(getState(), memory)) return { outcome: { status: 'stale' }, memory };
+    if (earlier?.kind === 'unknown') {
+      const failure: TransactionFailure = { kind: 'blocked', error: earlier.error };
+
+      return { outcome: { status: 'failed', failure, operation: createOperation(request, sessionKey) }, memory };
+    }
 
     if (pending && !isSameRequest(pending.operation, request)) {
       let { failure } = pending;
