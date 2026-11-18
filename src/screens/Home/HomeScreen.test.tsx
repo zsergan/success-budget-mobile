@@ -14,8 +14,7 @@ import { spaceApi } from '@redux/state/space/api';
 import { activateSpace } from '@redux/state/space/thunks';
 import { feedDto, transactionDto } from '@redux/state/transaction/fixtures';
 import { STATS_FIXTURES } from '@screens/Stats/fixtures/statsFixtures';
-import type { TransactionType } from '@shared/enums';
-import { ScreenNames, SpaceType } from '@shared/enums';
+import { ScreenNames, SpaceType, TransactionType } from '@shared/enums';
 import type { MainTabParamList } from '@shared/types';
 import HomeScreen from './HomeScreen';
 
@@ -148,6 +147,54 @@ describe('HomeScreen', () => {
     expect(breakdown.params).toMatchObject({ transaction_type: 'expense', as_of: summary.params?.as_of });
     expect(feed.params).toMatchObject({ from: new Date(2026, 8, 1).toISOString(), limit: 5 });
     expect(requests('/statistics/trend')).toEqual([]);
+  });
+
+  describe('when the summary and the breakdown disagree', () => {
+    const offTotal = { amount: '1.00', count: 1 };
+    // The first `mismatched` breakdowns were read after a change the summary did not see.
+    const answerMismatched = (mismatched: number) => {
+      let breakdowns = 0;
+      mockedRequest.mockImplementation((config: RequestConfig) => {
+        if (config.url.endsWith('/statistics/breakdown') && breakdowns++ < mismatched) {
+          return Promise.resolve({ data: { ...fixture.breakdown[TransactionType.EXPENSE], total: offTotal } });
+        }
+        return respond(config);
+      });
+    };
+    const cycles = () =>
+      requests('/statistics/summary').map((summary, index) => [
+        summary.params?.as_of,
+        requests('/statistics/breakdown')[index]?.params?.as_of,
+      ]);
+
+    it('reads both again once, on one as_of, and shows the pair that agrees', async () => {
+      answerMismatched(1);
+      renderHome();
+      await settle();
+
+      expect(cycles()).toHaveLength(2);
+      cycles().forEach(([summaryAsOf, breakdownAsOf]) => expect(breakdownAsOf).toBe(summaryAsOf));
+      expect(requests('/statistics/trend')).toEqual([]);
+      expect(screen.getByText('Housing')).toBeTruthy();
+      expect(screen.queryByText('The figures changed while they loaded and may not add up.')).toBeNull();
+    });
+
+    it('says so when they still disagree, and reads them again on Retry', async () => {
+      answerMismatched(3);
+      renderHome();
+      await settle();
+
+      expect(cycles()).toHaveLength(2);
+      expect(screen.getByText('The figures changed while they loaded and may not add up.')).toBeTruthy();
+
+      fireEvent.press(screen.getByText('Retry'));
+      await settle();
+
+      expect(cycles()).toHaveLength(4);
+      cycles().forEach(([summaryAsOf, breakdownAsOf]) => expect(breakdownAsOf).toBe(summaryAsOf));
+      expect(requests('/statistics/trend')).toEqual([]);
+      expect(screen.queryByText('The figures changed while they loaded and may not add up.')).toBeNull();
+    });
   });
 
   it('moves to an earlier month and back, never past the current one', async () => {

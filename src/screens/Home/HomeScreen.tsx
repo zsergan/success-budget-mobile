@@ -87,6 +87,7 @@ const HomeScreen = ({ navigation, route }: Props) => {
   const isEmptyMonth = !!summary && summary.has_any_transactions && summary.transactions_count === 0;
   // What is shown stays, flagged, when a refresh of any block could not bring it up to date.
   const refreshFailed = stats.updateFailed || activity.hasRefreshError;
+  const showsFailure = refreshFailed || stats.isUnreconciled;
   const anchor = range.from.toISOString();
   const currentName = monthName(new Date());
 
@@ -135,11 +136,15 @@ const HomeScreen = ({ navigation, route }: Props) => {
           onBackToCurrent={month.showCurrent}
         />
 
-        {refreshFailed && (
+        {showsFailure && (
           <View style={styles.banner}>
             <Banner
               tone="danger"
-              text="Couldn’t update. Showing what was loaded before."
+              text={
+                refreshFailed
+                  ? 'Couldn’t update. Showing what was loaded before.'
+                  : 'The figures changed while they loaded and may not add up.'
+              }
               actionLabel="Retry"
               onAction={retry}
             />

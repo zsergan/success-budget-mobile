@@ -14,6 +14,7 @@ import {
 import {
   areStatisticsConsistent,
   getDeviceTimeZone,
+  isBreakdownConsistent,
   isAsOfRejected,
   toStatisticsQuery,
 } from '@redux/state/statistics/selectors';
@@ -264,12 +265,16 @@ const useStatsData = (
 
   const isInconsistent =
     summary.currentData !== undefined &&
-    trend.currentData !== undefined &&
     breakdown.currentData !== undefined &&
-    !areStatisticsConsistent(summary.currentData, trend.currentData, breakdown.currentData);
+    (withTrend
+      ? trend.currentData !== undefined &&
+        !areStatisticsConsistent(summary.currentData, trend.currentData, breakdown.currentData)
+      : !isBreakdownConsistent(summary.currentData, breakdown.currentData));
   if (isInconsistent && cycle && !cycle.isReconciling) {
     restartInRender({ isReconciling: true });
   }
+  // The one reload still disagreed: what is shown is kept, marked, until a retry starts a new cycle.
+  const isUnreconciled = isInconsistent && !!cycle?.isReconciling;
 
   // A successful mutation bumps the revision; the first value for a space is only its baseline.
   const { currentData: revision } = useGetStatisticsRevisionQuery(useSpaceArg());
@@ -312,6 +317,11 @@ const useStatsData = (
   // A blocked block carries no error of its own; summary's is the one it waits on.
   const errors = blocks.map((block) => block.error ?? (block.hasError ? summaryBlock.error : undefined));
   const retryFailed = () => {
+    if (isUnreconciled) {
+      setStored((prev) => restart(prev, {}));
+      return;
+    }
+
     const failed = blocks.filter((block) => block.hasError || block.updateFailed);
     if (failed.length === 0) return;
 
@@ -333,6 +343,7 @@ const useStatsData = (
     // Every block failed with nothing to show: one screen-wide failure instead of three cards.
     loadFailed: blocks.every((block) => block.hasError),
     loadError: errors.find((error) => error !== undefined),
+    isUnreconciled,
     accessDenied: errors.some(isSpaceAccessDenied),
     refresh,
     refreshIfStale,
