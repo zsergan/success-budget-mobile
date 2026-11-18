@@ -177,6 +177,25 @@ const categories: GetCategoriesResponse = {
 
 const noLimits: GetLimitsResponse = { total: null, categories: [], over_allocation: null };
 
+const memberRow = (userId: number, name: string, email = `${name.toLowerCase()}@example.com`) => ({
+  type: 'member',
+  id: userId + 100,
+  user_id: userId,
+  name,
+  email,
+  role: 'member',
+  can_remove: true,
+});
+const pendingInvite = {
+  type: 'invite',
+  id: 5,
+  user_id: null,
+  name: null,
+  role: null,
+  email: 'anna@example.com',
+  can_remove: true,
+};
+let membersResponse: unknown[] | (() => Promise<unknown>) = [];
 let categoriesResponse = categories;
 let limitsResponse = noLimits;
 
@@ -235,6 +254,9 @@ const respond = ({ url, method }: { url: string; method: string }) => {
   if (url.includes('/transactions/operations/')) return answerOperation();
   if (url.endsWith('/transactions/tx-1')) return answerRead ? answerRead() : Promise.resolve({ data: stored });
   if (url.endsWith('/categories')) return Promise.resolve({ data: categoriesResponse });
+  if (url.endsWith('/members')) {
+    return typeof membersResponse === 'function' ? membersResponse() : Promise.resolve({ data: membersResponse });
+  }
   if (url.endsWith('/limits')) return Promise.resolve({ data: limitsResponse });
 
   return Promise.resolve({ data: [] });
@@ -348,6 +370,7 @@ beforeEach(() => {
   jest.spyOn(Keyboard, 'isVisible').mockReturnValue(false);
   answerOperation = defaultAnswerOperation;
   categoriesResponse = categories;
+  membersResponse = [];
   limitsResponse = noLimits;
   mockSheet.presents = 0;
   mockSheet.holdDismiss = false;
@@ -2240,5 +2263,167 @@ describe('TransactionFlowSheet', () => {
 
     expect(screen.getByText(/^Food: 150.* → 170.* of 200/)).toBeTruthy();
     expect(screen.getByText('Save changes')).toBeEnabled();
+  });
+
+  describe('assigned to', () => {
+    const team = [memberRow(1, 'Anna'), memberRow(31, 'Lena'), memberRow(40, 'Mark'), pendingInvite];
+    const lastPost = () => mockedRequest.mock.calls.filter(([config]) => config.method === 'POST').at(-1)?.[0];
+    const lastPatch = () => mockedRequest.mock.calls.filter(([config]) => config.method === 'PATCH').at(-1)?.[0];
+
+    it('starts on the user, offers the members and the two special values, and sends the pick', async () => {
+      membersResponse = team;
+      const { open } = renderFlow();
+
+      open();
+      await settle();
+
+      expect(screen.getByText('You’re the author')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'You (Anna)' }).props.accessibilityState).toMatchObject({
+        selected: true,
+      });
+      expect(screen.getByRole('button', { name: 'Lena' })).toBeTruthy();
+      expect(screen.queryByText('anna@example.com')).toBeNull();
+
+      fireEvent.press(screen.getByRole('button', { name: 'Whole space' }));
+      expect(
+        screen.getByText('Counts once in the space total. Not included in anyone’s personal amount.'),
+      ).toBeTruthy();
+      fireEvent.press(screen.getByRole('button', { name: 'No member assigned' }));
+      expect(screen.getByText('Counted in the space total, shown apart from Whole space.')).toBeTruthy();
+      fireEvent.press(screen.getByRole('button', { name: 'Lena' }));
+      fillExpense();
+      fireEvent.press(screen.getByText('Save expense'));
+      await act(async () => answerWrite({ data: createTransactionResponseDto() }));
+
+      expect(lastPost()?.data).toMatchObject({ assignment: { kind: 'member', user_id: 31 } });
+    });
+
+    it('keeps the user alone as one row in a space with nobody else, until asked for the other values', async () => {
+      membersResponse = [memberRow(1, 'Anna')];
+      const { open, flow } = renderFlow();
+
+      open();
+      await settle();
+
+      expect(screen.getByText('Tap to assign to Whole space or No member assigned')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Whole space' })).toBeNull();
+      fireEvent.press(screen.getByText('Tap to assign to Whole space or No member assigned'));
+      fireEvent.press(screen.getByRole('button', { name: 'Whole space' }));
+
+      expect(flow()?.draft?.assignment).toEqual({ kind: 'space' });
+    });
+
+    it('lets the user save with their own pick while the members load or fail', async () => {
+      let failMembers = true;
+      membersResponse = () =>
+        failMembers ? Promise.reject(new Error('Network Error')) : Promise.resolve({ data: team });
+      const { open } = renderFlow();
+
+      open();
+      expect(screen.getByLabelText('Loading members')).toBeTruthy();
+      await settle();
+
+      expect(screen.getByText('Members didn’t load. You can still save with the current choice.')).toBeTruthy();
+      fillExpense();
+      expect(screen.getByText('Save expense')).toBeEnabled();
+
+      failMembers = false;
+      fireEvent.press(screen.getByLabelText('Retry loading members'));
+      await settle();
+      expect(screen.getByRole('button', { name: 'Mark' })).toBeTruthy();
+    });
+
+    it('tells two members of one name apart', async () => {
+      membersResponse = [
+        memberRow(1, 'Anna'),
+        memberRow(31, 'Lena', 'lena@home.com'),
+        memberRow(32, 'Lena', 'lena@work.com'),
+      ];
+      const { open, flow } = renderFlow();
+
+      open();
+      await settle();
+      fireEvent.press(screen.getByRole('button', { name: 'Lena · lena@work.com' }));
+
+      expect(flow()?.draft?.assignment).toEqual({ kind: 'member', userId: 32 });
+      expect(screen.getByText('Assigned to Lena · lena@work.com')).toBeTruthy();
+    });
+
+    it('keeps the other fields and asks again when the member left before the save', async () => {
+      membersResponse = team;
+      const { open, flow } = renderFlow();
+
+      open();
+      await settle();
+      fireEvent.press(screen.getByRole('button', { name: 'Lena' }));
+      fillExpense();
+      fireEvent.press(screen.getByText('Save expense'));
+      membersResponse = [memberRow(1, 'Anna'), memberRow(40, 'Mark')];
+      await act(async () => failWrite(refusal(400, 'ASSIGNEE_NOT_MEMBER')));
+      await settle();
+
+      expect(
+        screen.getByText(
+          'Lena left this space while you were saving. Choose who this is assigned to — everything else is kept.',
+        ),
+      ).toBeTruthy();
+      expect(flow()?.draft).toMatchObject({ amount: '12', categoryId: 1, assignment: null });
+      expect(screen.queryByRole('button', { name: 'Lena' })).toBeNull();
+      expect(screen.getByText('Save expense')).toBeDisabled();
+
+      fireEvent.press(screen.getByRole('button', { name: 'Mark' }));
+      expect(screen.getByText('Save expense')).toBeEnabled();
+    });
+
+    it("keeps a former member's assignment through an edit, and back after another pick", async () => {
+      membersResponse = [memberRow(1, 'Anna'), memberRow(31, 'Lena')];
+      stored = transactionDto({
+        author: { user_id: 40, name: 'Mark', status: 'former_member', source: 'recorded' },
+        assignment: { kind: 'member', user_id: 40, name: 'Mark', status: 'former_member' },
+      });
+      const { openDetails } = renderFlow();
+
+      openDetails();
+      await settle();
+      fireEvent.press(screen.getByText('Edit'));
+      await settle();
+
+      expect(screen.getByText('Created by Mark · Former member')).toBeTruthy();
+      expect(
+        screen.getByText('Mark left this space. You can keep this assignment or choose someone else.'),
+      ).toBeTruthy();
+      fireEvent.press(screen.getByRole('button', { name: 'Lena' }));
+      expect(screen.getByText('Save changes')).toBeEnabled();
+      fireEvent.press(screen.getByRole('button', { name: 'Mark · Former member' }));
+      expect(screen.getByText('No changes yet')).toBeTruthy();
+
+      fireEvent.changeText(screen.getByLabelText('Amount'), '92');
+      fireEvent.press(screen.getByText('Save changes'));
+      await settle();
+
+      expect(lastPatch()?.data).toMatchObject({ amount: '92.00', assignment: { kind: 'member', user_id: 40 } });
+    });
+
+    it('clears a category of the other type, with a note, and keeps the rest of the draft', async () => {
+      const { open, flow } = renderFlow();
+
+      open(TransactionType.EXPENSE, { kind: 'unassigned' });
+      await settle();
+      fillExpense();
+      fireEvent.changeText(screen.getByLabelText('Description'), 'Groceries');
+      fireEvent.press(screen.getByText('Income'));
+
+      expect(
+        screen.getByText('Food is an expense category, so it was cleared. Amount, date, note and assignment are kept.'),
+      ).toBeTruthy();
+      expect(flow()?.draft).toMatchObject({
+        transactionType: TransactionType.INCOME,
+        amount: '12',
+        categoryId: null,
+        description: 'Groceries',
+        assignment: { kind: 'unassigned' },
+      });
+      expect(screen.getByText('Save income')).toBeDisabled();
+    });
   });
 });

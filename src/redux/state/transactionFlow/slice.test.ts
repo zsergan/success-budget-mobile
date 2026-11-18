@@ -6,6 +6,7 @@ import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
 import { hasUnsavedChanges, selectTransactionFlow } from './selectors';
 import {
   anotherStarted,
+  assigneeRefused,
   categoryCreated,
   categoryPicked,
   closed,
@@ -302,6 +303,28 @@ describe('transaction flow', () => {
 
     store.dispatch(categoryCreated({ draftId, categoryId: 12, transactionType: TransactionType.INCOME }));
     expect(flow()).toMatchObject({ draft: { categoryId: 11, assignment: lena } });
+  });
+
+  it('clears only the pick of a member who left during the save, until another one is picked', () => {
+    const { store, flow } = setUp();
+
+    openCreate(store);
+    store.dispatch(draftChanged({ amount: '12', categoryId: 4 }));
+    const { draftId } = flow()!;
+    store.dispatch(saveStarted({ draftId }));
+    store.dispatch(assigneeRefused({ draftId, name: 'Lena' }));
+
+    expect(flow()).toMatchObject({
+      isSaving: false,
+      notice: 'assigneeLeft',
+      refusal: 'Lena',
+      draft: { amount: '12', categoryId: 4, assignment: null },
+    });
+
+    store.dispatch(draftChanged({ description: 'Lunch' }));
+    expect(flow()?.notice).toBe('assigneeLeft');
+    store.dispatch(draftChanged({ assignment: { kind: 'space' } }));
+    expect(flow()).toMatchObject({ notice: null, draft: { assignment: { kind: 'space' } } });
   });
 
   it('starts on its assignment without counting it as a change', () => {

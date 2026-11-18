@@ -178,9 +178,9 @@ describe('assignment defaults', () => {
     expect(defaultAssignment(undefined)).toEqual({ kind: 'space' });
   });
 
-  it('repeats the last assignment for Add another while its member is still in the space', () => {
+  it('repeats the last assignment for Add another while its member is known to be in the space', () => {
     expect(keptAssignment(lena, { userId: 7, memberIds: [7, 31] })).toEqual(lena);
-    expect(keptAssignment(lena, { userId: 7 })).toEqual(lena);
+    expect(keptAssignment(lena, { userId: 7 })).toEqual(you);
     expect(keptAssignment(lena, { userId: 7, memberIds: [7] })).toEqual(you);
     expect(keptAssignment({ kind: 'unassigned' }, { userId: 7, memberIds: [7] })).toEqual({ kind: 'unassigned' });
     expect(keptAssignment(null, { userId: 7 })).toEqual(you);

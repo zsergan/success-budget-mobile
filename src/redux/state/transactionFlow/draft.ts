@@ -220,8 +220,7 @@ export const getDraftErrors = (
 export const defaultAssignment = (userId: number | undefined): DraftAssignment =>
   userId === undefined ? { kind: 'space' } : { kind: 'member', userId };
 
-// Add another repeats the last assignment while its member is still in the space; an unknown list keeps it, and the
-// server decides.
+// Add another repeats the last assignment while its member is known to be in the space.
 export const keptAssignment = (
   last: DraftAssignment | null,
   { userId, memberIds }: { userId: number | undefined; memberIds?: number[] },
@@ -229,7 +228,7 @@ export const keptAssignment = (
   if (!last) return defaultAssignment(userId);
   if (last.kind !== 'member') return last;
 
-  return last.userId !== null && (!memberIds || memberIds.includes(last.userId)) ? last : defaultAssignment(userId);
+  return last.userId !== null && memberIds?.includes(last.userId) ? last : defaultAssignment(userId);
 };
 
 export const hasDraftErrors = (errors: DraftErrors) => Object.keys(errors).length > 0;

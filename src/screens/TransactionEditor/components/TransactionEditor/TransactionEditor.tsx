@@ -10,6 +10,9 @@ import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
 import { getActiveCategories } from '@redux/state/category/selectors';
 import { useGetLimitsQuery } from '@redux/state/limit/api';
+import { useGetMembersQuery } from '@redux/state/member/api';
+import { activeMemberIds } from '@redux/state/member/selectors';
+import { useGetProfileQuery } from '@redux/state/profile/api';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import type { TransactionDraft } from '@redux/state/transactionFlow/draft';
 import { changedFields, getDraftErrors, hasDraftErrors } from '@redux/state/transactionFlow/draft';
@@ -18,6 +21,7 @@ import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { draftChanged } from '@redux/state/transactionFlow/slice';
 import { loadLatestRecord } from '@redux/state/transactionFlow/thunks';
 import { TransactionType } from '@shared/enums';
+import { authorLabel } from '@shared/utils';
 import DeleteButton from '@components/TransactionFlow/DeleteButton/DeleteButton';
 import { deleteFailureAction, deleteFailureText } from '@components/TransactionFlow/deleteMessage';
 import Banner from '@components/Banner/Banner';
@@ -25,6 +29,8 @@ import type { ListLoad } from '../SectionLoad/SectionLoad';
 import { listLoad } from '../SectionLoad/SectionLoad';
 import ActionRow from './ActionRow/ActionRow';
 import AmountField from './AmountField/AmountField';
+import { buildAssignmentOptions } from './AssignmentPicker/assignmentOptions';
+import AssignmentPicker from './AssignmentPicker/AssignmentPicker';
 import CategoryGrid from './CategoryGrid/CategoryGrid';
 import { buildCategoryGrid } from './CategoryGrid/categoryLayout';
 import DetailsCard from './DetailsCard/DetailsCard';
@@ -64,7 +70,13 @@ const TransactionEditor = ({
   const [isScrolled, setScrolled] = useState(false);
   const [isLoadingLatest, setLoadingLatest] = useState(false);
   const [hasLatestFailed, setLatestFailed] = useState(false);
+  // The category a type change cleared, named until another is picked in the same draft.
+  const [cleared, setCleared] = useState<{ draftId: number; name: string; typeWord: string } | null>(null);
   const spaceArg = useSpaceArg();
+  const membersQuery = useGetMembersQuery(spaceArg);
+  const { currentData: members } = membersQuery;
+  const membersLoad = listLoad(membersQuery);
+  const { currentData: profile } = useGetProfileQuery();
   const categoriesQuery = useGetCategoriesQuery(spaceArg);
   const { currentData: allCategories } = categoriesQuery;
   const categoriesLoad = listLoad(categoriesQuery);
@@ -97,17 +109,43 @@ const TransactionEditor = ({
 
   const change = (patch: Parameters<typeof draftChanged>[0]) => dispatch(draftChanged(patch));
 
-  // A category of the other type cannot stay picked.
+  // A category of the other type cannot stay picked; amount, date, note and assignment stay as they are.
   const changeType = (transactionType: TransactionType) => {
     if (transactionType === draft.transactionType) return;
 
-    change({ transactionType, ...(!fitsType(draft.categoryId, transactionType) && { categoryId: null }) });
+    const isCleared = draft.categoryId !== null && !fitsType(draft.categoryId, transactionType);
+    const name = [...activeOf(draft.transactionType), ...(archived ? [archived] : [])].find(
+      ({ id }) => id === draft.categoryId,
+    )?.name;
+
+    if (isCleared && name) setCleared({ draftId: flow.draftId, name, typeWord: isIncome ? 'an income' : 'an expense' });
+    change({ transactionType, ...(isCleared && { categoryId: null }) });
   };
+  const clearedNote =
+    cleared?.draftId === flow.draftId && draft.categoryId === null
+      ? `${cleared.name} is ${cleared.typeWord} category, so it was cleared. Amount, date, note and assignment are kept.`
+      : undefined;
+
+  const selfId = profile?.id;
+  const assignmentOptions = buildAssignmentOptions({
+    members,
+    self: profile && { id: profile.id, name: profile.name },
+    saved: saved?.assignment ?? null,
+  });
+  const authorNote = saved ? `Created by ${authorLabel(saved.author, selfId)}` : 'You’re the author';
+  const assigneeError =
+    flow.notice === 'assigneeLeft'
+      ? isEdit
+        ? `${flow.refusal ?? 'The member you chose'} left this space before your change was saved. Choose another option — your other edits are kept.`
+        : `${flow.refusal ?? 'The member you chose'} left this space while you were saving. Choose who this is assigned to — everything else is kept.`
+      : undefined;
 
   const errors = getDraftErrors(draft, {
     baseline: isEdit ? (flow.baseline ?? undefined) : undefined,
     now: now.getTime(),
     available: {
+      // The user is a member of the space they are in, whatever an older list says.
+      memberIds: members && [...(activeMemberIds(members) ?? []), ...(selfId === undefined ? [] : [selfId])],
       categoryIds: allCategories && [
         ...activeOf(draft.transactionType).map(({ id }) => id),
         ...(ownArchived ? [ownArchived.id] : []),
@@ -207,6 +245,13 @@ const TransactionEditor = ({
             />
 
             <View style={styles.categoryBlock}>
+              {clearedNote && (
+                <View style={styles.clearedNote}>
+                  <Icon name="info" size={14} color={colors.warnText} strokeWidth={2} />
+                  <Text style={styles.clearedNoteText}>{clearedNote}</Text>
+                </View>
+              )}
+
               <CategoryGrid
                 load={categoriesLoad}
                 tiles={grid.tiles}
@@ -227,6 +272,19 @@ const TransactionEditor = ({
 
               {limitForecast && <LimitHint forecast={limitForecast} currencyCode={currencyCode} />}
             </View>
+
+            <AssignmentPicker
+              key={flow.draftId}
+              load={membersLoad}
+              options={assignmentOptions}
+              selected={draft.assignment}
+              authorNote={authorNote}
+              error={assigneeError}
+              selfId={selfId}
+              typeColor={typeColor}
+              onSelect={(assignment) => change({ assignment })}
+              onRetry={membersQuery.refetch}
+            />
 
             <DetailsCard
               timestamp={draft.timestamp}

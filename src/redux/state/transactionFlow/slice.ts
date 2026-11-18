@@ -33,6 +33,7 @@ export type FlowCheck = 'pending' | 'done' | 'failed';
 // `saveRecovered`: an unconfirmed earlier save turned out to have applied; later changes wait for a new save.
 // `saveFound`: an earlier attempt of this create had applied, so the details show that record instead.
 // `saveRestored`: a create an older build never got applied; its draft is back for the user to check and send again.
+// `assigneeLeft`: the member picked left the space before the save went through; `refusal` names them.
 export type FlowNotice =
   | 'conflict'
   | 'deleteFailed'
@@ -43,7 +44,8 @@ export type FlowNotice =
   | 'saveExpired'
   | 'saveRecovered'
   | 'saveFound'
-  | 'saveRestored';
+  | 'saveRestored'
+  | 'assigneeLeft';
 
 export type SaveNotice = Extract<FlowNotice, `save${string}`>;
 
@@ -291,7 +293,11 @@ const transactionFlowSlice = createSlice({
 
       Object.assign(flow.draft, payload);
       // A refusal or a save that never went out says nothing about the changed draft; an unknown save still might.
-      if (flow.notice === 'saveRefused' || flow.notice === 'saveNotSent') {
+      if (
+        flow.notice === 'saveRefused' ||
+        flow.notice === 'saveNotSent' ||
+        (flow.notice === 'assigneeLeft' && payload.assignment)
+      ) {
         flow.notice = null;
         flow.refusal = null;
       }
@@ -346,6 +352,16 @@ const transactionFlowSlice = createSlice({
       flow.isSaving = false;
       flow.notice = payload.notice ?? null;
       flow.refusal = payload.refusal ?? null;
+    },
+    // The member picked is no longer in the space: the pick is cleared for a new one, everything else is kept.
+    assigneeRefused: (state, { payload }: DraftScoped<{ name: string | null }>) => {
+      const flow = flowOf(state, payload.draftId);
+      if (!flow?.draft) return;
+
+      flow.isSaving = false;
+      flow.draft.assignment = null;
+      flow.notice = 'assigneeLeft';
+      flow.refusal = payload.name;
     },
     // The form now edits the record an earlier save made, from what the server holds; the draft keeps the changes
     // typed since, so they show as changes of that record.
@@ -510,6 +526,7 @@ export const {
   panelClosed,
   saveStarted,
   saveFailed,
+  assigneeRefused,
   createFound,
   recordRecovered,
   createSucceeded,
