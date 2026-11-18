@@ -18,3 +18,8 @@ export const selectSpacePendingWrites = createSelector(
   [selectPendingWrites, (_state: RootState, spaceId: number | null) => spaceId],
   (writes, spaceId) => writes.filter(({ operation }) => operation.spaceId === spaceId),
 );
+
+// Creates whose space the user no longer has, whatever space is open: they can be saved nowhere.
+export const selectAccessLostWrites = createSelector([selectPendingWrites], (writes) =>
+  writes.filter(({ status }) => status === 'accessLost'),
+);

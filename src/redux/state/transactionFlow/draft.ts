@@ -135,6 +135,16 @@ export const draftFromTransaction = (transaction: TransactionModel): Transaction
   description: transaction.description ?? '',
 });
 
+// The draft a create was sent from, as near as its body says: a member's id, or the whole space or nobody.
+export const draftFromCreateRequest = (data: CreateTransactionRequest): TransactionDraft => ({
+  transactionType: data.transaction_type,
+  amount: data.amount,
+  categoryId: data.category_id,
+  assignment: data.assignment.kind === 'member' ? { kind: 'member', userId: data.assignment.user_id } : data.assignment,
+  timestamp: data.timestamp,
+  description: data.description ?? '',
+});
+
 const isSameAmount = (a: string, b: string) => (normalizeAmount(a) ?? a.trim()) === (normalizeAmount(b) ?? b.trim());
 
 const isSameField: { [K in keyof TransactionDraft]: (a: TransactionDraft[K], b: TransactionDraft[K]) => boolean } = {

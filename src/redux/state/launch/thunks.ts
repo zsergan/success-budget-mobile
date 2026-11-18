@@ -10,7 +10,6 @@ import { spaceApi } from '../space/api';
 import { pickFallbackSpaceId, selectCurrentSpaceId, selectSpaces } from '../space/selectors';
 import { persistActiveSpace, readActiveSpace } from '../space/storage';
 import { activateSpace, dropSpaceData } from '../space/thunks';
-import { walletApi } from '../wallet/api';
 import { attemptFailed, attemptSettled, attemptStarted, stageReached } from './actions';
 import type { LaunchFailure, LaunchStage } from './initialState';
 
@@ -159,13 +158,7 @@ export const runLaunch = (): AppThunk<Promise<void>> => async (dispatch, getStat
     // Nothing was selected, so nothing else clears a saved space the account no longer has.
     if (userId !== undefined && selectedSpaceId === null && spaceId === null) void persistActiveSpace(userId, null);
 
-    if (spaceId !== null) {
-      const wallets = await fetch(dispatch(walletApi.endpoints.getWallets.initiate({ spaceId }, { subscribe: false })));
-
-      if (!isLive()) return;
-      if (wallets.error) return await fail(wallets.error);
-    }
-
+    // A space needs nothing else to open: its currency comes with it, and its first transaction needs no setup.
     dispatch(attemptSettled({ attempt, phase: 'ready' }));
   } finally {
     releaseSpaces?.();

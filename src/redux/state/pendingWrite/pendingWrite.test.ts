@@ -59,7 +59,7 @@ const sent = () =>
 const posts = () => sent().filter(({ method }) => method === 'POST');
 
 const stored = async (userId = 1) =>
-  JSON.parse((await AsyncStorage.getItem(`pendingTransactionWrites.v1.${userId}`)) ?? '[]');
+  JSON.parse((await AsyncStorage.getItem(`pendingTransactionWrites.v2.${userId}`)) ?? '{"writes":[]}').writes;
 
 const signIn = (userId = 1) => {
   const store = createAppStore();
@@ -292,5 +292,144 @@ describe('pending writes', () => {
       { kind: 'refused', error: expect.objectContaining({ code: 'CATEGORY_ARCHIVED' }) },
     ]);
     expect(await stored()).toEqual([]);
+  });
+});
+
+describe('writes an older build left', () => {
+  const legacyKey = (userId = 1) => `pendingTransactionWrites.v1.${userId}`;
+  const legacyLunch = { ...sentLunch, assignment: undefined, wallet_id: 3 };
+  const convertedLunch = { ...sentLunch, assignment: { kind: 'space' } };
+  const leaveLegacy = (operations: object[], userId = 1) =>
+    AsyncStorage.setItem(
+      legacyKey(userId),
+      JSON.stringify(operations.map((operation) => ({ status: 'unknown', operation }))),
+    );
+  const legacyCreate = { type: 'create', spaceId: 1, idempotencyKey: 'key-1', firstSentAt: 0, data: legacyLunch };
+  const statuses = (store: ReturnType<typeof signIn>) =>
+    store.getState().pendingWrite.writes.map(({ status, found }) => ({ status, found: found?.id }));
+
+  it.each([
+    ['applied', operation('applied'), [{ status: 'found', found: 'tx-1' }]],
+    ['deleted since', operation('deleted'), []],
+    ['never applied', refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND'), [{ status: 'retry', found: undefined }]],
+    ['not known yet', noAnswer, [{ status: 'checking', found: undefined }]],
+    ['in a space the user lost', refusal(403, 'FORBIDDEN_SPACE'), [{ status: 'accessLost', found: undefined }]],
+  ])('looks a create up first and offers what it found: %s', async (_name, answer, expected) => {
+    await leaveLegacy([legacyCreate]);
+    const store = await restart();
+    mockedRequest.mockImplementationOnce(answer);
+
+    await store.dispatch(resumePendingWrites());
+
+    expect(sent()).toEqual([
+      expect.objectContaining({ method: 'GET', url: '/spaces/1/transactions/operations/key-1' }),
+    ]);
+    expect(statuses(store)).toEqual(expected);
+    expect(await stored()).toHaveLength(expected.length);
+  });
+
+  it('keeps checking across a restart, sends nothing for the user to decide, and keeps the lost space', async () => {
+    await leaveLegacy([legacyCreate]);
+    let store = await restart();
+    mockedRequest.mockImplementationOnce(noAnswer);
+    await store.dispatch(resumePendingWrites());
+
+    store = await restart();
+    expect(statuses(store)).toEqual([{ status: 'checking', found: undefined }]);
+    mockedRequest.mockImplementationOnce(refusal(403, 'FORBIDDEN_SPACE'));
+    await store.dispatch(resumePendingWrites());
+
+    store = await restart();
+    await store.dispatch(resumePendingWrites());
+
+    expect(posts()).toEqual([]);
+    expect(store.getState().pendingWrite.writes).toMatchObject([{ status: 'accessLost', operation: { spaceId: 1 } }]);
+  });
+
+  it('sends a restored create again under its original operation, also with a changed category', async () => {
+    await leaveLegacy([legacyCreate]);
+    const store = await restart();
+    mockedRequest.mockImplementationOnce(refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND'));
+    await store.dispatch(resumePendingWrites());
+
+    mockedRequest.mockImplementationOnce(answers(createTransactionResponseDto()));
+    const request: TransactionRequest = {
+      type: 'create',
+      spaceId: 1,
+      data: { ...lunch, category_id: 2 },
+      operationId: 'key-1',
+    };
+    const { outcome } = await submit(store, request);
+
+    expect(outcome).toMatchObject({ status: 'succeeded' });
+    expect(posts()).toEqual([
+      expect.objectContaining({
+        url: '/spaces/1/transactions',
+        data: { ...lunch, category_id: 2, client_operation_id: 'key-1' },
+        headers: { 'Idempotency-Key': 'key-1' },
+      }),
+    ]);
+    expect(await stored()).toEqual([]);
+  });
+
+  it('looks a restored create up when its key went with another body, and never adds it twice', async () => {
+    const store = signIn();
+    mockedRequest
+      .mockImplementationOnce(refusal(409, 'IDEMPOTENCY_KEY_REUSED'))
+      .mockImplementationOnce(operation('applied'));
+
+    const { outcome } = await submit(store, { ...create, operationId: 'key-1' });
+
+    expect(outcome).toMatchObject({ status: 'found', transaction: { id: 'tx-1' } });
+    expect(posts()).toHaveLength(1);
+  });
+
+  it('sends an edit and a delete again through v2 at their versions, with their own keys and no wallet', async () => {
+    await leaveLegacy([
+      {
+        type: 'update',
+        spaceId: 1,
+        transactionId: 'tx-1',
+        version: 3,
+        idempotencyKey: 'key-2',
+        firstSentAt: 0,
+        data: { wallet_id: 2, amount: '20.00' },
+      },
+      { type: 'delete', spaceId: 1, transactionId: 'tx-2', version: 1, idempotencyKey: 'key-3', firstSentAt: 0 },
+    ]);
+    const store = await restart();
+    mockedRequest.mockImplementation((config: SentRequest) =>
+      config.method === 'PATCH' ? answers({ transaction: transactionDto({ version: 4 }) })() : answers(true)(),
+    );
+
+    expect(await results(store)).toMatchObject([{ kind: 'done' }, { kind: 'done' }]);
+    expect(sent()).toEqual([
+      {
+        method: 'PATCH',
+        url: '/spaces/1/transactions/tx-1',
+        data: { amount: '20.00' },
+        headers: { 'Idempotency-Key': 'key-2', 'If-Match': '"3"' },
+      },
+      {
+        method: 'DELETE',
+        url: '/spaces/1/transactions/tx-2',
+        data: undefined,
+        headers: { 'Idempotency-Key': 'key-3', 'If-Match': '"1"' },
+      },
+    ]);
+  });
+
+  it('leaves another account’s writes in their old storage for that account', async () => {
+    await leaveLegacy([legacyCreate], 1);
+
+    const other = await restart(2);
+    expect(other.getState().pendingWrite.writes).toEqual([]);
+    expect(await AsyncStorage.getItem(legacyKey(1))).not.toBeNull();
+
+    const owner = await restart(1);
+    expect(owner.getState().pendingWrite.writes).toMatchObject([
+      { status: 'checking', operation: { data: convertedLunch } },
+    ]);
+    expect(await AsyncStorage.getItem(legacyKey(1))).toBeNull();
   });
 });

@@ -40,7 +40,9 @@ currencies. Redux Toolkit + RTK Query, React Navigation, react-hook-form + yup.
   the saved confirmation in one sheet; the route and the sheet follow
   this state, see `docs/sheets.md`; ends on logout or space switch),
   `pendingWrite` (transaction writes persisted per user before sending,
-  until their outcome is known; see `transaction/operations.ts`),
+  until their outcome is known; see `transaction/operations.ts`; writes
+  stored by builds before the v2 API are converted once and a create is
+  looked up by its operation id first, see `pendingWrite/legacy.ts`),
   `spaceCreation` (the unanswered space creation's `Idempotency-Key`
   and exact body, persisted per user until its outcome is known; see
   `spaceCreation/thunks.ts`),

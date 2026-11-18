@@ -32,6 +32,7 @@ export type FlowCheck = 'pending' | 'done' | 'failed';
 // `saveExpired`: a create the server never got before its key ran out; only the user sends it again.
 // `saveRecovered`: an unconfirmed earlier save turned out to have applied; later changes wait for a new save.
 // `saveFound`: an earlier attempt of this create had applied, so the details show that record instead.
+// `saveRestored`: a create an older build never got applied; its draft is back for the user to check and send again.
 export type FlowNotice =
   | 'conflict'
   | 'deleteFailed'
@@ -41,7 +42,8 @@ export type FlowNotice =
   | 'saveNotSent'
   | 'saveExpired'
   | 'saveRecovered'
-  | 'saveFound';
+  | 'saveFound'
+  | 'saveRestored';
 
 export type SaveNotice = Extract<FlowNotice, `save${string}`>;
 
@@ -74,6 +76,8 @@ export interface TransactionFlow {
   autoCloseAt: number | null;
   // What the screen the form opened from shows, so the confirmation can say where a hidden record went.
   selection: ViewSelection | null;
+  // The operation a restored draft is sent under, so it applies at most once with the attempt that went before it.
+  operationId: string | null;
 }
 
 interface TransactionFlowState {
@@ -123,6 +127,7 @@ const startCreate = (
     created: null,
     autoCloseAt: null,
     selection: flow.selection,
+    operationId: null,
   };
 };
 
@@ -184,6 +189,26 @@ const transactionFlowSlice = createSlice({
         created: null,
         autoCloseAt: null,
         selection: null,
+        operationId: null,
+      };
+    },
+    // An older build's create that never applied: its draft, sent again only by the user, under the same operation.
+    restoredOpened: (
+      state,
+      { payload }: PayloadAction<{ spaceId: number; operationId: string; draft: TransactionDraft }>,
+    ) => {
+      if (state.flow) return;
+
+      const flow = startCreate(state, { spaceId: payload.spaceId, selection: null }, payload.draft);
+
+      state.flow = {
+        ...flow,
+        view: { name: 'create', focusAmount: false },
+        draft: payload.draft,
+        baseline: payload.draft,
+        followsNow: false,
+        notice: 'saveRestored',
+        operationId: payload.operationId,
       };
     },
     checkStarted: (state, { payload }: DraftScoped) => {
@@ -467,6 +492,7 @@ const transactionFlowSlice = createSlice({
 
 export const {
   createOpened,
+  restoredOpened,
   detailsOpened,
   checkStarted,
   recordChecked,

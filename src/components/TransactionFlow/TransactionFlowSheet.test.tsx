@@ -16,7 +16,7 @@ import { transactionApi } from '@redux/state/transaction/api';
 import { createTransactionResponseDto, transactionDto } from '@redux/state/transaction/fixtures';
 import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import { mapTransaction } from '@api/models';
-import { closed, CREATED_AUTO_CLOSE_MS, createOpened } from '@redux/state/transactionFlow/slice';
+import { closed, CREATED_AUTO_CLOSE_MS, createOpened, restoredOpened } from '@redux/state/transactionFlow/slice';
 import type { DraftAssignment } from '@redux/state/transactionFlow/draft';
 import type { ViewSelection } from '@redux/state/transactionFlow/selection';
 import { checkFlowRecord, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
@@ -1132,6 +1132,39 @@ describe('TransactionFlowSheet', () => {
     await settle();
 
     expect(routes()).toMatchObject([{}, { name: ScreenNames.TRANSACTION_EDITOR_SCREEN, params: { spaceId: 2 } }]);
+  });
+
+  it("retries an older build's restored draft under its original operation", async () => {
+    const { store, flow } = renderFlow();
+
+    act(() => {
+      store.dispatch(
+        restoredOpened({
+          spaceId: 1,
+          operationId: 'legacy-key',
+          draft: {
+            transactionType: TransactionType.EXPENSE,
+            amount: '42.10',
+            categoryId: 1,
+            assignment: { kind: 'space' },
+            timestamp: '2026-01-05T10:00:00.000Z',
+            description: '',
+          },
+        }),
+      );
+    });
+    await settle();
+
+    expect(screen.getByText('This transaction wasn’t saved')).toBeTruthy();
+    fireEvent.press(screen.getByText('Retry save'));
+    await act(async () => answerWrite({ data: createTransactionResponseDto() }));
+
+    const [[post]] = mockedRequest.mock.calls.filter(([config]) => config.method === 'POST');
+    expect(post).toMatchObject({
+      headers: { 'Idempotency-Key': 'legacy-key' },
+      data: { client_operation_id: 'legacy-key', amount: '42.10', assignment: { kind: 'space' } },
+    });
+    expect(flow()?.view.name).toBe('created');
   });
 
   it('starts another transaction on the same type and assignment', async () => {

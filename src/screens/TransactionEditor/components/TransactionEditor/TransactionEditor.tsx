@@ -151,7 +151,13 @@ const TransactionEditor = ({
     setLatestFailed(outcome === 'failed');
   };
 
-  const saveLabel = isEdit ? 'Save changes' : isIncome ? 'Save income' : 'Save expense';
+  const saveLabel = isEdit
+    ? 'Save changes'
+    : flow.operationId
+      ? 'Retry save'
+      : isIncome
+        ? 'Save income'
+        : 'Save expense';
 
   return (
     <View style={styles.root}>
@@ -275,6 +281,12 @@ const TransactionEditor = ({
                   ? 'The form now edits that saved transaction. Changes made after it aren’t saved yet: review them and save again.'
                   : 'It was saved as shown here; nothing else is waiting to be saved.'
               }
+            />
+          ) : flow.notice === 'saveRestored' ? (
+            <Banner
+              tone="warn"
+              title="This transaction wasn’t saved"
+              text="We restored your draft. Check it and retry: it’s sent under its original operation, so it can’t be added twice."
             />
           ) : flow.notice === 'saveRefused' ? (
             <Banner tone="danger" title="The server refused this save" text={flow.refusal ?? ''} />

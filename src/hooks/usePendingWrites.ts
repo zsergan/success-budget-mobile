@@ -50,9 +50,15 @@ const usePendingWrites = () => {
       if (operation.type === 'delete') ticket.resolve(deleteSubject(operation.transactionId));
     });
 
-    const refused = here.filter((write) => write.result.kind === 'refused' && !wentThrough(write));
-    const through = here.filter(wentThrough);
     const subject = 'pending-writes';
+    const lookedUp = here.filter(({ wasLookedUp }) => wasLookedUp);
+    if (lookedUp.some(({ result }) => result.kind === 'deleted')) {
+      ticket.show({ tone: 'info', text: 'This transaction was saved earlier and has since been deleted', subject });
+    }
+    const sent = here.filter(({ wasLookedUp }) => !wasLookedUp);
+
+    const refused = sent.filter((write) => write.result.kind === 'refused' && !wentThrough(write));
+    const through = sent.filter(wentThrough);
 
     if (refused.length > 0) {
       const [first] = refused;

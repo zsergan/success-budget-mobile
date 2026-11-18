@@ -57,7 +57,12 @@ const useFlowSave = () => {
           version: saved.version,
           data: toUpdateRequest(draft),
         })
-      : submit({ type: 'create', spaceId, data: toCreateRequest(draft) });
+      : submit({
+          type: 'create',
+          spaceId,
+          data: toCreateRequest(draft),
+          ...(flow.operationId && { operationId: flow.operationId }),
+        });
 
     dispatch(saveStarted(scope));
     const outcome = await pending;

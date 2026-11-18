@@ -23,11 +23,11 @@ sends nothing on a sign-in.
 3. **Session** — `GET /users/profile`. A `401` (`code: UNAUTHORIZED`) ends
    the session through the HTTP client and opens Welcome; no other status
    signs the user out.
-4. **Required data** — the spaces list, the space to open (below) and,
-   when there is one, its wallets (Home's balance has no loading or error
-   state of its own). An empty spaces list opens the app. Categories,
-   limits and recent records load after entry; their blocks show their own
-   states.
+4. **Required data** — the spaces list and the space to open (below).
+   Nothing else of the space is required: its currency comes with it, and
+   a new or empty space takes a transaction at once. An empty spaces list
+   opens the app. Categories, limits, the month's figures and activity
+   load after entry; their blocks show their own states.
 
 An attempt is cut off after 30 s (each request keeps its own 20 s timeout),
 its requests are cancelled, and anything an older attempt or an ended
@@ -57,8 +57,8 @@ moves a selection off a space the list no longer has. The saved id is read
 once the profile names the account, beside the spaces request, and the
 space is the first of:
 
-1. the space already selected in this session, if the list has it (an
-   attempt repeated after a failed wallets request);
+1. the space already selected in this session, if the list has it (a
+   launch run again in the same session);
 2. the saved space, if the list has it;
 3. `pickFallbackSpaceId`: the personal space, else the lowest id, else
    none.
@@ -66,8 +66,7 @@ space is the first of:
 "The list" is the cached one at that moment, not the answer the launch got:
 a space lost while the saved id was being read is no longer in it.
 
-Wallets are asked for only then, for that space alone. An empty list
-selects nothing, asks for no wallets and removes the saved id.
+An empty list selects nothing and removes the saved id.
 
 The saved id is optional. The launch waits for it for at most 1 s
 (`ACTIVE_SPACE_READ_TIMEOUT_MS`); a missing, malformed, unreadable or slow

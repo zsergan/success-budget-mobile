@@ -10,7 +10,7 @@ import { profileApi } from '@redux/state/profile/api';
 import { selectProfileId } from '@redux/state/profile/selectors';
 import { ACTIVE_SPACE_READ_TIMEOUT_MS } from '@redux/state/space/storage';
 import { activateSpace, loseSpaceAccess } from '@redux/state/space/thunks';
-import { walletApi } from '@redux/state/wallet/api';
+import { categoryApi } from '@redux/state/category/api';
 import { createAppStore } from '@redux/Store';
 import { LAUNCH_ATTEMPT_DEADLINE_MS, LAUNCH_RATE_LIMIT_COOLDOWN_MS, retryLaunch, runLaunch } from './thunks';
 
@@ -38,10 +38,6 @@ const space = { id: 1, name: 'Home', type: 'personal', currency: { id: 1, code: 
 const ok = (url: string): Answer => {
   if (url === '/users/profile') return Promise.resolve({ data: { id: 1, email: 'me@example.com', name: 'Me' } });
   if (url === '/spaces') return Promise.resolve({ data: [space] });
-  if (url.endsWith('/wallets'))
-    return Promise.resolve({
-      data: { wallets: [], total_balance: 0, total_balance_currency: 'USD', delta_percent: 0 },
-    });
 
   return Promise.resolve({ data: [] });
 };
@@ -82,11 +78,12 @@ it('opens Welcome with no stored token and no request, offline included', async 
   expect(mockedNetInfoFetch).not.toHaveBeenCalled();
 });
 
-it('checks the session and loads the profile, spaces and wallets before opening the app', async () => {
+it('checks the session and loads the profile and spaces before opening the app, and no wallets', async () => {
   const store = await launch();
 
   expect(store.getState().launch.phase).toBe('ready');
-  expect(['/users/profile', '/spaces', '/spaces/1/wallets'].map(requested)).toEqual([1, 1, 1]);
+  expect(['/users/profile', '/spaces'].map(requested)).toEqual([1, 1]);
+  expect(mockedRequest.mock.calls.some(([config]) => config.url.includes('/wallets'))).toBe(false);
 });
 
 it('opens the app as soon as the data is in, with no minimum display time', async () => {
@@ -98,7 +95,7 @@ it('opens the app as soon as the data is in, with no minimum display time', asyn
   expect(Date.now()).toBe(startedAt);
 });
 
-it('opens the app with an empty spaces list, without asking for wallets', async () => {
+it('opens the app with an empty spaces list', async () => {
   answer((url) => (url === '/spaces' ? Promise.resolve({ data: [] }) : undefined));
 
   const store = await launch();
@@ -515,9 +512,9 @@ describe('once the app is open', () => {
     answer((url) => (url === '/spaces' ? Promise.resolve({ data: [space, space2] }) : undefined));
     const store = await launch();
 
-    answer((url) => (url === '/spaces/2/wallets' ? new Promise(() => {}) : undefined));
+    answer((url) => (url === '/spaces/2/categories' ? new Promise(() => {}) : undefined));
     store.dispatch(activateSpace(2));
-    store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId: 2 }));
+    store.dispatch(categoryApi.endpoints.getCategories.initiate({ spaceId: 2 }));
     await jest.advanceTimersByTimeAsync(LAUNCH_ATTEMPT_DEADLINE_MS);
 
     expect(store.getState().launch.phase).toBe('ready');
@@ -527,7 +524,7 @@ describe('once the app is open', () => {
     const store = await launch();
 
     answer(() => httpError(500));
-    await store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId: 1 }, { forceRefetch: true }));
+    await store.dispatch(categoryApi.endpoints.getCategories.initiate({ spaceId: 1 }, { forceRefetch: true }));
     await store.dispatch(profileApi.endpoints.getProfile.initiate(undefined, { forceRefetch: true }));
 
     expect(store.getState().launch.phase).toBe('ready');
@@ -542,12 +539,13 @@ describe('the space the app opens in', () => {
   const withSpaces = (...spaces: (typeof space)[]) =>
     answer((url) => (url === '/spaces' ? Promise.resolve({ data: spaces }) : undefined));
 
-  const walletRequests = () =>
-    mockedRequest.mock.calls.map(([config]) => config.url as string).filter((url) => url.endsWith('/wallets'));
+  // The launch asks for nothing of a space: it opens with its currency, and its data loads on screen.
+  const spaceRequests = () =>
+    mockedRequest.mock.calls.map(([config]) => config.url as string).filter((url) => /^\/spaces\/\d+/.test(url));
 
   const savedSpace = () => AsyncStorage.getItem(SAVED_KEY);
 
-  it('is the saved shared space, with one profile, one spaces and only that space’s wallets request', async () => {
+  it('is the saved shared space, with one profile and one spaces request', async () => {
     await AsyncStorage.setItem(SAVED_KEY, '2');
     withSpaces(personal, shared);
 
@@ -564,7 +562,7 @@ describe('the space the app opens in', () => {
     expect(store.getState().launch.phase).toBe('ready');
     expect(selections).toEqual([null, 2]);
     expect(['/users/profile', '/spaces'].map(requested)).toEqual([1, 1]);
-    expect(walletRequests()).toEqual(['/spaces/2/wallets']);
+    expect(spaceRequests()).toEqual([]);
     expect(await savedSpace()).toBe('2');
   });
 
@@ -600,7 +598,7 @@ describe('the space the app opens in', () => {
     await jest.advanceTimersByTimeAsync(0);
 
     expect(store.getState().space.currentSpaceId).toBe(1);
-    expect(walletRequests()).toEqual(['/spaces/1/wallets']);
+    expect(spaceRequests()).toEqual([]);
     expect(await savedSpace()).toBe('1');
   });
 
@@ -623,11 +621,11 @@ describe('the space the app opens in', () => {
     await jest.advanceTimersByTimeAsync(0);
 
     expect(store.getState().space.currentSpaceId).toBe(1);
-    expect(walletRequests()).toEqual(['/spaces/1/wallets']);
+    expect(spaceRequests()).toEqual([]);
     expect(await savedSpace()).toBe('1');
   });
 
-  it('is none for an empty list: no wallets request, and the saved space is forgotten', async () => {
+  it('is none for an empty list, and the saved space is forgotten', async () => {
     await AsyncStorage.setItem(SAVED_KEY, '2');
     withSpaces();
 
@@ -637,7 +635,7 @@ describe('the space the app opens in', () => {
 
     expect(store.getState().launch.phase).toBe('ready');
     expect(store.getState().space.currentSpaceId).toBeNull();
-    expect(walletRequests()).toEqual([]);
+    expect(spaceRequests()).toEqual([]);
     expect(await savedSpace()).toBeNull();
   });
 
@@ -667,7 +665,7 @@ describe('the space the app opens in', () => {
       await jest.advanceTimersByTimeAsync(ACTIVE_SPACE_READ_TIMEOUT_MS - 1);
       expect(store.getState().launch.phase).toBe('running');
       expect(store.getState().space.currentSpaceId).toBeNull();
-      expect(walletRequests()).toEqual([]);
+      expect(spaceRequests()).toEqual([]);
 
       await jest.advanceTimersByTimeAsync(1);
       await running;
@@ -679,7 +677,7 @@ describe('the space the app opens in', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       expect(store.getState().space.currentSpaceId).toBe(1);
-      expect(walletRequests()).toEqual(['/spaces/1/wallets']);
+      expect(spaceRequests()).toEqual([]);
     });
 
     it('opens the fallback when the saved space is lost while it reads, on the same attempt', async () => {
@@ -709,7 +707,7 @@ describe('the space the app opens in', () => {
 
       expect(store.getState().launch).toMatchObject({ attempt, phase: 'ready' });
       expect(store.getState().space.currentSpaceId).toBe(personal.id);
-      expect(walletRequests()).toEqual(['/spaces/1/wallets']);
+      expect(spaceRequests()).toEqual([]);
       expect(await savedSpace()).toBe('1');
     });
 
@@ -725,7 +723,7 @@ describe('the space the app opens in', () => {
 
       expect(store.getState().launch.phase).toBe('welcome');
       expect(store.getState().space.currentSpaceId).toBeNull();
-      expect(walletRequests()).toEqual([]);
+      expect(spaceRequests()).toEqual([]);
       expect(await savedSpace()).toBeNull();
     });
 
@@ -745,46 +743,16 @@ describe('the space the app opens in', () => {
       await first;
 
       expect(store.getState().space.currentSpaceId).toBe(2);
-      expect(walletRequests()).toEqual(['/spaces/2/wallets']);
+      expect(spaceRequests()).toEqual([]);
     });
-  });
-
-  it('stays the restored space when Try again follows a failed wallets request', async () => {
-    await AsyncStorage.setItem(SAVED_KEY, '2');
-    answer((url) => {
-      if (url === '/spaces') return Promise.resolve({ data: [personal, shared] });
-      if (url.endsWith('/wallets')) return httpError(500);
-
-      return undefined;
-    });
-
-    const store = await launch();
-
-    expect(store.getState().launch).toMatchObject({ phase: 'failed', stage: 'requiredData', failure: 'server' });
-    expect(store.getState().space.currentSpaceId).toBe(2);
-
-    // Whatever the storage says by now, the session's own selection stands.
-    await AsyncStorage.setItem(SAVED_KEY, '1');
-    withSpaces(personal, shared);
-    store.dispatch(retryLaunch());
-    await jest.runOnlyPendingTimersAsync();
-
-    expect(store.getState().launch.phase).toBe('ready');
-    expect(store.getState().space.currentSpaceId).toBe(2);
-    expect(requested('/spaces')).toBe(1);
-    expect(walletRequests()).toEqual(['/spaces/2/wallets', '/spaces/2/wallets']);
   });
 
   it('moves off a space selected earlier in the session that a new list no longer has', async () => {
     await AsyncStorage.setItem(SAVED_KEY, '2');
-    answer((url) => {
-      if (url === '/spaces') return Promise.resolve({ data: [personal, shared] });
-      if (url.endsWith('/wallets')) return httpError(500);
-
-      return undefined;
-    });
+    withSpaces(personal, shared);
 
     const store = await launch();
+    expect(store.getState().space.currentSpaceId).toBe(2);
 
     store.dispatch(baseApi.util.invalidateTags(['Spaces']));
     withSpaces(personal);
