@@ -27,6 +27,7 @@ describe('migrateLegacyWrites', () => {
           idempotencyKey: 'key-1',
           ...at,
           data: { ...rest, assignment: { kind: 'space' }, client_operation_id: 'key-1' },
+          recovered: true,
         },
       },
     ]);

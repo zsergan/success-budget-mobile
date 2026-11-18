@@ -33,6 +33,21 @@ const initialState: PendingWriteState = { userId: null, writes: [] };
 
 const keyOf = ({ operation }: PendingWrite) => operation.idempotencyKey;
 
+// A create sent under a recovered operation id is looked up, never resent blindly, when its send got no answer.
+// Entries stored before the flag existed are recognized by the statuses only such a create has.
+const restoredWrite = (write: PendingWrite): PendingWrite => {
+  const { operation, status } = write;
+  const isRecovered =
+    operation.type === 'create' && (operation.recovered === true || status === 'checking' || status === 'retry');
+  if (!isRecovered) return { ...write, status: status === 'sending' ? 'unknown' : status };
+
+  return {
+    ...write,
+    operation: { ...operation, recovered: true },
+    status: status === 'sending' || status === 'unknown' ? 'checking' : status,
+  };
+};
+
 const forUser = (state: PendingWriteState, userId: number) => {
   if (state.userId !== userId) {
     state.userId = userId;
@@ -51,9 +66,7 @@ const pendingWriteSlice = createSlice({
 
       payload.writes
         .filter((write) => !known.has(keyOf(write)))
-        .forEach((write) =>
-          state.writes.push({ ...write, status: write.status === 'sending' ? 'unknown' : write.status }),
-        );
+        .forEach((write) => state.writes.push(restoredWrite(write)));
     },
     writeRecorded: (state, { payload }: PayloadAction<{ userId: number; operation: StoredOperation }>) => {
       forUser(state, payload.userId);

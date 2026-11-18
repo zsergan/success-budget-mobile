@@ -51,7 +51,10 @@ export const fromLegacyWrite = ({ operation }: LegacyWrite): PendingWrite | Reti
         client_operation_id: idempotencyKey,
       };
 
-      return { operation: { type: 'create', spaceId, data, idempotencyKey, firstSentAt }, status: 'checking' };
+      return {
+        operation: { type: 'create', spaceId, data, idempotencyKey, firstSentAt, recovered: true },
+        status: 'checking',
+      };
     }
     case 'update': {
       const data: UpdateTransactionRequest = withoutWallet(operation.data);

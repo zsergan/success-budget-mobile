@@ -130,6 +130,7 @@ describe('writes an older build left', () => {
           idempotencyKey: 'key-1',
           firstSentAt: legacyCreate.firstSentAt,
           data: { ...createData, assignment: { kind: 'space' } },
+          recovered: true,
         },
       },
     ]);

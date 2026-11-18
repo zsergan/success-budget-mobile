@@ -372,6 +372,118 @@ describe('writes an older build left', () => {
     expect(await stored()).toEqual([]);
   });
 
+  describe('a restored create sent again', () => {
+    const resend = (store: ReturnType<typeof signIn>, categoryId = 1) =>
+      submit(store, { type: 'create', spaceId: 1, data: { ...lunch, category_id: categoryId }, operationId: 'key-1' });
+
+    const readyToRetry = async () => {
+      await leaveLegacy([legacyCreate]);
+      const store = await restart();
+      mockedRequest.mockImplementationOnce(refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND'));
+      await store.dispatch(resumePendingWrites());
+
+      return store;
+    };
+
+    it.each([
+      [400, 'CATEGORY_ARCHIVED'],
+      [403, 'FORBIDDEN_CATEGORY'],
+    ])('keeps its draft to retry when refused with %s, and saves the corrected one once', async (status, code) => {
+      let store = await readyToRetry();
+      mockedRequest
+        .mockImplementationOnce(refusal(status, code))
+        .mockImplementationOnce(refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND'));
+
+      const { outcome } = await resend(store);
+
+      expect(outcome).toMatchObject({ status: 'failed', failure: { kind: 'validation' } });
+      expect(sent().map(({ method }) => method)).toEqual(['GET', 'POST', 'GET']);
+      expect(await stored()).toMatchObject([
+        { status: 'retry', operation: { idempotencyKey: 'key-1', recovered: true, data: { category_id: 1 } } },
+      ]);
+
+      store = await restart();
+      expect(statuses(store)).toEqual([{ status: 'retry', found: undefined }]);
+      mockedRequest.mockImplementationOnce(answers(createTransactionResponseDto()));
+
+      expect((await resend(store, 2)).outcome).toMatchObject({ status: 'succeeded' });
+      expect(sent()).toEqual([
+        expect.objectContaining({
+          method: 'POST',
+          data: { ...convertedLunch, category_id: 2 },
+          headers: { 'Idempotency-Key': 'key-1' },
+        }),
+      ]);
+      expect(await stored()).toEqual([]);
+    });
+
+    it.each([
+      ['a rate limit', refusal(429, 'TOO_MANY_REQUESTS')],
+      ['no answer', noAnswer],
+      ['a server failure', refusal(503, 'SERVICE_UNAVAILABLE')],
+    ])('keeps it after %s and looks it up before anything is sent again', async (_name, answer) => {
+      let store = await readyToRetry();
+      mockedRequest.mockImplementationOnce(answer);
+
+      expect((await resend(store)).outcome).toMatchObject({ status: 'failed', failure: { kind: 'uncertain' } });
+      expect(await stored()).toMatchObject([{ status: 'checking', operation: { idempotencyKey: 'key-1' } }]);
+
+      store = await restart();
+      mockedRequest.mockImplementationOnce(operation('applied'));
+      await store.dispatch(resumePendingWrites());
+
+      expect(sent()).toEqual([
+        expect.objectContaining({ method: 'GET', url: '/spaces/1/transactions/operations/key-1' }),
+      ]);
+      expect(statuses(store)).toEqual([{ status: 'found', found: 'tx-1' }]);
+    });
+
+    it('looks it up first when saved again in the same session after no answer', async () => {
+      const store = await readyToRetry();
+      mockedRequest.mockImplementationOnce(noAnswer);
+      await resend(store);
+      mockedRequest.mockClear();
+      mockedRequest
+        .mockImplementationOnce(refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND'))
+        .mockImplementationOnce(answers(createTransactionResponseDto()));
+
+      expect((await resend(store)).outcome).toMatchObject({ status: 'succeeded' });
+      expect(sent().map(({ method }) => method)).toEqual(['GET', 'POST']);
+      expect(await stored()).toEqual([]);
+    });
+
+    it('shows the record when a refused resend had already applied, and adds nothing', async () => {
+      const store = await readyToRetry();
+      mockedRequest
+        .mockImplementationOnce(refusal(400, 'CATEGORY_ARCHIVED'))
+        .mockImplementationOnce(operation('applied'));
+
+      expect((await resend(store)).outcome).toMatchObject({ status: 'found', transaction: { id: 'tx-1' } });
+      expect(posts()).toHaveLength(1);
+      expect(await stored()).toEqual([]);
+    });
+
+    it('keeps it with its space when that space is lost', async () => {
+      const store = await readyToRetry();
+      mockedRequest
+        .mockImplementationOnce(refusal(403, 'FORBIDDEN_SPACE'))
+        .mockImplementationOnce(refusal(403, 'FORBIDDEN_SPACE'));
+
+      await resend(store);
+
+      expect(await stored()).toMatchObject([{ status: 'accessLost', operation: { spaceId: 1 } }]);
+    });
+
+    it('is not sent when its corrected body cannot be stored first', async () => {
+      const store = await readyToRetry();
+      jest.spyOn(AsyncStorage, 'setItem').mockRejectedValueOnce(new Error('disk full'));
+
+      expect((await resend(store, 2)).outcome).toMatchObject({ status: 'failed', failure: { kind: 'notSent' } });
+      expect(posts()).toEqual([]);
+      expect(statuses(store)).toEqual([{ status: 'retry', found: undefined }]);
+    });
+  });
+
   it('looks a restored create up when its key went with another body, and never adds it twice', async () => {
     const store = signIn();
     mockedRequest
