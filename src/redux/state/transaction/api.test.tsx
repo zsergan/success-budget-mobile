@@ -61,19 +61,26 @@ beforeEach(() => {
 });
 
 describe('transactionApi', () => {
-  it("asks for Home's latest records over the whole stored history, five of them, in the device zone", async () => {
+  it("asks for the newest five records of Home's month, in the device zone", async () => {
     const store = createAppStore();
 
     mockedRequest.mockResolvedValue({ data: feedDto([dto]) });
-    const result = await store.dispatch(getRecentTransactions.initiate({ spaceId: 3, timeZone: 'Europe/Moscow' }));
+    const result = await store.dispatch(
+      getRecentTransactions.initiate({
+        spaceId: 3,
+        timeZone: 'Europe/Moscow',
+        from: '2026-09-30T21:00:00.000Z',
+        to: '2026-10-31T20:59:59.999Z',
+      }),
+    );
 
     expect(mockedRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         url: '/spaces/3/transactions/feed',
         baseURL: expect.stringMatching(/\/api\/v2$/),
         params: {
-          from: '1970-01-01T00:00:01Z',
-          to: '2038-01-19T03:14:07.999Z',
+          from: '2026-09-30T21:00:00.000Z',
+          to: '2026-10-31T20:59:59.999Z',
           time_zone: 'Europe/Moscow',
           limit: 5,
         },
@@ -89,7 +96,14 @@ describe('transactionApi', () => {
       data: feedDto([{ ...dto, kind: TransactionKind.INITIAL_BALANCE, version: 3 }]),
     });
 
-    const result = await store.dispatch(getRecentTransactions.initiate({ spaceId: 3, timeZone: 'UTC' }));
+    const result = await store.dispatch(
+      getRecentTransactions.initiate({
+        spaceId: 3,
+        timeZone: 'UTC',
+        from: '2026-01-01T00:00:00.000Z',
+        to: '2026-01-31T23:59:59.999Z',
+      }),
+    );
 
     expect(result.data?.items[0]).toEqual({
       id: 'tx-1',
@@ -315,8 +329,22 @@ describe('transactionApi', () => {
     const store = createAppStore();
 
     mockedRequest.mockResolvedValue({ data: feedDto([]) });
-    store.dispatch(getRecentTransactions.initiate({ spaceId: 1, timeZone: 'UTC' }));
-    store.dispatch(getRecentTransactions.initiate({ spaceId: 2, timeZone: 'UTC' }));
+    store.dispatch(
+      getRecentTransactions.initiate({
+        spaceId: 1,
+        timeZone: 'UTC',
+        from: '2026-01-01T00:00:00.000Z',
+        to: '2026-01-31T23:59:59.999Z',
+      }),
+    );
+    store.dispatch(
+      getRecentTransactions.initiate({
+        spaceId: 2,
+        timeZone: 'UTC',
+        from: '2026-01-01T00:00:00.000Z',
+        to: '2026-01-31T23:59:59.999Z',
+      }),
+    );
     await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
     mockedRequest.mockClear();
 

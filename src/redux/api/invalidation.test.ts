@@ -53,15 +53,22 @@ const resourceOf = ({ url, params }: RequestConfig) => {
   return `${spaceId}:${name}`;
 };
 
-// Home's latest records and the latest record. A history page is subscribed too but never asked for again: its
+// Home's month activity and the latest record. A history page is subscribed too but never asked for again: its
 // screen starts a new generation from the history revision instead.
-const ALL_HISTORY = ['1:feed:1970-01', '1:latest'];
+const ALL_HISTORY = ['1:feed:2026-01', '1:latest'];
 
 const subscribeToSpace = (store: ReturnType<typeof createAppStore>, spaceId: number) => {
   store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId }));
   store.dispatch(categoryApi.endpoints.getCategories.initiate({ spaceId }));
   store.dispatch(limitApi.endpoints.getLimits.initiate({ spaceId }));
-  store.dispatch(transactionApi.endpoints.getRecentTransactions.initiate({ spaceId, timeZone: 'UTC' }));
+  store.dispatch(
+    transactionApi.endpoints.getRecentTransactions.initiate({
+      spaceId,
+      timeZone: 'UTC',
+      from: '2026-01-01T00:00:00.000Z',
+      to: '2026-01-31T23:59:59.999Z',
+    }),
+  );
   store.dispatch(
     transactionApi.endpoints.getTransactionsFeed.initiate({
       selection: feedSelection(

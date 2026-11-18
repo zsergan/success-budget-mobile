@@ -4,7 +4,7 @@ import { toMobileIcon } from '@api/models';
 import { TransactionKind } from '@shared/enums';
 import type { HistoryFilter } from '@shared/types';
 
-import { assignmentGroupName } from './breakdownAppearance';
+import { assignmentItemLabel } from '@shared/utils';
 import type { BreakdownGroup } from './statsItems';
 
 // Every category and every assignment group opens its transactions, Other's children too; the bounds pass through
@@ -28,5 +28,5 @@ export const toHistoryFilter = (
 
   return group.kind === 'category'
     ? { ...base, name: group.name, icon: toMobileIcon(group.icon), color: group.color, categoryId: group.id }
-    : { ...base, name: assignmentGroupName(group, selfId), assignment: group.key as AssignmentKey };
+    : { ...base, name: assignmentItemLabel(group, selfId), assignment: group.key as AssignmentKey };
 };

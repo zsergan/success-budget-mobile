@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { StatisticsTrend } from '@api/dto';
 import { useTheme, useThemedStyles } from '@hooks';
 import { formatMoney } from '@screens/Stats/format';
-import type { StatsBlock } from '@screens/Stats/hooks/useStatsData';
+import type { StatsBlock } from '@hooks/useStatsData';
 import BlockError from '../BlockError/BlockError';
 import BlockPlaceholder from '../BlockPlaceholder/BlockPlaceholder';
 import TrendChart from '../TrendChart/TrendChart';

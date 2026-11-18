@@ -63,8 +63,11 @@ export interface TransactionsCountArg extends TransactionsArg {
   q?: string;
 }
 
+// Home's activity: the newest records of the month it shows.
 export interface RecentTransactionsArg extends SpaceArg {
   timeZone: string;
+  from: string;
+  to: string;
 }
 
 export interface TransactionArg extends SpaceArg {
@@ -140,11 +143,16 @@ const feedParams = ({ selection, pageSize }: TransactionsFeedArg, { cursor, arou
   ...(aroundId && { around_id: aroundId }),
 });
 
-// Home's latest records: the whole range the server stores timestamps in, one short page and no more.
-export const WHOLE_HISTORY = { from: '1970-01-01T00:00:01Z', to: '2038-01-19T03:14:07.999Z' };
+// One short page and no more: the month's totals come from statistics, never from these rows.
 export const RECENT_TRANSACTIONS_LIMIT = 5;
 
-export const recentArg = (spaceId: number): RecentTransactionsArg => ({ spaceId, timeZone: getDeviceTimeZone() });
+// Built like `periodArg`, so Home and the early fetch for it share one entry for the same month.
+export const recentArg = (spaceId: number, range: { from: Date; to: Date }): RecentTransactionsArg => ({
+  spaceId,
+  timeZone: getDeviceTimeZone(),
+  from: range.from.toISOString(),
+  to: range.to.toISOString(),
+});
 
 // Pages kept per feed entry; scrolling further drops the farthest page and reads it again by cursor on the way back.
 export const FEED_MAX_PAGES = 10;
@@ -183,10 +191,10 @@ const invalidatesTransactionWrite = (_result: unknown, error: unknown, { spaceId
 export const transactionApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getRecentTransactions: build.query<TransactionFeedPageModel, RecentTransactionsArg>({
-      query: ({ spaceId, timeZone }) =>
+      query: ({ spaceId, timeZone, from, to }) =>
         v2({
           url: `/spaces/${spaceId}/transactions/feed`,
-          params: { ...WHOLE_HISTORY, time_zone: timeZone, limit: RECENT_TRANSACTIONS_LIMIT },
+          params: { from, to, time_zone: timeZone, limit: RECENT_TRANSACTIONS_LIMIT },
         }),
       transformResponse: (response: TransactionFeedResponse) => mapTransactionFeed(response),
       providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions'),

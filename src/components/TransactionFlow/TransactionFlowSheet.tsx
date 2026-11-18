@@ -126,10 +126,12 @@ const TransactionFlowSheet = () => {
     dispatch(closed());
 
     if (whereSaved(created.transaction, selection) === 'otherPeriod') {
-      navigation.navigate(ScreenNames.HOME_SCREEN, {
-        screen: ScreenNames.TRANSACTIONS_TAB,
-        params: { reveal: { spaceId, transactionId: id, timestamp } },
-      });
+      navigation.navigate(
+        ScreenNames.HOME_SCREEN,
+        selection?.origin === 'home'
+          ? { screen: ScreenNames.HOME_TAB, params: { showMonth: { spaceId, month: timestamp } } }
+          : { screen: ScreenNames.TRANSACTIONS_TAB, params: { reveal: { spaceId, transactionId: id, timestamp } } },
+      );
     }
     dispatch(openTransactionDetails({ spaceId, transaction: created.transaction }));
   };

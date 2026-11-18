@@ -18,6 +18,7 @@ type Props =
       onJumpToLatest: () => void;
     }
   | { variant: 'noMatches' }
+  | { variant: 'noFilterMatches'; activeRange: DateRange; onClearFilters: () => void }
   | { variant: 'noSearchMatches'; query: string; activeRange: DateRange; onClearSearch: () => void }
   | { variant: 'rangeError'; onRetry: () => void }
   | { variant: 'latestError'; onRetry: () => void };
@@ -65,6 +66,17 @@ const TransactionsEmptyState = (props: Props) => (
         icon="filter"
         title="No transactions here"
         description="They may have been changed or deleted since Stats was opened."
+      />
+    )}
+
+    {props.variant === 'noFilterMatches' && (
+      <EmptyState
+        variant="solid"
+        icon="filter"
+        title="Nothing matches these filters"
+        description={`No transactions of this type or assignment between ${formatRangeLabel(props.activeRange)}.`}
+        actionLabel="Clear filters"
+        onActionPress={props.onClearFilters}
       />
     )}
 

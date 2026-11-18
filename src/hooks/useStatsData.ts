@@ -176,7 +176,12 @@ const ofType = <Query extends QueryLike<StatisticsBreakdown>>(query: Query, type
     ? query
     : { ...query, currentData: undefined };
 
-const useStatsData = (range: DateRange, transactionType: TransactionType) => {
+// Stats reads all three blocks; Home leaves the trend out (`withTrend: false`), so it is never asked for there.
+const useStatsData = (
+  range: DateRange,
+  transactionType: TransactionType,
+  { withTrend = true }: { withTrend?: boolean } = {},
+) => {
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const [timeZone, setTimeZone] = useState(getDeviceTimeZone);
 
@@ -212,13 +217,14 @@ const useStatsData = (range: DateRange, transactionType: TransactionType) => {
   const isWaitingForAsOf = !!cycle && sharedAsOf === null;
   const blockArg = cycle && !isWaitingForAsOf ? cycleArg(cycle, sharedAsOf) : skipToken;
 
-  const trend = useGetStatisticsTrendQuery(blockArg);
+  const trendArg = withTrend ? blockArg : skipToken;
+  const trend = useGetStatisticsTrendQuery(trendArg);
   // A switch of type reuses the cycle's as_of and leaves summary and trend as they are.
   const breakdownArg = blockArg === skipToken ? skipToken : { ...blockArg, transactionType };
   const breakdown = ofType(useGetStatisticsBreakdownQuery(breakdownArg), transactionType);
 
   const current = { summary, trend, breakdown };
-  const currentArgs: CurrentArgs = { summary: summaryArg, trend: blockArg, breakdown: breakdownArg };
+  const currentArgs: CurrentArgs = { summary: summaryArg, trend: trendArg, breakdown: breakdownArg };
   const slotOf = { summary: 'summary', trend: 'trend', breakdown: transactionType } as const;
 
   const succeeded = BLOCKS.filter(
@@ -302,7 +308,7 @@ const useStatsData = (range: DateRange, transactionType: TransactionType) => {
     retry: waitingRetry ?? breakdown.refetch,
   });
 
-  const blocks = [summaryBlock, trendBlock, breakdownBlock];
+  const blocks = withTrend ? [summaryBlock, trendBlock, breakdownBlock] : [summaryBlock, breakdownBlock];
   // A blocked block carries no error of its own; summary's is the one it waits on.
   const errors = blocks.map((block) => block.error ?? (block.hasError ? summaryBlock.error : undefined));
   const retryFailed = () => {

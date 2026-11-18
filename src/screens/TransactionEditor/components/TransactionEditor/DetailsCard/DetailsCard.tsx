@@ -12,6 +12,8 @@ import createStyles from './style';
 
 interface Props {
   timestamp: string;
+  // Why the date is not in the month the screen behind shows.
+  dateNote?: string;
   dateError?: string;
   description: string;
   descriptionError?: string;
@@ -22,6 +24,7 @@ interface Props {
 // The two fields that usually keep their defaults: when it happened, and an optional note.
 const DetailsCard = ({
   timestamp,
+  dateNote,
   dateError,
   description,
   descriptionError,
@@ -44,7 +47,10 @@ const DetailsCard = ({
       <View style={[styles.card, (dateError || descriptionError) && styles.cardError]}>
         <TouchableOpacity style={styles.dateRow} onPress={onOpenDate} activeOpacity={0.6} accessibilityRole="button">
           <Icon name="calendar" size={17} color={colors.muted} strokeWidth={1.8} />
-          <Text style={styles.rowLabel}>Date</Text>
+          <View style={styles.dateLabel}>
+            <Text style={styles.rowLabel}>Date</Text>
+            {dateNote && <Text style={styles.dateNote}>{dateNote}</Text>}
+          </View>
           <Text style={styles.dateValue} numberOfLines={1}>
             {formatDateTime(timestamp)}
           </Text>

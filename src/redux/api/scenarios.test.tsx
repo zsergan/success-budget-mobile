@@ -325,7 +325,8 @@ describe('server data scenarios', () => {
       .map((request) => request.split('?')[1].slice(0, 7))
       .sort();
 
-    expect(feedRequests).toEqual(['1970-01', '2026-01']);
+    // Home's activity of the month, and History's page of the same month: each asked for once.
+    expect(feedRequests).toEqual(['2026-01', '2026-01']);
     expect(result.current.home.currentData?.items.map(({ id }) => id)).toEqual(['tx-1']);
     expect(result.current.history.transactions.map(({ id }) => id)).toEqual(['tx-1']);
 
@@ -487,8 +488,9 @@ describe('server data scenarios', () => {
     });
     await settle(store);
 
+    // Home's activity and History's page, each read once.
     const historyRequests = getRequests().filter((request) => request.startsWith('/spaces/1/transactions/feed?2026'));
-    expect(historyRequests).toHaveLength(1);
+    expect(historyRequests).toHaveLength(2);
     expect(result.current.history.transactions[0].amount).toBe('30.00');
 
     unmount();

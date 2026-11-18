@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -30,6 +30,8 @@ import TransactionsEmptyState from './components/TransactionsEmptyState/Transact
 import TransactionsHeader from './components/TransactionsHeader/TransactionsHeader';
 import TransactionsList from './components/TransactionsList/TransactionsList';
 import useSearch from './hooks/useSearch';
+import HistoryFilters from './components/HistoryFilters/HistoryFilters';
+import type { HistoryFilters as Filters } from './hooks/useTransactionsData';
 import useTransactionsData from './hooks/useTransactionsData';
 import { feedListProps } from './feedListProps';
 import { MAX_SEARCH_LENGTH } from './search';
@@ -69,6 +71,8 @@ const TransactionsScreen = () => {
   const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod, openMonthOf } = usePeriod();
   const search = useSearch();
   const q = search.submitted;
+  // The type and assignment the list is narrowed to, as Home or the user set them; they belong to the space.
+  const [filters, setFilters] = useState<Filters>({});
 
   // Show from a confirmation: the record's month with no search, its row scrolled to and lit for a moment.
   // The user's period changes only on this explicit request.
@@ -100,6 +104,7 @@ const TransactionsScreen = () => {
     setRestoreId(null);
     if (search.isSearching) search.cancel();
     setReturnPoint(null);
+    setFilters({});
   }
 
   // Read when the history is refreshed after a change, to keep these rows in the new window.
@@ -110,10 +115,41 @@ const TransactionsScreen = () => {
     if (reveal) navigation.setParams({ reveal: undefined });
   }, [navigation, reveal]);
 
-  const { openCreate, openDetails } = useTransactionFlow(rangeSelection(range));
+  // Home's request: its month, narrowed to a type and an assignment, once, and only in the space it was made in.
+  const focus = route.params?.focus;
+  const [focused, setFocused] = useState<typeof focus>(undefined);
+  if (focus && focus !== focused) {
+    setFocused(focus);
+    if (focus.spaceId === spaceId) {
+      applyPeriod(monthPeriodOf(focus.month));
+      setFilters({
+        transactionType: focus.transactionType,
+        assignment: focus.assignment,
+        assignmentName: focus.assignmentName,
+      });
+      setAnchor(null);
+      if (search.isSearching) search.cancel();
+      setReturnPoint(null);
+    }
+  }
+  useEffect(() => {
+    if (focus) navigation.setParams({ focus: undefined });
+  }, [navigation, focus]);
+
+  const { transactionType: filterType, assignment: filterAssignment } = filters;
+  const viewSelection = useMemo(
+    () => ({
+      ...rangeSelection(range),
+      ...(filterType && { transactionType: filterType }),
+      ...(filterAssignment && { assignment: filterAssignment }),
+    }),
+    [range, filterType, filterAssignment],
+  );
+  const { openCreate, openDetails } = useTransactionFlow(viewSelection);
   const data = useTransactionsData({
     range,
     q,
+    filters,
     aroundId: anchor && !q && anchor.spaceId === spaceId ? anchor.transactionId : undefined,
     getVisibleIds,
   });
@@ -139,6 +175,7 @@ const TransactionsScreen = () => {
       const isListed =
         !q && isShownMonth(reveal.timestamp) && transactions.some(({ id }) => id === reveal.transactionId);
 
+      setFilters({});
       if (!isListed) {
         openMonthOf(reveal.timestamp);
         setAnchor({ ...monthBounds(reveal.timestamp), spaceId, transactionId: reveal.transactionId, isReveal: true });
@@ -210,7 +247,7 @@ const TransactionsScreen = () => {
         <RangePickerSheet
           period={period}
           onApply={applyPeriod}
-          renderRangeNote={(draft) => <RangeCount range={draft} q={q} />}
+          renderRangeNote={(draft) => <RangeCount range={draft} q={q} filters={filters} />}
         />
       </BottomModal>
 
@@ -249,6 +286,14 @@ const TransactionsScreen = () => {
                 onPresetPress={selectCurrent}
                 onOpenPicker={handleOpenPicker}
                 onReset={resetPeriod}
+              />
+
+              <HistoryFilters
+                filters={filters}
+                onClearType={() => setFilters(({ transactionType: _type, ...rest }) => rest)}
+                onClearAssignment={() =>
+                  setFilters(({ assignment: _assignment, assignmentName: _name, ...rest }) => rest)
+                }
               />
 
               <PendingWritesBanner style={styles.banner} />
@@ -294,6 +339,14 @@ const TransactionsScreen = () => {
                   activeRange={range}
                   onResetRange={canReset ? resetPeriod : undefined}
                   onJumpToLatest={() => openMonthOf(latest.timestamp)}
+                />
+              )}
+
+              {viewState === 'noFilterMatches' && (
+                <TransactionsEmptyState
+                  variant="noFilterMatches"
+                  activeRange={range}
+                  onClearFilters={() => setFilters({})}
                 />
               )}
 

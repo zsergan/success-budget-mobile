@@ -9,6 +9,8 @@ export interface ViewSelection {
   transactionType?: TransactionType;
   categoryId?: number;
   assignment?: AssignmentKey;
+  // Home follows a record saved outside its month by opening that month; any other screen shows it in History.
+  origin?: 'home';
 }
 
 // `otherFilter`: in the period, but no longer of the type, category or assignment the list is narrowed to.

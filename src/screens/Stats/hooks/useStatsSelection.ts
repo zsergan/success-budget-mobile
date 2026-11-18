@@ -69,6 +69,12 @@ const useStatsSelection = (scope: string) => {
       setMode(next);
       update(() => ({ segmentKey: null }));
     },
+    // Home asks for a type and a grouping together.
+    focus: (type: TransactionType, next: BreakdownMode) => {
+      setBreakdownType(type);
+      setMode(next);
+      update(() => ({ segmentKey: null }));
+    },
     selectTrend: (key: string | null) => update(() => ({ trendKey: key })),
     selectSegment: (key: string | null) => update(() => ({ segmentKey: key })),
     toggleOther: () =>

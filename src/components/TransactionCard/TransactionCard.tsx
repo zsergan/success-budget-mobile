@@ -28,12 +28,22 @@ interface Props {
   isHighlighted?: boolean;
   // The zone the time is told in; the device's when left out.
   timeZone?: string;
+  // Home's hidden amounts: the row says what it is, not how much.
+  isAmountHidden?: boolean;
   onPress?: (transaction: TransactionModel) => void;
   // Swiping left offers Delete; `onSettled` slides the row back once the confirmation closes.
   onDelete?: (transaction: TransactionModel, onSettled: () => void) => void;
 }
 
-const TransactionCard = ({ transaction, currencyCode, isHighlighted = false, timeZone, onPress, onDelete }: Props) => {
+const TransactionCard = ({
+  transaction,
+  currencyCode,
+  isHighlighted = false,
+  timeZone,
+  isAmountHidden = false,
+  onPress,
+  onDelete,
+}: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const swipeRef = useRef<SwipeableMethods>(null);
@@ -92,9 +102,11 @@ const TransactionCard = ({ transaction, currencyCode, isHighlighted = false, tim
             <ActivityIndicator size="small" color={colors.muted} />
           ) : (
             <Text style={[styles.amount, isIncome && styles.income]}>
-              {isSystem
-                ? formatMoneyAmount(transaction.amount, currencyCode)
-                : formatAmount(transaction.amount, transaction.transactionType, currencyCode)}
+              {isAmountHidden
+                ? `${isSystem ? '' : isIncome ? '+' : '-'}••••`
+                : isSystem
+                  ? formatMoneyAmount(transaction.amount, currencyCode)
+                  : formatAmount(transaction.amount, transaction.transactionType, currencyCode)}
             </Text>
           )}
         </View>

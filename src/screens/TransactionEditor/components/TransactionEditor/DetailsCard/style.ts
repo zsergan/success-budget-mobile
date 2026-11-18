@@ -28,6 +28,15 @@ const createStyles = ({ colors }: ColorTheme) =>
       borderBottomWidth: 1,
       borderBottomColor: colors.hairline,
     },
+    dateLabel: {
+      rowGap: 1,
+    },
+    dateNote: {
+      fontFamily: theme.fonts.medium,
+      fontSize: theme.fontSizes.caption,
+      lineHeight: theme.lineHeights.caption,
+      color: colors.muted,
+    },
     rowLabel: {
       fontFamily: theme.fonts.semiBold,
       fontSize: theme.fontSizes.label,

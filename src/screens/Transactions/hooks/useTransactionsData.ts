@@ -9,15 +9,44 @@ import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/sta
 import { feedSelection, feedSelectionKey, periodArg, useGetLatestTransactionQuery } from '@redux/state/transaction/api';
 import type { FeedSelection, TransactionsArg } from '@redux/state/transaction/api';
 import { getEmptyPeriodState } from '@redux/state/transaction/selectors';
+import type { AssignmentKey } from '@api/models';
+import type { TransactionType } from '@shared/enums';
+import { TransactionKind } from '@shared/enums';
 import type { HistoryFilter } from '@shared/types';
 import type { DateRange, DayGroup } from '@shared/utils';
 import { groupRowsByDay } from '@shared/utils';
 
 // trueEmpty: no transactions at all; filteredEmpty: none in this period; noMatches: none behind a Stats row;
-// noSearchMatches: none for the search in this period.
+// noSearchMatches: none for the search in this period; noFilterMatches: none of the type or assignment picked.
 // latestError: the period is empty but whether any transactions exist couldn't be checked.
 export type TransactionsViewState =
-  'loading' | 'trueEmpty' | 'filteredEmpty' | 'noMatches' | 'noSearchMatches' | 'ready' | 'rangeError' | 'latestError';
+  | 'loading'
+  | 'trueEmpty'
+  | 'filteredEmpty'
+  | 'noMatches'
+  | 'noSearchMatches'
+  | 'noFilterMatches'
+  | 'ready'
+  | 'rangeError'
+  | 'latestError';
+
+// What History is narrowed to besides its period and search.
+export interface HistoryFilters {
+  transactionType?: TransactionType;
+  assignment?: AssignmentKey;
+  // How the place the filter came from named the assignment.
+  assignmentName?: string;
+}
+
+export const hasHistoryFilters = ({ transactionType, assignment }: HistoryFilters) =>
+  transactionType !== undefined || assignment !== undefined;
+
+// A type filter lists regular records only, so its sum is the one Home and Stats show; starting balances are not part
+// of income or expenses.
+export const historyFilterArg = ({ transactionType, assignment }: HistoryFilters) => ({
+  ...(transactionType && { transactionType, kind: TransactionKind.REGULAR }),
+  ...(assignment && { assignment }),
+});
 
 export interface HistorySection extends DayGroup {
   // The server's net of the whole day; null if it did not send one for this day.
@@ -35,6 +64,7 @@ interface HistoryRange extends ListedRows {
   aroundId?: string;
   // Search text, trimmed; empty for the plain history.
   q?: string;
+  filters?: HistoryFilters;
 }
 
 interface StatsSelection extends ListedRows {
@@ -73,7 +103,10 @@ const useTransactionsData = (props: UseTransactionsDataProps) => {
   if (filter && filter.spaceId === spaceId) {
     selection = feedSelection(toFilterArg(filter), { timeZone: filter.timeZone });
   } else if (history && spaceId !== null) {
-    selection = feedSelection(periodArg(spaceId, history.range), { q });
+    selection = feedSelection(
+      { ...periodArg(spaceId, history.range), ...historyFilterArg(history.filters ?? {}) },
+      { q },
+    );
   }
   const feed = useTransactionsFeed(selection, { aroundId: history?.aroundId, getVisibleIds: props.getVisibleIds });
   const { items, summary, dayNets } = feed;
@@ -81,7 +114,8 @@ const useTransactionsData = (props: UseTransactionsDataProps) => {
 
   // Whether the account has any history at all only matters for an empty period.
   const spaceArg = useSpaceArg();
-  const needsLatest = history !== null && !q && isEmpty;
+  const isFiltered = !!history?.filters && hasHistoryFilters(history.filters);
+  const needsLatest = history !== null && !q && !isFiltered && isEmpty;
   const latestQuery = useGetLatestTransactionQuery(needsLatest ? spaceArg : skipToken);
 
   const sections = useMemo<HistorySection[]>(
@@ -106,6 +140,8 @@ const useTransactionsData = (props: UseTransactionsDataProps) => {
     viewState = 'noMatches';
   } else if (q) {
     viewState = 'noSearchMatches';
+  } else if (isFiltered) {
+    viewState = 'noFilterMatches';
   } else {
     viewState = getEmptyPeriodState(latestQuery, history.range);
   }

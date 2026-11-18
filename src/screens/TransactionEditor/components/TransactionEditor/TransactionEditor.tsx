@@ -127,6 +127,13 @@ const TransactionEditor = ({
       : undefined;
 
   const selfId = profile?.id;
+  // A new record is dated now, also from an earlier month on Home; the form says which month is behind it.
+  const viewed = flow.selection;
+  const time = Date.parse(draft.timestamp);
+  const dateNote =
+    !isEdit && viewed?.origin === 'home' && (time < Date.parse(viewed.from) || time > Date.parse(viewed.to))
+      ? `You’re viewing ${new Date(viewed.from).toLocaleString('en-US', { month: 'long' })}`
+      : undefined;
   const assignmentOptions = buildAssignmentOptions({
     members,
     self: profile && { id: profile.id, name: profile.name },
@@ -288,6 +295,7 @@ const TransactionEditor = ({
 
             <DetailsCard
               timestamp={draft.timestamp}
+              dateNote={dateNote}
               dateError={errors.timestamp}
               description={draft.description}
               descriptionError={errors.description}

@@ -8,7 +8,7 @@ import { useAppSelector } from '@redux/hooks';
 import { selectProfileId } from '@redux/state/profile/selectors';
 import { TransactionType } from '@shared/enums';
 import type { StatisticsBreakdown, StatisticsSummary, StatisticsTrend } from '@api/dto';
-import type { StatsBlock } from '@screens/Stats/hooks/useStatsData';
+import type { StatsBlock } from '@hooks/useStatsData';
 import type { BreakdownGroup, BreakdownMode, StatsItem } from '@screens/Stats/statsItems';
 import BlockError from '../BlockError/BlockError';
 import BlockPlaceholder from '../BlockPlaceholder/BlockPlaceholder';

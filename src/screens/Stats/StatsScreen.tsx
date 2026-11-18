@@ -1,7 +1,7 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
 import {
   Banner,
@@ -18,7 +18,7 @@ import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { activateSpace } from '@redux/state/space/thunks';
 import { rangeSelection } from '@redux/state/transactionFlow/selection';
 import { ScreenNames, TransactionType } from '@shared/enums';
-import type { StatsStackNavigationProp } from '@shared/types';
+import type { StatsStackNavigationProp, StatsStackScreenProps } from '@shared/types';
 import { formatRangeLabel, hasComparison, isCurrentMonth, monthPeriodOf } from '@shared/utils';
 import CreateWalletSheet from './components/CreateWalletSheet/CreateWalletSheet';
 import StatsEmptyState from './components/StatsEmptyState/StatsEmptyState';
@@ -30,7 +30,7 @@ import { toHistoryFilter } from './historyFilter';
 import useAddTransaction from './hooks/useAddTransaction';
 import useComposeWithNewWallet from './hooks/useComposeWithNewWallet';
 import useSpaceStatus from './hooks/useSpaceStatus';
-import useStatsData from './hooks/useStatsData';
+import useStatsData from '@hooks/useStatsData';
 import useStatsSelection from './hooks/useStatsSelection';
 import useUpdateFailure from './hooks/useUpdateFailure';
 import type { BreakdownGroup } from './statsItems';
@@ -62,6 +62,17 @@ const StatsScreen = () => {
     accessDenied,
   } = useStatsData(range, breakdownType);
   useRefreshOnReturn(refreshIfStale);
+
+  // Home's request: its month, type and grouping, once, and only in the space it was made in.
+  const focus = useRoute<StatsStackScreenProps<ScreenNames.STATS_OVERVIEW_SCREEN>['route']>().params?.focus;
+  useEffect(() => {
+    if (!focus) return;
+
+    navigation.setParams({ focus: undefined });
+    if (focus.spaceId !== spaceId) return;
+    applyPeriod(monthPeriodOf(focus.month));
+    selection.focus(focus.transactionType, focus.mode);
+  }, [navigation, focus, spaceId, applyPeriod, selection]);
 
   const dispatch = useAppDispatch();
   const space = useSpaceStatus();

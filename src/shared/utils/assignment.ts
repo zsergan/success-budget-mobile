@@ -1,3 +1,4 @@
+import type { AssignmentBreakdownItem } from '@api/dto';
 import type { AssignmentKey, AssignmentModel, AuthorModel, PersonModel } from '@api/models';
 import { AppColor } from '@shared/enums';
 import type { ColorTheme } from '@shared/theme';
@@ -63,4 +64,21 @@ export const assignmentKeyColor = (
   if (key === 'deleted_member') return colors.chartDeleted;
 
   return categories[memberAppColor(Number(key.slice('member:'.length)), selfId)].stroke;
+};
+
+// A breakdown group as lists name it: a person, or the whole space, nobody, or every deleted account together.
+export const assignmentItemLabel = (
+  item: Pick<AssignmentBreakdownItem, 'kind' | 'user_id' | 'name' | 'status'>,
+  selfId: number | undefined,
+) => {
+  switch (item.kind) {
+    case 'space':
+      return WHOLE_SPACE_LABEL;
+    case 'unassigned':
+      return UNASSIGNED_LABEL;
+    case 'deleted_member':
+      return DELETED_MEMBER_LABEL;
+    case 'member':
+      return personLabel({ userId: item.user_id, name: item.name, status: item.status ?? 'member' }, selfId);
+  }
 };
