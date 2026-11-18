@@ -16,9 +16,9 @@ describe('useStatsSelection', () => {
   it('changes the type and the grouping independently', () => {
     const { result } = setup();
 
-    act(() => result.current.changeMode('wallet'));
+    act(() => result.current.changeMode('assignment'));
     act(() => result.current.changeBreakdownType(TransactionType.INCOME));
-    expect(result.current).toMatchObject({ breakdownType: TransactionType.INCOME, mode: 'wallet' });
+    expect(result.current).toMatchObject({ breakdownType: TransactionType.INCOME, mode: 'assignment' });
 
     act(() => result.current.changeMode('category'));
     expect(result.current).toMatchObject({ breakdownType: TransactionType.INCOME, mode: 'category' });
@@ -30,7 +30,7 @@ describe('useStatsSelection', () => {
     act(() => result.current.toggleOther());
     expect(result.current.isOtherExpanded).toBe(true);
 
-    act(() => result.current.changeMode('wallet'));
+    act(() => result.current.changeMode('assignment'));
     expect(result.current.isOtherExpanded).toBe(false);
 
     act(() => result.current.changeBreakdownType(TransactionType.INCOME));
@@ -52,7 +52,7 @@ describe('useStatsSelection', () => {
     expect(result.current.selectedSegmentKey).toBeNull();
 
     act(() => result.current.selectSegment('category:12'));
-    act(() => result.current.changeMode('wallet'));
+    act(() => result.current.changeMode('assignment'));
     act(() => result.current.changeMode('category'));
     expect(result.current.selectedSegmentKey).toBeNull();
   });
@@ -74,7 +74,7 @@ describe('useStatsSelection', () => {
 
     act(() => {
       result.current.changeBreakdownType(TransactionType.INCOME);
-      result.current.changeMode('wallet');
+      result.current.changeMode('assignment');
     });
     act(() => {
       result.current.toggleOther();
@@ -85,7 +85,7 @@ describe('useStatsSelection', () => {
 
     expect(result.current).toMatchObject({
       breakdownType: TransactionType.INCOME,
-      mode: 'wallet',
+      mode: 'assignment',
       isOtherExpanded: false,
       selectedSegmentKey: null,
       selectedTrendKey: null,

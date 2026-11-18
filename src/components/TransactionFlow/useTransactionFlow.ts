@@ -7,6 +7,7 @@ import type { ViewSelection } from '@redux/state/transactionFlow/selection';
 import { createOpened } from '@redux/state/transactionFlow/slice';
 import { openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { TransactionType } from '@shared/enums';
+import useAssignmentDefaults from './hooks/useAssignmentDefaults';
 
 // Starts the one transaction flow of the active space: a new transaction's form opens as a screen and a record's
 // details as a sheet, once the flow has taken the step. A flow that is already open stays as it is.
@@ -15,26 +16,27 @@ const useTransactionFlow = (selection: ViewSelection | null = null) => {
   const dispatch = useAppDispatch();
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const selectionRef = useRef(selection);
+  const { forNew } = useAssignmentDefaults();
 
   useEffect(() => {
     selectionRef.current = selection;
   }, [selection]);
 
   const openCreate = useCallback(
-    (transactionType = TransactionType.EXPENSE, walletId?: number) => {
+    (transactionType = TransactionType.EXPENSE) => {
       if (spaceId === null) return;
 
       dispatch(
         createOpened({
           spaceId,
           transactionType,
-          walletId: walletId ?? null,
+          assignment: forNew(),
           now: new Date().toISOString(),
           selection: selectionRef.current,
         }),
       );
     },
-    [dispatch, spaceId],
+    [dispatch, spaceId, forNew],
   );
 
   const openDetails = useCallback(

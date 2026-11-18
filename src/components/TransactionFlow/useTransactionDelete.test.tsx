@@ -86,7 +86,8 @@ describe('useTransactionDelete from a list row', () => {
     act(() => result.current.requestDelete(lunch));
     expect(result.current.confirmation).toMatchObject({
       title: 'Delete transaction?',
-      description: '-12.00 · Food · Cash. The wallet balance will be adjusted.',
+      description:
+        '-12.00 · Food · Zakhar. It will be removed from History, and the period’s totals, stats and limits will update.',
       primaryAction: { label: 'Delete transaction', tone: 'danger' },
     });
     const press = result.current.confirmation!.primaryAction.onPress;

@@ -7,7 +7,7 @@ import type {
   StatisticsSummary,
   StatisticsTimeState,
   StatisticsTrend,
-  WalletBreakdownItem,
+  AssignmentBreakdownItem,
 } from '@api/dto';
 import { AppColor, TransactionType } from '@shared/enums';
 
@@ -39,11 +39,13 @@ const CATEGORIES: Record<string, Category> = {
   refund: ['Refund', AppColor.SLATE, 'Refund'],
 };
 
-const WALLETS: Record<string, [name: string, color: AppColor]> = {
-  everyday: ['Everyday', AppColor.SLATE],
-  travel: ['Travel', AppColor.INDIGO],
-  jointTravel: ['Joint Travel Savings', AppColor.INDIGO],
-  savings: ['Savings', AppColor.EVERGREEN],
+// The signed-in user is 1 (`withProfile`); Lena has left the space since.
+const ASSIGNEES: Record<string, Pick<AssignmentBreakdownItem, 'kind' | 'key' | 'user_id' | 'name' | 'status'>> = {
+  you: { kind: 'member', key: 'member:1', user_id: 1, name: 'Anna', status: 'member' },
+  lena: { kind: 'member', key: 'member:31', user_id: 31, name: 'Lena', status: 'former_member' },
+  alexandra: { kind: 'member', key: 'member:32', user_id: 32, name: 'Alexandra Konstantinopolskaya', status: 'member' },
+  space: { kind: 'space', key: 'space', user_id: null, name: null, status: null },
+  unassigned: { kind: 'unassigned', key: 'unassigned', user_id: null, name: null, status: null },
 };
 
 interface BucketSpec {
@@ -68,11 +70,11 @@ interface FixtureSpec {
   buckets: BucketSpec[];
   categories?: [key: string, cents: number][];
   archived?: string[];
-  wallets?: [key: string, cents: number][];
-  deletedWallets?: number;
+  assignees?: [key: string, cents: number][];
+  deletedMembers?: number;
   // All income lands as Salary in Everyday unless set.
   incomeCategories?: [key: string, cents: number][];
-  incomeWallets?: [key: string, cents: number][];
+  incomeAssignees?: [key: string, cents: number][];
   // Transactions of $0.00 still count.
   counts?: { income: number; expense: number };
   hasAnyTransactions?: boolean;
@@ -113,15 +115,22 @@ const buildPeriod = (spec: FixtureSpec): StatisticsPeriod => {
   };
 };
 
-const group = <Item extends CategoryBreakdownItem | WalletBreakdownItem>(items: Item[], total: number) => {
-  const sorted = [...items].sort((a, b) => Number(b.amount) - Number(a.amount));
-  if (sorted.length <= PRIMARY_LIMIT) return { primary: sorted, other: null };
+// Whole space and nobody are never folded into Other.
+const isFoldable = (item: CategoryBreakdownItem | AssignmentBreakdownItem) =>
+  item.kind !== 'space' && item.kind !== 'unassigned';
 
-  const children = sorted.slice(PRIMARY_LIMIT);
+const group = <Item extends CategoryBreakdownItem | AssignmentBreakdownItem>(items: Item[], total: number) => {
+  const sorted = [...items].sort((a, b) => Number(b.amount) - Number(a.amount));
+  const fixed = sorted.filter((item) => !isFoldable(item));
+  const foldable = sorted.filter(isFoldable);
+  const room = PRIMARY_LIMIT - fixed.length;
+  if (foldable.length <= room) return { primary: sorted, other: null };
+
+  const children = foldable.slice(room);
   const cents = children.reduce((sum, item) => sum + Math.round(Number(item.amount) * 100), 0);
 
   return {
-    primary: sorted.slice(0, PRIMARY_LIMIT),
+    primary: sorted.filter((item) => !children.includes(item)),
     other: {
       kind: 'other' as const,
       key: 'other' as const,
@@ -142,17 +151,16 @@ interface BreakdownSpec {
   type: TransactionType;
   total: MoneyCount;
   categories: [key: string, cents: number][];
-  wallets: [key: string, cents: number][];
-  deletedWallets: number;
-  // Ids stay unique across both types, and one wallet keeps its id in each.
+  assignees: [key: string, cents: number][];
+  deletedMembers: number;
+  // Ids stay unique across both types.
   firstCategoryId: number;
-  walletKeys: string[];
 }
 
 const buildBreakdown = (
   spec: FixtureSpec,
   period: StatisticsPeriod,
-  { type, total, categories: categorySpecs, wallets: walletSpecs, deletedWallets: deleted, ...ids }: BreakdownSpec,
+  { type, total, categories: categorySpecs, assignees: assigneeSpecs, deletedMembers: deleted, ...ids }: BreakdownSpec,
 ): StatisticsBreakdown => {
   const cents = Math.round(Number(total.amount) * 100);
   const categories = categorySpecs.map(([key, amount], index): CategoryBreakdownItem => {
@@ -172,25 +180,28 @@ const buildBreakdown = (
       percent: share(amount, cents),
     };
   });
-  const wallets = walletSpecs.map(([key, amount]): WalletBreakdownItem => {
-    const [name, color] = WALLETS[key];
-    const id = ids.walletKeys.indexOf(key) + 1;
-
-    return {
-      kind: 'wallet',
-      key: `wallet:${id}`,
-      id,
-      name,
-      icon: null,
-      color,
-      is_archived: false,
-      opens_history: true,
-      amount: money(amount),
-      percent: share(amount, cents),
-    };
-  });
+  const assignees = [
+    ...assigneeSpecs.map(([key, amount]) => ({ ...ASSIGNEES[key], amount })),
+    ...(deleted
+      ? [
+          {
+            kind: 'deleted_member',
+            key: 'deleted_member',
+            user_id: null,
+            name: null,
+            status: null,
+            amount: deleted,
+          } as const,
+        ]
+      : []),
+  ].map(({ amount, ...item }): AssignmentBreakdownItem => ({
+    ...item,
+    opens_history: true,
+    amount: money(amount),
+    percent: share(amount, cents),
+  }));
   const byCategory = group(categories, cents);
-  const byWallet = group(wallets, cents);
+  const byAssignment = group(assignees, cents);
 
   return {
     period,
@@ -203,26 +214,18 @@ const buildBreakdown = (
       primary_items: byCategory.primary,
       other: byCategory.other,
     },
-    by_wallet: {
+    by_assignment: {
       total_amount: total.amount,
-      source_count: wallets.length + (deleted ? 1 : 0),
-      primary_items: byWallet.primary,
-      deleted_wallets: deleted
-        ? {
-            kind: 'deleted_wallets',
-            key: 'deleted_wallets',
-            id: null,
-            name: null,
-            icon: null,
-            color: null,
-            is_archived: false,
-            opens_history: false,
-            wallets_count: 1,
-            amount: money(deleted),
-            percent: share(deleted, cents),
-          }
-        : null,
-      other: byWallet.other,
+      source_count: assignees.length,
+      primary_items: byAssignment.primary,
+      other: byAssignment.other && {
+        kind: 'other',
+        key: 'other',
+        opens_history: false,
+        amount: byAssignment.other.amount,
+        percent: byAssignment.other.percent,
+        children: byAssignment.other.children,
+      },
     },
   };
 };
@@ -234,10 +237,9 @@ export const buildStatsFixture = (spec: FixtureSpec): StatsFixture => {
   const transactionsCount = income.count + expense.count;
   const previous = spec.previous;
   const expenseCategories = spec.categories ?? [];
-  const expenseWallets = spec.wallets ?? [];
+  const expenseAssignees = spec.assignees ?? [];
   const incomeCategories = spec.incomeCategories ?? (spec.income ? [['salary', spec.income]] : []);
-  const incomeWallets = spec.incomeWallets ?? (spec.income ? [['everyday', spec.income]] : []);
-  const walletKeys = [...new Set([...expenseWallets, ...incomeWallets].map(([key]) => key))];
+  const incomeAssignees = spec.incomeAssignees ?? (spec.income ? [['you', spec.income]] : []);
 
   return {
     summary: {
@@ -296,19 +298,17 @@ export const buildStatsFixture = (spec: FixtureSpec): StatsFixture => {
         type: TransactionType.EXPENSE,
         total: expense,
         categories: expenseCategories,
-        wallets: expenseWallets,
-        deletedWallets: spec.deletedWallets ?? 0,
+        assignees: expenseAssignees,
+        deletedMembers: spec.deletedMembers ?? 0,
         firstCategoryId: 1,
-        walletKeys,
       }),
       [TransactionType.INCOME]: buildBreakdown(spec, period, {
         type: TransactionType.INCOME,
         total: income,
         categories: incomeCategories,
-        wallets: incomeWallets,
-        deletedWallets: 0,
+        assignees: incomeAssignees,
+        deletedMembers: 0,
         firstCategoryId: expenseCategories.length + 1,
-        walletKeys,
       }),
     },
   };
@@ -345,18 +345,18 @@ const MONTH: FixtureSpec = {
   granularity: 'week',
   buckets: MONTH_BUCKETS,
   categories: MONTH_CATEGORIES,
-  wallets: [
-    ['everyday', 184210],
-    ['travel', 62030],
-    ['savings', 40200],
+  assignees: [
+    ['you', 184210],
+    ['space', 62030],
+    ['unassigned', 40200],
   ],
   incomeCategories: [
     ['salary', 320000],
     ['freelance', 85000],
   ],
-  incomeWallets: [
-    ['everyday', 320000],
-    ['savings', 85000],
+  incomeAssignees: [
+    ['you', 320000],
+    ['unassigned', 85000],
   ],
 };
 
@@ -412,10 +412,10 @@ export const STATS_FIXTURES = {
       ['clothes', 65051],
       ['gifts', 144800],
     ],
-    wallets: [
-      ['everyday', sum(YEAR_EXPENSE) - 1016400],
-      ['travel', 623000],
-      ['savings', 393400],
+    assignees: [
+      ['you', sum(YEAR_EXPENSE) - 1016400],
+      ['space', 623000],
+      ['unassigned', 393400],
     ],
     incomeCategories: [
       ['salary', 2880000],
@@ -424,9 +424,9 @@ export const STATS_FIXTURES = {
       ['dividends', 60000],
       ['refund', 20000],
     ],
-    incomeWallets: [
-      ['everyday', 2880000],
-      ['savings', sum(YEAR_INCOME) - 2880000],
+    incomeAssignees: [
+      ['you', 2880000],
+      ['unassigned', sum(YEAR_INCOME) - 2880000],
     ],
   }),
   // L8: the current week, by day, mostly ahead
@@ -453,7 +453,7 @@ export const STATS_FIXTURES = {
       ['groceries', 2410],
       ['cafe', 1450],
     ],
-    wallets: [['everyday', 3860]],
+    assignees: [['you', 3860]],
   }),
   // L11: a month cut into six calendar weeks
   august: buildStatsFixture({
@@ -485,10 +485,10 @@ export const STATS_FIXTURES = {
       ['cafe', 4800],
       ['gifts', 2801],
     ],
-    wallets: [
-      ['everyday', 210645],
-      ['travel', 62030],
-      ['savings', 38000],
+    assignees: [
+      ['you', 210645],
+      ['space', 62030],
+      ['unassigned', 38000],
     ],
   }),
   // L12: a month that has not started
@@ -546,21 +546,21 @@ export const STATS_FIXTURES = {
       ['health', 23148],
       ['gifts', 16000],
     ],
-    wallets: [
-      ['everyday', 631095],
-      ['travel', 186030],
-      ['savings', 114000],
+    assignees: [
+      ['you', 631095],
+      ['space', 186030],
+      ['unassigned', 114000],
     ],
   }),
   // L16
-  deletedWallets: buildStatsFixture({
+  deletedMembers: buildStatsFixture({
     ...MONTH,
-    wallets: [
-      ['everyday', 164210],
-      ['jointTravel', 62030],
-      ['savings', 40200],
+    assignees: [
+      ['you', 164210],
+      ['alexandra', 62030],
+      ['unassigned', 40200],
     ],
-    deletedWallets: 20000,
+    deletedMembers: 20000,
   }),
   // L17
   archived: buildStatsFixture({ ...MONTH, archived: ['subscriptions'] }),
@@ -576,9 +576,9 @@ export const STATS_FIXTURES = {
       expense: 0,
     })),
     categories: [],
-    wallets: [],
+    assignees: [],
     incomeCategories: [['freelance', 170000]],
-    incomeWallets: [['savings', 170000]],
+    incomeAssignees: [['unassigned', 170000]],
   }),
   // L19: a finished week in deficit
   expenseOnly: buildStatsFixture({
@@ -603,9 +603,9 @@ export const STATS_FIXTURES = {
       ['health', 4620],
       ['subscriptions', 4000],
     ],
-    wallets: [
-      ['everyday', 57320],
-      ['travel', 4000],
+    assignees: [
+      ['you', 57320],
+      ['space', 4000],
     ],
   }),
   // L20: transactions, all of $0.00
@@ -637,9 +637,9 @@ export const STATS_FIXTURES = {
       expense: index === 0 ? 125000 : 0,
     })),
     categories: [['housing', 125000]],
-    wallets: [['everyday', 125000]],
+    assignees: [['you', 125000]],
     incomeCategories: [['salary', 140000]],
-    incomeWallets: [['everyday', 140000]],
+    incomeAssignees: [['you', 140000]],
   }),
   // L5: no transactions ever
   noHistory: buildStatsFixture({
@@ -649,9 +649,9 @@ export const STATS_FIXTURES = {
     previous: undefined,
     buckets: MONTH_BUCKETS.map((bucket) => ({ ...bucket, income: 0, expense: 0 })),
     categories: [],
-    wallets: [],
+    assignees: [],
     incomeCategories: [],
-    incomeWallets: [],
+    incomeAssignees: [],
     hasAnyTransactions: false,
     lastTransactionDate: null,
   }),
@@ -663,9 +663,9 @@ export const STATS_FIXTURES = {
     previous: undefined,
     buckets: MONTH_BUCKETS.map((bucket) => ({ ...bucket, income: 0, expense: 0 })),
     categories: [],
-    wallets: [],
+    assignees: [],
     incomeCategories: [],
-    incomeWallets: [],
+    incomeAssignees: [],
     lastTransactionDate: '2026-08-29',
   }),
   // Not in the design: the longest names and amounts the layout has to hold.
@@ -685,12 +685,12 @@ export const STATS_FIXTURES = {
     ],
     archived: ['kids'],
     names: { kids: 'Kids & School Supply' },
-    wallets: [
-      ['jointTravel', 98765432101 - 1000],
-      ['savings', 1000],
+    assignees: [
+      ['alexandra', 98765432101 - 1000],
+      ['unassigned', 1000],
     ],
     incomeCategories: [['salary', 123456789012]],
-    incomeWallets: [['jointTravel', 123456789012]],
+    incomeAssignees: [['alexandra', 123456789012]],
   }),
 } satisfies Record<string, StatsFixture>;
 

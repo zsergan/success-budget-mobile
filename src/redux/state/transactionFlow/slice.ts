@@ -1,12 +1,12 @@
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice } from '@reduxjs/toolkit';
 
-import type { CreateTransactionResult, TransactionModel } from '@api/models';
+import type { TransactionModel, TransactionWriteResult } from '@api/models';
 import { isInitialBalance } from '@api/models';
 import type { TransactionType } from '@shared/enums';
 import { logoutMe } from '../auth/thunks';
 import { spaceAccessLost, spaceSelected } from '../space/thunks';
-import type { TransactionDraft } from './draft';
+import type { DraftAssignment, TransactionDraft } from './draft';
 import { createDraft, draftFromTransaction } from './draft';
 import type { ViewSelection } from './selection';
 
@@ -21,9 +21,6 @@ export type FlowView =
   | { name: 'created' }
   // The record was deleted elsewhere.
   | { name: 'gone' };
-
-// A wallet being created from the form, on a screen over it; the draft waits here.
-export type FlowAway = 'wallet';
 
 // Whether the record has been read again since the details opened from a list that may be behind the server.
 export type FlowCheck = 'pending' | 'done' | 'failed';
@@ -72,24 +69,21 @@ export interface TransactionFlow {
   // A category picked from the full list keeps its tile in the grid until the form closes.
   promotedCategoryId: number | null;
   // The last create's result, for its confirmation and Undo.
-  created: CreateTransactionResult | null;
+  created: TransactionWriteResult | null;
   // When the confirmation closes on its own; a touch clears it. A deadline, so a remount never restarts the timer.
   autoCloseAt: number | null;
   // What the screen the form opened from shows, so the confirmation can say where a hidden record went.
   selection: ViewSelection | null;
-  away: FlowAway | null;
 }
 
 interface TransactionFlowState {
   flow: TransactionFlow | null;
   lastDraftId: number;
-  // The wallet of the last saved transaction, per space, so a new one starts there.
-  lastWalletIds: Record<number, number>;
   // Deletes waiting for the server, from the sheet or a list row; a row leaves the list only once its delete is done.
   deletingIds: string[];
 }
 
-const initialState: TransactionFlowState = { flow: null, lastDraftId: 0, lastWalletIds: {}, deletingIds: [] };
+const initialState: TransactionFlowState = { flow: null, lastDraftId: 0, deletingIds: [] };
 
 type DraftScoped<T = object> = PayloadAction<T & { draftId: number }>;
 
@@ -108,7 +102,7 @@ const idleFlow = (state: TransactionFlowState) => (state.flow && !state.flow.isS
 const startCreate = (
   state: TransactionFlowState,
   flow: Pick<TransactionFlow, 'spaceId' | 'selection'>,
-  draft: Pick<TransactionDraft, 'transactionType' | 'walletId' | 'timestamp'>,
+  draft: Pick<TransactionDraft, 'transactionType' | 'assignment' | 'timestamp'>,
 ): TransactionFlow => {
   state.lastDraftId += 1;
   const fresh = createDraft(draft);
@@ -129,7 +123,6 @@ const startCreate = (
     created: null,
     autoCloseAt: null,
     selection: flow.selection,
-    away: null,
   };
 };
 
@@ -158,7 +151,7 @@ const transactionFlowSlice = createSlice({
       }: PayloadAction<{
         spaceId: number;
         transactionType: TransactionType;
-        walletId: number | null;
+        assignment: DraftAssignment;
         now: string;
         selection?: ViewSelection | null;
       }>,
@@ -191,7 +184,6 @@ const transactionFlowSlice = createSlice({
         created: null,
         autoCloseAt: null,
         selection: null,
-        away: null,
       };
     },
     checkStarted: (state, { payload }: DraftScoped) => {
@@ -336,8 +328,6 @@ const transactionFlowSlice = createSlice({
       const flow = flowOf(state, payload.draftId);
       if (!flow) return;
 
-      if (payload.transaction.wallet) state.lastWalletIds[flow.spaceId] = payload.transaction.wallet.id;
-
       flow.isSaving = false;
       flow.saved = payload.transaction;
       flow.check = 'done';
@@ -368,14 +358,13 @@ const transactionFlowSlice = createSlice({
         isSaving: false,
       });
     },
-    createSucceeded: (state, { payload }: DraftScoped<{ result: CreateTransactionResult; now: number }>) => {
+    createSucceeded: (state, { payload }: DraftScoped<{ result: TransactionWriteResult; now: number }>) => {
       const flow = flowOf(state, payload.draftId);
       if (!flow) return;
 
       flow.isSaving = false;
       flow.created = payload.result;
       flow.autoCloseAt = payload.now + CREATED_AUTO_CLOSE_MS;
-      if (payload.result.transaction.wallet) state.lastWalletIds[flow.spaceId] = payload.result.transaction.wallet.id;
       flow.view = { name: 'created' };
     },
     editSucceeded: (state, { payload }: DraftScoped<{ transaction: TransactionModel }>) => {
@@ -383,22 +372,22 @@ const transactionFlowSlice = createSlice({
       if (!flow) return;
 
       flow.isSaving = false;
-      if (payload.transaction.wallet) state.lastWalletIds[flow.spaceId] = payload.transaction.wallet.id;
       flow.saved = payload.transaction;
       flow.check = 'done';
       flow.draft = null;
       flow.baseline = null;
       flow.view = { name: 'details' };
     },
-    // Keeps the type, the wallet and a picked date; a date that was "now" becomes the new now.
-    anotherStarted: (state, { payload }: PayloadAction<{ now: string }>) => {
+    // Keeps the type, the assignment and a picked date; a date that was "now" becomes the new now.
+    // The caller passes the assignment to keep: the last one while it is still on offer, else the default.
+    anotherStarted: (state, { payload }: PayloadAction<{ now: string; assignment: DraftAssignment }>) => {
       const flow = idleFlow(state);
       if (flow?.view.name !== 'created' || !flow.draft) return;
 
-      const { transactionType, walletId, timestamp } = flow.draft;
+      const { transactionType, timestamp } = flow.draft;
       const next = startCreate(state, flow, {
         transactionType,
-        walletId,
+        assignment: payload.assignment,
         timestamp: flow.followsNow ? payload.now : timestamp,
       });
 
@@ -421,30 +410,6 @@ const transactionFlowSlice = createSlice({
       const flow = flowOf(state, payload.draftId);
       if (flow?.view.name === 'created' && flow.autoCloseAt !== null && !flow.isSaving) state.flow = null;
     },
-    // A new draft's wallet, once the space's wallets are known; it is where the form starts, not a change.
-    walletDefaulted: (state, { payload }: DraftScoped<{ walletId: number | null }>) => {
-      const flow = flowOf(state, payload.draftId);
-      if (!flow?.draft || !flow.baseline || flow.saved || flow.isSaving) return;
-
-      flow.draft.walletId = payload.walletId;
-      flow.baseline.walletId = payload.walletId;
-    },
-    awayStarted: (state, { payload }: DraftScoped<{ target: FlowAway }>) => {
-      const flow = flowOf(state, payload.draftId);
-      if (!flow || flow.isSaving || !activeForm(flow)) return;
-
-      flow.away = payload.target;
-      // The form comes back as from a picker, without the keyboard over it.
-      if (flow.view.name === 'create') flow.view.focusAmount = false;
-    },
-    // The new wallet is saved on its own; discarding the draft later does not remove it.
-    // The form comes back with awayEnded, once the wallet screen has gone.
-    walletCreated: (state, { payload }: DraftScoped<{ walletId: number }>) => {
-      const flow = flowOf(state, payload.draftId);
-      if (flow?.away !== 'wallet' || !flow.draft) return;
-
-      flow.draft.walletId = payload.walletId;
-    },
     // From a category sheet over the form or its full list; the screen that owns the sheet answers for the opening.
     categoryCreated: (state, { payload }: DraftScoped<{ categoryId: number; transactionType: TransactionType }>) => {
       const flow = flowOf(state, payload.draftId);
@@ -453,10 +418,6 @@ const transactionFlowSlice = createSlice({
 
       flow.draft.categoryId = payload.categoryId;
       flow.promotedCategoryId = payload.categoryId;
-    },
-    awayEnded: (state, { payload }: DraftScoped) => {
-      const flow = flowOf(state, payload.draftId);
-      if (flow) flow.away = null;
     },
     // The open record locks its sheet like a save does; the confirmation already showed what is deleted.
     deleteStarted: (state, { payload }: PayloadAction<{ transactionId: string }>) => {
@@ -499,7 +460,6 @@ const transactionFlowSlice = createSlice({
     });
     builder.addCase(logoutMe.fulfilled, (state) => {
       state.flow = null;
-      state.lastWalletIds = {};
       state.deletingIds = [];
     });
   },
@@ -532,11 +492,7 @@ export const {
   autoCloseRestarted,
   autoCloseStopped,
   autoClosed,
-  walletDefaulted,
-  awayStarted,
-  walletCreated,
   categoryCreated,
-  awayEnded,
   deleteStarted,
   deleteSettled,
   closed,

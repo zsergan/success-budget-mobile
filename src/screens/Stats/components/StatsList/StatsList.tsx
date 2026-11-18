@@ -4,6 +4,8 @@ import { FlatList, Text, View } from 'react-native';
 
 import { Icon } from '@components';
 import { useTheme, useThemedStyles } from '@hooks';
+import { useAppSelector } from '@redux/hooks';
+import { selectProfileId } from '@redux/state/profile/selectors';
 import { TransactionType } from '@shared/enums';
 import type { StatisticsBreakdown, StatisticsSummary, StatisticsTrend } from '@api/dto';
 import type { StatsBlock } from '@screens/Stats/hooks/useStatsData';
@@ -83,9 +85,9 @@ const StatsList = ({
 }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
+  const selfId = useAppSelector(selectProfileId);
   const rowPress = (group: BreakdownGroup) => {
     if (group.kind === 'other') return onToggleOther;
-    if (group.kind === 'deleted_wallets') return undefined;
     return () => onOpenHistory(group);
   };
 
@@ -141,6 +143,7 @@ const StatsList = ({
               currency={item.currency}
               type={item.type}
               mode={mode}
+              selfId={selfId}
               selectedKey={selectedSegmentKey}
               onSelect={onSelectSegment}
               onTouchInside={onDonutTouch}
@@ -155,6 +158,7 @@ const StatsList = ({
             <BreakdownRow
               group={item.group}
               currency={item.currency}
+              selfId={selfId}
               isChild={item.isChild}
               isFirst={item.isFirst}
               isOtherExpanded={isOtherExpanded}

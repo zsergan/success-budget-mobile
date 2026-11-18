@@ -96,13 +96,13 @@ const createStyles = ({ colors }: ColorTheme) =>
     description: {
       flexShrink: 1,
     },
-    // Hugging Plus Jakarta Sans boxes under-measure by a pixel or two (see cde3346); without the buffer "Cash" ellipsizes.
-    walletBeside: {
+    // Hugging Plus Jakarta Sans boxes under-measure by a pixel or two (see cde3346); without the buffer "Lena" ellipsizes.
+    assignmentBeside: {
       flexShrink: 0,
-      maxWidth: '30%',
+      maxWidth: '40%',
       paddingRight: 2,
     },
-    walletAlone: {
+    assignmentAlone: {
       flexShrink: 1,
     },
     fixed: {

@@ -8,7 +8,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 
-import type { Category, GetCategoriesResponse, GetLimitsResponse, WalletsOverviewResponse } from '@api/dto';
+import type { Category, GetCategoriesResponse, GetLimitsResponse } from '@api/dto';
 import { createAppStore } from '@redux/Store';
 import { withProfile } from '@redux/state/profile/fixtures';
 import { activateSpace } from '@redux/state/space/thunks';
@@ -16,13 +16,8 @@ import { transactionApi } from '@redux/state/transaction/api';
 import { createTransactionResponseDto, transactionDto } from '@redux/state/transaction/fixtures';
 import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import { mapTransaction } from '@api/models';
-import {
-  awayEnded,
-  closed,
-  CREATED_AUTO_CLOSE_MS,
-  createOpened,
-  walletCreated,
-} from '@redux/state/transactionFlow/slice';
+import { closed, CREATED_AUTO_CLOSE_MS, createOpened } from '@redux/state/transactionFlow/slice';
+import type { DraftAssignment } from '@redux/state/transactionFlow/draft';
 import type { ViewSelection } from '@redux/state/transactionFlow/selection';
 import { checkFlowRecord, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { baseApi, spaceTags } from '@redux/api/baseApi';
@@ -180,18 +175,8 @@ const categories: GetCategoriesResponse = {
   archived: [],
 };
 
-const wallets: WalletsOverviewResponse = {
-  total_balance: 0,
-  total_balance_currency: 'USD',
-  delta_percent: 0,
-  wallets: [
-    { wallet: { id: 7, wallet_name: 'Cash', design: AppColor.SLATE, balance: 100 }, total_income: 0, total_spend: 0 },
-  ],
-};
-
 const noLimits: GetLimitsResponse = { total: null, categories: [], over_allocation: null };
 
-let walletsResponse = wallets;
 let categoriesResponse = categories;
 let limitsResponse = noLimits;
 
@@ -249,7 +234,6 @@ const respond = ({ url, method }: { url: string; method: string }) => {
   }
   if (url.includes('/transactions/operations/')) return answerOperation();
   if (url.endsWith('/transactions/tx-1')) return answerRead ? answerRead() : Promise.resolve({ data: stored });
-  if (url.endsWith('/wallets')) return Promise.resolve({ data: walletsResponse });
   if (url.endsWith('/categories')) return Promise.resolve({ data: categoriesResponse });
   if (url.endsWith('/limits')) return Promise.resolve({ data: limitsResponse });
 
@@ -265,7 +249,6 @@ const renderHome = () => (
     <Text>Home</Text>
   </>
 );
-const renderWallet = () => <Text>Add Wallet</Text>;
 const renderInvite = () => <Text>Join a space</Text>;
 
 // The sheet over the app's first route, with the routes its form opens.
@@ -282,7 +265,6 @@ const flowTree = (store: ReturnType<typeof createAppStore>) => (
           <Stack.Screen name={ScreenNames.HOME_SCREEN}>{renderHome}</Stack.Screen>
           <Stack.Screen name={ScreenNames.TRANSACTION_EDITOR_SCREEN} component={TransactionEditorScreen} />
           <Stack.Screen name={ScreenNames.TRANSACTION_CATEGORIES_SCREEN} component={TransactionCategoriesScreen} />
-          <Stack.Screen name={ScreenNames.ADD_WALLET_SCREEN}>{renderWallet}</Stack.Screen>
           <Stack.Screen name={ScreenNames.ACCEPT_INVITE_SCREEN}>{renderInvite}</Stack.Screen>
         </Stack.Navigator>
       </NavigationContainer>
@@ -307,11 +289,13 @@ const renderFlow = () => {
 
   const open = (
     transactionType = TransactionType.EXPENSE,
-    walletId: number | null = 7,
+    assignment: DraftAssignment = { kind: 'member', userId: 1 },
     selection: ViewSelection | null = null,
   ) =>
     act(() => {
-      store.dispatch(createOpened({ spaceId: 1, transactionType, walletId, now: new Date().toISOString(), selection }));
+      store.dispatch(
+        createOpened({ spaceId: 1, transactionType, assignment, now: new Date().toISOString(), selection }),
+      );
     });
 
   const openDetails = () =>
@@ -363,7 +347,6 @@ beforeEach(() => {
   answerCategory = null;
   jest.spyOn(Keyboard, 'isVisible').mockReturnValue(false);
   answerOperation = defaultAnswerOperation;
-  walletsResponse = wallets;
   categoriesResponse = categories;
   limitsResponse = noLimits;
   mockSheet.presents = 0;
@@ -390,7 +373,7 @@ describe('TransactionFlowSheet', () => {
         createOpened({
           spaceId: 1,
           transactionType: TransactionType.EXPENSE,
-          walletId: 7,
+          assignment: { kind: 'member', userId: 1 },
           now: new Date().toISOString(),
           selection: null,
         }),
@@ -645,7 +628,7 @@ describe('TransactionFlowSheet', () => {
         createOpened({
           spaceId: 1,
           transactionType: TransactionType.EXPENSE,
-          walletId: 7,
+          assignment: { kind: 'member', userId: 1 },
           now: new Date().toISOString(),
         }),
       );
@@ -878,7 +861,7 @@ describe('TransactionFlowSheet', () => {
     await act(async () => answerWrite({ data: createTransactionResponseDto() }));
     await act(async () => jest.advanceTimersByTimeAsync(100));
 
-    expect(mockedRequest).toHaveBeenCalledWith(expect.objectContaining({ method: 'GET', url: '/spaces/1/wallets' }));
+    expect(mockedRequest).toHaveBeenCalledWith(expect.objectContaining({ method: 'GET', url: '/spaces/1/limits' }));
     expect(screen.getByText('Transaction saved')).toBeTruthy();
     expect(flow()?.view.name).toBe('created');
     expect(mockToasts.shown).toEqual([]);
@@ -893,15 +876,14 @@ describe('TransactionFlowSheet', () => {
     fireEvent.press(screen.getByText('Save expense'));
     await act(async () => answerWrite({ data: createTransactionResponseDto() }));
 
-    expect(screen.getByText(/^Food · Cash · Jan 5, \d\d:00$/)).toBeTruthy();
-    expect(screen.getByText('Cash balance 90 · was 100')).toBeTruthy();
+    expect(screen.getByText(/^Food · Zakhar · Jan 5, \d\d:00$/)).toBeTruthy();
     // Its time counts from when it showed, with the form gone.
     expect(routeNames()).toEqual(HOME_ONLY);
     expect(flow()?.autoCloseAt).toBe(Date.now() + CREATED_AUTO_CLOSE_MS);
 
     await act(async () => jest.advanceTimersByTime(3000));
     act(() => {
-      store.dispatch(baseApi.util.invalidateTags(spaceTags(1, 'Transactions', 'Wallets')));
+      store.dispatch(baseApi.util.invalidateTags(spaceTags(1, 'Transactions')));
     });
     await act(async () => jest.advanceTimersByTime(2100));
     expect(flow()).toBeNull();
@@ -1061,7 +1043,7 @@ describe('TransactionFlowSheet', () => {
     const { open, flow } = renderFlow();
     const september = { from: '2026-09-01T00:00:00.000Z', to: '2026-09-30T23:59:59.999Z' };
 
-    open(TransactionType.EXPENSE, 7, september);
+    open(TransactionType.EXPENSE, undefined, september);
     await settle();
     fillExpense();
     fireEvent.press(screen.getByText('Save expense'));
@@ -1126,15 +1108,13 @@ describe('TransactionFlowSheet', () => {
     expect(mockToasts.shown).toEqual([]);
   });
 
-  it('takes the editor and a wallet screen opened from it off the stack when the space changes', async () => {
+  it('takes the editor off the stack when the space changes', async () => {
     const { store, open, flow } = renderFlow();
 
     open();
     await settle();
     fillExpense();
-    fireEvent.press(screen.getByLabelText('New wallet'));
-    const { draftId } = flow()!;
-    expect(routeNames()).toEqual([...WITH_EDITOR, ScreenNames.ADD_WALLET_SCREEN]);
+    expect(routeNames()).toEqual(WITH_EDITOR);
 
     act(() => {
       store.dispatch(activateSpace(2));
@@ -1144,18 +1124,17 @@ describe('TransactionFlowSheet', () => {
     expect(flow()).toBeNull();
     expect(routeNames()).toEqual(HOME_ONLY);
 
-    // The wallet saved for the draft that is gone picks nothing in a form opened since.
     act(() => {
-      store.dispatch(createOpened({ spaceId: 2, transactionType: TransactionType.EXPENSE, walletId: null, now: '' }));
-      store.dispatch(walletCreated({ draftId, walletId: 8 }));
+      store.dispatch(
+        createOpened({ spaceId: 2, transactionType: TransactionType.EXPENSE, assignment: { kind: 'space' }, now: '' }),
+      );
     });
     await settle();
 
-    expect(flow()?.draft?.walletId).not.toBe(8);
     expect(routes()).toMatchObject([{}, { name: ScreenNames.TRANSACTION_EDITOR_SCREEN, params: { spaceId: 2 } }]);
   });
 
-  it('starts another transaction on the same type and wallet', async () => {
+  it('starts another transaction on the same type and assignment', async () => {
     const { open, flow } = renderFlow();
 
     open();
@@ -1168,36 +1147,27 @@ describe('TransactionFlowSheet', () => {
 
     expect(flow()).toMatchObject({
       view: { name: 'create' },
-      draft: { transactionType: TransactionType.EXPENSE, walletId: 7, amount: '', categoryId: null },
+      draft: {
+        transactionType: TransactionType.EXPENSE,
+        assignment: { kind: 'member', userId: 1 },
+        amount: '',
+        categoryId: null,
+      },
     });
     expect(screen.getByText('New transaction')).toBeTruthy();
   });
 
-  it('starts another on a wallet created for the last one and its picked date, after an unanswered Undo', async () => {
-    const { store, open, flow } = renderFlow();
+  it('starts another on the last assignment and its picked date, after an unanswered Undo', async () => {
+    const { open, flow } = renderFlow();
 
-    open();
+    open(TransactionType.EXPENSE, { kind: 'unassigned' });
     await settle();
     fillExpense();
     fireEvent.press(screen.getByText(/^Today, /));
     fireEvent.press(screen.getByText('Yesterday'));
     fireEvent.press(screen.getByText('Apply'));
-    fireEvent.press(screen.getByLabelText('New wallet'));
-    const { draftId } = flow()!;
-    walletsResponse = {
-      ...wallets,
-      wallets: [
-        ...wallets.wallets,
-        { wallet: { id: 8, wallet_name: 'Card', design: AppColor.SLATE, balance: 0 }, total_income: 0, total_spend: 0 },
-      ],
-    };
-    await act(async () => {
-      store.dispatch(walletCreated({ draftId, walletId: 8 }));
-      store.dispatch(baseApi.util.invalidateTags(spaceTags(1, 'Wallets')));
-      navigationRef.goBack();
-      store.dispatch(awayEnded({ draftId }));
-    });
     await settle();
+    const { draftId } = flow()!;
     const { timestamp } = flow()!.draft!;
 
     fireEvent.press(screen.getByText('Save expense'));
@@ -1210,7 +1180,13 @@ describe('TransactionFlowSheet', () => {
     expect(flow()).toMatchObject({
       view: { name: 'create', focusAmount: true },
       notice: null,
-      draft: { transactionType: TransactionType.EXPENSE, walletId: 8, timestamp, amount: '', categoryId: null },
+      draft: {
+        transactionType: TransactionType.EXPENSE,
+        assignment: { kind: 'unassigned' },
+        timestamp,
+        amount: '',
+        categoryId: null,
+      },
     });
     expect(flow()!.draftId).not.toBe(draftId);
     expect(screen.getByText('Save expense')).toBeDisabled();
@@ -1317,9 +1293,7 @@ describe('TransactionFlowSheet', () => {
     fireEvent.press(screen.getByText('Save changes'));
 
     stored = transactionDto({ amount: '70.00', version: 3 });
-    await act(async () =>
-      answerWrite({ data: { transaction: stored, wallets: [{ id: 1, balance: 30, is_deleted: false }] } }),
-    );
+    await act(async () => answerWrite({ data: { transaction: stored } }));
     await settle();
 
     expect(mockedRequest).toHaveBeenCalledWith(
@@ -1537,7 +1511,11 @@ describe('TransactionFlowSheet', () => {
     pressFlowDelete();
 
     expect(asked()).toEqual(['Delete transaction?']);
-    expect(confirmation().getByText('-50.00 · Food · Cash. The wallet balance will be adjusted.')).toBeTruthy();
+    expect(
+      confirmation().getByText(
+        '-50.00 · Food · Zakhar. It will be removed from History, and the period’s totals, stats and limits will update.',
+      ),
+    ).toBeTruthy();
 
     answer('Cancel');
     expect(flow()).toMatchObject({ view: { name: 'edit' }, draft: { amount: '70' } });
@@ -1627,8 +1605,11 @@ describe('TransactionFlowSheet', () => {
     expect(screen.getByRole('button', { name: 'Edit' })).toBeEnabled();
   });
 
-  it('explains that deleting a record of a deleted wallet changes no balance', async () => {
-    stored = transactionDto({ amount: '2.75', wallet: null });
+  it('names whom a deleted record was assigned to, and what its removal changes', async () => {
+    stored = transactionDto({
+      amount: '2.75',
+      assignment: { kind: 'space', user_id: null, name: null, status: null },
+    });
     const { openDetails } = renderFlow();
 
     openDetails();
@@ -1637,7 +1618,7 @@ describe('TransactionFlowSheet', () => {
 
     expect(
       confirmation().getByText(
-        '-2.75 · Food · Deleted wallet. It will be removed from history and period totals. No wallet balance will change.',
+        '-2.75 · Food · Whole space. It will be removed from History, and the period’s totals, stats and limits will update.',
       ),
     ).toBeTruthy();
   });
@@ -1678,13 +1659,13 @@ describe('TransactionFlowSheet', () => {
     expect(mockedRequest.mock.calls.filter(([{ method }]) => method === 'DELETE')).toEqual([]);
   });
 
-  it('keeps a deleted wallet unless another one is picked', async () => {
-    stored = transactionDto({ wallet: null });
+  it("keeps a deleted account's assignment through an edit of another field", async () => {
+    stored = transactionDto({ assignment: { kind: 'member', user_id: null, name: null, status: 'deleted' } });
     const { openDetails } = renderFlow();
 
     openDetails();
     await settle();
-    expect(screen.getByText('Deleted wallet')).toBeTruthy();
+    expect(screen.getByText('Deleted member')).toBeTruthy();
 
     fireEvent.press(screen.getByText('Edit'));
     fireEvent.changeText(screen.getByLabelText('Description'), 'Lunch');
@@ -1692,43 +1673,7 @@ describe('TransactionFlowSheet', () => {
     await settle();
 
     const [[patch]] = mockedRequest.mock.calls.filter(([config]) => config.method === 'PATCH');
-    expect(patch.data).not.toHaveProperty('wallet_id');
-  });
-
-  it('never reports the deleted wallet as kept once an unconfirmed move to another one went through', async () => {
-    stored = transactionDto({ wallet: null });
-    const { openDetails, flow } = renderFlow();
-    openDetails();
-    await settle();
-    fireEvent.press(screen.getByText('Edit'));
-    await settle();
-
-    fireEvent.press(screen.getByText('Cash'));
-    fireEvent.press(screen.getByText('Save changes'));
-    await act(async () => failWrite(new Error('Network Error')));
-    await settle();
-
-    fireEvent.press(screen.getByText('Deleted wallet'));
-    fireEvent.changeText(screen.getByLabelText('Description'), 'Lunch');
-    fireEvent.press(screen.getByText('Save changes'));
-    await act(async () =>
-      answerWrite({
-        data: {
-          transaction: transactionDto({
-            wallet: { id: 7, wallet_name: 'Cash', design: AppColor.SLATE, created_at: '', updated_at: '' },
-            version: 2,
-          }),
-          wallets: [{ id: 7, balance: 90, is_deleted: false }],
-        },
-      }),
-    );
-    await settle();
-
-    expect(flow()).toMatchObject({ view: { name: 'edit' }, saved: { wallet: { id: 7 } }, draft: { walletId: null } });
-    expect(screen.getByText('The deleted wallet can’t be picked again. Choose a wallet')).toBeTruthy();
-    expect(screen.getByText('Save changes')).toBeDisabled();
-    expect(mockToasts.shown).toEqual([]);
-    expect(mockedRequest.mock.calls.filter(([config]) => config.method === 'PATCH')).toHaveLength(2);
+    expect(patch.data).not.toHaveProperty('assignment');
   });
 
   it('offers no edit for an initial balance', async () => {
@@ -1742,35 +1687,6 @@ describe('TransactionFlowSheet', () => {
     expect(screen.getByText('Set when the wallet was created')).toBeTruthy();
     expect(screen.queryByText('Edit')).toBeNull();
     expect(screen.queryByText('Delete transaction')).toBeNull();
-  });
-
-  it('comes back from a new wallet with it picked and the rest of the draft kept', async () => {
-    const { store, open, flow } = renderFlow();
-
-    open();
-    await settle();
-    fillExpense();
-    fireEvent.press(screen.getByLabelText('New wallet'));
-
-    const { draftId } = flow()!;
-    expect(flow()?.away).toBe('wallet');
-    expect(screen.queryByText('New transaction')).toBeNull();
-    fireEvent.press(screen.getByLabelText('New wallet', { includeHiddenElements: true }));
-    expect(routes()).toMatchObject([
-      { name: ScreenNames.HOME_SCREEN },
-      { name: ScreenNames.TRANSACTION_EDITOR_SCREEN },
-      { name: ScreenNames.ADD_WALLET_SCREEN, params: { id: 'new', forDraft: draftId } },
-    ]);
-
-    act(() => {
-      store.dispatch(walletCreated({ draftId, walletId: 8 }));
-      navigationRef.goBack();
-      store.dispatch(awayEnded({ draftId }));
-    });
-
-    expect(screen.getByText('New transaction')).toBeTruthy();
-    expect(routeNames()).toEqual(WITH_EDITOR);
-    expect(flow()?.draft).toMatchObject({ amount: '12', categoryId: 1, walletId: 8 });
   });
 
   it('creates a category from an empty grid and comes back with it picked', async () => {
@@ -2023,7 +1939,7 @@ describe('TransactionFlowSheet', () => {
         createOpened({
           spaceId: 1,
           transactionType: TransactionType.EXPENSE,
-          walletId: 7,
+          assignment: { kind: 'member', userId: 1 },
           now: new Date().toISOString(),
         }),
       );
@@ -2067,8 +1983,8 @@ describe('TransactionFlowSheet', () => {
     expect(flow()?.autoCloseAt).toBe(Date.now() + CREATED_AUTO_CLOSE_MS);
   });
 
-  it('tells lists that are loading or failed from empty ones, retries each, and saves only once they are there', async () => {
-    let failing = ['/categories', '/wallets'];
+  it('tells a category list that is loading or failed from an empty one, and saves only once it is there', async () => {
+    let failing = ['/categories'];
     mockedRequest.mockImplementation((config: { url: string; method: string }) =>
       config.method === 'GET' && failing.some((path) => config.url.endsWith(path))
         ? Promise.reject(new Error('Network Error'))
@@ -2078,37 +1994,25 @@ describe('TransactionFlowSheet', () => {
 
     open();
     expect(screen.getByLabelText('Loading categories')).toBeTruthy();
-    expect(screen.getByLabelText('Loading wallets')).toBeTruthy();
     await settle();
 
     expect(screen.getByText('Categories didn’t load')).toBeTruthy();
-    expect(screen.getByText('Wallets didn’t load')).toBeTruthy();
     expect(screen.queryByText('No expense categories yet')).toBeNull();
-    expect(screen.queryByLabelText('New wallet')).toBeNull();
 
     fireEvent.changeText(screen.getByLabelText('Amount'), '12');
     expect(screen.getByText('Save expense')).toBeDisabled();
 
-    failing = ['/wallets'];
+    failing = [];
     fireEvent.press(screen.getByLabelText('Retry loading categories'));
     await settle();
     fireEvent.press(screen.getByText('Food'));
 
-    expect(screen.getByText('Wallets didn’t load')).toBeTruthy();
-    expect(screen.getByText('Retry loading wallets to save')).toBeTruthy();
-    expect(screen.getByText('Save expense')).toBeDisabled();
-
-    failing = [];
-    fireEvent.press(screen.getByLabelText('Retry loading wallets'));
-    await settle();
-
-    expect(screen.getByText('Cash')).toBeTruthy();
     expect(screen.getByText('Save expense')).toBeEnabled();
   });
 
   it('saves a changed amount of an edit without lists it does not need', async () => {
     mockedRequest.mockImplementation((config: { url: string; method: string }) =>
-      config.method === 'GET' && (config.url.endsWith('/categories') || config.url.endsWith('/wallets'))
+      config.method === 'GET' && config.url.endsWith('/categories')
         ? Promise.reject(new Error('Network Error'))
         : respond(config),
     );
@@ -2126,7 +2030,7 @@ describe('TransactionFlowSheet', () => {
 
   it('saves an edit of the description alone while the lists fail to load, and returns to the details', async () => {
     mockedRequest.mockImplementation((config: { url: string; method: string }) =>
-      config.method === 'GET' && (config.url.endsWith('/categories') || config.url.endsWith('/wallets'))
+      config.method === 'GET' && config.url.endsWith('/categories')
         ? Promise.reject(new Error('Network Error'))
         : respond(config),
     );
@@ -2140,46 +2044,17 @@ describe('TransactionFlowSheet', () => {
     expect(screen.getByText('Save changes')).toBeDisabled();
 
     fireEvent.changeText(screen.getByLabelText('Description'), 'Lunch with Sam');
-    expect(screen.getByText('Wallets didn’t load')).toBeTruthy();
+    expect(screen.getByText('Categories didn’t load')).toBeTruthy();
     fireEvent.press(screen.getByText('Save changes'));
 
     stored = transactionDto({ amount: '50.00', version: 3, description: 'Lunch with Sam' });
-    await act(async () =>
-      answerWrite({ data: { transaction: stored, wallets: [{ id: 1, balance: 50, is_deleted: false }] } }),
-    );
+    await act(async () => answerWrite({ data: { transaction: stored } }));
     await settle();
 
     const [patch] = mockedRequest.mock.calls.filter(([config]) => config.method === 'PATCH');
     expect(patch[0]).toMatchObject({ data: { description: 'Lunch with Sam' }, headers: { 'If-Match': '"2"' } });
     expect(flow()).toMatchObject({ view: { name: 'details' }, saved: { description: 'Lunch with Sam', version: 3 } });
     expect(routeNames()).toEqual(HOME_ONLY);
-  });
-
-  it('starts on an active wallet when none or a gone one was asked for, with nothing to discard', async () => {
-    const { open, flow } = renderFlow();
-
-    open(TransactionType.EXPENSE, 99);
-    await settle();
-
-    expect(flow()?.draft?.walletId).toBe(7);
-    fireEvent.press(screen.getByLabelText('Back'));
-    expect(asked()).toEqual([]);
-    expect(flow()).toBeNull();
-  });
-
-  it('offers a wallet first when the space has none, and saves nothing until there is one', async () => {
-    walletsResponse = { ...wallets, wallets: [] };
-    const { open, flow } = renderFlow();
-
-    open(TransactionType.EXPENSE, null);
-    await settle();
-    fillExpense();
-
-    expect(flow()?.draft?.walletId).toBeNull();
-    expect(screen.getByText('No wallets yet')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Create wallet' })).toBeTruthy();
-    expect(screen.queryByLabelText('New wallet')).toBeNull();
-    expect(screen.getByText('Save expense')).toBeDisabled();
   });
 
   it('explains a typed or pasted amount that is not one and keeps it as entered', async () => {
@@ -2222,9 +2097,8 @@ describe('TransactionFlowSheet', () => {
     expect(screen.getAllByText('Spend 20').length).toBeGreaterThan(0);
   });
 
-  it('keeps the archived category and deleted wallet of an edit as options of that record only', async () => {
+  it('keeps the archived category of an edit as an option of that record only', async () => {
     stored = transactionDto({
-      wallet: null,
       category: { ...transactionDto().category, id: 40, name: 'Old gym', is_active: 0, is_archived: true },
     });
     const { openDetails, flow } = renderFlow();
@@ -2236,16 +2110,11 @@ describe('TransactionFlowSheet', () => {
 
     expect(screen.getByText('Old gym · archived')).toBeTruthy();
     expect(screen.getByText(/^Archived category\. You can keep it/)).toBeTruthy();
-    expect(
-      screen.getByText('This wallet was deleted. You can keep it or move the transaction to another wallet.'),
-    ).toBeTruthy();
 
     fireEvent.press(screen.getByText('Food'));
-    fireEvent.press(screen.getByText('Cash'));
     expect(screen.getByText('Save changes')).toBeEnabled();
 
     fireEvent.press(screen.getAllByText('Old gym')[0]);
-    fireEvent.press(screen.getByText('Deleted wallet'));
     expect(screen.getByText('Save changes')).toBeDisabled();
 
     fireEvent.press(screen.getByText('Income'));
@@ -2257,18 +2126,18 @@ describe('TransactionFlowSheet', () => {
     expect(screen.getByText('Old gym')).toBeTruthy();
   });
 
-  it('keeps an edit of an archived category and a deleted wallet through the panels and a new wallet', async () => {
+  it('keeps an edit of an archived category through the panels', async () => {
     stored = transactionDto({
-      wallet: null,
       version: 2,
       category: { ...transactionDto().category, id: 40, name: 'Old gym', is_active: 0, is_archived: true },
     });
-    const { store, openDetails, flow } = renderFlow();
+    const { openDetails, flow } = renderFlow();
 
     openDetails();
     await settle();
     fireEvent.press(screen.getByText('Edit'));
     await settle();
+    const { draftId } = flow()!;
     fireEvent.changeText(screen.getByLabelText('Amount'), '70');
     fireEvent.changeText(screen.getByLabelText('Description'), 'Yearly pass');
 
@@ -2278,29 +2147,13 @@ describe('TransactionFlowSheet', () => {
     fireEvent.press(screen.getByText('Yesterday'));
     fireEvent.press(screen.getByText('Apply'));
     const { timestamp } = flow()!.draft!;
-
-    fireEvent.press(screen.getByLabelText('New wallet'));
-    const { draftId } = flow()!;
-    walletsResponse = {
-      ...wallets,
-      wallets: [
-        ...wallets.wallets,
-        { wallet: { id: 8, wallet_name: 'Card', design: AppColor.SLATE, balance: 0 }, total_income: 0, total_spend: 0 },
-      ],
-    };
-    await act(async () => {
-      store.dispatch(walletCreated({ draftId, walletId: 8 }));
-      store.dispatch(baseApi.util.invalidateTags(spaceTags(1, 'Wallets')));
-      navigationRef.goBack();
-      store.dispatch(awayEnded({ draftId }));
-    });
     await settle();
 
     expect(screen.getByText('Edit transaction')).toBeTruthy();
     expect(flow()).toMatchObject({
       view: { name: 'edit' },
       draftId,
-      draft: { amount: '70', description: 'Yearly pass', categoryId: 40, walletId: 8, timestamp },
+      draft: { amount: '70', description: 'Yearly pass', categoryId: 40, timestamp },
     });
 
     fireEvent.press(screen.getByText('Save changes'));
@@ -2308,15 +2161,15 @@ describe('TransactionFlowSheet', () => {
     expect(mockedRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         method: 'PATCH',
-        data: expect.objectContaining({ amount: '70.00', category_id: 40, wallet_id: 8, description: 'Yearly pass' }),
+        data: expect.objectContaining({ amount: '70.00', category_id: 40, description: 'Yearly pass' }),
         headers: expect.objectContaining({ 'If-Match': '"2"' }),
       }),
     );
   });
 
-  it("forecasts an edit of a deleted wallet's expense by replacing its share, without blocking Save", async () => {
+  it('forecasts an edit of an expense by replacing its share, without blocking Save', async () => {
     const day = 86_400_000;
-    stored = transactionDto({ wallet: null, amount: '50.00', timestamp: new Date(Date.now() - day).toISOString() });
+    stored = transactionDto({ amount: '50.00', timestamp: new Date(Date.now() - day).toISOString() });
     limitsResponse = {
       period: {
         time_zone: 'UTC',

@@ -1,21 +1,18 @@
 import type {
+  AssignmentBreakdownItem,
+  AssignmentOtherItem,
   CategoryBreakdownItem,
   Money,
-  DeletedWalletsBreakdownItem,
   OtherBreakdownItem,
   StatisticsBreakdown,
   StatisticsSummary,
-  WalletBreakdownItem,
 } from '@api/dto';
 import { TransactionType } from '@shared/enums';
 
-export type BreakdownMode = 'category' | 'wallet';
+export type BreakdownMode = 'category' | 'assignment';
 
 export type BreakdownGroup =
-  | CategoryBreakdownItem
-  | WalletBreakdownItem
-  | DeletedWalletsBreakdownItem
-  | OtherBreakdownItem<CategoryBreakdownItem | WalletBreakdownItem>;
+  CategoryBreakdownItem | OtherBreakdownItem<CategoryBreakdownItem> | AssignmentBreakdownItem | AssignmentOtherItem;
 
 export type BreakdownRowItem = {
   kind: 'row';
@@ -59,9 +56,9 @@ const toGroups = (breakdown: StatisticsBreakdown, mode: BreakdownMode): Breakdow
     return other ? [...primary_items, other] : primary_items;
   }
 
-  const { primary_items, deleted_wallets, other } = breakdown.by_wallet;
+  const { primary_items, other } = breakdown.by_assignment;
 
-  return [...primary_items, ...(deleted_wallets ? [deleted_wallets] : []), ...(other ? [other] : [])];
+  return other ? [...primary_items, other] : primary_items;
 };
 
 // Every block is its own list item, and Other's children follow it as plain rows,
@@ -103,14 +100,14 @@ export const buildStatsItems = ({
   }
 
   const groups = toGroups(breakdown, mode);
-  const { total_amount, source_count } = mode === 'category' ? breakdown.by_category : breakdown.by_wallet;
+  const { total_amount, source_count } = mode === 'category' ? breakdown.by_category : breakdown.by_assignment;
 
   const rows: Omit<BreakdownRowItem, 'isFirst' | 'isLast'>[] = [];
   groups.forEach((group) => {
     rows.push({ kind: 'row', key: `${type}:${mode}:${group.key}`, group, currency, isChild: false });
 
     if (group.kind === 'other' && isOtherExpanded) {
-      group.children.forEach((child) =>
+      (group.children as BreakdownGroup[]).forEach((child) =>
         rows.push({ kind: 'row', key: `${type}:${mode}:other:${child.key}`, group: child, currency, isChild: true }),
       );
     }

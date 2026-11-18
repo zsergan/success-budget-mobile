@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { View } from 'react-native';
 
 import {
@@ -33,7 +32,6 @@ interface Props extends MainTabScreenProps<ScreenNames.HOME_TAB> {}
 
 const HomeScreen = ({ navigation }: Props) => {
   useSpaceRefresh();
-  const [focusedWalletId, setFocusedWalletId] = useState<number | undefined>(undefined);
   const { lock: deleteLock, confirmation: deleteConfirmation } = useConfirmation();
   const { requestDelete } = useTransactionDelete(deleteLock);
 
@@ -53,9 +51,6 @@ const HomeScreen = ({ navigation }: Props) => {
   // Balances and activity stay, but a refresh, e.g. after a saved change, could not bring them up to date.
   const refreshFailed = hasRecentRefreshError || getLoadState(walletsQuery).hasRefreshError;
   const { isHidden, toggle } = useBalanceVisibility();
-
-  // A wallet the user swiped to opens the form on it; otherwise the form picks the last used one.
-  const composerWalletId = wallets.some(({ wallet }) => wallet.id === focusedWalletId) ? focusedWalletId : undefined;
 
   return (
     <>
@@ -93,7 +88,7 @@ const HomeScreen = ({ navigation }: Props) => {
           onToggleVisibility={toggle}
         />
 
-        <WalletsSection navigation={navigation} onFocusedWalletChange={setFocusedWalletId} />
+        <WalletsSection navigation={navigation} onFocusedWalletChange={() => {}} />
 
         <RecentActivity
           navigation={navigation}
@@ -108,10 +103,7 @@ const HomeScreen = ({ navigation }: Props) => {
         />
       </RootLayout>
 
-      <Fab
-        onExpense={() => openCreate(TransactionType.EXPENSE, composerWalletId)}
-        onIncome={() => openCreate(TransactionType.INCOME, composerWalletId)}
-      />
+      <Fab onExpense={() => openCreate(TransactionType.EXPENSE)} onIncome={() => openCreate(TransactionType.INCOME)} />
 
       <ConfirmationSheet confirmation={deleteConfirmation} />
     </>

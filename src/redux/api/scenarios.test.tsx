@@ -42,7 +42,7 @@ interface SpaceDb {
   limits: LimitView[];
   wallets: WalletWithBalance[];
   // Stored with their ids, like the backend's table; responses expose only the joined relations.
-  transactions: (Omit<Transaction, 'wallet' | 'category'> & { wallet_id: number; category_id: number })[];
+  transactions: (Omit<Transaction, 'category' | 'author' | 'assignment'> & { category_id: number })[];
 }
 
 const category = (id: number, name: string, limit: number | null): Category => ({
@@ -70,7 +70,7 @@ const space = (id: number): Space => ({
 });
 
 // A tiny backend that keeps the relations the real one derives on every read:
-// history rows join their current category and wallet, limits list their categories.
+// history rows join their current category and people, limits list their categories.
 const createBackend = () => {
   const dbs: Record<number, SpaceDb> = {};
   const db = (spaceId: number) =>
@@ -81,19 +81,16 @@ const createBackend = () => {
       transactions: [],
     });
 
-  const toRow = (
-    spaceDb: SpaceDb,
-    { wallet_id, category_id, ...row }: SpaceDb['transactions'][number],
-  ): Transaction => {
-    const wallet = spaceDb.wallets.find((item) => item.id === wallet_id);
+  const toRow = (spaceDb: SpaceDb, { category_id, ...row }: SpaceDb['transactions'][number]): Transaction => {
     const { id, name, transaction_type, icon, color, is_active } = spaceDb.categories.find(
       (item) => item.id === category_id,
     )!;
 
     return {
       ...row,
-      wallet: wallet ? { id: wallet.id, wallet_name: wallet.wallet_name, design: wallet.design, ...STAMPS } : null,
       category: { id, name, transaction_type, icon, color, is_active, is_archived: is_active === 0, ...STAMPS },
+      author: { user_id: 1, name: 'Me', status: 'member', source: 'recorded' },
+      assignment: { kind: 'space', user_id: null, name: null, status: null },
     };
   };
 
@@ -171,17 +168,18 @@ const createBackend = () => {
       };
     }
     if (resource === 'transactions' && method === 'POST') {
+      const { assignment: _assignment, ...fields } = data!;
       const row = {
         id: `tx-${spaceDb.transactions.length + 1}`,
         kind: TransactionKind.REGULAR,
         version: 1,
         description: null,
-        ...data,
+        ...fields,
       } as SpaceDb['transactions'][0];
 
       spaceDb.transactions.push(row);
 
-      return { transaction: toRow(spaceDb, row), wallet: { ...spaceDb.wallets[0], ...STAMPS }, previous_balance: 0 };
+      return { transaction: toRow(spaceDb, row) };
     }
 
     throw new Error(`Unhandled ${method} ${url}`);
@@ -311,7 +309,7 @@ describe('server data scenarios', () => {
           spaceId: 1,
           idempotencyKey: 'key-1',
           data: {
-            wallet_id: 1,
+            assignment: { kind: 'space' },
             category_id: 5,
             transaction_type: TransactionType.EXPENSE,
             amount: '12',
@@ -334,12 +332,11 @@ describe('server data scenarios', () => {
     unmount();
   });
 
-  it('renames a category and a wallet inside the history already on screen', async () => {
+  it('renames a category inside the history already on screen', async () => {
     backend.db(1).transactions.push({
       id: 'tx-1',
       kind: TransactionKind.REGULAR,
       version: 1,
-      wallet_id: 1,
       category_id: 5,
       transaction_type: TransactionType.EXPENSE,
       amount: '12.00',
@@ -353,20 +350,12 @@ describe('server data scenarios', () => {
       await store.dispatch(
         categoryApi.endpoints.updateCategory.initiate({ spaceId: 1, categoryId: 5, data: { name: 'Groceries' } }),
       );
-      await store.dispatch(
-        walletApi.endpoints.updateWallet.initiate({
-          spaceId: 1,
-          walletId: 1,
-          data: { wallet_name: 'Card', design: AppColor.SLATE },
-        }),
-      );
     });
     await settle(store);
 
     const [row] = result.current.history.transactions;
 
     expect(row.category.name).toBe('Groceries');
-    expect(row.wallet?.wallet_name).toBe('Card');
 
     unmount();
   });
@@ -439,7 +428,6 @@ describe('server data scenarios', () => {
         id: 'tx-1',
         kind: TransactionKind.REGULAR,
         version: 1,
-        wallet_id: 1,
         category_id: 5,
         transaction_type: TransactionType.EXPENSE,
         amount: '12.00',
@@ -483,7 +471,6 @@ describe('server data scenarios', () => {
       id: 'tx-1',
       kind: TransactionKind.REGULAR,
       version: 1,
-      wallet_id: 1,
       category_id: 5,
       transaction_type: TransactionType.EXPENSE,
       amount: '12.00',
@@ -516,7 +503,7 @@ describe('server data scenarios', () => {
           spaceId: 1,
           idempotencyKey: 'key-1',
           data: {
-            wallet_id: 1,
+            assignment: { kind: 'space' },
             category_id: 5,
             transaction_type: TransactionType.EXPENSE,
             amount: '12',

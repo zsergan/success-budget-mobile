@@ -6,6 +6,7 @@ import type { ToastTicket } from '@components/Toast';
 import { useToast } from '@hooks';
 import type { ConfirmLock } from '@hooks/useConfirmation';
 import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
+import { selectProfileId } from '@redux/state/profile/selectors';
 import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/state/space/selectors';
 import type { DeleteOutcome } from '@redux/state/transactionFlow/thunks';
 import { deleteTransaction, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
@@ -21,6 +22,7 @@ const useTransactionDelete = (confirmLock: ConfirmLock, { leavesScreen = false }
   const toast = useToast();
   const currentSpaceId = useAppSelector(selectCurrentSpaceId);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
+  const selfId = useAppSelector(selectProfileId);
   // A toast's Retry or Check status runs the delete again without asking; the ref lets the delete offer itself.
   const runRef = useRef<(transaction: TransactionModel, spaceId: number) => Promise<void>>(async () => {});
 
@@ -114,7 +116,7 @@ const useTransactionDelete = (confirmLock: ConfirmLock, { leavesScreen = false }
 
         return {
           title: 'Delete transaction?',
-          description: deleteMessage(transaction, currencyCode),
+          description: deleteMessage(transaction, currencyCode, selfId),
           primaryAction: {
             label: 'Delete transaction',
             tone: 'danger',
@@ -131,7 +133,7 @@ const useTransactionDelete = (confirmLock: ConfirmLock, { leavesScreen = false }
       });
       if (!isAsked) onSettled?.();
     },
-    [confirmLock, currencyCode, runDelete, currentSpaceId, store],
+    [confirmLock, currencyCode, selfId, runDelete, currentSpaceId, store],
   );
 
   const retryDelete = useCallback((transaction: TransactionModel) => runDelete(transaction), [runDelete]);

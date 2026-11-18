@@ -1,15 +1,14 @@
 import type { BottomTabNavigationProp, BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp, CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { AssignmentKey } from '@api/models';
 import type { ScreenNames, AppColor, TransactionKind, TransactionType } from '@shared/enums';
 
 // Plain data, never a callback: where to go once the wallet is saved, and for which space.
 export type AddTransactionIntent = { returnTo: ScreenNames.STATS_TAB; spaceId: number };
 
 type AddWalletParams =
-  // `forDraft`: the transaction draft waiting for this wallet; it gets it on save, and its form back on leaving.
-  // `forEditor`: the key of the editor route that opened it, which takes it along when its flow ends.
-  | { id: 'new'; addTransaction?: AddTransactionIntent; forDraft?: number; forEditor?: string }
+  | { id: 'new'; addTransaction?: AddTransactionIntent }
   | { id: number; walletName: string; balance: string; design: AppColor };
 
 // A one-time request to open the composer on a wallet that was just created.
@@ -26,11 +25,13 @@ export type HistoryFilter = {
   transactionType: TransactionType;
   // Starting balances are left out of the list itself, so it adds up to the row.
   kind: TransactionKind;
-  // The row's name and look, shown with the list.
+  // The row's name, shown with the list.
   name: string;
-  icon: IconType;
-  color: AppColor;
-} & ({ categoryId: number; walletId?: never } | { walletId: number; categoryId?: never });
+} & (
+  | { categoryId: number; icon: IconType; color: AppColor; assignment?: never }
+  // The feed's `assignment` value, as the breakdown named it; the list draws the group's look itself.
+  | { assignment: AssignmentKey; categoryId?: never }
+);
 
 // A one-time request to bring a saved transaction into view: its month, no filter, the row scrolled to.
 export type RevealTransaction = { spaceId: number; transactionId: string; timestamp: string };
@@ -125,6 +126,8 @@ export type IconType =
   | 'lock'
   | 'mail'
   | 'user'
+  | 'user-x'
+  | 'archive'
   | 'users'
   | 'logout'
   | 'wallet'

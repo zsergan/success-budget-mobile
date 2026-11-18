@@ -57,13 +57,6 @@ const createStyles = ({ colors }: ColorTheme) =>
       lineHeight: theme.lineHeights.bodySm,
       color: colors.muted,
     },
-    balance: {
-      fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
-      color: colors.muted,
-      textAlign: 'center',
-    },
     hiddenRow: {
       alignSelf: 'stretch',
       flexDirection: 'row',

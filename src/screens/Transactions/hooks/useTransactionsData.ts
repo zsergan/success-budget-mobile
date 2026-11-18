@@ -51,14 +51,14 @@ const toFilterArg = ({
   transactionType,
   kind,
   categoryId,
-  walletId,
+  assignment,
 }: HistoryFilter): TransactionsArg => ({
   spaceId,
   from,
   to,
   transactionType,
   kind,
-  ...(categoryId !== undefined ? { categoryId } : { walletId }),
+  ...(categoryId !== undefined ? { categoryId } : { assignment }),
 });
 
 const useTransactionsData = (props: UseTransactionsDataProps) => {

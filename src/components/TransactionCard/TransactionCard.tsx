@@ -8,9 +8,10 @@ import { isInitialBalance } from '@api/models';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { useAppSelector } from '@redux/hooks';
+import { selectProfileId } from '@redux/state/profile/selectors';
 import { selectIsDeleting } from '@redux/state/transactionFlow/selectors';
 import Icon from '../Icon/Icon';
-import { formatAmount, formatDateHHMM, formatMoneyAmount } from '@shared/utils';
+import { assignmentLabel, formatAmount, formatDateHHMM, formatMoneyAmount } from '@shared/utils';
 import { TransactionType } from '@shared/enums';
 
 import createStyles from './style';
@@ -39,7 +40,9 @@ const TransactionCard = ({ transaction, currencyCode, isHighlighted = false, tim
   const isLargeText = useWindowDimensions().fontScale >= LARGE_FONT_SCALE;
   const isSystem = isInitialBalance(transaction);
   const isIncome = transaction.transactionType === TransactionType.INCOME && !isSystem;
-  const { description, wallet } = transaction;
+  const selfId = useAppSelector(selectProfileId);
+  const { description, assignment } = transaction;
+  const isPersonGone = assignment.kind === 'member' && assignment.person.status !== 'member';
 
   // A row being deleted stays put, dimmed, until the server answers.
   const card = (
@@ -85,7 +88,7 @@ const TransactionCard = ({ transaction, currencyCode, isHighlighted = false, tim
           )}
         </View>
 
-        {/* The time never shrinks; the description gives way first, then only a wallet name past its share. */}
+        {/* The time never shrinks; the description gives way first, then only an assignment past its share. */}
         <View style={[styles.metaLine, isLargeText && styles.metaLineWrapped]}>
           {description && (
             <>
@@ -97,10 +100,14 @@ const TransactionCard = ({ transaction, currencyCode, isHighlighted = false, tim
           )}
 
           <Text
-            style={[styles.meta, description ? styles.walletBeside : styles.walletAlone, !wallet && styles.metaFaint]}
+            style={[
+              styles.meta,
+              description ? styles.assignmentBeside : styles.assignmentAlone,
+              isPersonGone && styles.metaFaint,
+            ]}
             numberOfLines={1}
           >
-            {wallet ? wallet.wallet_name : 'Deleted wallet'}
+            {assignmentLabel(assignment, selfId)}
           </Text>
 
           <Text style={[styles.meta, styles.fixed]}>{` · ${formatDateHHMM(transaction.timestamp, timeZone)}`}</Text>

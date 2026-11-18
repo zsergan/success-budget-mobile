@@ -194,20 +194,22 @@ describe('StatsTransactionsScreen', () => {
     expect(screen.getByText(' · 14:00')).toBeTruthy();
   });
 
-  it('names an expense wallet selection', async () => {
+  it('names an expense assignment selection', async () => {
     renderScreen({
       ...september,
       transactionType: TransactionType.EXPENSE,
-      name: 'Everyday',
-      icon: 'wallet',
-      walletId: 3,
+      name: 'Whole space',
+      assignment: 'space',
     });
     await settle();
 
-    expect(feedRequests().at(-1)?.params).toMatchObject({ transaction_type: TransactionType.EXPENSE, wallet_id: 3 });
+    expect(feedRequests().at(-1)?.params).toMatchObject({
+      transaction_type: TransactionType.EXPENSE,
+      assignment: 'space',
+    });
     expect(feedRequests().at(-1)?.params).not.toHaveProperty('category_id');
     expect(screen.getByText('Expenses')).toBeTruthy();
-    expect(screen.getByText('Everyday')).toBeTruthy();
+    expect(screen.getByText('Whole space')).toBeTruthy();
   });
 
   it('explains an empty selection and offers nothing to change it', async () => {
@@ -261,7 +263,7 @@ describe('StatsTransactionsScreen', () => {
         }
         if (method === 'PATCH') {
           return Promise.resolve({
-            data: { transaction: { ...invoice('tx-1', '450.00', 22), version: 2 }, wallets: [] },
+            data: { transaction: { ...invoice('tx-1', '450.00', 22), version: 2 } },
           });
         }
         if (url === '/spaces/1/transactions/tx-1') return Promise.resolve({ data: invoice('tx-1', '450.00', 22) });

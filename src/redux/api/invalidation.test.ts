@@ -1,3 +1,4 @@
+import type { CreateTransactionRequest } from '@api/dto';
 import { createAppStore } from '@redux/Store';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { categoryApi } from '@redux/state/category/api';
@@ -99,8 +100,8 @@ beforeEach(() => {
   mockedRequest.mockImplementation(async (config: RequestConfig) => respond(config));
 });
 
-const transactionData = {
-  wallet_id: 1,
+const transactionData: CreateTransactionRequest = {
+  assignment: { kind: 'space' },
   category_id: 1,
   transaction_type: TransactionType.EXPENSE,
   amount: '10',
@@ -121,7 +122,7 @@ const rules = [
         }),
       ),
     response: createTransactionResponseDto(),
-    expected: [...ALL_HISTORY, '1:wallets', '1:limits', '1:categories'],
+    expected: [...ALL_HISTORY, '1:limits', '1:categories'],
   },
   {
     name: 'edit transaction',
@@ -135,8 +136,8 @@ const rules = [
           data: { amount: '20' },
         }),
       ),
-    response: { transaction: transactionDto({ version: 2 }), wallets: [{ id: 1, balance: 80, is_deleted: false }] },
-    expected: [...ALL_HISTORY, '1:wallets', '1:limits', '1:categories'],
+    response: { transaction: transactionDto({ version: 2 }) },
+    expected: [...ALL_HISTORY, '1:limits', '1:categories'],
   },
   {
     name: 'delete transaction',
@@ -150,7 +151,7 @@ const rules = [
         }),
       ),
     response: true,
-    expected: [...ALL_HISTORY, '1:wallets', '1:limits', '1:categories'],
+    expected: [...ALL_HISTORY, '1:limits', '1:categories'],
   },
   {
     name: 'create category',
@@ -291,7 +292,7 @@ describe('invalidation rules (docs/server-data.md)', () => {
     expect(await refetchedAfter(mutate)).toEqual(['1:categories', '1:limits']);
   });
 
-  it.each(['TRANSACTION_NOT_FOUND', 'TRANSACTION_VERSION_CONFLICT', 'WALLET_DELETED', 'CATEGORY_ARCHIVED'])(
+  it.each(['TRANSACTION_NOT_FOUND', 'TRANSACTION_VERSION_CONFLICT', 'CATEGORY_ARCHIVED', 'FORBIDDEN_CATEGORY'])(
     'a transaction write refused with %s refreshes what it shows to be stale',
     async (code) => {
       mutationFails = true;
@@ -308,7 +309,7 @@ describe('invalidation rules (docs/server-data.md)', () => {
         ),
       );
 
-      expect(refetched).toEqual([...ALL_HISTORY, '1:categories', '1:limits', '1:wallets'].sort());
+      expect(refetched).toEqual([...ALL_HISTORY, '1:categories', '1:limits'].sort());
     },
   );
 
@@ -392,6 +393,22 @@ describe('member and space rules', () => {
       name: 'revoke invite',
       mutate: (store: ReturnType<typeof createAppStore>) =>
         store.dispatch(memberApi.endpoints.revokeInvite.initiate({ spaceId: 1, inviteId: 3 })),
+      expected: ['/spaces/1/members'],
+    },
+    {
+      name: 'transaction write refused for a member who left',
+      mutate: (store: ReturnType<typeof createAppStore>) => {
+        mutationFails = true;
+        mutationError = { statusCode: 400, code: 'ASSIGNEE_NOT_MEMBER', message: 'Not a member' };
+
+        return store.dispatch(
+          transactionApi.endpoints.createTransaction.initiate({
+            spaceId: 1,
+            idempotencyKey: 'k',
+            data: transactionData,
+          }),
+        );
+      },
       expected: ['/spaces/1/members'],
     },
     {

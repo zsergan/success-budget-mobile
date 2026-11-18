@@ -41,7 +41,12 @@ afterEach(() => jest.restoreAllMocks());
 const openDraft = (store: ReturnType<typeof createAppStore>, spaceId = 1) =>
   act(() => {
     store.dispatch(
-      createOpened({ spaceId, transactionType: TransactionType.EXPENSE, walletId: 7, now: new Date().toISOString() }),
+      createOpened({
+        spaceId,
+        transactionType: TransactionType.EXPENSE,
+        assignment: { kind: 'space' },
+        now: new Date().toISOString(),
+      }),
     );
     store.dispatch(draftChanged({ description: 'Unsaved' }));
   });

@@ -31,7 +31,6 @@ const dto: Transaction = {
   timestamp: '2026-01-01T00:00:00.000Z',
   description: null,
   version: 1,
-  wallet: { id: 1, wallet_name: 'Cash', design: AppColor.SLATE, ...STAMPS },
   category: {
     id: 1,
     name: 'Food',
@@ -42,6 +41,8 @@ const dto: Transaction = {
     is_archived: false,
     ...STAMPS,
   },
+  author: { user_id: 7, name: 'Zakhar', status: 'member', source: 'recorded' },
+  assignment: { kind: 'member', user_id: 31, name: 'Lena', status: 'member' },
 };
 
 const {
@@ -69,6 +70,7 @@ describe('transactionApi', () => {
     expect(mockedRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         url: '/spaces/3/transactions/feed',
+        baseURL: expect.stringMatching(/\/api\/v2$/),
         params: {
           from: '1970-01-01T00:00:01Z',
           to: '2038-01-19T03:14:07.999Z',
@@ -77,14 +79,14 @@ describe('transactionApi', () => {
         },
       }),
     );
-    expect(result.data?.items[0]).toMatchObject({ id: 'tx-1', wallet: { id: 1 }, category: { icon: 'grocery' } });
+    expect(result.data?.items[0]).toMatchObject({ id: 'tx-1', category: { icon: 'grocery' } });
   });
 
-  it('maps the kind, the version and the compact category, and keeps a deleted wallet as null', async () => {
+  it('maps the kind, the version, the compact category, the author and the assignment', async () => {
     const store = createAppStore();
 
     mockedRequest.mockResolvedValue({
-      data: feedDto([{ ...dto, kind: TransactionKind.INITIAL_BALANCE, version: 3, wallet: null }]),
+      data: feedDto([{ ...dto, kind: TransactionKind.INITIAL_BALANCE, version: 3 }]),
     });
 
     const result = await store.dispatch(getRecentTransactions.initiate({ spaceId: 3, timeZone: 'UTC' }));
@@ -97,7 +99,6 @@ describe('transactionApi', () => {
       timestamp: '2026-01-01T00:00:00.000Z',
       description: null,
       version: 3,
-      wallet: null,
       category: {
         id: 1,
         name: 'Food',
@@ -106,6 +107,74 @@ describe('transactionApi', () => {
         color: AppColor.SLATE,
         isArchived: false,
       },
+      author: { userId: 7, name: 'Zakhar', status: 'member', source: 'recorded' },
+      assignment: { kind: 'member', person: { userId: 31, name: 'Lena', status: 'member' } },
+    });
+  });
+
+  it.each([
+    ['the whole space', { kind: 'space', user_id: null, name: null, status: null }, { kind: 'space' }],
+    ['nobody', { kind: 'unassigned', user_id: null, name: null, status: null }, { kind: 'unassigned' }],
+    [
+      'a former member',
+      { kind: 'member', user_id: 31, name: 'Lena', status: 'former_member' },
+      { kind: 'member', person: { userId: 31, name: 'Lena', status: 'former_member' } },
+    ],
+    [
+      'a deleted account, still a person rather than nobody',
+      { kind: 'member', user_id: null, name: null, status: 'deleted' },
+      { kind: 'member', person: { userId: null, name: null, status: 'deleted' } },
+    ],
+  ] as const)('maps an assignment to %s', async (_name, assignment, expected) => {
+    const store = createAppStore();
+
+    mockedRequest.mockResolvedValue({ data: { ...dto, assignment } });
+    const result = await store.dispatch(getTransaction.initiate({ spaceId: 3, transactionId: 'tx-1' }));
+
+    expect(result.data?.assignment).toEqual(expected);
+  });
+
+  it.each([
+    ['recorded by a member', { user_id: 7, name: 'Zakhar', status: 'member', source: 'recorded' }],
+    ['imported from wallet history', { user_id: 7, name: 'Zakhar', status: 'member', source: 'imported' }],
+    ['by someone who left', { user_id: 31, name: 'Lena', status: 'former_member', source: 'recorded' }],
+    ['by a deleted account', { user_id: null, name: null, status: 'deleted', source: 'recorded' }],
+  ] as const)('maps an author %s', async (_name, author) => {
+    const store = createAppStore();
+
+    mockedRequest.mockResolvedValue({ data: { ...dto, author } });
+    const result = await store.dispatch(getTransaction.initiate({ spaceId: 3, transactionId: 'tx-1' }));
+
+    expect(result.data?.author).toEqual({
+      userId: author.user_id,
+      name: author.name,
+      status: author.status,
+      source: author.source,
+    });
+  });
+
+  it('lists the assignees of the History filter, former members apart', async () => {
+    const store = createAppStore();
+
+    mockedRequest.mockResolvedValue({
+      data: {
+        members: [{ key: 'member:7', user_id: 7, name: 'Zakhar', status: 'member' }],
+        former_members: [{ key: 'member:31', user_id: 31, name: 'Lena', status: 'former_member' }],
+        has_deleted_members: true,
+      },
+    });
+    const result = await store.dispatch(transactionApi.endpoints.getTransactionAssignees.initiate({ spaceId: 3 }));
+
+    expect(mockedRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: '/spaces/3/transactions/assignees',
+        baseURL: expect.stringMatching(/\/api\/v2$/),
+      }),
+    );
+    expect(result.data).toEqual({
+      members: [{ key: 'member:7', userId: 7, name: 'Zakhar', status: 'member' }],
+      formerMembers: [{ key: 'member:31', userId: 31, name: 'Lena', status: 'former_member' }],
+      hasDeletedMembers: true,
     });
   });
 
@@ -117,14 +186,14 @@ describe('transactionApi', () => {
       to: '2026-09-30T09:15:42.123Z',
       transactionType: TransactionType.INCOME,
       kind: TransactionKind.REGULAR,
-      walletId: 4,
+      assignment: 'member:31' as const,
     };
     const params = {
       from: filters.from,
       to: filters.to,
       transaction_type: TransactionType.INCOME,
       kind: TransactionKind.REGULAR,
-      wallet_id: 4,
+      assignment: 'member:31',
       q: 'salary',
     };
 
@@ -181,11 +250,11 @@ describe('transactionApi', () => {
   it('sends the action key with a create and maps its result', async () => {
     const store = createAppStore();
     const data = {
-      wallet_id: 1,
       category_id: 1,
       transaction_type: TransactionType.EXPENSE,
       amount: '10',
       timestamp: '2026-01-05T10:00:00.000Z',
+      assignment: { kind: 'space' as const },
     };
 
     mockedRequest.mockResolvedValue({ data: createTransactionResponseDto() });
@@ -193,9 +262,15 @@ describe('transactionApi', () => {
     const result = await store.dispatch(createTransaction.initiate({ spaceId: 3, idempotencyKey: 'key-1', data }));
 
     expect(mockedRequest).toHaveBeenCalledWith(
-      expect.objectContaining({ method: 'POST', data, headers: { 'Idempotency-Key': 'key-1' } }),
+      expect.objectContaining({
+        url: '/spaces/3/transactions',
+        baseURL: expect.stringMatching(/\/api\/v2$/),
+        method: 'POST',
+        data,
+        headers: { 'Idempotency-Key': 'key-1' },
+      }),
     );
-    expect(result.data).toMatchObject({ transaction: { id: 'tx-1' }, wallet: { balance: 90 }, previousBalance: 100 });
+    expect(result.data).toEqual({ transaction: expect.objectContaining({ id: 'tx-1' }) });
   });
 
   it('sends the version it replaces as a quoted If-Match with an edit and a delete', async () => {
@@ -203,9 +278,7 @@ describe('transactionApi', () => {
     const arg = { spaceId: 3, transactionId: 'tx-1', version: 4, idempotencyKey: 'key-1' };
     const headers = { 'Idempotency-Key': 'key-1', 'If-Match': '"4"' };
 
-    mockedRequest.mockResolvedValue({
-      data: { transaction: { ...dto, version: 5 }, wallets: [{ id: 1, balance: 80, is_deleted: false }] },
-    });
+    mockedRequest.mockResolvedValue({ data: { transaction: { ...dto, version: 5 } } });
     const edit = await store.dispatch(updateTransaction.initiate({ ...arg, data: { description: null } }));
 
     mockedRequest.mockResolvedValue({ data: true });
@@ -224,10 +297,7 @@ describe('transactionApi', () => {
       2,
       expect.objectContaining({ url: '/spaces/3/transactions/tx-1', method: 'DELETE', headers }),
     );
-    expect(edit.data).toMatchObject({
-      transaction: { version: 5 },
-      wallets: [{ id: 1, balance: 80, isDeleted: false }],
-    });
+    expect(edit.data).toEqual({ transaction: expect.objectContaining({ version: 5 }) });
   });
 
   it('keeps an empty latest as null rather than an error', async () => {
@@ -305,6 +375,7 @@ describe('getTransactionsFeed', () => {
     expect(mockedRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         url: '/spaces/3/transactions/feed',
+        baseURL: expect.stringMatching(/\/api\/v2$/),
         params: {
           from: period.from,
           to: period.to,

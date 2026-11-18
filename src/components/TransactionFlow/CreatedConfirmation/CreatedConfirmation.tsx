@@ -17,14 +17,15 @@ import Icon from '@components/Icon/Icon';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
+import { selectProfileId } from '@redux/state/profile/selectors';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import { whereSaved } from '@redux/state/transactionFlow/selection';
 import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { autoClosed, autoCloseStopped, CREATED_AUTO_CLOSE_MS } from '@redux/state/transactionFlow/slice';
-import type { CreateTransactionResult } from '@api/models';
+import type { TransactionWriteResult } from '@api/models';
 import { TransactionType } from '@shared/enums';
 import theme from '@shared/theme';
-import { formatAmount, formatCurrencyAmount, formatDateLong, formatDayMonth, hexToRgba } from '@shared/utils';
+import { assignmentLabel, formatAmount, formatDateLong, formatDayMonth, hexToRgba } from '@shared/utils';
 import { deleteFailureAction, deleteFailureText } from '../deleteMessage';
 import Banner from '@components/Banner/Banner';
 import { formatDateTime } from '../format';
@@ -35,7 +36,7 @@ import createStyles from './style';
 const LARGE_FONT_SCALE = 1.3;
 
 interface Props {
-  flow: TransactionFlow & { created: CreateTransactionResult };
+  flow: TransactionFlow & { created: TransactionWriteResult };
   onUndo: () => void;
   onShow: () => void;
   onOpenRecord: () => void;
@@ -56,13 +57,14 @@ const CreatedConfirmation = ({ flow, onUndo, onShow, onOpenRecord, onAddAnother,
   const insets = useSafeAreaInsets();
   const { fontScale } = useWindowDimensions();
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
+  const selfId = useAppSelector(selectProfileId);
   const {
     draftId,
     autoCloseAt,
     isSaving: isUndoing,
     notice,
     selection,
-    created: { transaction, wallet, previousBalance },
+    created: { transaction },
   } = flow;
   const typeColor = transaction.transactionType === TransactionType.INCOME ? colors.ok : colors.danger;
   const place = whereSaved(transaction, selection);
@@ -134,11 +136,7 @@ const CreatedConfirmation = ({ flow, onUndo, onShow, onOpenRecord, onAddAnother,
         </Text>
 
         <Text style={styles.meta} numberOfLines={2}>
-          {`${transaction.category.name} · ${wallet.wallet_name} · ${formatDateTime(transaction.timestamp)}`}
-        </Text>
-
-        <Text style={styles.balance}>
-          {`${wallet.wallet_name} balance ${formatCurrencyAmount(wallet.balance, currencyCode)} · was ${formatCurrencyAmount(previousBalance, currencyCode)}`}
+          {`${transaction.category.name} · ${assignmentLabel(transaction.assignment, selfId)} · ${formatDateTime(transaction.timestamp)}`}
         </Text>
 
         {place === 'otherPeriod' && (

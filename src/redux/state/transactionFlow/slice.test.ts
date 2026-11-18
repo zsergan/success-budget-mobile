@@ -1,13 +1,11 @@
-import type { CreateTransactionResult, TransactionModel } from '@api/models';
+import type { TransactionModel, TransactionWriteResult } from '@api/models';
 import { createAppStore } from '@redux/Store';
 import { logoutMe } from '@redux/state/auth/thunks';
 import { activateSpace } from '@redux/state/space/thunks';
 import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
-import { hasUnsavedChanges, selectLastWalletId, selectTransactionFlow } from './selectors';
+import { hasUnsavedChanges, selectTransactionFlow } from './selectors';
 import {
   anotherStarted,
-  awayEnded,
-  awayStarted,
   categoryCreated,
   categoryPicked,
   closed,
@@ -28,8 +26,6 @@ import {
   pendingDateChanged,
   saveFailed,
   saveStarted,
-  walletCreated,
-  walletDefaulted,
 } from './slice';
 
 jest.mock('@api/instance', () => ({
@@ -48,7 +44,6 @@ const saved: TransactionModel = {
   timestamp: '2026-10-05T09:30:00.000Z',
   description: null,
   version: 2,
-  wallet: null,
   category: {
     id: 4,
     name: 'Food',
@@ -57,7 +52,11 @@ const saved: TransactionModel = {
     color: AppColor.SLATE,
     isArchived: false,
   },
+  author: { userId: 7, name: 'Zakhar', status: 'member', source: 'recorded' },
+  assignment: { kind: 'member', person: { userId: null, name: null, status: 'deleted' } },
 };
+
+const lena = { kind: 'member', userId: 31 } as const;
 
 const setUp = () => {
   const store = createAppStore();
@@ -73,7 +72,7 @@ const openChecked = (store: ReturnType<typeof setUp>['store'], transaction = sav
 };
 
 const openCreate = (store: ReturnType<typeof setUp>['store']) =>
-  store.dispatch(createOpened({ spaceId: 1, transactionType: TransactionType.EXPENSE, walletId: 3, now: NOW }));
+  store.dispatch(createOpened({ spaceId: 1, transactionType: TransactionType.EXPENSE, assignment: lena, now: NOW }));
 
 describe('transaction flow', () => {
   it('opens a new transaction focused on the amount, and never a second flow over it', () => {
@@ -84,7 +83,7 @@ describe('transaction flow', () => {
 
     expect(flow()).toMatchObject({
       view: { name: 'create', focusAmount: true },
-      draft: { amount: '', walletId: 3, timestamp: NOW },
+      draft: { amount: '', assignment: lena, timestamp: NOW },
     });
   });
 
@@ -132,7 +131,11 @@ describe('transaction flow', () => {
 
     openChecked(store);
     store.dispatch(editStarted());
-    expect(flow()).toMatchObject({ view: { name: 'edit' }, saved: { version: 2 }, draft: { walletId: null } });
+    expect(flow()).toMatchObject({
+      view: { name: 'edit' },
+      saved: { version: 2 },
+      draft: { assignment: { kind: 'member', userId: null } },
+    });
 
     store.dispatch(draftChanged({ amount: '70' }));
     expect(hasUnsavedChanges(flow())).toBe(true);
@@ -227,9 +230,9 @@ describe('transaction flow', () => {
     });
   });
 
-  it('keeps the create result, then starts another draft on the type, wallet and the new now', () => {
+  it('keeps the create result, then starts another draft on the type, the assignment given and the new now', () => {
     const { store, flow } = setUp();
-    const result = { transaction: saved } as CreateTransactionResult;
+    const result: TransactionWriteResult = { transaction: saved };
 
     openCreate(store);
     store.dispatch(draftChanged({ amount: '5', categoryId: 4, transactionType: TransactionType.INCOME }));
@@ -239,14 +242,14 @@ describe('transaction flow', () => {
     store.dispatch(createSucceeded({ draftId, result, now: 0 }));
     expect(flow()).toMatchObject({ view: { name: 'created' }, created: result });
 
-    store.dispatch(anotherStarted({ now: '2026-10-06T12:05:00.000Z' }));
+    store.dispatch(anotherStarted({ now: '2026-10-06T12:05:00.000Z', assignment: lena }));
     expect(flow()).toMatchObject({
       draftId: draftId + 1,
       view: { name: 'create', focusAmount: true },
       created: null,
       draft: {
         transactionType: TransactionType.INCOME,
-        walletId: 3,
+        assignment: lena,
         amount: '',
         categoryId: null,
         timestamp: '2026-10-06T12:05:00.000Z',
@@ -259,7 +262,7 @@ describe('transaction flow', () => {
     const selection = { from: '2026-10-01T00:00:00.000Z', to: '2026-10-31T23:59:59.999Z' };
 
     store.dispatch(
-      createOpened({ spaceId: 1, transactionType: TransactionType.EXPENSE, walletId: 3, now: NOW, selection }),
+      createOpened({ spaceId: 1, transactionType: TransactionType.EXPENSE, assignment: lena, now: NOW, selection }),
     );
     store.dispatch(dateTimeOpened());
     store.dispatch(pendingDateChanged({ timestamp: '2026-10-01T08:00:00.000Z' }));
@@ -268,29 +271,29 @@ describe('transaction flow', () => {
     const { draftId } = flow()!;
 
     store.dispatch(saveStarted({ draftId }));
-    store.dispatch(createSucceeded({ draftId, result: { transaction: saved } as CreateTransactionResult, now: 0 }));
+    store.dispatch(createSucceeded({ draftId, result: { transaction: saved }, now: 0 }));
     expect(flow()).toMatchObject({ autoCloseAt: 5000 });
 
-    store.dispatch(anotherStarted({ now: '2026-10-06T12:05:00.000Z' }));
+    store.dispatch(anotherStarted({ now: '2026-10-06T12:05:00.000Z', assignment: { kind: 'space' } }));
     expect(flow()).toMatchObject({
       draftId: draftId + 1,
       selection,
       autoCloseAt: null,
-      draft: { timestamp: '2026-10-01T08:00:00.000Z', amount: '', categoryId: null, description: '' },
+      draft: {
+        timestamp: '2026-10-01T08:00:00.000Z',
+        amount: '',
+        categoryId: null,
+        description: '',
+        assignment: { kind: 'space' },
+      },
     });
   });
 
-  it('returns from creating a wallet or a category with it picked, or with nothing changed', () => {
+  it('takes a category created over the form for its own draft and type only', () => {
     const { store, flow } = setUp();
 
     openCreate(store);
     const { draftId } = flow()!;
-
-    store.dispatch(awayStarted({ draftId, target: 'wallet' }));
-    store.dispatch(walletCreated({ draftId, walletId: 9 }));
-    expect(flow()).toMatchObject({ away: 'wallet', draft: { walletId: 9 } });
-    store.dispatch(awayEnded({ draftId }));
-    expect(flow()).toMatchObject({ away: null, view: { name: 'create', focusAmount: false } });
 
     store.dispatch(categoryCreated({ draftId: draftId + 1, categoryId: 10, transactionType: TransactionType.EXPENSE }));
     expect(flow()?.draft?.categoryId).toBeNull();
@@ -298,35 +301,17 @@ describe('transaction flow', () => {
     expect(flow()).toMatchObject({ view: { name: 'create' }, promotedCategoryId: 11, draft: { categoryId: 11 } });
 
     store.dispatch(categoryCreated({ draftId, categoryId: 12, transactionType: TransactionType.INCOME }));
-    store.dispatch(awayStarted({ draftId, target: 'wallet' }));
-    store.dispatch(awayEnded({ draftId }));
-    expect(flow()).toMatchObject({ away: null, draft: { categoryId: 11, walletId: 9 } });
+    expect(flow()).toMatchObject({ draft: { categoryId: 11, assignment: lena } });
   });
 
-  it('starts on a default wallet without counting it as a change', () => {
+  it('starts on its assignment without counting it as a change', () => {
     const { store, flow } = setUp();
-
-    store.dispatch(createOpened({ spaceId: 1, transactionType: TransactionType.EXPENSE, walletId: null, now: NOW }));
-    store.dispatch(walletDefaulted({ draftId: flow()!.draftId, walletId: 5 }));
-
-    expect(flow()?.draft?.walletId).toBe(5);
-    expect(hasUnsavedChanges(flow())).toBe(false);
-  });
-
-  it('remembers the wallet of a saved transaction per space until a logout', async () => {
-    const { store, flow } = setUp();
-    const result = { transaction: { ...saved, wallet: { id: 7, wallet_name: 'Card', design: AppColor.SLATE } } };
 
     openCreate(store);
-    const { draftId } = flow()!;
-    store.dispatch(saveStarted({ draftId }));
-    store.dispatch(createSucceeded({ draftId, result: result as CreateTransactionResult, now: 0 }));
 
-    expect(selectLastWalletId(store.getState(), 1)).toBe(7);
-    expect(selectLastWalletId(store.getState(), 2)).toBeNull();
-
-    await store.dispatch(logoutMe());
-    expect(selectLastWalletId(store.getState(), 1)).toBeNull();
+    expect(hasUnsavedChanges(flow())).toBe(false);
+    store.dispatch(draftChanged({ assignment: { kind: 'unassigned' } }));
+    expect(hasUnsavedChanges(flow())).toBe(true);
   });
 
   it('keeps the category of an edited record in the grid', () => {
@@ -356,7 +341,7 @@ describe('transaction flow', () => {
     store.dispatch(activateSpace(2));
     expect(flow()).toBeNull();
 
-    store.dispatch(createOpened({ spaceId: 2, transactionType: TransactionType.EXPENSE, walletId: 1, now: NOW }));
+    store.dispatch(createOpened({ spaceId: 2, transactionType: TransactionType.EXPENSE, assignment: lena, now: NOW }));
     store.dispatch(saveStarted({ draftId: flow()!.draftId }));
     await store.dispatch(logoutMe());
     expect(flow()).toBeNull();

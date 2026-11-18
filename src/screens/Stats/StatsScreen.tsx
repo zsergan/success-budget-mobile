@@ -13,6 +13,7 @@ import {
 } from '@components';
 import { usePeriod, useRefreshOnReturn } from '@hooks';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
+import { selectProfileId } from '@redux/state/profile/selectors';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { activateSpace } from '@redux/state/space/thunks';
 import { rangeSelection } from '@redux/state/transactionFlow/selection';
@@ -45,6 +46,7 @@ const StatsScreen = () => {
   const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod } = usePeriod();
   const { openCreate } = useTransactionFlow(rangeSelection(range));
   const spaceId = useAppSelector(selectCurrentSpaceId);
+  const selfId = useAppSelector(selectProfileId);
   const selection = useStatsSelection(JSON.stringify([spaceId, range.from, range.to]));
   const { breakdownType, mode } = selection;
   const {
@@ -88,7 +90,7 @@ const StatsScreen = () => {
     });
   };
 
-  useComposeWithNewWallet(useCallback((walletId) => openCreate(TransactionType.EXPENSE, walletId), [openCreate]));
+  useComposeWithNewWallet(useCallback(() => openCreate(TransactionType.EXPENSE), [openCreate]));
 
   // Without a space the stats are skipped, so they could never leave their placeholders.
   const failure =
@@ -130,7 +132,7 @@ const StatsScreen = () => {
   const selectedSegmentKey = isSegmentShown ? selection.selectedSegmentKey : null;
 
   const openTransactions = (group: BreakdownGroup) => {
-    const filter = breakdown.data && spaceId !== null && toHistoryFilter(group, breakdown.data, spaceId);
+    const filter = breakdown.data && spaceId !== null && toHistoryFilter(group, breakdown.data, spaceId, selfId);
     if (filter) navigation.navigate(ScreenNames.STATS_TRANSACTIONS_SCREEN, { filter });
   };
 

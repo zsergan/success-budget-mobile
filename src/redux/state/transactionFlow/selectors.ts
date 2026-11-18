@@ -16,9 +16,6 @@ export const hasUnsavedChanges = (flow: TransactionFlow | null) =>
 export const hasOpenSave = (flow: TransactionFlow | null) =>
   flow?.notice === 'saveUnknown' || flow?.notice === 'saveExpired';
 
-export const selectLastWalletId = (state: RootState, spaceId: number) =>
-  state.transactionFlow.lastWalletIds[spaceId] ?? null;
-
 export const selectIsDeleting = (state: RootState, transactionId: string) =>
   state.transactionFlow.deletingIds.includes(transactionId);
 

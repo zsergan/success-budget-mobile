@@ -495,7 +495,7 @@ describe('switching the breakdown type', () => {
           spaceId: 1,
           idempotencyKey: 'key-both',
           data: {
-            wallet_id: 1,
+            assignment: { kind: 'space' },
             category_id: 1,
             transaction_type: TransactionType.INCOME,
             amount: '30.00',
@@ -611,7 +611,7 @@ const createTransaction = (store: ReturnType<typeof createAppStore>) =>
         spaceId: 1,
         idempotencyKey: 'key-1',
         data: {
-          wallet_id: 1,
+          assignment: { kind: 'space' },
           category_id: 1,
           transaction_type: TransactionType.EXPENSE,
           amount: '15.00',
@@ -742,7 +742,7 @@ describe('after a mutation', () => {
           spaceId: 1,
           idempotencyKey: 'key-1',
           data: {
-            wallet_id: 1,
+            assignment: { kind: 'space' },
             category_id: 1,
             transaction_type: TransactionType.EXPENSE,
             amount: '15.00',
@@ -772,7 +772,7 @@ describe('after a mutation', () => {
           spaceId: 1,
           idempotencyKey: 'key-1',
           data: {
-            wallet_id: 1,
+            assignment: { kind: 'space' },
             category_id: 1,
             transaction_type: TransactionType.EXPENSE,
             amount: '15.00',

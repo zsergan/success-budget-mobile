@@ -9,13 +9,14 @@ import Icon from '@components/Icon/Icon';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
+import { selectProfileId } from '@redux/state/profile/selectors';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { editStarted } from '@redux/state/transactionFlow/slice';
 import { checkFlowRecord, loadLatestRecord } from '@redux/state/transactionFlow/thunks';
 import { TransactionType } from '@shared/enums';
 import theme from '@shared/theme';
-import { formatAmount, formatMoneyAmount, hexToRgba } from '@shared/utils';
+import { assignmentLabel, authorLabel, formatAmount, formatMoneyAmount, hexToRgba } from '@shared/utils';
 import DeleteButton from '../DeleteButton/DeleteButton';
 import { deleteFailureAction, deleteFailureText } from '../deleteMessage';
 import Banner from '@components/Banner/Banner';
@@ -43,6 +44,7 @@ const TransactionDetails = ({
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
+  const selfId = useAppSelector(selectProfileId);
   const [isLoadingLatest, setLoadingLatest] = useState(false);
   const canAct = check === 'done' && notice !== 'conflict' && !isSaving;
 
@@ -106,10 +108,23 @@ const TransactionDetails = ({
         )}
 
         <View style={styles.card}>
+          {!isSystem && (
+            <>
+              <View style={styles.property}>
+                <Text style={styles.propertyLabel}>Assigned to</Text>
+                <Text style={styles.propertyValue} numberOfLines={1}>
+                  {assignmentLabel(transaction.assignment, selfId)}
+                </Text>
+              </View>
+
+              <View style={styles.divider} />
+            </>
+          )}
+
           <View style={styles.property}>
-            <Text style={styles.propertyLabel}>Wallet</Text>
-            <Text style={[styles.propertyValue, !transaction.wallet && styles.propertyValueMuted]} numberOfLines={1}>
-              {transaction.wallet?.wallet_name ?? 'Deleted wallet'}
+            <Text style={styles.propertyLabel}>Created by</Text>
+            <Text style={styles.propertyValue} numberOfLines={1}>
+              {authorLabel(transaction.author, selfId)}
             </Text>
           </View>
 

@@ -2,7 +2,7 @@ import { randomUUID } from 'expo-crypto';
 
 import type { CreateTransactionRequest, ErrorResponse, UpdateTransactionRequest } from '@api/dto';
 import { ApiErrorCode } from '@api/dto';
-import type { CreateTransactionResult, TransactionModel, UpdateTransactionResult } from '@api/models';
+import type { TransactionModel, TransactionWriteResult } from '@api/models';
 import { spaceTags } from '@redux/api/baseApi';
 import type { AppThunk, RootState } from '@redux/Store';
 import { IDEMPOTENCY_KEY_LIFETIME_MS } from '@shared/constants';
@@ -11,7 +11,7 @@ import { writeRecorded, writeSettled } from '../pendingWrite/slice';
 import { forgetPendingWrite, persistPendingWrites } from '../pendingWrite/storage';
 import { selectProfileId } from '../profile/selectors';
 import { loseSpaceAccess } from '../space/thunks';
-import { transactionApi } from './api';
+import { TRANSACTION_WRITE_TAGS, transactionApi } from './api';
 
 // What the user asked for, tied to the space the draft belongs to.
 export type TransactionRequest =
@@ -31,8 +31,8 @@ export type TransactionOperation = Readonly<StoredOperation & { sessionKey: numb
 export const KEY_LIFETIME_MS = IDEMPOTENCY_KEY_LIFETIME_MS;
 
 interface OperationResults {
-  create: CreateTransactionResult;
-  update: UpdateTransactionResult;
+  create: TransactionWriteResult;
+  update: TransactionWriteResult;
   delete: null;
 }
 
@@ -73,7 +73,7 @@ export const classifyTransactionError = (error: unknown): TransactionFailureKind
   if (code === ApiErrorCode.TRANSACTION_VERSION_CONFLICT) return 'conflict';
   if (code === ApiErrorCode.TRANSACTION_NOT_FOUND) return 'notFound';
   if (code === ApiErrorCode.FORBIDDEN_SPACE) return 'accessLost';
-  if (statusCode === 400 || code === ApiErrorCode.FORBIDDEN_WALLET || code === ApiErrorCode.FORBIDDEN_CATEGORY) {
+  if (statusCode === 400 || code === ApiErrorCode.FORBIDDEN_CATEGORY) {
     return 'validation';
   }
 
@@ -140,11 +140,7 @@ const lookUpCreate =
         ),
       ).unwrap();
 
-      dispatch(
-        transactionApi.util.invalidateTags(
-          spaceTags(operation.spaceId, 'Transactions', 'Wallets', 'Limits', 'Categories'),
-        ),
-      );
+      dispatch(transactionApi.util.invalidateTags(spaceTags(operation.spaceId, ...TRANSACTION_WRITE_TAGS)));
 
       return transaction ? { kind: 'applied', transaction } : { kind: 'deleted' };
     } catch (error) {
@@ -301,7 +297,8 @@ const isSameRequest = (operation: TransactionOperation, request: TransactionRequ
   const keys = new Set([...Object.keys(sent), ...Object.keys(asked)]);
   keys.delete('client_operation_id');
 
-  return [...keys].every((key) => sent[key] === asked[key]);
+  // Values are plain JSON; the assignment is an object, equal when its fields are.
+  return [...keys].every((key) => JSON.stringify(sent[key]) === JSON.stringify(asked[key]));
 };
 
 const remember = (memory: OperationMemory, operation: TransactionOperation, outcome: OperationOutcome) =>
@@ -312,7 +309,7 @@ const recordOf = (outcome: OperationOutcome): TransactionModel | null => {
   if (outcome.status === 'found' || outcome.status === 'recovered') return outcome.transaction;
   if (outcome.status !== 'succeeded' || !outcome.result) return null;
 
-  return (outcome.result as CreateTransactionResult | UpdateTransactionResult).transaction;
+  return (outcome.result as TransactionWriteResult).transaction;
 };
 
 export interface Submission<T extends RequestType> {

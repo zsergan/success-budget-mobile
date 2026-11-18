@@ -14,7 +14,7 @@ import TransactionEditor from '@screens/TransactionEditor/components/Transaction
 import useTransactionDelete from '@components/TransactionFlow/useTransactionDelete';
 import { useSheetPresence } from '@hooks';
 import { useAppDispatch } from '@redux/hooks';
-import { awayStarted, dateTimeOpened, panelClosed } from '@redux/state/transactionFlow/slice';
+import { dateTimeOpened, panelClosed } from '@redux/state/transactionFlow/slice';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
 import CategoryCreationSheet from './components/CategoryCreation/CategoryCreationSheet';
@@ -55,7 +55,7 @@ const TransactionEditorScreen = ({ navigation, route }: Props) => {
   // The form acts on a tap only while nothing covers it and no write runs.
   const getIdleFlow = useCallback(() => {
     const current = getOwnFlow();
-    const isIdle = current && !current.isSaving && !current.away && current.view.name !== 'dateTime';
+    const isIdle = current && !current.isSaving && current.view.name !== 'dateTime';
 
     return isIdle && navigation.isFocused() ? current : null;
   }, [getOwnFlow, navigation]);
@@ -71,30 +71,11 @@ const TransactionEditorScreen = ({ navigation, route }: Props) => {
     else back();
   });
 
-  // After the guard above has let go: a flow that ended or left the form takes this route with it, and a wallet
-  // screen it opened, also when that was not the user's doing (a space switch, lost access). Whatever else is on
-  // the stack stays, in focus if it was.
+  // After the guard above has let go: a flow that ended or left the form takes this route with it, also when that
+  // was not the user's doing (a space switch, lost access). Whatever else is on the stack stays, in focus if it was.
   useEffect(() => {
-    if (flow) return;
-
-    navigation
-      .getState()
-      .routes.filter(
-        ({ key, params }) => key === route.key || (params as { forEditor?: string })?.forEditor === route.key,
-      )
-      .reverse()
-      .forEach(({ key }) => removeRoute(navigation, key));
+    if (!flow) removeRoute(navigation, route.key);
   }, [flow, navigation, route.key]);
-
-  // The draft waits in the flow while a wallet is created, and comes back with it.
-  const createWallet = () => {
-    const current = getFreeFlow();
-    if (!current) return;
-
-    delay.cancel();
-    dispatch(awayStarted({ draftId: current.draftId, target: 'wallet' }));
-    navigation.navigate(ScreenNames.ADD_WALLET_SCREEN, { id: 'new', forDraft: current.draftId, forEditor: route.key });
-  };
 
   // The full list goes with the keyboard closed, so the form comes back without it.
   const openCategories = () => {
@@ -130,7 +111,6 @@ const TransactionEditorScreen = ({ navigation, route }: Props) => {
             onBack={back}
             onOpenCategories={openCategories}
             onOpenDate={openDate}
-            onCreateWallet={createWallet}
             onCreateCategory={category.open}
             onDelete={() => shown.saved && requestDelete(shown.saved)}
             onRetryDelete={() => shown.saved && retryDelete(shown.saved)}

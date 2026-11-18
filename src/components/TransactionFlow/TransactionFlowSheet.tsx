@@ -15,6 +15,7 @@ import { ScreenNames } from '@shared/enums';
 import type { RootStackParamList } from '@shared/types';
 import { afterKeyboardHides } from '@shared/utils';
 import CreatedConfirmation from './CreatedConfirmation/CreatedConfirmation';
+import useAssignmentDefaults from './hooks/useAssignmentDefaults';
 import useEditorRoute from './hooks/useEditorRoute';
 import useFlowClose from './hooks/useFlowClose';
 import useFlowConfirmation from './hooks/useFlowConfirmation';
@@ -33,6 +34,7 @@ const TransactionFlowSheet = () => {
   const { lock: confirmLock, confirmation } = useFlowConfirmation();
   const { requestClose, back } = useFlowClose(confirmLock);
   const { requestDelete, retryDelete, undoCreate: deleteCreated } = useTransactionDelete(confirmLock);
+  const { forAnother } = useAssignmentDefaults();
 
   // The content stays on screen while the sheet animates away after the flow ended.
   const sheetFlow = flow && !hasOpenForm(flow) ? flow : null;
@@ -153,7 +155,14 @@ const TransactionFlowSheet = () => {
             onUndo={undoCreate}
             onShow={() => leaveCreated('row')}
             onOpenRecord={() => leaveCreated('record')}
-            onAddAnother={() => dispatch(anotherStarted({ now: new Date().toISOString() }))}
+            onAddAnother={() =>
+              dispatch(
+                anotherStarted({
+                  now: new Date().toISOString(),
+                  assignment: forAnother(shown.spaceId, shown.draft?.assignment ?? null),
+                }),
+              )
+            }
             onDone={requestClose}
           />
         ) : null;

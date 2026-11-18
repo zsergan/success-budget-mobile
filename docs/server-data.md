@@ -15,10 +15,11 @@ One exception: a limit create or edit rejected with
 `400 CATEGORY_ARCHIVED` refreshes Limits and Categories,
 because the error itself shows a category was archived elsewhere.
 Likewise a transaction write refused with `TRANSACTION_NOT_FOUND`,
-`TRANSACTION_VERSION_CONFLICT`, `WALLET_DELETED`, `CATEGORY_ARCHIVED`,
-`FORBIDDEN_WALLET` or `FORBIDDEN_CATEGORY` refreshes everything a
-transaction write does, since the cached record, wallet or category is
-behind the server.
+`TRANSACTION_VERSION_CONFLICT`, `CATEGORY_ARCHIVED` or
+`FORBIDDEN_CATEGORY` refreshes everything a transaction write does, since
+the cached record or category is behind the server; one refused with
+`ASSIGNEE_NOT_MEMBER` refreshes Members too, as the member it named has
+left.
 An invitation resend refreshes Members after any answer except one that
 outlived its session: a refused or unanswered resend may still have
 scheduled an email, a `429` moves the cooldown and a `404` means the
@@ -46,6 +47,17 @@ one array, once `History.Range`) is removed from the backend and answers
 `src/redux/api/scenarios.test.tsx` covers the user-visible scenarios
 end to end.
 
+Transactions and statistics are read and written through `/api/v2`
+(`apiVersion: 2` on the request; the backend's
+`docs/transactions-v2-contract.md`): a record belongs to its space and
+carries an `author` and an `assignment` (a member, the whole space or
+nobody), and a breakdown groups by assignment. Every other resource stays
+on `/api/v1`. A transaction write (create, edit, reassignment, delete)
+invalidates the space's `Transactions`, `Limits` and `Categories` tags;
+tags are per space, so every history selection and statistics cycle of the
+space reads again, under the record's old assignment as well as its new
+one.
+
 ## Cached resources
 
 Every resource except Profile and Currencies is scoped to the active space.
@@ -61,6 +73,7 @@ Every resource except Profile and Currencies is scoped to the active space.
 | `History.Recent` | `GET /spaces/:id/transactions/feed?from=1970…&to=2038…&limit=5` | — (RTK Query only)    | Home's latest five records of the whole history and their days' `net`; one entry shared with the initial-load gate, never paged further                                                                  |
 | `History.Latest` | `GET /spaces/:id/transactions/latest`                           | `transaction.latest`  | Single most recent row (or `null`); tells "no transactions at all" apart from "none in this period"                                                                                                      |
 | `History.Count`  | `GET /spaces/:id/transactions/count?from&to[&q]`                | — (RTK Query only)    | `summary.count` of the same `History.Feed` selection, initial balances included; the period picker's counter                                                                                             |
+| `Assignees`      | `GET /spaces/:id/transactions/assignees`                        | — (RTK Query only)    | History's "Assigned to" filter: current members, former members with records, whether a deleted account has records; provides `Transactions` and `Members`                                               |
 | `History.Feed`   | `GET /spaces/:id/transactions/feed?from&to&time_zone[&q]`       | — (RTK Query only)    | Cursor pages of rows (same row shape) with the selection's `summary` and each listed day's `net`; one entry per selection and load generation; the Transactions tab, its search and the Stats drill-down |
 | `Members`        | `GET /spaces/:id/members`                                       | `member.members`      | Member rows and pending invite rows with their email delivery state                                                                                                                                      |
 | `InvitePreview`  | `POST /spaces/invites/preview`                                  | — (RTK Query only)    | Not scoped to a space and provides no tags; one entry per link token, read again after a restart rather than stored                                                                                      |
@@ -159,12 +172,13 @@ described in the lifecycle section.
 
 ## Notes for the RTK Query design
 
-- Every transaction read and write result is the backend's transaction
-  view (`docs/transactions-contract.md`): `kind`, `version`, a nullable
-  `wallet` and a compact `category` without `transaction_count`, `limit`
-  or `sort`, mapped to `TransactionCategoryModel` rather than the
-  Categories API's `CategoryModel`. `wallet_id` and `category_id` are not
-  in it.
+- Every transaction read and write result is the backend's v2
+  transaction view (`docs/transactions-v2-contract.md`): `kind`,
+  `version`, `author` (with `source`), `assignment` (people resolved to
+  `member`, `former_member` or `deleted`) and a compact `category` without
+  `transaction_count`, `limit` or `sort`, mapped to
+  `TransactionCategoryModel` rather than the Categories API's
+  `CategoryModel`. There is no wallet.
 - A transaction created outside the currently cached period does not
   change `History.Recent`/`History.Feed` rows, but invalidating them
   anyway is correct and cheap; no need to match on timestamps.
@@ -178,8 +192,9 @@ the same space, period, zone and `as_of`, per the backend's
 `docs/statistics-contract.md`. Because `as_of` is part of every argument, the
 blocks provide no tags; a refetch of the same arguments would miss anything
 recorded after that `as_of`. Instead `getStatisticsRevision`, a local query with
-no request, provides the space's `Transactions`, `Wallets` and `Categories`
-tags, and each new value starts a new cycle. So does a return to the screen or
+no request, provides the space's `Transactions`, `Categories` and `Members`
+tags (a breakdown names people by their current names and membership), and
+each new value starts a new cycle. So does a return to the screen or
 to the app on it, when the cycle is older than 30 seconds.
 
 A new cycle for the same space and period keeps each block's last successful

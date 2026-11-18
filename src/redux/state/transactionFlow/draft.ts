@@ -1,14 +1,17 @@
-import type { CreateTransactionRequest, UpdateTransactionRequest } from '@api/dto';
-import type { TransactionModel } from '@api/models';
+import type { CreateTransactionRequest, TransactionAssignment, UpdateTransactionRequest } from '@api/dto';
+import type { AssignmentModel, TransactionModel } from '@api/models';
 import type { TransactionType } from '@shared/enums';
+
+// Who the form assigns the amount to. A member's null id is the record's own deleted account, kept as it is.
+export type DraftAssignment = { kind: 'member'; userId: number | null } | { kind: 'space' } | { kind: 'unassigned' };
 
 export interface TransactionDraft {
   transactionType: TransactionType;
   // As typed, with either decimal separator.
   amount: string;
   categoryId: number | null;
-  // In an edit, null keeps the deleted wallet the record still points at.
-  walletId: number | null;
+  // Null only after the server refused a member who is no longer in the space: the user picks again.
+  assignment: DraftAssignment | null;
   timestamp: string;
   description: string;
 }
@@ -16,7 +19,7 @@ export interface TransactionDraft {
 export interface DraftErrors {
   amount?: string;
   category?: string;
-  wallet?: string;
+  assignment?: string;
   timestamp?: string;
   description?: string;
 }
@@ -106,22 +109,28 @@ export const descriptionLength = (value: string) => [...value.trim()].length;
 
 export const createDraft = ({
   transactionType,
-  walletId,
+  assignment,
   timestamp,
-}: Pick<TransactionDraft, 'transactionType' | 'walletId' | 'timestamp'>): TransactionDraft => ({
+}: Pick<TransactionDraft, 'transactionType' | 'assignment' | 'timestamp'>): TransactionDraft => ({
   transactionType,
   amount: '',
   categoryId: null,
-  walletId,
+  assignment,
   timestamp,
   description: '',
 });
+
+export const draftAssignmentOf = (assignment: AssignmentModel): DraftAssignment =>
+  assignment.kind === 'member' ? { kind: 'member', userId: assignment.person.userId } : { kind: assignment.kind };
+
+export const isSameAssignment = (a: DraftAssignment | null, b: DraftAssignment | null) =>
+  a === b || (!!a && !!b && a.kind === b.kind && (a.kind !== 'member' || a.userId === (b as typeof a).userId));
 
 export const draftFromTransaction = (transaction: TransactionModel): TransactionDraft => ({
   transactionType: transaction.transactionType,
   amount: transaction.amount,
   categoryId: transaction.category.id,
-  walletId: transaction.wallet?.id ?? null,
+  assignment: draftAssignmentOf(transaction.assignment),
   timestamp: transaction.timestamp,
   description: transaction.description ?? '',
 });
@@ -132,7 +141,7 @@ const isSameField: { [K in keyof TransactionDraft]: (a: TransactionDraft[K], b: 
   transactionType: (a, b) => a === b,
   amount: isSameAmount,
   categoryId: (a, b) => a === b,
-  walletId: (a, b) => a === b,
+  assignment: isSameAssignment,
   timestamp: (a, b) => Date.parse(a) === Date.parse(b),
   description: (a, b) => normalizeDescription(a) === normalizeDescription(b),
 };
@@ -145,15 +154,16 @@ export const changedFields = (draft: TransactionDraft, baseline: TransactionDraf
 export const isDraftChanged = (draft: TransactionDraft, baseline: TransactionDraft) =>
   changedFields(draft, baseline).length > 0;
 
-// An edit leaves values it does not change alone, as the server does: a legacy zero amount survives a new note.
-// `available` holds what may be picked now, once loaded; an edit's own archived category counts while its type matches.
+// An edit leaves values it does not change alone, as the server does: a legacy zero amount survives a new note, and a
+// former member stays assigned. `available` holds what may be picked now, once loaded; an edit's own archived
+// category counts while its type matches. The server still decides on a member who leaves while the save is sent.
 export const getDraftErrors = (
   draft: TransactionDraft,
   {
     baseline,
     now,
     available,
-  }: { baseline?: TransactionDraft; now: number; available?: { walletIds?: number[]; categoryIds?: number[] } },
+  }: { baseline?: TransactionDraft; now: number; available?: { memberIds?: number[]; categoryIds?: number[] } },
 ): DraftErrors => {
   const changed = new Set(baseline ? changedFields(draft, baseline) : Object.keys(isSameField));
   const errors: DraftErrors = {};
@@ -172,11 +182,15 @@ export const getDraftErrors = (
     errors.category = 'Choose a category';
   }
 
-  if ((!baseline && draft.walletId === null) || isGone(draft.walletId, available?.walletIds, changed.has('walletId'))) {
-    errors.wallet = 'Choose a wallet';
-  } else if (draft.walletId === null && baseline && baseline.walletId !== null) {
-    // No wallet keeps the record's deleted one; once it is in another wallet, that would keep that one instead.
-    errors.wallet = 'The deleted wallet can’t be picked again. Choose a wallet';
+  const { assignment } = draft;
+  const memberId = assignment?.kind === 'member' ? assignment.userId : null;
+
+  if (
+    !assignment ||
+    (assignment.kind === 'member' && memberId === null && changed.has('assignment')) ||
+    isGone(memberId, available?.memberIds, changed.has('assignment'))
+  ) {
+    errors.assignment = 'Choose who it’s assigned to';
   }
 
   if (changed.has('timestamp') && Date.parse(draft.timestamp) > now + FUTURE_MARGIN_MS) {
@@ -192,14 +206,34 @@ export const getDraftErrors = (
   return errors;
 };
 
-// A wallet the new draft was opened from, else the last one used in this space, else the first active one.
-export const defaultWalletId = (activeIds: number[], preferred: (number | null)[]) =>
-  preferred.find((id) => id !== null && activeIds.includes(id)) ?? activeIds[0] ?? null;
+// A new transaction is the user's own unless they choose otherwise.
+export const defaultAssignment = (userId: number | undefined): DraftAssignment =>
+  userId === undefined ? { kind: 'space' } : { kind: 'member', userId };
+
+// Add another repeats the last assignment while its member is still in the space; an unknown list keeps it, and the
+// server decides.
+export const keptAssignment = (
+  last: DraftAssignment | null,
+  { userId, memberIds }: { userId: number | undefined; memberIds?: number[] },
+): DraftAssignment => {
+  if (!last) return defaultAssignment(userId);
+  if (last.kind !== 'member') return last;
+
+  return last.userId !== null && (!memberIds || memberIds.includes(last.userId)) ? last : defaultAssignment(userId);
+};
 
 export const hasDraftErrors = (errors: DraftErrors) => Object.keys(errors).length > 0;
 
+// A deleted account has no id to send; only leaving the assignment out keeps it.
+const toAssignmentRequest = (assignment: DraftAssignment | null): TransactionAssignment | null => {
+  if (!assignment) return null;
+  if (assignment.kind !== 'member') return { kind: assignment.kind };
+
+  return assignment.userId === null ? null : { kind: 'member', user_id: assignment.userId };
+};
+
 export const toCreateRequest = (draft: TransactionDraft): CreateTransactionRequest => ({
-  wallet_id: draft.walletId!,
+  assignment: toAssignmentRequest(draft.assignment)!,
   category_id: draft.categoryId!,
   transaction_type: draft.transactionType,
   amount: normalizeAmount(draft.amount) ?? draft.amount,
@@ -208,9 +242,10 @@ export const toCreateRequest = (draft: TransactionDraft): CreateTransactionReque
 });
 
 // The whole form, so a save that follows an unsettled one still ends in exactly this state; values equal to the
-// stored ones are no change to the server. A null wallet is left out, which keeps the deleted one.
+// stored ones are no change to the server, a former member's assignment included.
 export const toUpdateRequest = (draft: TransactionDraft): UpdateTransactionRequest => {
-  const { wallet_id, ...request } = toCreateRequest(draft);
+  const { assignment: _assignment, ...request } = toCreateRequest(draft);
+  const assignment = toAssignmentRequest(draft.assignment);
 
-  return draft.walletId === null ? request : { ...request, wallet_id };
+  return assignment ? { ...request, assignment } : request;
 };

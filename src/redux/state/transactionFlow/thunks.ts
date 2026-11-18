@@ -5,7 +5,7 @@ import type { AppThunk } from '@redux/Store';
 import { selectUnconfirmedDelete } from '../pendingWrite/selectors';
 import { inSession } from '../pendingWrite/thunks';
 import { loseSpaceAccess } from '../space/thunks';
-import { transactionApi } from '../transaction/api';
+import { TRANSACTION_WRITE_TAGS, transactionApi } from '../transaction/api';
 import type { OperationMemory } from '../transaction/operations';
 import { classifyTransactionError, submitTransactionRequest } from '../transaction/operations';
 import { selectIsDeleting, selectIsFlowDeleting, selectTransactionFlow } from './selectors';
@@ -54,9 +54,7 @@ const readFlowRecord =
     switch (classifyTransactionError(error)) {
       case 'notFound':
         dispatch(recordGone({ draftId }));
-        dispatch(
-          transactionApi.util.invalidateTags(spaceTags(spaceId, 'Transactions', 'Wallets', 'Limits', 'Categories')),
-        );
+        dispatch(transactionApi.util.invalidateTags(spaceTags(spaceId, ...TRANSACTION_WRITE_TAGS)));
         return 'gone';
       case 'accessLost':
         dispatch(loseSpaceAccess(spaceId));

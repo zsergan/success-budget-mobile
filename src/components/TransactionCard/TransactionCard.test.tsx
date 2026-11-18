@@ -71,25 +71,30 @@ describe('TransactionCard', () => {
     expect(screen.queryByLabelText('Delete')).toBeNull();
   });
 
-  it('shows the description, wallet and time as separate parts', () => {
+  it('shows the description, assignment and time as separate parts', () => {
     renderCard({ description: 'Dinner with Anna', timestamp: new Date(2026, 0, 5, 9, 10).toISOString() });
 
     expect(screen.getByText('Dinner with Anna')).toBeTruthy();
-    expect(screen.getByText('Cash')).toBeTruthy();
+    expect(screen.getByText('Zakhar')).toBeTruthy();
     expect(screen.getByText(' · 09:10')).toBeTruthy();
   });
 
-  it('starts the second line with the wallet when there is no description', () => {
+  it('starts the second line with the assignment when there is no description', () => {
     renderCard({ description: null });
 
     expect(screen.getAllByText('Food')).toHaveLength(1);
     expect(screen.queryByText(' · ')).toBeNull();
-    expect(screen.getByText('Cash')).toBeTruthy();
+    expect(screen.getByText('Zakhar')).toBeTruthy();
   });
 
-  it('names a deleted wallet', () => {
-    renderCard({ wallet: null });
+  it.each([
+    ['Whole space', { kind: 'space', user_id: null, name: null, status: null }],
+    ['No member assigned', { kind: 'unassigned', user_id: null, name: null, status: null }],
+    ['Lena · Former member', { kind: 'member', user_id: 31, name: 'Lena', status: 'former_member' }],
+    ['Deleted member', { kind: 'member', user_id: null, name: null, status: 'deleted' }],
+  ])('names the assignment %s', (label, assignment) => {
+    renderCard({ assignment });
 
-    expect(screen.getByText('Deleted wallet')).toBeTruthy();
+    expect(screen.getByText(label)).toBeTruthy();
   });
 });

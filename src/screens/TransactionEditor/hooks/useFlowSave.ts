@@ -102,10 +102,10 @@ const useFlowSave = () => {
       );
     }
 
-    if ('previousBalance' in outcome.result) {
-      dispatch(createSucceeded({ ...scope, result: outcome.result, now: Date.now() }));
-    } else {
+    if (saved) {
       dispatch(editSucceeded({ ...scope, transaction: outcome.result.transaction }));
+    } else {
+      dispatch(createSucceeded({ ...scope, result: outcome.result, now: Date.now() }));
     }
   }, [dispatch, store, submit, toast]);
 };

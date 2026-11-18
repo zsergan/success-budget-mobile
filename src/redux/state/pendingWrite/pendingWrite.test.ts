@@ -30,7 +30,7 @@ interface SentRequest {
 }
 
 const lunch: CreateTransactionRequest = {
-  wallet_id: 1,
+  assignment: { kind: 'space' },
   category_id: 1,
   transaction_type: TransactionType.EXPENSE,
   amount: '10.00',

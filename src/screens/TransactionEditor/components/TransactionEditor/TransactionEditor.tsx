@@ -17,7 +17,6 @@ import { hasUnsavedChanges, selectIsDeleting } from '@redux/state/transactionFlo
 import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { draftChanged } from '@redux/state/transactionFlow/slice';
 import { loadLatestRecord } from '@redux/state/transactionFlow/thunks';
-import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { TransactionType } from '@shared/enums';
 import DeleteButton from '@components/TransactionFlow/DeleteButton/DeleteButton';
 import { deleteFailureAction, deleteFailureText } from '@components/TransactionFlow/deleteMessage';
@@ -32,8 +31,6 @@ import DetailsCard from './DetailsCard/DetailsCard';
 import { forecastLimit } from './LimitHint/limitForecast';
 import LimitHint from './LimitHint/LimitHint';
 import TypeToggle from './TypeToggle/TypeToggle';
-import useDefaultWallet from './useDefaultWallet';
-import WalletPicker from './WalletPicker/WalletPicker';
 
 import createStyles from './style';
 
@@ -43,7 +40,6 @@ interface Props {
   onBack: () => void;
   onOpenCategories: () => void;
   onOpenDate: () => void;
-  onCreateWallet: () => void;
   onCreateCategory: () => void;
   onDelete: () => void;
   onRetryDelete: () => void;
@@ -55,7 +51,6 @@ const TransactionEditor = ({
   onBack,
   onOpenCategories,
   onOpenDate,
-  onCreateWallet,
   onCreateCategory,
   onDelete,
   onRetryDelete,
@@ -70,11 +65,8 @@ const TransactionEditor = ({
   const [isLoadingLatest, setLoadingLatest] = useState(false);
   const [hasLatestFailed, setLatestFailed] = useState(false);
   const spaceArg = useSpaceArg();
-  const walletsQuery = useGetWalletsQuery(spaceArg);
   const categoriesQuery = useGetCategoriesQuery(spaceArg);
-  const { currentData: walletsOverview } = walletsQuery;
   const { currentData: allCategories } = categoriesQuery;
-  const walletsLoad = listLoad(walletsQuery);
   const categoriesLoad = listLoad(categoriesQuery);
   const { currentData: limits } = useGetLimitsQuery(spaceArg);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
@@ -86,15 +78,11 @@ const TransactionEditor = ({
   const typeColor = isIncome ? colors.ok : colors.danger;
   const now = new Date();
 
-  const wallets = useMemo(() => walletsOverview?.wallets.map(({ wallet }) => wallet) ?? [], [walletsOverview]);
-  const activeWalletIds = useMemo(() => walletsOverview?.wallets.map(({ wallet }) => wallet.id), [walletsOverview]);
   const { incomes, expenses } = useMemo(() => getActiveCategories(allCategories), [allCategories]);
   const activeOf = (type: TransactionType) => (type === TransactionType.INCOME ? incomes : expenses);
   // Only the record's own archived category is offered, and only for its type.
   const archived = saved?.category.isArchived ? saved.category : null;
   const ownArchived = archived?.transactionType === draft.transactionType ? archived : null;
-
-  useDefaultWallet(flow, activeWalletIds);
 
   const fitsType = (categoryId: number | null, type: TransactionType) =>
     categoryId !== null &&
@@ -120,7 +108,6 @@ const TransactionEditor = ({
     baseline: isEdit ? (flow.baseline ?? undefined) : undefined,
     now: now.getTime(),
     available: {
-      walletIds: activeWalletIds,
       categoryIds: allCategories && [
         ...activeOf(draft.transactionType).map(({ id }) => id),
         ...(ownArchived ? [ownArchived.id] : []),
@@ -137,15 +124,14 @@ const TransactionEditor = ({
     !changed || changed.includes('categoryId') || changed.includes('transactionType')
       ? notLoaded(categoriesLoad, 'categories')
       : undefined;
-  const walletsNote = !changed || changed.includes('walletId') ? notLoaded(walletsLoad, 'wallets') : undefined;
-  const ready = !hasDraftErrors(errors) && !categoriesNote && !walletsNote && (!isEdit || isChanged) && !hasConflict;
+  const ready = !hasDraftErrors(errors) && !categoriesNote && (!isEdit || isChanged) && !hasConflict;
   // A typed value that is not an amount, and a date out of range, are explained at their fields; the footer names
   // what is still missing.
   const amountError = draft.amount.trim() ? errors.amount : undefined;
   const missing = [
     amountError ? undefined : errors.amount,
     categoriesNote ?? errors.category,
-    walletsNote ?? errors.wallet,
+    errors.assignment,
     errors.description,
   ];
   const helperText = hasConflict ? undefined : isEdit && !isChanged ? 'No changes yet' : missing.find(Boolean);
@@ -156,16 +142,6 @@ const TransactionEditor = ({
     draft,
     now: now.getTime(),
   });
-
-  const hasDeletedWallet = isEdit && saved.wallet === null;
-  const hasNoWallets = activeWalletIds?.length === 0;
-  const walletHint = hasDeletedWallet
-    ? hasNoWallets
-      ? 'This wallet was deleted and you have no other wallets. Keep it, or create a new one to move the transaction.'
-      : 'This wallet was deleted. You can keep it or move the transaction to another wallet.'
-    : isEdit && draft.walletId === null
-      ? errors.wallet
-      : undefined;
 
   const loadLatest = async () => {
     setLoadingLatest(true);
@@ -245,18 +221,6 @@ const TransactionEditor = ({
 
               {limitForecast && <LimitHint forecast={limitForecast} currencyCode={currencyCode} />}
             </View>
-
-            <WalletPicker
-              load={walletsLoad}
-              wallets={wallets}
-              hasDeletedWallet={hasDeletedWallet}
-              selectedId={draft.walletId}
-              hint={walletHint}
-              typeColor={typeColor}
-              onSelect={(walletId) => change({ walletId })}
-              onCreate={onCreateWallet}
-              onRetry={walletsQuery.refetch}
-            />
 
             <DetailsCard
               timestamp={draft.timestamp}

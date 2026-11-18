@@ -65,7 +65,7 @@ const write = (key: string, status: PendingWrite['status'], spaceId = 1): Pendin
     idempotencyKey: key,
     firstSentAt: Date.now(),
     data: {
-      wallet_id: 1,
+      assignment: { kind: 'space' },
       category_id: 1,
       transaction_type: TransactionType.EXPENSE,
       amount: '12.00',
