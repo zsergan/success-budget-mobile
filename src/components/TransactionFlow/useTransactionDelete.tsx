@@ -10,7 +10,9 @@ import { selectProfileId } from '@redux/state/profile/selectors';
 import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/state/space/selectors';
 import type { DeleteOutcome } from '@redux/state/transactionFlow/thunks';
 import { deleteTransaction, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
-import { deleteMessage, deleteSubject } from './deleteMessage';
+import CategoryIconBox from '@components/CategoryIconBox/CategoryIconBox';
+import ConfirmationObject from '@components/ConfirmationSheet/ConfirmationObject/ConfirmationObject';
+import { deleteFacts, deleteMessage, deleteSubject, totalsName } from './deleteMessage';
 
 // One delete for a list row, the details and the form: the same confirmation, asked through its owner's lock, then a
 // write the row or the sheet waits for. A sheet still waiting on it when the answer comes explains a failure in place;
@@ -76,7 +78,11 @@ const useTransactionDelete = (confirmLock: ConfirmLock, { leavesScreen = false }
   // The ticket is taken as the delete starts: its toast, and the actions on it, belong to the screen, space and
   // session it ran in.
   const runDelete = useCallback(
-    async (transaction: TransactionModel, spaceId = currentSpaceId, doneText = 'Transaction deleted') => {
+    async (
+      transaction: TransactionModel,
+      spaceId = currentSpaceId,
+      doneText = `Transaction deleted. ${totalsName(transaction.timestamp)} totals updated.`,
+    ) => {
       if (spaceId === null) return;
 
       const ticket = toast.begin();
@@ -116,7 +122,14 @@ const useTransactionDelete = (confirmLock: ConfirmLock, { leavesScreen = false }
 
         return {
           title: 'Delete transaction?',
-          description: deleteMessage(transaction, currencyCode, selfId),
+          description: deleteMessage(transaction),
+          context: (
+            <ConfirmationObject
+              icon={<CategoryIconBox icon={transaction.category.icon} color={transaction.category.color} size={40} />}
+              name={transaction.category.name}
+              meta={deleteFacts(transaction, currencyCode, selfId)}
+            />
+          ),
           primaryAction: {
             label: 'Delete transaction',
             tone: 'danger',
@@ -140,7 +153,12 @@ const useTransactionDelete = (confirmLock: ConfirmLock, { leavesScreen = false }
 
   // Undo of a create just made: the same delete, without asking, named for what the user did.
   const undoCreate = useCallback(
-    (transaction: TransactionModel) => runDelete(transaction, currentSpaceId, 'Transaction removed'),
+    (transaction: TransactionModel) =>
+      runDelete(
+        transaction,
+        currentSpaceId,
+        `Transaction removed. ${totalsName(transaction.timestamp)} totals updated.`,
+      ),
     [runDelete, currentSpaceId],
   );
 

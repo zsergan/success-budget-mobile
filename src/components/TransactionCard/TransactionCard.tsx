@@ -9,9 +9,10 @@ import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { useAppSelector } from '@redux/hooks';
 import { selectProfileId } from '@redux/state/profile/selectors';
+import { selectIsPersonalSpace } from '@redux/state/space/selectors';
 import { selectIsDeleting } from '@redux/state/transactionFlow/selectors';
 import Icon from '../Icon/Icon';
-import { assignmentLabel, formatAmount, formatDateHHMM, formatMoneyAmount } from '@shared/utils';
+import { assignmentLabel, formatAmount, formatDateHHMM, formatMoneyAmount, isOwnAssignment } from '@shared/utils';
 import { TransactionType } from '@shared/enums';
 
 import createStyles from './style';
@@ -41,8 +42,14 @@ const TransactionCard = ({ transaction, currencyCode, isHighlighted = false, tim
   const isSystem = isInitialBalance(transaction);
   const isIncome = transaction.transactionType === TransactionType.INCOME && !isSystem;
   const selfId = useAppSelector(selectProfileId);
-  const { description, assignment } = transaction;
+  const isPersonal = useAppSelector(selectIsPersonalSpace);
+  const { description, assignment, author } = transaction;
   const isPersonGone = assignment.kind === 'member' && assignment.person.status !== 'member';
+  // A personal space leaves its ordinary "You" unsaid; the whole space, nobody and anyone else are always named. A
+  // starting balance is the space's history, not anyone's.
+  const shownAssignment =
+    isSystem || (isPersonal && isOwnAssignment(assignment, selfId)) ? null : assignmentLabel(assignment, selfId);
+  const tag = isSystem ? 'Archived' : author.source === 'imported' ? 'Imported' : null;
 
   // A row being deleted stays put, dimmed, until the server answers.
   const card = (
@@ -65,7 +72,7 @@ const TransactionCard = ({ transaction, currencyCode, isHighlighted = false, tim
         ]}
       >
         <Icon
-          name={isSystem ? 'wallet' : transaction.category.icon}
+          name={isSystem ? 'archive' : transaction.category.icon}
           size={20}
           color={isIncome ? colors.ok : colors.text}
         />
@@ -73,9 +80,13 @@ const TransactionCard = ({ transaction, currencyCode, isHighlighted = false, tim
 
       <View style={styles.textColumn}>
         <View style={[styles.topLine, isLargeText && styles.lineStacked]}>
-          <Text style={styles.category} numberOfLines={isLargeText ? 2 : 1}>
-            {transaction.category.name}
-          </Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.category} numberOfLines={isLargeText ? 2 : 1}>
+              {transaction.category.name}
+            </Text>
+
+            {tag && <Text style={styles.tag}>{tag}</Text>}
+          </View>
 
           {isDeleting ? (
             <ActivityIndicator size="small" color={colors.muted} />
@@ -91,26 +102,29 @@ const TransactionCard = ({ transaction, currencyCode, isHighlighted = false, tim
         {/* The time never shrinks; the description gives way first, then only an assignment past its share. */}
         <View style={[styles.metaLine, isLargeText && styles.metaLineWrapped]}>
           {description && (
-            <>
-              <Text style={[styles.meta, styles.description]} numberOfLines={1}>
-                {description}
-              </Text>
-              <Text style={[styles.meta, styles.fixed]}>{' · '}</Text>
-            </>
+            <Text style={[styles.meta, styles.description]} numberOfLines={1}>
+              {description}
+            </Text>
           )}
 
-          <Text
-            style={[
-              styles.meta,
-              description ? styles.assignmentBeside : styles.assignmentAlone,
-              isPersonGone && styles.metaFaint,
-            ]}
-            numberOfLines={1}
-          >
-            {assignmentLabel(assignment, selfId)}
-          </Text>
+          {description && shownAssignment && <Text style={[styles.meta, styles.fixed]}>{' · '}</Text>}
 
-          <Text style={[styles.meta, styles.fixed]}>{` · ${formatDateHHMM(transaction.timestamp, timeZone)}`}</Text>
+          {shownAssignment && (
+            <Text
+              style={[
+                styles.meta,
+                description ? styles.assignmentBeside : styles.assignmentAlone,
+                isPersonGone && styles.metaFaint,
+              ]}
+              numberOfLines={1}
+            >
+              {shownAssignment}
+            </Text>
+          )}
+
+          <Text style={[styles.meta, styles.fixed]}>
+            {`${description || shownAssignment ? ' · ' : ''}${formatDateHHMM(transaction.timestamp, timeZone)}`}
+          </Text>
         </View>
       </View>
     </Pressable>

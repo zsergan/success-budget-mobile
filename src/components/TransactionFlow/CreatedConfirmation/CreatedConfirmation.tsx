@@ -13,6 +13,7 @@ import {
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import AssignmentAvatar from '@components/AssignmentAvatar/AssignmentAvatar';
 import Icon from '@components/Icon/Icon';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
@@ -38,8 +39,8 @@ const LARGE_FONT_SCALE = 1.3;
 interface Props {
   flow: TransactionFlow & { created: TransactionWriteResult };
   onUndo: () => void;
-  onShow: () => void;
-  onOpenRecord: () => void;
+  // The record's details, in its own period when the screen it was made from shows another.
+  onView: () => void;
   onAddAnother: () => void;
   onDone: () => void;
 }
@@ -50,7 +51,7 @@ const savedToLabel = (timestamp: string) =>
     : formatDateLong(timestamp);
 
 // Shown only after the API confirmed the create. It closes by itself after a while unless touched.
-const CreatedConfirmation = ({ flow, onUndo, onShow, onOpenRecord, onAddAnother, onDone }: Props) => {
+const CreatedConfirmation = ({ flow, onUndo, onView, onAddAnother, onDone }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const dispatch = useAppDispatch();
@@ -66,8 +67,10 @@ const CreatedConfirmation = ({ flow, onUndo, onShow, onOpenRecord, onAddAnother,
     selection,
     created: { transaction },
   } = flow;
-  const typeColor = transaction.transactionType === TransactionType.INCOME ? colors.ok : colors.danger;
+  const isIncome = transaction.transactionType === TransactionType.INCOME;
+  const typeColor = isIncome ? colors.ok : colors.danger;
   const place = whereSaved(transaction, selection);
+  const { assignment } = transaction;
   const [remaining] = useState(() => new Animated.Value(1));
 
   const stopTimer = () => {
@@ -124,7 +127,7 @@ const CreatedConfirmation = ({ flow, onUndo, onShow, onOpenRecord, onAddAnother,
           <Icon name="check" size={28} color={typeColor} strokeWidth={2.4} />
         </View>
 
-        <Text style={styles.title}>Transaction saved</Text>
+        <Text style={styles.title}>{isIncome ? 'Income saved' : 'Expense saved'}</Text>
 
         <Text
           style={[styles.amount, { color: typeColor }]}
@@ -135,19 +138,47 @@ const CreatedConfirmation = ({ flow, onUndo, onShow, onOpenRecord, onAddAnother,
           {formatAmount(transaction.amount, transaction.transactionType, currencyCode)}
         </Text>
 
-        <Text style={styles.meta} numberOfLines={2}>
-          {`${transaction.category.name} · ${assignmentLabel(transaction.assignment, selfId)} · ${formatDateTime(transaction.timestamp)}`}
-        </Text>
-
-        {place === 'otherPeriod' && (
-          <View style={styles.hiddenRow}>
-            <Text style={styles.hiddenText}>
-              {`Saved to ${savedToLabel(transaction.timestamp)} — outside the period you’re viewing`}
+        <View style={styles.facts}>
+          <View style={styles.fact}>
+            <Text style={styles.factLabel}>Category</Text>
+            <Text style={styles.factValue} numberOfLines={1}>
+              {transaction.category.name}
             </Text>
+          </View>
 
-            <TouchableOpacity onPress={onShow} disabled={isUndoing} hitSlop={8} accessibilityRole="button">
-              <Text style={styles.showText}>Show</Text>
-            </TouchableOpacity>
+          <View style={[styles.fact, styles.factSeparated]}>
+            <Text style={styles.factLabel}>Assigned to</Text>
+            <View style={styles.factPerson}>
+              <AssignmentAvatar
+                subject={assignment.kind === 'member' ? { kind: 'member', ...assignment.person } : assignment}
+                selfId={selfId}
+                size={22}
+              />
+              <Text style={styles.factValue} numberOfLines={2}>
+                {assignmentLabel(assignment, selfId)}
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.fact, styles.factSeparated]}>
+            <Text style={styles.factLabel}>Date</Text>
+            <Text style={styles.factValue}>{formatDateTime(transaction.timestamp)}</Text>
+          </View>
+        </View>
+
+        {place !== 'shown' && (
+          <View style={styles.hiddenRow}>
+            <Icon
+              name={place === 'otherPeriod' ? 'calendar' : 'filter'}
+              size={15}
+              color={colors.text}
+              strokeWidth={1.9}
+            />
+            <Text style={styles.hiddenText}>
+              {place === 'otherPeriod'
+                ? `Saved to ${savedToLabel(transaction.timestamp)} — outside the period you’re viewing.`
+                : 'Saved outside the filter you’re viewing, so the list doesn’t show it.'}
+            </Text>
           </View>
         )}
 
@@ -158,7 +189,7 @@ const CreatedConfirmation = ({ flow, onUndo, onShow, onOpenRecord, onAddAnother,
               title="This transaction was changed"
               text="Someone saved it after it was created, so it wasn’t undone. Open it to see the latest version."
               actionLabel="Open"
-              onAction={onOpenRecord}
+              onAction={onView}
             />
           </View>
         ) : (
@@ -175,41 +206,57 @@ const CreatedConfirmation = ({ flow, onUndo, onShow, onOpenRecord, onAddAnother,
         )}
       </BottomSheetScrollView>
 
-      <TouchableOpacity
-        style={styles.undoButton}
-        onPress={onUndo}
-        disabled={isUndoing || notice === 'conflict'}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: isUndoing || notice === 'conflict', busy: isUndoing }}
-      >
-        {isUndoing ? (
-          <ActivityIndicator size="small" color={colors.text} />
-        ) : (
-          <Icon name="refresh" size={15} color={colors.text} strokeWidth={2} />
-        )}
-        <Text style={styles.undoText}>{isUndoing ? 'Undoing…' : 'Undo'}</Text>
-      </TouchableOpacity>
-
-      <View style={[styles.actions, isUndoing && styles.actionsLocked]}>
+      <View style={styles.actions}>
         <TouchableOpacity
-          style={styles.secondaryButton}
+          style={styles.undoButton}
+          onPress={onUndo}
+          disabled={isUndoing || notice === 'conflict'}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: isUndoing || notice === 'conflict', busy: isUndoing }}
+        >
+          {isUndoing ? (
+            <ActivityIndicator size="small" color={colors.text} />
+          ) : (
+            <Icon name="refresh" size={15} color={colors.text} strokeWidth={2} />
+          )}
+          <Text style={styles.undoText}>{isUndoing ? 'Undoing…' : 'Undo'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.accentButton, isUndoing && styles.actionsLocked]}
           onPress={onAddAnother}
           disabled={isUndoing}
           activeOpacity={0.8}
           accessibilityRole="button"
         >
-          <Text style={styles.secondaryButtonText}>Add another</Text>
+          <Icon name="plus" size={15} color={colors.onAccent} strokeWidth={2.2} />
+          <Text style={styles.accentButtonText}>Add another</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={[styles.actions, isUndoing && styles.actionsLocked]}>
+        {/* Out of the viewed period, the record is what the user most likely wants to see. */}
+        <TouchableOpacity
+          style={place !== 'shown' ? styles.primaryButton : styles.secondaryButton}
+          onPress={onView}
+          disabled={isUndoing}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+        >
+          <Text style={place !== 'shown' ? styles.primaryButtonText : styles.secondaryButtonText}>
+            View transaction
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.primaryButton}
+          style={styles.doneButton}
           onPress={onDone}
           disabled={isUndoing}
           activeOpacity={0.8}
           accessibilityRole="button"
         >
-          <Text style={styles.primaryButtonText}>Done</Text>
+          <Text style={styles.secondaryButtonText}>Done</Text>
         </TouchableOpacity>
       </View>
     </View>

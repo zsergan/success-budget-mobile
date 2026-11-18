@@ -4,13 +4,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
 import type { TransactionModel } from '@api/models';
-import { isInitialBalance } from '@api/models';
+import { assignmentKeyOf, isInitialBalance } from '@api/models';
+import type { ViewSelection } from '@redux/state/transactionFlow/selection';
+import { whereSaved } from '@redux/state/transactionFlow/selection';
+import type { AvatarSubject } from '@components/AssignmentAvatar/AssignmentAvatar';
+import AssignmentAvatar from '@components/AssignmentAvatar/AssignmentAvatar';
 import Icon from '@components/Icon/Icon';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectProfileId } from '@redux/state/profile/selectors';
-import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
+import { selectCurrentSpaceCurrencyCode, selectIsPersonalSpace } from '@redux/state/space/selectors';
 import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { editStarted } from '@redux/state/transactionFlow/slice';
 import { checkFlowRecord, loadLatestRecord } from '@redux/state/transactionFlow/thunks';
@@ -33,8 +37,24 @@ interface Props {
 
 // Shows the record the list had at once; Edit and Delete wait until it is read again, so neither acts on an old
 // version.
+// Why an edited record is no longer in the list the details were opened from.
+const movedOutText = (
+  transaction: TransactionModel,
+  selection: ViewSelection | null,
+  selfId: number | undefined,
+): string => {
+  if (whereSaved(transaction, selection) === 'otherPeriod') {
+    return `Now dated ${formatDateTime(transaction.timestamp)}, outside the period this list shows, so it left the list.`;
+  }
+  if (selection?.assignment !== undefined && assignmentKeyOf(transaction.assignment) !== selection.assignment) {
+    return `Now assigned to ${assignmentLabel(transaction.assignment, selfId)}, so it left this filtered list.`;
+  }
+
+  return 'It no longer matches this list’s filter, so it left the list.';
+};
+
 const TransactionDetails = ({
-  flow: { saved: transaction, check, notice, isSaving },
+  flow: { saved: transaction, check, notice, isSaving, selection },
   onClose,
   onDelete,
   onRetryDelete,
@@ -45,6 +65,7 @@ const TransactionDetails = ({
   const insets = useSafeAreaInsets();
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
   const selfId = useAppSelector(selectProfileId);
+  const isPersonal = useAppSelector(selectIsPersonalSpace);
   const [isLoadingLatest, setLoadingLatest] = useState(false);
   const canAct = check === 'done' && notice !== 'conflict' && !isSaving;
 
@@ -55,6 +76,35 @@ const TransactionDetails = ({
   };
 
   const isSystem = isInitialBalance(transaction);
+  const { assignment, author } = transaction;
+  const isImported = author.source === 'imported';
+  const assignee: AvatarSubject = assignment.kind === 'member' ? { kind: 'member', ...assignment.person } : assignment;
+  const assigneeSub =
+    assignment.kind === 'space' ? (isPersonal ? 'Space-level operation' : 'Counts once in the space total') : undefined;
+  const isAssigneeGone = assignment.kind === 'member' && assignment.person.status !== 'member';
+  // An imported author was filled in when wallets were retired: it says whom the record was given to, not who entered it.
+  const authorSub = isImported
+    ? author.name
+      ? `Filled in as ${author.name} during the move from wallets`
+      : 'Filled in during the move from wallets'
+    : undefined;
+
+  const person = (label: string, subject: AvatarSubject, value: string, sub?: string, isMuted = false) => (
+    <View style={styles.property}>
+      <Text style={styles.propertyLabel}>{label}</Text>
+
+      <View style={styles.personValue}>
+        <AssignmentAvatar subject={subject} selfId={selfId} size={24} />
+
+        <View style={styles.personTexts}>
+          <Text style={[styles.propertyValue, isMuted && styles.propertyValueMuted]} numberOfLines={2}>
+            {value}
+          </Text>
+          {sub && <Text style={styles.propertySub}>{sub}</Text>}
+        </View>
+      </View>
+    </View>
+  );
   const isIncome = transaction.transactionType === TransactionType.INCOME;
   const typeColor = isSystem ? colors.text : isIncome ? colors.ok : colors.danger;
 
@@ -76,7 +126,7 @@ const TransactionDetails = ({
       <BottomSheetScrollView style={styles.scroll} contentContainerStyle={styles.body}>
         <View style={styles.hero}>
           <View style={[styles.heroIcon, { backgroundColor: isSystem ? colors.track : hexToRgba(typeColor, 0.12) }]}>
-            <Icon name={isSystem ? 'wallet' : transaction.category.icon} size={26} color={typeColor} />
+            <Icon name={isSystem ? 'archive' : transaction.category.icon} size={26} color={typeColor} />
           </View>
 
           <Text style={styles.category} numberOfLines={2}>
@@ -96,7 +146,7 @@ const TransactionDetails = ({
 
           <View style={[styles.typeChip, { backgroundColor: isSystem ? colors.track : hexToRgba(typeColor, 0.1) }]}>
             <Text style={[styles.typeChipText, { color: typeColor }]}>
-              {isSystem ? 'Starting balance' : isIncome ? 'Income' : 'Expense'}
+              {isSystem ? 'Starting balance · not counted' : isIncome ? 'Income' : 'Expense'}
             </Text>
           </View>
         </View>
@@ -110,23 +160,18 @@ const TransactionDetails = ({
         <View style={styles.card}>
           {!isSystem && (
             <>
-              <View style={styles.property}>
-                <Text style={styles.propertyLabel}>Assigned to</Text>
-                <Text style={styles.propertyValue} numberOfLines={1}>
-                  {assignmentLabel(transaction.assignment, selfId)}
-                </Text>
-              </View>
-
+              {person('Assigned to', assignee, assignmentLabel(assignment, selfId), assigneeSub, isAssigneeGone)}
               <View style={styles.divider} />
             </>
           )}
 
-          <View style={styles.property}>
-            <Text style={styles.propertyLabel}>Created by</Text>
-            <Text style={styles.propertyValue} numberOfLines={1}>
-              {authorLabel(transaction.author, selfId)}
-            </Text>
-          </View>
+          {person(
+            'Created by',
+            isImported ? { kind: 'imported' } : { kind: 'member', ...author },
+            authorLabel(author, selfId),
+            authorSub,
+            isImported || author.status !== 'member',
+          )}
 
           <View style={styles.divider} />
 
@@ -135,10 +180,18 @@ const TransactionDetails = ({
             <Text style={styles.propertyValue}>{formatDateTime(transaction.timestamp)}</Text>
           </View>
         </View>
+        {isImported && !isSystem && (
+          <View style={styles.importNote}>
+            <Icon name="info" size={14} color={colors.muted} strokeWidth={1.9} />
+            <Text style={styles.importNoteText}>
+              Moved from wallets when they were retired. Amount, date, category and note are unchanged.
+            </Text>
+          </View>
+        )}
       </BottomSheetScrollView>
 
       {isSystem ? (
-        <Text style={styles.systemNote}>Set when the wallet was created</Text>
+        <Text style={styles.systemNote}>Kept for history. Not part of income, expenses, monthly net or limits.</Text>
       ) : (
         <>
           {check === 'failed' ? (
@@ -158,6 +211,8 @@ const TransactionDetails = ({
               isBusy={isLoadingLatest}
               onAction={loadLatest}
             />
+          ) : notice === 'movedOut' ? (
+            <Banner tone="success" title="Saved" text={movedOutText(transaction, selection, selfId)} />
           ) : notice === 'saveFound' ? (
             <Banner
               tone="success"

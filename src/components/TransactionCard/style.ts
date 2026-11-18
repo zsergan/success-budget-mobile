@@ -76,8 +76,27 @@ const createStyles = ({ colors }: ColorTheme) =>
     metaLineWrapped: {
       flexWrap: 'wrap',
     },
-    category: {
+    titleRow: {
       flexGrow: 1,
+      flexShrink: 1,
+      minWidth: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      columnGap: 6,
+    },
+    tag: {
+      flexShrink: 0,
+      paddingHorizontal: 6,
+      paddingVertical: 1,
+      borderRadius: 6,
+      overflow: 'hidden',
+      fontFamily: theme.fonts.bold,
+      fontSize: theme.fontSizes.micro,
+      lineHeight: theme.lineHeights.micro,
+      color: colors.muted,
+      backgroundColor: colors.track,
+    },
+    category: {
       flexShrink: 1,
       fontFamily: theme.fonts.semiBold,
       fontSize: theme.fontSizes.bodyLg,

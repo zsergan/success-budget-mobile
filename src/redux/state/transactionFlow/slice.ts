@@ -9,6 +9,7 @@ import { spaceAccessLost, spaceSelected } from '../space/thunks';
 import type { DraftAssignment, TransactionDraft } from './draft';
 import { createDraft, draftFromTransaction } from './draft';
 import type { ViewSelection } from './selection';
+import { whereSaved } from './selection';
 
 export type FlowForm = 'create' | 'edit';
 
@@ -34,6 +35,7 @@ export type FlowCheck = 'pending' | 'done' | 'failed';
 // `saveFound`: an earlier attempt of this create had applied, so the details show that record instead.
 // `saveRestored`: a create an older build never got applied; its draft is back for the user to check and send again.
 // `assigneeLeft`: the member picked left the space before the save went through; `refusal` names them.
+// `movedOut`: an edit took the record out of what the screen it was opened from lists; the details stay on it.
 export type FlowNotice =
   | 'conflict'
   | 'deleteFailed'
@@ -45,7 +47,8 @@ export type FlowNotice =
   | 'saveRecovered'
   | 'saveFound'
   | 'saveRestored'
-  | 'assigneeLeft';
+  | 'assigneeLeft'
+  | 'movedOut';
 
 export type SaveNotice = Extract<FlowNotice, `save${string}`>;
 
@@ -76,7 +79,7 @@ export interface TransactionFlow {
   created: TransactionWriteResult | null;
   // When the confirmation closes on its own; a touch clears it. A deadline, so a remount never restarts the timer.
   autoCloseAt: number | null;
-  // What the screen the form opened from shows, so the confirmation can say where a hidden record went.
+  // What the screen the form or the details opened from lists, so they can say where a record it no longer lists went.
   selection: ViewSelection | null;
   // The operation a restored draft is sent under, so it applies at most once with the attempt that went before it.
   operationId: string | null;
@@ -171,7 +174,10 @@ const transactionFlowSlice = createSlice({
         { ...payload, timestamp: payload.now },
       );
     },
-    detailsOpened: (state, { payload }: PayloadAction<{ spaceId: number; transaction: TransactionModel }>) => {
+    detailsOpened: (
+      state,
+      { payload }: PayloadAction<{ spaceId: number; transaction: TransactionModel; selection?: ViewSelection | null }>,
+    ) => {
       if (state.flow) return;
 
       state.lastDraftId += 1;
@@ -190,7 +196,7 @@ const transactionFlowSlice = createSlice({
         promotedCategoryId: null,
         created: null,
         autoCloseAt: null,
-        selection: null,
+        selection: payload.selection ?? null,
         operationId: null,
       };
     },
@@ -418,6 +424,7 @@ const transactionFlowSlice = createSlice({
       flow.draft = null;
       flow.baseline = null;
       flow.view = { name: 'details' };
+      if (whereSaved(payload.transaction, flow.selection) !== 'shown') flow.notice = 'movedOut';
     },
     // Keeps the type, the assignment and a picked date; a date that was "now" becomes the new now.
     // The caller passes the assignment to keep: the last one while it is still on offer, else the default.

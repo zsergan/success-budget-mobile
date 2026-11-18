@@ -9,6 +9,7 @@ import { TRANSACTION_WRITE_TAGS, transactionApi } from '../transaction/api';
 import type { OperationMemory } from '../transaction/operations';
 import { classifyTransactionError, submitTransactionRequest } from '../transaction/operations';
 import { selectIsDeleting, selectIsFlowDeleting, selectTransactionFlow } from './selectors';
+import type { ViewSelection } from './selection';
 import type { DeleteResult } from './slice';
 import {
   checkFailed,
@@ -82,7 +83,7 @@ export const loadLatestRecord = (): AppThunk<Promise<ReadOutcome>> => (dispatch)
   dispatch(readFlowRecord(latestLoaded));
 
 export const openTransactionDetails =
-  (payload: { spaceId: number; transaction: TransactionModel }): AppThunk =>
+  (payload: { spaceId: number; transaction: TransactionModel; selection?: ViewSelection | null }): AppThunk =>
   (dispatch, getState) => {
     dispatch(detailsOpened(payload));
 

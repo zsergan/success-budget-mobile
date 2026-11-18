@@ -686,7 +686,7 @@ describe('TransactionFlowSheet', () => {
     fireEvent.press(screen.getByText('Save expense'));
 
     expect(screen.getByText('Saving…')).toBeTruthy();
-    expect(screen.queryByText('Transaction saved')).toBeNull();
+    expect(screen.queryByText('Expense saved')).toBeNull();
     expect(screen.getByLabelText('Back')).toBeDisabled();
 
     pressBack();
@@ -700,7 +700,7 @@ describe('TransactionFlowSheet', () => {
 
     expect(routeNames()).toEqual(HOME_ONLY);
     expect(mockSheet.presents).toBe(1);
-    expect(screen.getByText('Transaction saved')).toBeTruthy();
+    expect(screen.getByText('Expense saved')).toBeTruthy();
     expect(mockedRequest).toHaveBeenCalledWith(
       expect.objectContaining({ method: 'POST', data: expect.objectContaining({ amount: '12.00', category_id: 1 }) }),
     );
@@ -727,7 +727,7 @@ describe('TransactionFlowSheet', () => {
     expect(posts).toHaveLength(2);
     expect(posts[1][0]).toEqual(posts[0][0]);
     expect(posts[0][0].data.client_operation_id).toBe(posts[0][0].headers['Idempotency-Key']);
-    expect(screen.getByText('Transaction saved')).toBeTruthy();
+    expect(screen.getByText('Expense saved')).toBeTruthy();
   });
 
   it('turns into an edit of the record an unconfirmed create made, and saves later changes only on request', async () => {
@@ -868,7 +868,7 @@ describe('TransactionFlowSheet', () => {
 
     const posts = mockedRequest.mock.calls.filter(([config]) => config.method === 'POST');
     expect(posts).toHaveLength(1);
-    expect(screen.getByText('Transaction saved')).toBeTruthy();
+    expect(screen.getByText('Expense saved')).toBeTruthy();
   });
 
   it('keeps a confirmed create confirmed when the refresh after it fails', async () => {
@@ -885,7 +885,7 @@ describe('TransactionFlowSheet', () => {
     await act(async () => jest.advanceTimersByTimeAsync(100));
 
     expect(mockedRequest).toHaveBeenCalledWith(expect.objectContaining({ method: 'GET', url: '/spaces/1/limits' }));
-    expect(screen.getByText('Transaction saved')).toBeTruthy();
+    expect(screen.getByText('Expense saved')).toBeTruthy();
     expect(flow()?.view.name).toBe('created');
     expect(mockToasts.shown).toEqual([]);
   });
@@ -899,7 +899,9 @@ describe('TransactionFlowSheet', () => {
     fireEvent.press(screen.getByText('Save expense'));
     await act(async () => answerWrite({ data: createTransactionResponseDto() }));
 
-    expect(screen.getByText(/^Food · Zakhar · Jan 5, \d\d:00$/)).toBeTruthy();
+    expect(screen.getByText('Food')).toBeTruthy();
+    expect(screen.getByText('Zakhar')).toBeTruthy();
+    expect(screen.getByText(/^Jan 5(, 2026)?, \d\d:00$/)).toBeTruthy();
     // Its time counts from when it showed, with the form gone.
     expect(routeNames()).toEqual(HOME_ONLY);
     expect(flow()?.autoCloseAt).toBe(Date.now() + CREATED_AUTO_CLOSE_MS);
@@ -916,7 +918,7 @@ describe('TransactionFlowSheet', () => {
     fillExpense();
     fireEvent.press(screen.getByText('Save expense'));
     await act(async () => answerWrite({ data: createTransactionResponseDto() }));
-    fireEvent(screen.getByText('Transaction saved'), 'touchStart');
+    fireEvent(screen.getByText('Expense saved'), 'touchStart');
     await act(async () => jest.advanceTimersByTime(10000));
 
     expect(flow()?.view.name).toBe('created');
@@ -997,7 +999,11 @@ describe('TransactionFlowSheet', () => {
     expect(mockToasts.shown).toEqual([
       {
         when: 'afterSheetsClose',
-        message: { tone: 'success', text: 'Transaction removed', subject: 'transaction-delete:tx-9' },
+        message: {
+          tone: 'success',
+          text: expect.stringMatching(/^Transaction removed\. January( 2026)? totals updated\.$/),
+          subject: 'transaction-delete:tx-9',
+        },
       },
     ]);
   });
@@ -1062,7 +1068,7 @@ describe('TransactionFlowSheet', () => {
     expect(flow()).toMatchObject({ view: { name: 'details' }, check: 'done', saved: { amount: '30.00' } });
   });
 
-  it('says a record was saved outside the viewed period, and shows it on request', async () => {
+  it('says a record was saved outside the viewed period, and shows it in its own period on request', async () => {
     const { open, flow } = renderFlow();
     const september = { from: '2026-09-01T00:00:00.000Z', to: '2026-09-30T23:59:59.999Z' };
 
@@ -1072,10 +1078,10 @@ describe('TransactionFlowSheet', () => {
     fireEvent.press(screen.getByText('Save expense'));
     await act(async () => answerWrite({ data: createTransactionResponseDto({ id: 'tx-9' }) }));
 
-    expect(screen.getByText(/^Saved to Jan 5 — outside the period you’re viewing$/)).toBeTruthy();
-    fireEvent.press(screen.getByText('Show'));
+    expect(screen.getByText(/^Saved to Jan 5(, 2026)? — outside the period you’re viewing\.$/)).toBeTruthy();
+    fireEvent.press(screen.getByText('View transaction'));
 
-    expect(flow()).toBeNull();
+    expect(flow()).toMatchObject({ view: { name: 'details' }, saved: { id: 'tx-9' } });
     expect(routes()).toMatchObject([
       {
         name: ScreenNames.HOME_SCREEN,
@@ -1127,7 +1133,7 @@ describe('TransactionFlowSheet', () => {
 
     expect(flow()).toBeNull();
     expect(routeNames()).toEqual(HOME_ONLY);
-    expect(screen.queryByText('Transaction saved')).toBeNull();
+    expect(screen.queryByText('Expense saved')).toBeNull();
     expect(mockToasts.shown).toEqual([]);
   });
 
@@ -1569,9 +1575,10 @@ describe('TransactionFlowSheet', () => {
     expect(asked()).toEqual(['Delete transaction?']);
     expect(
       confirmation().getByText(
-        '-50.00 · Food · Zakhar. It will be removed from History, and the period’s totals, stats and limits will update.',
+        /^It will be removed from History, and January( 2026)? totals, stats and limits will update\. This can’t be undone\.$/,
       ),
     ).toBeTruthy();
+    expect(confirmation().getByText(/^-50\.00 · Zakhar · /)).toBeTruthy();
 
     answer('Cancel');
     expect(flow()).toMatchObject({ view: { name: 'edit' }, draft: { amount: '70' } });
@@ -1603,7 +1610,11 @@ describe('TransactionFlowSheet', () => {
     expect(mockToasts.shown).toEqual([
       {
         when: 'afterNavigation',
-        message: { tone: 'success', text: 'Transaction deleted', subject: 'transaction-delete:tx-1' },
+        message: {
+          tone: 'success',
+          text: expect.stringMatching(/^Transaction deleted\. January( 2026)? totals updated\.$/),
+          subject: 'transaction-delete:tx-1',
+        },
       },
     ]);
   });
@@ -1674,9 +1685,10 @@ describe('TransactionFlowSheet', () => {
 
     expect(
       confirmation().getByText(
-        '-2.75 · Food · Whole space. It will be removed from History, and the period’s totals, stats and limits will update.',
+        /^It will be removed from History, and January( 2026)? totals, stats and limits will update\. This can’t be undone\.$/,
       ),
     ).toBeTruthy();
+    expect(confirmation().getByText(/^-2\.75 · Whole space · /)).toBeTruthy();
   });
 
   it('drops a delete confirmation whose record was found deleted meanwhile, and closes at once', async () => {
@@ -1739,8 +1751,8 @@ describe('TransactionFlowSheet', () => {
     openDetails();
     await settle();
 
-    expect(screen.getByText('Starting balance')).toBeTruthy();
-    expect(screen.getByText('Set when the wallet was created')).toBeTruthy();
+    expect(screen.getByText('Starting balance · not counted')).toBeTruthy();
+    expect(screen.getByText('Kept for history. Not part of income, expenses, monthly net or limits.')).toBeTruthy();
     expect(screen.queryByText('Edit')).toBeNull();
     expect(screen.queryByText('Delete transaction')).toBeNull();
   });
@@ -2035,7 +2047,7 @@ describe('TransactionFlowSheet', () => {
     swipeBack();
 
     expect(routeNames()).toEqual(HOME_ONLY);
-    expect(screen.getByText('Transaction saved')).toBeTruthy();
+    expect(screen.getByText('Expense saved')).toBeTruthy();
     expect(flow()?.autoCloseAt).toBe(Date.now() + CREATED_AUTO_CLOSE_MS);
   });
 
@@ -2424,6 +2436,84 @@ describe('TransactionFlowSheet', () => {
         assignment: { kind: 'unassigned' },
       });
       expect(screen.getByText('Save income')).toBeDisabled();
+    });
+  });
+
+  describe('details', () => {
+    it('shows whom it is assigned to and who created it, apart', async () => {
+      stored = transactionDto({
+        author: { user_id: 1, name: 'Anna', status: 'member', source: 'recorded' },
+        assignment: { kind: 'member', user_id: 31, name: 'Lena', status: 'member' },
+      });
+      const { openDetails } = renderFlow();
+
+      openDetails();
+      await settle();
+
+      expect(screen.getByText('Assigned to')).toBeTruthy();
+      expect(screen.getByText('Lena')).toBeTruthy();
+      expect(screen.getByText('Created by')).toBeTruthy();
+      expect(screen.getByText('You')).toBeTruthy();
+    });
+
+    it('never presents an imported author as the one who entered the record', async () => {
+      stored = transactionDto({
+        author: { user_id: 7, name: 'Zakhar', status: 'member', source: 'imported' },
+        assignment: { kind: 'space', user_id: null, name: null, status: null },
+      });
+      const { openDetails } = renderFlow();
+
+      openDetails();
+      await settle();
+
+      expect(screen.getByText('Imported from wallet history')).toBeTruthy();
+      expect(screen.getByText('Filled in as Zakhar during the move from wallets')).toBeTruthy();
+      expect(
+        screen.getByText('Moved from wallets when they were retired. Amount, date, category and note are unchanged.'),
+      ).toBeTruthy();
+      expect(screen.getByText('Whole space')).toBeTruthy();
+      expect(screen.getByText('Counts once in the space total')).toBeTruthy();
+    });
+
+    it('names a former member and a deleted account by what they are now', async () => {
+      stored = transactionDto({
+        author: { user_id: null, name: null, status: 'deleted', source: 'recorded' },
+        assignment: { kind: 'member', user_id: 31, name: 'Lena', status: 'former_member' },
+      });
+      const { openDetails } = renderFlow();
+
+      openDetails();
+      await settle();
+
+      expect(screen.getByText('Lena · Former member')).toBeTruthy();
+      expect(screen.getByText('Deleted member')).toBeTruthy();
+    });
+
+    it('stays on a record an edit took out of the filtered list, and says why it left', async () => {
+      membersResponse = [memberRow(1, 'Anna'), memberRow(31, 'Lena')];
+      stored = transactionDto({ assignment: { kind: 'member', user_id: 31, name: 'Lena', status: 'member' } });
+      const { store, flow } = renderFlow();
+      const selection = {
+        from: '2026-01-01T00:00:00.000Z',
+        to: '2026-01-31T23:59:59.999Z',
+        assignment: 'member:31' as const,
+      };
+
+      act(() => {
+        store.dispatch(openTransactionDetails({ spaceId: 1, transaction: mapTransaction(stored), selection }));
+      });
+      await settle();
+      fireEvent.press(screen.getByText('Edit'));
+      await settle();
+      fireEvent.press(screen.getByRole('button', { name: 'Whole space' }));
+      fireEvent.press(screen.getByText('Save changes'));
+      stored = transactionDto({ version: 2, assignment: { kind: 'space', user_id: null, name: null, status: null } });
+      await act(async () => answerWrite({ data: { transaction: stored } }));
+      await settle();
+
+      expect(flow()).toMatchObject({ view: { name: 'details' }, notice: 'movedOut', saved: { version: 2 } });
+      expect(screen.getByText('Now assigned to Whole space, so it left this filtered list.')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Edit' })).toBeEnabled();
     });
   });
 });

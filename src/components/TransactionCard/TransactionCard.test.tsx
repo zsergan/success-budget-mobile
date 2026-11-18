@@ -5,7 +5,10 @@ import { mapTransaction } from '@api/models';
 import { createAppStore } from '@redux/Store';
 import { transactionDto } from '@redux/state/transaction/fixtures';
 import { deleteStarted } from '@redux/state/transactionFlow/slice';
-import { TransactionKind, TransactionType } from '@shared/enums';
+import { withProfile } from '@redux/state/profile/fixtures';
+import { spaceApi } from '@redux/state/space/api';
+import { activateSpace } from '@redux/state/space/thunks';
+import { SpaceType, TransactionKind, TransactionType } from '@shared/enums';
 import TransactionCard from './TransactionCard';
 
 jest.mock('@api/instance', () => ({
@@ -28,8 +31,31 @@ jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
   });
 });
 
-const renderCard = (overrides = {}) => {
+const renderCard = (overrides = {}, spaceType?: SpaceType) => {
   const store = createAppStore();
+  if (spaceType) {
+    withProfile(store, 7);
+    store.dispatch(
+      spaceApi.util.upsertQueryEntries([
+        {
+          endpointName: 'getSpaces',
+          arg: undefined,
+          value: [
+            {
+              id: 1,
+              name: 'Space',
+              type: spaceType,
+              currency: { id: 1, code: 'USD', name: 'US Dollar' },
+              role: 'owner',
+              member_count: 1,
+              created_at: '2026-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+      ]),
+    );
+    store.dispatch(activateSpace(1));
+  }
   const transaction = mapTransaction(transactionDto({ amount: '12.00', ...overrides }));
   const onPress = jest.fn();
   const onDelete = jest.fn();
@@ -96,5 +122,31 @@ describe('TransactionCard', () => {
     renderCard({ assignment });
 
     expect(screen.getByText(label)).toBeTruthy();
+  });
+
+  it('leaves the ordinary You unsaid in a personal space, and names everything else', () => {
+    renderCard({ description: 'Market', timestamp: new Date(2026, 0, 5, 18, 20).toISOString() }, SpaceType.PERSONAL);
+
+    expect(screen.queryByText('You')).toBeNull();
+    expect(screen.getByText(' · 18:20')).toBeTruthy();
+  });
+
+  it('names the whole space in a personal space, and the user as You in a shared one', () => {
+    renderCard({ assignment: { kind: 'space', user_id: null, name: null, status: null } }, SpaceType.PERSONAL);
+    expect(screen.getByText('Whole space')).toBeTruthy();
+
+    screen.unmount();
+    renderCard({}, SpaceType.GROUP);
+    expect(screen.getByText('You')).toBeTruthy();
+  });
+
+  it('marks a record moved from wallets, and a starting balance as archived without an assignee', () => {
+    renderCard({ author: { user_id: 7, name: 'Zakhar', status: 'member', source: 'imported' } });
+    expect(screen.getByText('Imported')).toBeTruthy();
+
+    screen.unmount();
+    renderCard({ kind: TransactionKind.INITIAL_BALANCE, transaction_type: TransactionType.INCOME, description: null });
+    expect(screen.getByText('Archived')).toBeTruthy();
+    expect(screen.queryByText('Zakhar')).toBeNull();
   });
 });
