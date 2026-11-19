@@ -55,7 +55,7 @@ const TransactionCategoriesScreen = ({ navigation, route }: Props) => {
   // A second tap, or one landing as the screen leaves, must not act on the form below.
   const getIdleFlow = useCallback(() => {
     const current = getFlow();
-    return current && !current.isSaving && !current.away && navigation.isFocused() ? current : null;
+    return current && !current.isSaving && navigation.isFocused() ? current : null;
   }, [getFlow, navigation]);
 
   const delay = usePickerDelay(flow?.draftId);

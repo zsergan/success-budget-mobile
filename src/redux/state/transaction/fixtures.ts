@@ -1,4 +1,4 @@
-import type { CreateTransactionResponse, Transaction, TransactionFeedResponse } from '@api/dto';
+import type { Transaction, TransactionFeedResponse, TransactionWriteResponse } from '@api/dto';
 import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
 
 const STAMPS = { created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-01T00:00:00.000Z' };
@@ -11,7 +11,6 @@ export const transactionDto = (overrides: Partial<Transaction> = {}): Transactio
   timestamp: '2026-01-05T10:00:00.000Z',
   description: null,
   version: 1,
-  wallet: { id: 1, wallet_name: 'Cash', design: AppColor.SLATE, ...STAMPS },
   category: {
     id: 1,
     name: 'Food',
@@ -22,13 +21,13 @@ export const transactionDto = (overrides: Partial<Transaction> = {}): Transactio
     is_archived: false,
     ...STAMPS,
   },
+  author: { user_id: 7, name: 'Zakhar', status: 'member', source: 'recorded' },
+  assignment: { kind: 'member', user_id: 7, name: 'Zakhar', status: 'member' },
   ...overrides,
 });
 
-export const createTransactionResponseDto = (overrides: Partial<Transaction> = {}): CreateTransactionResponse => ({
+export const createTransactionResponseDto = (overrides: Partial<Transaction> = {}): TransactionWriteResponse => ({
   transaction: transactionDto(overrides),
-  wallet: { id: 1, wallet_name: 'Cash', design: AppColor.SLATE, ...STAMPS, balance: 90 },
-  previous_balance: 100,
 });
 
 export const feedDto = (

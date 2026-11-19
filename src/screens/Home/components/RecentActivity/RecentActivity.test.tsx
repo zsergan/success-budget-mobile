@@ -6,8 +6,6 @@ import { mapTransactionFeed } from '@api/models';
 import { createAppStore } from '@redux/Store';
 import { feedDto, transactionDto } from '@redux/state/transaction/fixtures';
 import { toLocalDateKey } from '@shared/utils';
-import type { MainTabNavigationProp } from '@shared/types';
-import type { ScreenNames } from '@shared/enums';
 import RecentActivity from './RecentActivity';
 
 jest.mock('@api/instance', () => ({
@@ -28,12 +26,12 @@ const renderActivity = (props: Partial<ComponentProps<typeof RecentActivity>>) =
   render(
     <Provider store={createAppStore()}>
       <RecentActivity
-        navigation={{ navigate: jest.fn() } as unknown as MainTabNavigationProp<ScreenNames.HOME_TAB>}
         currencyCode="USD"
-        hasWallets
+        isHidden={false}
         isLoading={false}
         hasError={false}
         onRetry={jest.fn()}
+        onViewAll={jest.fn()}
         onPressTransaction={jest.fn()}
         onDeleteTransaction={jest.fn()}
         {...props}
@@ -55,15 +53,29 @@ describe('RecentActivity', () => {
     expect(screen.getByText('-70.00 USD')).toBeTruthy();
   });
 
-  it('keeps the first-run state for an empty history', () => {
+  it('says the month has nothing in it', () => {
     renderActivity({ recent: mapTransactionFeed(feedDto([])) });
 
-    expect(screen.getByText('Nothing here yet')).toBeTruthy();
+    expect(screen.getByText('No transactions this month.')).toBeTruthy();
+  });
+
+  it('hides the amounts and day totals when amounts are hidden', () => {
+    renderActivity({
+      isHidden: true,
+      recent: mapTransactionFeed(
+        feedDto([transactionDto({ timestamp: today(9) })], {
+          day_totals: [{ date: toLocalDateKey(new Date()), net: '-10.00' }],
+        }),
+      ),
+    });
+
+    expect(screen.getByText('-••••')).toBeTruthy();
+    expect(screen.queryByText('-10.00 USD')).toBeNull();
   });
 
   it('shows a failed load as a failure, never as loading', () => {
     renderActivity({ hasError: true });
 
-    expect(screen.getByText("Couldn't load recent activity")).toBeTruthy();
+    expect(screen.getByText("Couldn't load activity")).toBeTruthy();
   });
 });

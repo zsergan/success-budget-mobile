@@ -8,6 +8,7 @@ import type { AppDispatch, AppStore, RootState } from '@redux/Store';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import type { RecentTransactionsArg } from '@redux/state/transaction/api';
 import { recentArg } from '@redux/state/transaction/api';
+import { getCurrentMonthRange } from '@shared/utils';
 
 export const useAppDispatch = useDispatch<AppDispatch>;
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
@@ -32,9 +33,10 @@ export const useSpaceArg = (): SpaceArg | typeof skipToken => {
   return spaceId === null ? skipToken : { spaceId };
 };
 
-// Home's latest records, read by Home and asked for early by the session data: one cache entry for both.
-export const useRecentArg = (): RecentTransactionsArg | typeof skipToken => {
+// Home's activity for a month (the current one unless given), read by Home and asked for early by the session data:
+// one cache entry for both.
+export const useRecentArg = (range?: { from: Date; to: Date }): RecentTransactionsArg | typeof skipToken => {
   const spaceId = useAppSelector(selectCurrentSpaceId);
 
-  return spaceId === null ? skipToken : recentArg(spaceId);
+  return spaceId === null ? skipToken : recentArg(spaceId, range ?? getCurrentMonthRange());
 };

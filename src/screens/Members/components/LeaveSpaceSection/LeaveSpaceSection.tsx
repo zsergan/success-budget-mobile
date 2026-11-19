@@ -31,8 +31,8 @@ const LeaveSpaceSection = ({ isOwner, canLeave, onPress }: Props) => {
         {!canLeave
           ? "Couldn't find your own membership row -- pull to refresh before leaving."
           : isOwner
-            ? 'As the owner you can remove anyone but yourself. Leaving hands the space to the next member.'
-            : 'Only the owner can remove other members. Leaving takes you out of this space -- your own wallets stay untouched.'}
+            ? 'As the owner you can remove anyone but yourself. Leaving hands the space to the next member. What you added or what’s assigned to you stays in its history, labelled Former member.'
+            : 'Only the owner can remove other members. Leaving takes you out of this space. The space and its history stay with the other members; what you added or what’s assigned to you remains, labelled Former member.'}
       </Text>
     </View>
   );

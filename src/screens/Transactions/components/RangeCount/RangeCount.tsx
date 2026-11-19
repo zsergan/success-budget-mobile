@@ -6,6 +6,8 @@ import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { periodArg, useGetTransactionsCountQuery } from '@redux/state/transaction/api';
+import type { HistoryFilters } from '@screens/Transactions/hooks/useTransactionsData';
+import { historyFilterArg } from '@screens/Transactions/hooks/useTransactionsData';
 import { isSearchTooLong } from '@screens/Transactions/search';
 import type { DateRange } from '@shared/utils';
 
@@ -13,22 +15,25 @@ import createStyles from './style';
 
 interface Props {
   range: DateRange;
-  // The search shown in the history, so the count matches the rows it would list.
+  // The search and filters shown in the history, so the count matches the rows it would list.
   q?: string;
+  filters?: HistoryFilters;
 }
 
 const countLabel = (count: number) =>
   count === 0 ? 'No transactions' : `${count} transaction${count === 1 ? '' : 's'}`;
 
 // The records in a drafted range, counted by the server; currentData never shows the count of a previous range.
-const RangeCount = ({ range, q }: Props) => {
+const RangeCount = ({ range, q, filters = {} }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const spaceId = useAppSelector(selectCurrentSpaceId);
   const text = q?.trim();
   const isTooLong = text !== undefined && isSearchTooLong(text);
   const query = useGetTransactionsCountQuery(
-    spaceId === null || isTooLong ? skipToken : { ...periodArg(spaceId, range), ...(text && { q: text }) },
+    spaceId === null || isTooLong
+      ? skipToken
+      : { ...periodArg(spaceId, range), ...historyFilterArg(filters), ...(text && { q: text }) },
   );
   const { isLoading, hasError } = getLoadState(query);
 

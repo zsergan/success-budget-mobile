@@ -9,8 +9,8 @@ and is stored under `THEME_PREFERENCE_KEY`. Startup and native surfaces:
 
 - `src/shared/theme.ts` is the only palette. Both schemes implement one
   `ColorTheme`: semantic `colors`, `elevation` presets (card, modal, segment,
-  fab, accentGlow, toast), and the `wallets` and `categories` appearance of each
-  `AppColor`. Add a token there when a role needs its own value in either
+  fab, accentGlow, toast), the `categories` appearance of each `AppColor`, and
+  the `gradientCard` the Total limit is drawn on. Add a token there when a role needs its own value in either
   scheme; never a literal in a screen.
 - The toast is the `elevated` surface with a `line` outline and the light
   `toast` shadow, so it stays apart from a sheet in both schemes; its type

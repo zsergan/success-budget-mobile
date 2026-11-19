@@ -30,7 +30,7 @@ interface SentRequest {
 }
 
 const lunch: CreateTransactionRequest = {
-  wallet_id: 1,
+  assignment: { kind: 'space' },
   category_id: 1,
   transaction_type: TransactionType.EXPENSE,
   amount: '10.00',
@@ -59,7 +59,7 @@ const sent = () =>
 const posts = () => sent().filter(({ method }) => method === 'POST');
 
 const stored = async (userId = 1) =>
-  JSON.parse((await AsyncStorage.getItem(`pendingTransactionWrites.v1.${userId}`)) ?? '[]');
+  JSON.parse((await AsyncStorage.getItem(`pendingTransactionWrites.v2.${userId}`)) ?? '{"writes":[]}').writes;
 
 const signIn = (userId = 1) => {
   const store = createAppStore();
@@ -70,8 +70,11 @@ const signIn = (userId = 1) => {
   return store;
 };
 
-const submit = (store: ReturnType<typeof signIn>, request = create, memory: OperationMemory | null = null) =>
-  store.dispatch(submitTransactionRequest(request, memory));
+const submit = (
+  store: ReturnType<typeof signIn>,
+  request: TransactionRequest = create,
+  memory: OperationMemory | null = null,
+) => store.dispatch(submitTransactionRequest(request, memory));
 
 const results = async (store: ReturnType<typeof signIn>) =>
   (await store.dispatch(resumePendingWrites())).map(({ result }) => result);
@@ -292,5 +295,362 @@ describe('pending writes', () => {
       { kind: 'refused', error: expect.objectContaining({ code: 'CATEGORY_ARCHIVED' }) },
     ]);
     expect(await stored()).toEqual([]);
+  });
+});
+
+describe('a record with an unsettled edit or delete', () => {
+  const edit = (transactionId = 'tx-1', version = 3, amount = '20.00'): TransactionRequest => ({
+    type: 'update',
+    spaceId: 1,
+    transactionId,
+    version,
+    data: { amount },
+  });
+  const remove: TransactionRequest = { type: 'delete', spaceId: 1, transactionId: 'tx-1', version: 3 };
+  const mutations = () => sent().filter(({ method }) => method !== 'GET');
+  const edited = answers({ transaction: transactionDto({ version: 4 }) });
+
+  // An edit that got no answer, read back after a restart.
+  const leftUnsettled = async (request = edit()) => {
+    mockedRequest.mockImplementationOnce(noAnswer);
+    await submit(signIn(), request);
+
+    return restart();
+  };
+
+  it('sends nothing new while its replay is in flight, and keeps it pending when that gets no answer', async () => {
+    const store = await leftUnsettled();
+    let failReplay!: (error: unknown) => void;
+    let replaySent!: () => void;
+    const isReplaySent = new Promise<void>((resolve) => (replaySent = resolve));
+    mockedRequest.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          failReplay = reject;
+          replaySent();
+        }),
+    );
+
+    const replay = store.dispatch(resumePendingWrites());
+    await isReplaySent;
+    const newEdit = submit(store, edit('tx-1', 3));
+    const newDelete = submit(store, remove);
+    failReplay(new Error('timeout of 20000ms exceeded'));
+    await replay;
+
+    expect((await newEdit).outcome).toMatchObject({ status: 'failed', failure: { kind: 'blocked' } });
+    expect((await newDelete).outcome).toMatchObject({ status: 'failed', failure: { kind: 'blocked' } });
+    expect(mutations()).toEqual([
+      expect.objectContaining({ method: 'PATCH', headers: expect.objectContaining({ 'Idempotency-Key': 'key-1' }) }),
+    ]);
+    expect(await stored()).toMatchObject([{ status: 'unknown', operation: { idempotencyKey: 'key-1' } }]);
+  });
+
+  it('waits for the stored writes to be read back before anything is sent for the record', async () => {
+    mockedRequest.mockImplementationOnce(noAnswer);
+    await submit(signIn(), edit());
+    mockedRequest.mockClear();
+    const store = signIn();
+    mockedRequest.mockImplementationOnce(noAnswer);
+
+    const restoring = store.dispatch(restorePendingWrites(1));
+    const { outcome } = await submit(store, edit('tx-1', 3));
+    await restoring;
+
+    expect(outcome).toMatchObject({ status: 'failed', failure: { kind: 'blocked' } });
+    expect(mutations()).toEqual([
+      expect.objectContaining({ headers: expect.objectContaining({ 'Idempotency-Key': 'key-1' }) }),
+    ]);
+  });
+
+  it('lets another record be edited at once', async () => {
+    const store = await leftUnsettled();
+    mockedRequest.mockImplementationOnce(edited);
+
+    expect((await submit(store, edit('tx-2', 1))).outcome).toMatchObject({ status: 'succeeded' });
+    expect(mutations()).toEqual([expect.objectContaining({ method: 'PATCH', url: '/spaces/1/transactions/tx-2' })]);
+    expect(await stored()).toMatchObject([{ status: 'unknown', operation: { transactionId: 'tx-1' } }]);
+  });
+
+  it('settles the earlier edit first, then sends the new one at its version for the server to compare', async () => {
+    const store = await leftUnsettled();
+    mockedRequest.mockImplementationOnce(edited).mockImplementationOnce(refusal(409, 'TRANSACTION_VERSION_CONFLICT'));
+
+    const { outcome } = await submit(store, edit('tx-1', 3, '30.00'));
+
+    expect(outcome).toMatchObject({ status: 'failed', failure: { kind: 'conflict' } });
+    expect(mutations().map(({ headers }) => headers?.['Idempotency-Key'])).toEqual(['key-1', 'key-2']);
+    expect(await stored()).toEqual([]);
+  });
+
+  it('finds the record gone when the earlier delete went through', async () => {
+    const store = await leftUnsettled(remove);
+    mockedRequest.mockImplementationOnce(answers(true)).mockImplementationOnce(refusal(404, 'TRANSACTION_NOT_FOUND'));
+
+    const { outcome } = await submit(store, edit('tx-1', 3));
+
+    expect(outcome).toMatchObject({ status: 'failed', failure: { kind: 'notFound' } });
+    expect(mutations().map(({ method }) => method)).toEqual(['DELETE', 'PATCH']);
+  });
+
+  it('keeps one account’s unsettled edit from another account', async () => {
+    await leftUnsettled();
+    const other = await restart(2);
+    mockedRequest.mockImplementationOnce(edited);
+
+    expect((await submit(other, edit('tx-1', 3))).outcome).toMatchObject({ status: 'succeeded' });
+    expect(mutations()).toHaveLength(1);
+    expect(await stored(1)).toHaveLength(1);
+  });
+});
+
+describe('writes an older build left', () => {
+  const legacyKey = (userId = 1) => `pendingTransactionWrites.v1.${userId}`;
+  const legacyLunch = { ...sentLunch, assignment: undefined, wallet_id: 3 };
+  const convertedLunch = { ...sentLunch, assignment: { kind: 'space' } };
+  const leaveLegacy = (operations: object[], userId = 1) =>
+    AsyncStorage.setItem(
+      legacyKey(userId),
+      JSON.stringify(operations.map((operation) => ({ status: 'unknown', operation }))),
+    );
+  const legacyCreate = { type: 'create', spaceId: 1, idempotencyKey: 'key-1', firstSentAt: 0, data: legacyLunch };
+  const statuses = (store: ReturnType<typeof signIn>) =>
+    store.getState().pendingWrite.writes.map(({ status, found }) => ({ status, found: found?.id }));
+
+  it.each([
+    ['applied', operation('applied'), [{ status: 'found', found: 'tx-1' }]],
+    ['deleted since', operation('deleted'), []],
+    ['never applied', refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND'), [{ status: 'retry', found: undefined }]],
+    ['not known yet', noAnswer, [{ status: 'checking', found: undefined }]],
+    ['in a space the user lost', refusal(403, 'FORBIDDEN_SPACE'), [{ status: 'accessLost', found: undefined }]],
+  ])('looks a create up first and offers what it found: %s', async (_name, answer, expected) => {
+    await leaveLegacy([legacyCreate]);
+    const store = await restart();
+    mockedRequest.mockImplementationOnce(answer);
+
+    await store.dispatch(resumePendingWrites());
+
+    expect(sent()).toEqual([
+      expect.objectContaining({ method: 'GET', url: '/spaces/1/transactions/operations/key-1' }),
+    ]);
+    expect(statuses(store)).toEqual(expected);
+    expect(await stored()).toHaveLength(expected.length);
+  });
+
+  it('keeps checking across a restart, sends nothing for the user to decide, and keeps the lost space', async () => {
+    await leaveLegacy([legacyCreate]);
+    let store = await restart();
+    mockedRequest.mockImplementationOnce(noAnswer);
+    await store.dispatch(resumePendingWrites());
+
+    store = await restart();
+    expect(statuses(store)).toEqual([{ status: 'checking', found: undefined }]);
+    mockedRequest.mockImplementationOnce(refusal(403, 'FORBIDDEN_SPACE'));
+    await store.dispatch(resumePendingWrites());
+
+    store = await restart();
+    await store.dispatch(resumePendingWrites());
+
+    expect(posts()).toEqual([]);
+    expect(store.getState().pendingWrite.writes).toMatchObject([{ status: 'accessLost', operation: { spaceId: 1 } }]);
+  });
+
+  it('sends a restored create again under its original operation, also with a changed category', async () => {
+    await leaveLegacy([legacyCreate]);
+    const store = await restart();
+    mockedRequest.mockImplementationOnce(refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND'));
+    await store.dispatch(resumePendingWrites());
+
+    mockedRequest.mockImplementationOnce(answers(createTransactionResponseDto()));
+    const request: TransactionRequest = {
+      type: 'create',
+      spaceId: 1,
+      data: { ...lunch, category_id: 2 },
+      operationId: 'key-1',
+    };
+    const { outcome } = await submit(store, request);
+
+    expect(outcome).toMatchObject({ status: 'succeeded' });
+    expect(posts()).toEqual([
+      expect.objectContaining({
+        url: '/spaces/1/transactions',
+        data: { ...lunch, category_id: 2, client_operation_id: 'key-1' },
+        headers: { 'Idempotency-Key': 'key-1' },
+      }),
+    ]);
+    expect(await stored()).toEqual([]);
+  });
+
+  describe('a restored create sent again', () => {
+    const resend = (store: ReturnType<typeof signIn>, categoryId = 1) =>
+      submit(store, { type: 'create', spaceId: 1, data: { ...lunch, category_id: categoryId }, operationId: 'key-1' });
+
+    const readyToRetry = async () => {
+      await leaveLegacy([legacyCreate]);
+      const store = await restart();
+      mockedRequest.mockImplementationOnce(refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND'));
+      await store.dispatch(resumePendingWrites());
+
+      return store;
+    };
+
+    it.each([
+      [400, 'CATEGORY_ARCHIVED'],
+      [403, 'FORBIDDEN_CATEGORY'],
+    ])('keeps its draft to retry when refused with %s, and saves the corrected one once', async (status, code) => {
+      let store = await readyToRetry();
+      mockedRequest
+        .mockImplementationOnce(refusal(status, code))
+        .mockImplementationOnce(refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND'));
+
+      const { outcome } = await resend(store);
+
+      expect(outcome).toMatchObject({ status: 'failed', failure: { kind: 'validation' } });
+      expect(sent().map(({ method }) => method)).toEqual(['GET', 'POST', 'GET']);
+      expect(await stored()).toMatchObject([
+        { status: 'retry', operation: { idempotencyKey: 'key-1', recovered: true, data: { category_id: 1 } } },
+      ]);
+
+      store = await restart();
+      expect(statuses(store)).toEqual([{ status: 'retry', found: undefined }]);
+      mockedRequest.mockImplementationOnce(answers(createTransactionResponseDto()));
+
+      expect((await resend(store, 2)).outcome).toMatchObject({ status: 'succeeded' });
+      expect(sent()).toEqual([
+        expect.objectContaining({
+          method: 'POST',
+          data: { ...convertedLunch, category_id: 2 },
+          headers: { 'Idempotency-Key': 'key-1' },
+        }),
+      ]);
+      expect(await stored()).toEqual([]);
+    });
+
+    it.each([
+      ['a rate limit', refusal(429, 'TOO_MANY_REQUESTS')],
+      ['no answer', noAnswer],
+      ['a server failure', refusal(503, 'SERVICE_UNAVAILABLE')],
+    ])('keeps it after %s and looks it up before anything is sent again', async (_name, answer) => {
+      let store = await readyToRetry();
+      mockedRequest.mockImplementationOnce(answer);
+
+      expect((await resend(store)).outcome).toMatchObject({ status: 'failed', failure: { kind: 'uncertain' } });
+      expect(await stored()).toMatchObject([{ status: 'checking', operation: { idempotencyKey: 'key-1' } }]);
+
+      store = await restart();
+      mockedRequest.mockImplementationOnce(operation('applied'));
+      await store.dispatch(resumePendingWrites());
+
+      expect(sent()).toEqual([
+        expect.objectContaining({ method: 'GET', url: '/spaces/1/transactions/operations/key-1' }),
+      ]);
+      expect(statuses(store)).toEqual([{ status: 'found', found: 'tx-1' }]);
+    });
+
+    it('looks it up first when saved again in the same session after no answer', async () => {
+      const store = await readyToRetry();
+      mockedRequest.mockImplementationOnce(noAnswer);
+      await resend(store);
+      mockedRequest.mockClear();
+      mockedRequest
+        .mockImplementationOnce(refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND'))
+        .mockImplementationOnce(answers(createTransactionResponseDto()));
+
+      expect((await resend(store)).outcome).toMatchObject({ status: 'succeeded' });
+      expect(sent().map(({ method }) => method)).toEqual(['GET', 'POST']);
+      expect(await stored()).toEqual([]);
+    });
+
+    it('shows the record when a refused resend had already applied, and adds nothing', async () => {
+      const store = await readyToRetry();
+      mockedRequest
+        .mockImplementationOnce(refusal(400, 'CATEGORY_ARCHIVED'))
+        .mockImplementationOnce(operation('applied'));
+
+      expect((await resend(store)).outcome).toMatchObject({ status: 'found', transaction: { id: 'tx-1' } });
+      expect(posts()).toHaveLength(1);
+      expect(await stored()).toEqual([]);
+    });
+
+    it('keeps it with its space when that space is lost', async () => {
+      const store = await readyToRetry();
+      mockedRequest
+        .mockImplementationOnce(refusal(403, 'FORBIDDEN_SPACE'))
+        .mockImplementationOnce(refusal(403, 'FORBIDDEN_SPACE'));
+
+      await resend(store);
+
+      expect(await stored()).toMatchObject([{ status: 'accessLost', operation: { spaceId: 1 } }]);
+    });
+
+    it('is not sent when its corrected body cannot be stored first', async () => {
+      const store = await readyToRetry();
+      jest.spyOn(AsyncStorage, 'setItem').mockRejectedValueOnce(new Error('disk full'));
+
+      expect((await resend(store, 2)).outcome).toMatchObject({ status: 'failed', failure: { kind: 'notSent' } });
+      expect(posts()).toEqual([]);
+      expect(statuses(store)).toEqual([{ status: 'retry', found: undefined }]);
+    });
+  });
+
+  it('looks a restored create up when its key went with another body, and never adds it twice', async () => {
+    const store = signIn();
+    mockedRequest
+      .mockImplementationOnce(refusal(409, 'IDEMPOTENCY_KEY_REUSED'))
+      .mockImplementationOnce(operation('applied'));
+
+    const { outcome } = await submit(store, { ...create, operationId: 'key-1' });
+
+    expect(outcome).toMatchObject({ status: 'found', transaction: { id: 'tx-1' } });
+    expect(posts()).toHaveLength(1);
+  });
+
+  it('sends an edit and a delete again through v2 at their versions, with their own keys and no wallet', async () => {
+    await leaveLegacy([
+      {
+        type: 'update',
+        spaceId: 1,
+        transactionId: 'tx-1',
+        version: 3,
+        idempotencyKey: 'key-2',
+        firstSentAt: 0,
+        data: { wallet_id: 2, amount: '20.00' },
+      },
+      { type: 'delete', spaceId: 1, transactionId: 'tx-2', version: 1, idempotencyKey: 'key-3', firstSentAt: 0 },
+    ]);
+    const store = await restart();
+    mockedRequest.mockImplementation((config: SentRequest) =>
+      config.method === 'PATCH' ? answers({ transaction: transactionDto({ version: 4 }) })() : answers(true)(),
+    );
+
+    expect(await results(store)).toMatchObject([{ kind: 'done' }, { kind: 'done' }]);
+    expect(sent()).toEqual([
+      {
+        method: 'PATCH',
+        url: '/spaces/1/transactions/tx-1',
+        data: { amount: '20.00' },
+        headers: { 'Idempotency-Key': 'key-2', 'If-Match': '"3"' },
+      },
+      {
+        method: 'DELETE',
+        url: '/spaces/1/transactions/tx-2',
+        data: undefined,
+        headers: { 'Idempotency-Key': 'key-3', 'If-Match': '"1"' },
+      },
+    ]);
+  });
+
+  it('leaves another account’s writes in their old storage for that account', async () => {
+    await leaveLegacy([legacyCreate], 1);
+
+    const other = await restart(2);
+    expect(other.getState().pendingWrite.writes).toEqual([]);
+    expect(await AsyncStorage.getItem(legacyKey(1))).not.toBeNull();
+
+    const owner = await restart(1);
+    expect(owner.getState().pendingWrite.writes).toMatchObject([
+      { status: 'checking', operation: { data: convertedLunch } },
+    ]);
+    expect(await AsyncStorage.getItem(legacyKey(1))).toBeNull();
   });
 });

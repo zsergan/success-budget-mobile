@@ -61,8 +61,8 @@ const TYPE_LOOK = {
 } as const;
 
 const countLabel = (count: number, mode: BreakdownMode) =>
-  mode === 'wallet'
-    ? `${count} ${count === 1 ? 'wallet' : 'wallets'}`
+  mode === 'assignment'
+    ? `${count} ${count === 1 ? 'assignment' : 'assignments'}`
     : `${count} ${count === 1 ? 'category' : 'categories'}`;
 
 interface Props {
@@ -72,6 +72,8 @@ interface Props {
   currency: string;
   type: TransactionType;
   mode: BreakdownMode;
+  // The signed-in user, named "You" among the people.
+  selfId?: number;
   selectedKey: string | null;
   onSelect: (key: string | null) => void;
   // Fires for any touch that starts on the donut, so the screen can tell it from a tap outside.
@@ -85,6 +87,7 @@ const DonutChart = ({
   currency,
   type,
   mode,
+  selfId,
   selectedKey,
   onSelect,
   onTouchInside,
@@ -107,7 +110,7 @@ const DonutChart = ({
   const center = !selected
     ? { label: look.label, amount: totalAmount, sub: countLabel(sourceCount, mode) }
     : {
-        label: getBreakdownAppearance(selected, colorTheme).name,
+        label: getBreakdownAppearance(selected, colorTheme, selfId).name,
         amount: selected.amount,
         sub: `${selected.percent.toFixed(1)}%`,
       };
@@ -151,7 +154,7 @@ const DonutChart = ({
                 cy={CENTER}
                 r={RADIUS}
                 fill="none"
-                stroke={getBreakdownAppearance(group, colorTheme).color}
+                stroke={getBreakdownAppearance(group, colorTheme, selfId).color}
                 strokeWidth={isSelected ? SELECTED_STROKE : STROKE}
                 strokeDasharray={[segment.visibleLength, CIRCUMFERENCE - segment.visibleLength]}
                 strokeDashoffset={-segment.start}

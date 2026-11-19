@@ -26,7 +26,7 @@ const request: TransactionRequest & { type: 'create' } = {
   type: 'create',
   spaceId: 1,
   data: {
-    wallet_id: 1,
+    assignment: { kind: 'space' },
     category_id: 1,
     transaction_type: TransactionType.EXPENSE,
     amount: '10',

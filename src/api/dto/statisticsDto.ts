@@ -1,5 +1,6 @@
 import type { AppColor, TransactionType } from '@shared/enums';
 import type { CategoryIconApi } from './categoryDto';
+import type { PersonStatus } from './transactionDto';
 
 export type StatisticsPeriodType = 'week' | 'month' | 'year' | 'custom';
 
@@ -106,37 +107,37 @@ export interface CategoryBreakdownItem extends BreakdownShare {
   opens_history: true;
 }
 
-export interface WalletBreakdownItem extends BreakdownShare {
-  kind: 'wallet';
+// One group per assigned user (former members too), one for the whole space, one for nobody and one for every deleted
+// account; `key` is the feed's `assignment` value.
+export interface AssignmentBreakdownItem extends BreakdownShare {
+  kind: 'member' | 'space' | 'unassigned' | 'deleted_member';
   key: string;
-  id: number;
-  name: string;
-  icon: null;
-  color: AppColor;
-  is_archived: false;
+  // Member only.
+  user_id: number | null;
+  name: string | null;
+  status: Exclude<PersonStatus, 'deleted'> | null;
   opens_history: true;
 }
 
-// Service groups are named and colored by the client and open no history.
-interface ServiceBreakdownItem extends BreakdownShare {
+// The small groups folded together; named by the client, it opens no history of its own.
+export interface OtherBreakdownItem<Child> extends BreakdownShare {
+  kind: 'other';
+  key: 'other';
   id: null;
   name: null;
   icon: null;
   color: null;
   is_archived: false;
   opens_history: false;
+  children: Child[];
 }
 
-export interface DeletedWalletsBreakdownItem extends ServiceBreakdownItem {
-  kind: 'deleted_wallets';
-  key: 'deleted_wallets';
-  wallets_count: number;
-}
-
-export interface OtherBreakdownItem<Child> extends ServiceBreakdownItem {
+// Assignment's Other carries only what names it; space and unassigned are never folded into it.
+export interface AssignmentOtherItem extends BreakdownShare {
   kind: 'other';
   key: 'other';
-  children: Child[];
+  opens_history: false;
+  children: AssignmentBreakdownItem[];
 }
 
 export interface StatisticsBreakdown extends StatisticsBlock {
@@ -148,11 +149,11 @@ export interface StatisticsBreakdown extends StatisticsBlock {
     primary_items: CategoryBreakdownItem[];
     other: OtherBreakdownItem<CategoryBreakdownItem> | null;
   };
-  by_wallet: {
+  by_assignment: {
+    // Equal to `by_category.total_amount` and `total.amount`.
     total_amount: Money;
     source_count: number;
-    primary_items: WalletBreakdownItem[];
-    deleted_wallets: DeletedWalletsBreakdownItem | null;
-    other: OtherBreakdownItem<WalletBreakdownItem> | null;
+    primary_items: AssignmentBreakdownItem[];
+    other: AssignmentOtherItem | null;
   };
 }

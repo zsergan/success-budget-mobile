@@ -13,7 +13,7 @@ import { transactionApi } from '@redux/state/transaction/api';
 import { feedDto, transactionDto } from '@redux/state/transaction/fixtures';
 import { deleteTransaction } from '@redux/state/transactionFlow/thunks';
 import { mapTransaction } from '@api/models';
-import { ScreenNames } from '@shared/enums';
+import { ScreenNames, TransactionType } from '@shared/enums';
 import { colorThemes } from '@shared/theme';
 import type { MainTabParamList } from '@shared/types';
 import { hexToRgba } from '@shared/utils';
@@ -32,11 +32,17 @@ jest.mock('@gorhom/bottom-sheet', () => {
   const { ScrollView, View } = jest.requireActual('react-native');
 
   const BottomSheetModal = React.forwardRef(function BottomSheetModal(
-    { children }: { children: ReactNode },
+    { children, onDismiss }: { children: ReactNode; onDismiss?: () => void },
     ref: Ref<unknown>,
   ) {
     const [isOpen, setOpen] = React.useState(false);
-    React.useImperativeHandle(ref, () => ({ present: () => setOpen(true), dismiss: () => setOpen(false) }));
+    React.useImperativeHandle(ref, () => ({
+      present: () => setOpen(true),
+      dismiss: () => {
+        setOpen(false);
+        onDismiss?.();
+      },
+    }));
 
     return isOpen ? children : null;
   });
@@ -126,6 +132,120 @@ beforeEach(() => {
 });
 
 describe('TransactionsScreen', () => {
+  describe('filters', () => {
+    const assignees = {
+      members: [
+        { key: 'member:1', user_id: 1, name: 'Anna', status: 'member' },
+        { key: 'member:31', user_id: 31, name: 'Lena', status: 'member' },
+      ],
+      former_members: [{ key: 'member:40', user_id: 40, name: 'Mark', status: 'former_member' }],
+      has_deleted_members: false,
+    };
+
+    beforeEach(() => {
+      mockedRequest.mockImplementation(({ url }: RequestConfig) =>
+        Promise.resolve({ data: url.endsWith('/assignees') ? assignees : url === FEED ? feedDto([taxi]) : null }),
+      );
+    });
+
+    it("opens on Home's month, type and assignment, and takes each filter off on its own", async () => {
+      renderTransactions({
+        focus: {
+          spaceId: 1,
+          month: august,
+          transactionType: TransactionType.EXPENSE,
+          assignment: 'member:31',
+          assignmentName: 'Lena',
+        },
+      });
+      await settle();
+
+      expect(listRequests().at(-1)?.params).toMatchObject({
+        from: new Date(2026, 7, 1).toISOString(),
+        transaction_type: 'expense',
+        kind: 'regular',
+        assignment: 'member:31',
+      });
+      expect(navigationRef.getCurrentRoute()?.params).toEqual({});
+
+      fireEvent.press(screen.getByLabelText('Remove the Lena filter'));
+      await settle();
+      expect(listRequests().at(-1)?.params).not.toHaveProperty('assignment');
+      expect(listRequests().at(-1)?.params).toMatchObject({ transaction_type: 'expense' });
+
+      fireEvent.press(screen.getByLabelText('Remove the Expenses filter'));
+      await settle();
+      expect(listRequests().at(-1)?.params).not.toHaveProperty('transaction_type');
+    });
+
+    it('narrows to a person, the whole space or a former member from the Assigned to choices', async () => {
+      renderTransactions(undefined);
+      await settle();
+
+      fireEvent.press(screen.getByLabelText('All transactions. Change filter'));
+      expect(screen.getByText('Show transactions for one person or a shared bucket.')).toBeTruthy();
+      expect(screen.getByText('You')).toBeTruthy();
+      expect(screen.getByText('Former members')).toBeTruthy();
+      fireEvent.press(screen.getByText('Whole space'));
+      await settle();
+
+      expect(listRequests().at(-1)?.params).toMatchObject({ assignment: 'space' });
+
+      fireEvent.press(screen.getByLabelText('Whole space. Change filter'));
+      fireEvent.press(screen.getByText('Mark · Former member'));
+      await settle();
+      expect(listRequests().at(-1)?.params).toMatchObject({ assignment: 'member:40' });
+    });
+
+    it('opens a record shown from elsewhere around it, unfiltered, even when the filtered list had it', async () => {
+      const newer = transactionDto({ id: 'tx-newer', timestamp: new Date(2026, 7, 30, 9).toISOString() });
+      mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
+        if (url.endsWith('/assignees')) return Promise.resolve({ data: assignees });
+        if (url !== FEED) return Promise.resolve({ data: null });
+        // Unfiltered, the month's first page ends before the record.
+        const rows = params?.assignment || params?.around_id ? [taxi] : [newer];
+        return Promise.resolve({ data: feedDto(rows) });
+      });
+      renderTransactions({ focus: { spaceId: 1, month: august, assignment: 'member:31', assignmentName: 'Lena' } });
+      await settle();
+      expect(screen.getByText('Taxi')).toBeTruthy();
+
+      const { landings, restore } = spyLandings();
+      act(() =>
+        navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB, {
+          reveal: { spaceId: 1, transactionId: 'tx-aug', timestamp: august },
+        }),
+      );
+      await settle();
+
+      expect(listRequests().at(-1)?.params).toEqual({
+        from: new Date(2026, 7, 1).toISOString(),
+        to: new Date(2026, 7, 31, 23, 59, 59, 999).toISOString(),
+        time_zone: ZONE,
+        around_id: 'tx-aug',
+      });
+      expect(screen.queryByLabelText('Remove the Lena filter')).toBeNull();
+      expect(screen.getByText('Taxi')).toBeTruthy();
+      expect(landings.at(-1)).toEqual({ id: 'tx-aug', viewPosition: 0.4 });
+      restore();
+    });
+
+    it('says nothing matches the filters, and clears them', async () => {
+      mockedRequest.mockImplementation(({ url }: RequestConfig) =>
+        Promise.resolve({ data: url.endsWith('/assignees') ? assignees : url === FEED ? feedDto([]) : null }),
+      );
+      renderTransactions({
+        focus: { spaceId: 1, month: august, assignment: 'unassigned', assignmentName: 'No member assigned' },
+      });
+      await settle();
+
+      expect(screen.getByText('Nothing matches these filters')).toBeTruthy();
+      fireEvent.press(screen.getByText('Clear filters'));
+      await settle();
+      expect(listRequests().at(-1)?.params).not.toHaveProperty('assignment');
+    });
+  });
+
   it("opens a revealed record's month around it and takes the request off the route", async () => {
     renderTransactions({
       reveal: { spaceId: 1, transactionId: 'tx-aug', timestamp: august },
@@ -486,7 +606,7 @@ describe('TransactionsScreen', () => {
     const openSearch = async () => {
       fireEvent.press(screen.getByRole('button', { name: 'Search transactions' }));
       await settle();
-      return screen.getByPlaceholderText('Description, category, wallet');
+      return screen.getByPlaceholderText('Search description or category');
     };
 
     it('searches the period once typing pauses, hides +, and keeps the period controls', async () => {
@@ -613,7 +733,7 @@ describe('TransactionsScreen', () => {
       const statusRow = screen.getByTestId('search-status');
 
       const field = await openSearch();
-      const isSameField = () => screen.getByPlaceholderText('Description, category, wallet') === field;
+      const isSameField = () => screen.getByPlaceholderText('Search description or category') === field;
       expect(screen.getByTestId('search-status')).toBe(statusRow);
 
       fireEvent.changeText(field, 'coffee');
@@ -666,7 +786,7 @@ describe('TransactionsScreen', () => {
       expect(screen.getByText('Couldn’t search. Check your connection and try again.')).toBeTruthy();
       expect(screen.getByText('Search results')).toBeTruthy();
       expect(screen.getAllByText('—')).toHaveLength(3);
-      expect(screen.getByPlaceholderText('Description, category, wallet').props.value).toBe('coffee');
+      expect(screen.getByPlaceholderText('Search description or category').props.value).toBe('coffee');
 
       fail = false;
       fireEvent.press(screen.getByText('Try again'));
@@ -801,7 +921,7 @@ describe('TransactionsScreen', () => {
       await settle();
 
       expect(listRequests().at(-1)?.params).toMatchObject({ q: 'coffee', from: new Date(2026, 0, 1).toISOString() });
-      expect(screen.getByPlaceholderText('Description, category, wallet').props.value).toBe('coffee');
+      expect(screen.getByPlaceholderText('Search description or category').props.value).toBe('coffee');
     });
 
     it('brings the plain history back to where it was on Cancel, if the period is the same', async () => {

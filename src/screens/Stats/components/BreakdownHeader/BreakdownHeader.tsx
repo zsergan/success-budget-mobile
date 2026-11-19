@@ -9,7 +9,7 @@ import createStyles from './style';
 
 const MODES: { value: BreakdownMode; label: string }[] = [
   { value: 'category', label: 'By category' },
-  { value: 'wallet', label: 'By wallet' },
+  { value: 'assignment', label: 'By assignment' },
 ];
 
 interface Props {

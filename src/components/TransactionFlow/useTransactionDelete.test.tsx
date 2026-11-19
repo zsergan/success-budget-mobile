@@ -86,7 +86,9 @@ describe('useTransactionDelete from a list row', () => {
     act(() => result.current.requestDelete(lunch));
     expect(result.current.confirmation).toMatchObject({
       title: 'Delete transaction?',
-      description: '-12.00 · Food · Cash. The wallet balance will be adjusted.',
+      description: expect.stringMatching(
+        /^It will be removed from History, and January( 2026)? totals, stats and limits will update\. This can’t be undone\.$/,
+      ),
       primaryAction: { label: 'Delete transaction', tone: 'danger' },
     });
     const press = result.current.confirmation!.primaryAction.onPress;
@@ -154,7 +156,7 @@ describe('useTransactionDelete from a list row', () => {
     act(() => result.current.requestDelete(lunch));
     await confirm();
 
-    expect(screen.getByText('Transaction deleted')).toBeTruthy();
+    expect(screen.getByText(/^Transaction deleted\. January( 2026)? totals updated\.$/)).toBeTruthy();
     expect(toastCount()).toBe(1);
   });
 
@@ -166,7 +168,7 @@ describe('useTransactionDelete from a list row', () => {
     await confirm();
 
     expect(screen.getByText('This transaction is no longer available')).toBeTruthy();
-    expect(screen.queryByText('Transaction deleted')).toBeNull();
+    expect(screen.queryByText(/^Transaction deleted\./)).toBeNull();
   });
 
   it('offers Retry after a definite failure, which deletes again without asking', async () => {
@@ -182,7 +184,7 @@ describe('useTransactionDelete from a list row', () => {
 
     expect(result.current.confirmation).toBeNull();
     expect(deletes()).toHaveLength(2);
-    expect(screen.getByText('Transaction deleted')).toBeTruthy();
+    expect(screen.getByText(/^Transaction deleted\. January( 2026)? totals updated\.$/)).toBeTruthy();
     expect(toastCount()).toBe(1);
   });
 
@@ -209,7 +211,7 @@ describe('useTransactionDelete from a list row', () => {
     await act(async () => result.current.retryDelete(lunch));
 
     expect(new Set(deleteKeys()).size).toBe(1);
-    expect(screen.getByText('Transaction deleted')).toBeTruthy();
+    expect(screen.getByText(/^Transaction deleted\. January( 2026)? totals updated\.$/)).toBeTruthy();
     expect(store.getState().pendingWrite.writes).toEqual([]);
   });
 
@@ -290,6 +292,6 @@ it('shows what the delete did only once its confirmation sheet has finished clos
   expect(toastCount()).toBe(0);
 
   finishDismissals();
-  expect(screen.getByText('Transaction deleted')).toBeTruthy();
+  expect(screen.getByText(/^Transaction deleted\. January( 2026)? totals updated\.$/)).toBeTruthy();
   expect(toastCount()).toBe(1);
 });

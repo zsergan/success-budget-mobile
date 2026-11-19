@@ -1,7 +1,8 @@
 # success-budget-mobile
 
-A React Native (Expo) personal-finance app: wallets, transactions,
-categories, spending limits, shared spaces with one currency each.
+A React Native (Expo) personal-finance app: transactions assigned to a
+member, the whole space or nobody, categories, spending limits, and shared
+spaces with one currency each.
 
 ## Stack
 

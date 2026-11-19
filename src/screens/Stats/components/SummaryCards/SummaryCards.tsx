@@ -11,7 +11,7 @@ import {
   formatPeriodWord,
   getMoneySign,
 } from '@screens/Stats/format';
-import type { StatsBlock } from '@screens/Stats/hooks/useStatsData';
+import type { StatsBlock } from '@hooks/useStatsData';
 import type { ThemeColors } from '@shared/theme';
 import BlockError from '../BlockError/BlockError';
 import BlockPlaceholder from '../BlockPlaceholder/BlockPlaceholder';

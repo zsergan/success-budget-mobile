@@ -21,26 +21,36 @@ export interface StatisticsBreakdownArg extends StatisticsArg {
 
 let revision = 0;
 
+// On `/api/v2`, whose breakdown groups by assignment instead of wallet.
 // The three blocks provide no tags: a refetch would reuse the cycle's as_of and miss
 // the change, so the tags bump this local marker instead and a new value starts a new cycle.
 export const statisticsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getStatisticsSummary: build.query<StatisticsSummary, StatisticsArg>({
-      query: ({ spaceId, query }) => ({ url: `/spaces/${spaceId}/statistics/summary`, params: { ...query } }),
+      query: ({ spaceId, query }) => ({
+        url: `/spaces/${spaceId}/statistics/summary`,
+        params: { ...query },
+        apiVersion: 2,
+      }),
     }),
     getStatisticsTrend: build.query<StatisticsTrend, StatisticsArg>({
-      query: ({ spaceId, query }) => ({ url: `/spaces/${spaceId}/statistics/trend`, params: { ...query } }),
+      query: ({ spaceId, query }) => ({
+        url: `/spaces/${spaceId}/statistics/trend`,
+        params: { ...query },
+        apiVersion: 2,
+      }),
     }),
     getStatisticsBreakdown: build.query<StatisticsBreakdown, StatisticsBreakdownArg>({
       query: ({ spaceId, query, transactionType }) => {
         const params: StatisticsBreakdownQuery = { ...query, transaction_type: transactionType };
 
-        return { url: `/spaces/${spaceId}/statistics/breakdown`, params: { ...params } };
+        return { url: `/spaces/${spaceId}/statistics/breakdown`, params: { ...params }, apiVersion: 2 };
       },
     }),
     getStatisticsRevision: build.query<number, SpaceArg>({
       queryFn: () => ({ data: ++revision }),
-      providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions', 'Wallets', 'Categories'),
+      // Members too: a breakdown names its people by their current names and membership.
+      providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions', 'Categories', 'Members'),
     }),
   }),
 });

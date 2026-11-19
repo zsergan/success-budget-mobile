@@ -17,6 +17,12 @@ export const selectCurrentSpace = createSelector(selectSpaces, selectCurrentSpac
   spaces.find((space) => space.id === currentSpaceId),
 );
 
+// One person's space: its lists leave the ordinary "You" unsaid, and it has no assignment breakdown.
+export const selectIsPersonalSpace = createSelector(
+  selectCurrentSpace,
+  (currentSpace) => currentSpace?.type === SpaceType.PERSONAL,
+);
+
 export const selectCurrentSpaceCurrencyCode = createSelector(
   selectCurrentSpace,
   (currentSpace) => currentSpace?.currency.code,

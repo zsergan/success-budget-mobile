@@ -1,9 +1,8 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import type { LimitModel } from '@api/models';
-import { Icon, WalletGradientBackground } from '@components';
+import { GradientBackground, Icon } from '@components';
 import { useTheme, useThemedStyles } from '@hooks';
-import { AppColor } from '@shared/enums';
 import { formatCurrencyAmount, getDailyPace, getDaysLeftInMonth, getLimitStatus } from '@shared/utils';
 
 import createStyles from './style';
@@ -22,9 +21,9 @@ const nextResetLabel = () => {
 };
 
 const TotalLimitCard = ({ total, currencyCode, onEdit }: Props) => {
-  const { colors, wallets } = useTheme().colorTheme;
+  const { colors, gradientCard } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
-  const { fg, dim, inner } = wallets[AppColor.SLATE];
+  const { fg, dim, inner } = gradientCard;
   const amount = Number(total.amount);
   const status = getLimitStatus(total.spent, amount);
   const daysLeft = getDaysLeftInMonth();
@@ -33,7 +32,14 @@ const TotalLimitCard = ({ total, currencyCode, onEdit }: Props) => {
 
   return (
     <View style={styles.root}>
-      <WalletGradientBackground style={styles.gradient} design={AppColor.SLATE} />
+      {/* 152deg as start/end points; locations match the design's 0%/78% stops. */}
+      <GradientBackground
+        style={styles.gradient}
+        colors={gradientCard.gradient}
+        locations={[0, 0.78]}
+        start={{ x: 0.27, y: 0.06 }}
+        end={{ x: 0.73, y: 0.94 }}
+      />
 
       <View style={styles.topRow}>
         <View>

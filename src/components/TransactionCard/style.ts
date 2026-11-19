@@ -76,8 +76,27 @@ const createStyles = ({ colors }: ColorTheme) =>
     metaLineWrapped: {
       flexWrap: 'wrap',
     },
-    category: {
+    titleRow: {
       flexGrow: 1,
+      flexShrink: 1,
+      minWidth: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      columnGap: 6,
+    },
+    tag: {
+      flexShrink: 0,
+      paddingHorizontal: 6,
+      paddingVertical: 1,
+      borderRadius: 6,
+      overflow: 'hidden',
+      fontFamily: theme.fonts.bold,
+      fontSize: theme.fontSizes.micro,
+      lineHeight: theme.lineHeights.micro,
+      color: colors.muted,
+      backgroundColor: colors.track,
+    },
+    category: {
       flexShrink: 1,
       fontFamily: theme.fonts.semiBold,
       fontSize: theme.fontSizes.bodyLg,
@@ -96,13 +115,13 @@ const createStyles = ({ colors }: ColorTheme) =>
     description: {
       flexShrink: 1,
     },
-    // Hugging Plus Jakarta Sans boxes under-measure by a pixel or two (see cde3346); without the buffer "Cash" ellipsizes.
-    walletBeside: {
+    // Hugging Plus Jakarta Sans boxes under-measure by a pixel or two (see cde3346); without the buffer "Lena" ellipsizes.
+    assignmentBeside: {
       flexShrink: 0,
-      maxWidth: '30%',
+      maxWidth: '40%',
       paddingRight: 2,
     },
-    walletAlone: {
+    assignmentAlone: {
       flexShrink: 1,
     },
     fixed: {

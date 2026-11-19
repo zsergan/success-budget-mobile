@@ -9,9 +9,11 @@ import useToast from '@hooks/useToast';
 import { createAppStore } from '@redux/Store';
 import type { PendingWrite } from '@redux/state/pendingWrite/slice';
 import { writeSettled, writesRestored } from '@redux/state/pendingWrite/slice';
+import { closed } from '@redux/state/transactionFlow/slice';
+import { mapTransaction } from '@api/models';
 import { withProfile } from '@redux/state/profile/fixtures';
 import { activateSpace } from '@redux/state/space/thunks';
-import { createTransactionResponseDto } from '@redux/state/transaction/fixtures';
+import { createTransactionResponseDto, transactionDto } from '@redux/state/transaction/fixtures';
 import { TransactionType } from '@shared/enums';
 import PendingWritesBanner from './PendingWritesBanner';
 
@@ -65,7 +67,7 @@ const write = (key: string, status: PendingWrite['status'], spaceId = 1): Pendin
     idempotencyKey: key,
     firstSentAt: Date.now(),
     data: {
-      wallet_id: 1,
+      assignment: { kind: 'space' },
       category_id: 1,
       transaction_type: TransactionType.EXPENSE,
       amount: '12.00',
@@ -327,5 +329,69 @@ describe('PendingWritesBanner', () => {
     expect(screen.queryByText('Send this transaction now?')).toBeNull();
     fireEvent.press(discard);
     expect(store.getState().pendingWrite.writes).toHaveLength(1);
+  });
+
+  describe('a create an older build left', () => {
+    it('says it was already saved, and shows the record it found', () => {
+      const found = { ...write('key-1', 'found'), found: mapTransaction(transactionDto({ id: 'tx-7' })) };
+      const store = renderBanner([found]);
+
+      expect(screen.getByText('Already saved')).toBeTruthy();
+      expect(screen.getByText(/Nothing was added twice/)).toBeTruthy();
+      fireEvent.press(screen.getByText('View transaction'));
+
+      expect(store.getState().transactionFlow.flow).toMatchObject({ view: { name: 'details' }, saved: { id: 'tx-7' } });
+      expect(store.getState().pendingWrite.writes).toEqual([]);
+      expect(posts()).toEqual([]);
+    });
+
+    it('restores its draft to retry under the same operation, or discards it', () => {
+      const store = renderBanner([write('key-1', 'retry'), write('key-2', 'retry')]);
+
+      expect(screen.getByText('Ready to retry')).toBeTruthy();
+      fireEvent.press(screen.getByText('Review'));
+      fireEvent.press(screen.getByRole('button', { name: 'Review draft' }));
+
+      expect(store.getState().transactionFlow.flow).toMatchObject({
+        view: { name: 'create' },
+        notice: 'saveRestored',
+        operationId: 'key-1',
+        draft: { amount: '12.00', categoryId: 1, assignment: { kind: 'space' } },
+      });
+      expect(store.getState().pendingWrite.writes).toHaveLength(2);
+
+      act(() => {
+        store.dispatch(closed());
+      });
+      fireEvent.press(screen.getByText('Review'));
+      fireEvent.press(screen.getByRole('button', { name: 'Discard' }));
+
+      expect(store.getState().pendingWrite.writes.map(({ operation }) => operation.idempotencyKey)).toEqual(['key-2']);
+      expect(posts()).toEqual([]);
+    });
+
+    it('keeps checking one with no answer yet, and asks again on request', async () => {
+      const store = renderBanner([write('key-1', 'checking')]);
+      mockedRequest.mockRejectedValueOnce(new Error('Network Error'));
+
+      expect(screen.getByText('Still checking')).toBeTruthy();
+      await act(async () => fireEvent.press(screen.getByText('Check again')));
+
+      expect(mockedRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: 'GET', url: '/spaces/1/transactions/operations/key-1' }),
+      );
+      expect(posts()).toEqual([]);
+      expect(store.getState().pendingWrite.writes).toMatchObject([{ status: 'checking' }]);
+    });
+
+    it('says one whose space is gone can be saved nowhere, in any space, until discarded', () => {
+      const store = renderBanner([write('key-1', 'accessLost', 9)]);
+
+      expect(screen.getByText('A transaction can’t be saved')).toBeTruthy();
+      fireEvent.press(screen.getByText('Review'));
+      fireEvent.press(screen.getByRole('button', { name: 'Discard' }));
+
+      expect(store.getState().pendingWrite.writes).toEqual([]);
+    });
   });
 });

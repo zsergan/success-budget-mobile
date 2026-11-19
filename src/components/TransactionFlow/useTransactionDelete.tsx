@@ -1,0 +1,168 @@
+import { useCallback, useEffect, useRef } from 'react';
+
+import type { TransactionModel } from '@api/models';
+import { isInitialBalance } from '@api/models';
+import type { ToastTicket } from '@components/Toast';
+import { useToast } from '@hooks';
+import type { ConfirmLock } from '@hooks/useConfirmation';
+import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
+import { selectProfileId } from '@redux/state/profile/selectors';
+import { selectCurrentSpaceCurrencyCode, selectCurrentSpaceId } from '@redux/state/space/selectors';
+import type { DeleteOutcome } from '@redux/state/transactionFlow/thunks';
+import { deleteTransaction, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
+import CategoryIconBox from '@components/CategoryIconBox/CategoryIconBox';
+import ConfirmationObject from '@components/ConfirmationSheet/ConfirmationObject/ConfirmationObject';
+import { deleteFacts, deleteMessage, deleteSubject, totalsName } from './deleteMessage';
+
+// One delete for a list row, the details and the form: the same confirmation, asked through its owner's lock, then a
+// write the row or the sheet waits for. A sheet still waiting on it when the answer comes explains a failure in place;
+// otherwise a toast does, with the next step. What the delete did shows once the sheets it closed have gone; where the
+// record's own screen closes with it (`leavesScreen`, the editor), on the screen that is left for.
+const useTransactionDelete = (confirmLock: ConfirmLock, { leavesScreen = false }: { leavesScreen?: boolean } = {}) => {
+  const dispatch = useAppDispatch();
+  const store = useAppStore();
+  const toast = useToast();
+  const currentSpaceId = useAppSelector(selectCurrentSpaceId);
+  const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
+  const selfId = useAppSelector(selectProfileId);
+  // A toast's Retry or Check status runs the delete again without asking; the ref lets the delete offer itself.
+  const runRef = useRef<(transaction: TransactionModel, spaceId: number) => Promise<void>>(async () => {});
+
+  const report = useCallback(
+    (
+      ticket: ToastTicket,
+      { result, isShownInFlow }: DeleteOutcome,
+      transaction: TransactionModel,
+      spaceId: number,
+      doneText: string,
+    ) => {
+      const subject = deleteSubject(transaction.id);
+      const again = { onPress: () => void runRef.current(transaction, spaceId) };
+
+      if (result === 'stale') return;
+      ticket.resolve(subject);
+      const showDone = leavesScreen && isShownInFlow ? ticket.showAfterNavigation : ticket.showAfterSheetsClose;
+
+      if (result === 'deleted') {
+        showDone({ tone: 'success', text: doneText, subject });
+      } else if (result === 'gone') {
+        showDone({ tone: 'info', text: 'This transaction is no longer available', subject });
+      } else if (isShownInFlow) {
+        return;
+      } else if (result === 'conflict') {
+        ticket.show({
+          tone: 'warning',
+          text: 'Not deleted — this transaction changed',
+          subject,
+          action: { label: 'View', onPress: () => dispatch(openTransactionDetails({ spaceId, transaction })) },
+        });
+      } else if (result === 'uncertain') {
+        ticket.show({
+          tone: 'error',
+          text: 'Couldn’t confirm the delete',
+          subject,
+          action: { label: 'Check status', ...again },
+        });
+      } else {
+        ticket.show({
+          tone: 'error',
+          text: 'Couldn’t delete transaction',
+          subject,
+          action: { label: 'Retry', ...again },
+        });
+      }
+    },
+    [dispatch, leavesScreen],
+  );
+
+  // The ticket is taken as the delete starts: its toast, and the actions on it, belong to the screen, space and
+  // session it ran in.
+  const runDelete = useCallback(
+    async (
+      transaction: TransactionModel,
+      spaceId = currentSpaceId,
+      doneText = `Transaction deleted. ${totalsName(transaction.timestamp)} totals updated.`,
+    ) => {
+      if (spaceId === null) return;
+
+      const ticket = toast.begin();
+      // Reported before the flow takes the outcome: a delete that closes the record's screen shows on the next one.
+      await dispatch(
+        deleteTransaction({
+          spaceId,
+          transaction,
+          beforeSettled: (outcome) => report(ticket, outcome, transaction, spaceId, doneText),
+        }),
+      );
+    },
+    [dispatch, toast, report, currentSpaceId],
+  );
+
+  useEffect(() => {
+    runRef.current = runDelete;
+  }, [runDelete]);
+
+  // `onSettled` runs when the confirmation closes either way, or at once when there is nothing to delete or another
+  // confirmation is open.
+  const requestDelete = useCallback(
+    (transaction: TransactionModel, onSettled?: () => void) => {
+      const spaceId = currentSpaceId;
+      if (isInitialBalance(transaction) || spaceId === null) {
+        onSettled?.();
+        return;
+      }
+      const sessionKey = store.getState().auth.sessionKey;
+
+      const isAsked = confirmLock.ask((settle) => {
+        const close = () => {
+          const isCurrent = settle();
+          onSettled?.();
+          return isCurrent;
+        };
+
+        return {
+          title: 'Delete transaction?',
+          description: deleteMessage(transaction),
+          context: (
+            <ConfirmationObject
+              icon={<CategoryIconBox icon={transaction.category.icon} color={transaction.category.color} size={40} />}
+              name={transaction.category.name}
+              meta={deleteFacts(transaction, currencyCode, selfId)}
+            />
+          ),
+          primaryAction: {
+            label: 'Delete transaction',
+            tone: 'danger',
+            onPress: () => {
+              if (!close()) return;
+              const { auth, space } = store.getState();
+              if (auth.sessionKey === sessionKey && space.currentSpaceId === spaceId) {
+                void runDelete(transaction, spaceId);
+              }
+            },
+          },
+          onCancel: close,
+        };
+      });
+      if (!isAsked) onSettled?.();
+    },
+    [confirmLock, currencyCode, selfId, runDelete, currentSpaceId, store],
+  );
+
+  const retryDelete = useCallback((transaction: TransactionModel) => runDelete(transaction), [runDelete]);
+
+  // Undo of a create just made: the same delete, without asking, named for what the user did.
+  const undoCreate = useCallback(
+    (transaction: TransactionModel) =>
+      runDelete(
+        transaction,
+        currentSpaceId,
+        `Transaction removed. ${totalsName(transaction.timestamp)} totals updated.`,
+      ),
+    [runDelete, currentSpaceId],
+  );
+
+  return { requestDelete, retryDelete, undoCreate };
+};
+
+export default useTransactionDelete;

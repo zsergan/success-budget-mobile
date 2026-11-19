@@ -1,9 +1,9 @@
 import type {
+  AssignmentBreakdownItem,
+  AssignmentOtherItem,
   CategoryBreakdownItem,
-  DeletedWalletsBreakdownItem,
   OtherBreakdownItem,
   StatisticsBreakdown,
-  WalletBreakdownItem,
 } from '@api/dto';
 import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
 
@@ -29,18 +29,21 @@ const category = (id: number, name: string, isArchived = false) =>
     is_archived: isArchived,
     opens_history: true,
   }) as CategoryBreakdownItem;
-const wallet = {
-  kind: 'wallet',
-  key: 'wallet:3',
-  id: 3,
-  name: 'Cash',
-  color: AppColor.INDIGO,
-  opens_history: true,
-} as WalletBreakdownItem;
+const assignee = (overrides: Partial<AssignmentBreakdownItem>) =>
+  ({
+    kind: 'member',
+    key: 'member:31',
+    user_id: 31,
+    name: 'Lena',
+    status: 'member',
+    opens_history: true,
+    ...overrides,
+  }) as AssignmentBreakdownItem;
+const lena = assignee({});
 
 describe('toHistoryFilter', () => {
   it('passes the space, the period bounds and its zone through as they came, with regular transactions only', () => {
-    expect(toHistoryFilter(category(12, 'Restaurants'), expense, 7)).toEqual({
+    expect(toHistoryFilter(category(12, 'Restaurants'), expense, 7, 1)).toEqual({
       spaceId: 7,
       name: 'Restaurants',
       icon: 'home-goods',
@@ -55,45 +58,69 @@ describe('toHistoryFilter', () => {
   });
 
   it('takes the type from the breakdown it was shown in', () => {
-    expect(toHistoryFilter(wallet, income, 7)).toEqual({
+    expect(toHistoryFilter(lena, income, 7, 1)).toEqual({
       spaceId: 7,
-      name: 'Cash',
-      icon: 'wallet',
-      color: AppColor.INDIGO,
+      name: 'Lena',
       from: '2026-08-31T21:00:00.000Z',
       to: '2026-09-30T09:15:42.123Z',
       timeZone: 'Europe/Kyiv',
       transactionType: TransactionType.INCOME,
       kind: TransactionKind.REGULAR,
-      walletId: 3,
+      assignment: 'member:31',
     });
-    expect(toHistoryFilter(category(20, 'Salary'), income, 7)).toMatchObject({
+    expect(toHistoryFilter(category(20, 'Salary'), income, 7, 1)).toMatchObject({
       transactionType: TransactionType.INCOME,
       categoryId: 20,
     });
   });
 
-  it('opens real groups, archived ones and a category named Other included, but no service group', () => {
+  it('opens every assignment group by its key, named as the list shows it', () => {
+    const none = { user_id: null, name: null, status: null } as const;
+
+    expect(toHistoryFilter(assignee({ user_id: 1, key: 'member:1' }), expense, 7, 1)).toMatchObject({
+      name: 'You',
+      assignment: 'member:1',
+    });
+    expect(toHistoryFilter(assignee({ status: 'former_member' }), expense, 7, 1)).toMatchObject({
+      name: 'Lena · Former member',
+      assignment: 'member:31',
+    });
+    expect(toHistoryFilter(assignee({ ...none, kind: 'space', key: 'space' }), expense, 7, 1)).toMatchObject({
+      name: 'Whole space',
+      assignment: 'space',
+    });
+    expect(toHistoryFilter(assignee({ ...none, kind: 'unassigned', key: 'unassigned' }), expense, 7, 1)).toMatchObject({
+      name: 'No member assigned',
+      assignment: 'unassigned',
+    });
+    expect(
+      toHistoryFilter(assignee({ ...none, kind: 'deleted_member', key: 'deleted_member' }), expense, 7, 1),
+    ).toMatchObject({ name: 'Deleted member', assignment: 'deleted_member' });
+  });
+
+  it('opens real groups, archived ones and a category named Other included, but not Other itself', () => {
     const otherGroup = {
       kind: 'other',
       key: 'other',
       opens_history: false,
       children: [category(31, 'Gifts')],
     } as OtherBreakdownItem<CategoryBreakdownItem>;
-    const deletedWallets = {
-      kind: 'deleted_wallets',
-      key: 'deleted_wallets',
+    const otherAssignees = {
+      kind: 'other',
+      key: 'other',
       opens_history: false,
-    } as DeletedWalletsBreakdownItem;
+      children: [lena],
+    } as AssignmentOtherItem;
 
-    expect(toHistoryFilter(otherGroup, expense, 7)).toBeNull();
-    expect(toHistoryFilter(deletedWallets, expense, 7)).toBeNull();
-    expect(toHistoryFilter(otherGroup.children[0], expense, 7)).toMatchObject({ categoryId: 31 });
-    expect(toHistoryFilter(category(40, 'Other'), expense, 7)).toMatchObject({ name: 'Other', categoryId: 40 });
-    expect(toHistoryFilter(category(41, 'Old hobby', true), expense, 7)).toMatchObject({ categoryId: 41 });
+    expect(toHistoryFilter(otherGroup, expense, 7, 1)).toBeNull();
+    expect(toHistoryFilter(otherAssignees, expense, 7, 1)).toBeNull();
+    expect(toHistoryFilter(otherAssignees.children[0], expense, 7, 1)).toMatchObject({ assignment: 'member:31' });
+    expect(toHistoryFilter(otherGroup.children[0], expense, 7, 1)).toMatchObject({ categoryId: 31 });
+    expect(toHistoryFilter(category(40, 'Other'), expense, 7, 1)).toMatchObject({ name: 'Other', categoryId: 40 });
+    expect(toHistoryFilter(category(41, 'Old hobby', true), expense, 7, 1)).toMatchObject({ categoryId: 41 });
   });
 
   it('opens nothing without a passed part of the period', () => {
-    expect(toHistoryFilter(category(12, 'Restaurants'), breakdown(TransactionType.EXPENSE, null), 7)).toBeNull();
+    expect(toHistoryFilter(category(12, 'Restaurants'), breakdown(TransactionType.EXPENSE, null), 7, 1)).toBeNull();
   });
 });

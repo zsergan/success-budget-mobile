@@ -21,18 +21,20 @@ describe('STATS_FIXTURES', () => {
       Object.values(TransactionType).map((type) => [name, type, fixture] as const),
     ),
   )('%s breaks %s down to its summary total', (_name, type, { summary, breakdown }) => {
-    const { transaction_type: transactionType, total, by_category: byCategory, by_wallet: byWallet } = breakdown[type];
+    const {
+      transaction_type: transactionType,
+      total,
+      by_category: byCategory,
+      by_assignment: byAssignment,
+    } = breakdown[type];
     const categoryGroups = [...byCategory.primary_items, ...(byCategory.other ? [byCategory.other] : [])];
-    const walletGroups = [
-      ...byWallet.primary_items,
-      ...(byWallet.deleted_wallets ? [byWallet.deleted_wallets] : []),
-      ...(byWallet.other ? [byWallet.other] : []),
-    ];
+    const assignmentGroups = [...byAssignment.primary_items, ...(byAssignment.other ? [byAssignment.other] : [])];
 
     expect(transactionType).toBe(type);
     expect(total).toEqual(summary[type]);
     expect(sumOf(categoryGroups.map((group) => group.amount))).toBe(cents(total.amount));
-    expect(sumOf(walletGroups.map((group) => group.amount))).toBe(cents(total.amount));
+    expect(sumOf(assignmentGroups.map((group) => group.amount))).toBe(cents(total.amount));
+    expect(byAssignment.other?.children.map(({ kind }) => kind) ?? []).not.toContain('space');
     expect(sumOf(byCategory.other?.children.map((child) => child.amount) ?? [])).toBe(
       byCategory.other ? cents(byCategory.other.amount) : 0,
     );

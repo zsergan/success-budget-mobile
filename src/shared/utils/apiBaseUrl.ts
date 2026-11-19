@@ -40,3 +40,14 @@ export const resolveApiBaseUrl = ({ urls, env, overrideUrl, isDevBuild }: ApiBas
 
   return url;
 };
+
+// The same host under another URI version (`/api/v1` → `/api/v2`); only resources whose contract changed use it.
+export const withApiVersion = (baseUrl: string, version: number) => {
+  const versioned = baseUrl.replace(/\/v\d+\/?$/, `/v${version}`);
+
+  if (versioned === baseUrl && !baseUrl.endsWith(`/v${version}`)) {
+    throw new Error(`The API base URL must end with its version (/v1), got "${baseUrl}"`);
+  }
+
+  return versioned;
+};

@@ -11,6 +11,7 @@ import { toastCount, withToasts } from '@components/Toast/testing';
 import focusedRoutePath from '@navigation/focusedRoutePath';
 import StatsNavigator from '@navigation/StatsNavigator';
 import { TransactionsScreen } from '@screens';
+import { withProfile } from '@redux/state/profile/fixtures';
 import { createAppStore } from '@redux/Store';
 import launchInitialState from '@redux/state/launch/initialState';
 import { spaceApi } from '@redux/state/space/api';
@@ -164,6 +165,7 @@ const RoutedContainer = ({ children }: { children: ReactNode }) => {
 const renderStats = ({ spaceId = 1 }: { spaceId?: number | null } = {}) => {
   // An open app: while it launches, the launch makes the first selection.
   const store = createAppStore({ launch: { ...launchInitialState, phase: 'ready' } });
+  withProfile(store);
   if (spaceId !== null) store.dispatch(activateSpace(spaceId));
   // The app keeps the spaces list subscribed from sign-in on.
   store.dispatch(spaceApi.endpoints.getSpaces.initiate());
@@ -246,8 +248,9 @@ describe('StatsScreen', () => {
     expect(screen.getByText('Housing')).toBeTruthy();
     mockedRequest.mockClear();
 
-    fireEvent.press(screen.getByText('By wallet'));
-    expect(screen.getByText('Everyday')).toBeTruthy();
+    fireEvent.press(screen.getByText('By assignment'));
+    expect(screen.getByText('You')).toBeTruthy();
+    expect(screen.getByText('Whole space')).toBeTruthy();
     fireEvent.press(screen.getByText('By category'));
     fireEvent.press(screen.getByText('Other'));
     expect(screen.getByText('Gifts')).toBeTruthy();
@@ -284,10 +287,10 @@ describe('StatsScreen', () => {
 
     expect(screen.getByText('No expenses in this period')).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Income' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'By wallet' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'By assignment' })).toBeTruthy();
 
     fail.breakdown = failure(500);
-    fireEvent.press(screen.getByRole('tab', { name: 'By wallet' }));
+    fireEvent.press(screen.getByRole('tab', { name: 'By assignment' }));
     fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
     await settle();
 
@@ -302,10 +305,10 @@ describe('StatsScreen', () => {
 
     expect(statsRequests()).toEqual(['/spaces/1/statistics/breakdown']);
     expect(lastParams('breakdown')?.transaction_type).toBe('income');
-    expect(screen.getByRole('adjustable').props.accessibilityLabel).toBe('Income by wallet');
+    expect(screen.getByRole('adjustable').props.accessibilityLabel).toBe('Income by assignment');
   });
 
-  it('charts income by category and by wallet under its own label', async () => {
+  it('charts income by category and by assignment under its own label', async () => {
     renderStats();
     await settle();
     fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
@@ -316,9 +319,9 @@ describe('StatsScreen', () => {
     expect(donut.props.accessibilityValue.text).toBe('Income, $4,050.00, 2 categories');
     expect(screen.getByText('Freelance')).toBeTruthy();
 
-    fireEvent.press(screen.getByRole('tab', { name: 'By wallet' }));
-    expect(screen.getByRole('adjustable').props.accessibilityValue.text).toBe('Income, $4,050.00, 2 wallets');
-    expect(screen.getByText('Savings')).toBeTruthy();
+    fireEvent.press(screen.getByRole('tab', { name: 'By assignment' }));
+    expect(screen.getByRole('adjustable').props.accessibilityValue.text).toBe('Income, $4,050.00, 2 assignments');
+    expect(screen.getByText('No member assigned')).toBeTruthy();
   });
 
   it('keeps the grouping across a change of type', async () => {
@@ -326,13 +329,15 @@ describe('StatsScreen', () => {
     await settle();
     fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
     await settle();
-    fireEvent.press(screen.getByRole('tab', { name: 'By wallet' }));
+    fireEvent.press(screen.getByRole('tab', { name: 'By assignment' }));
     fireEvent.press(screen.getByRole('tab', { name: 'Expense' }));
     await settle();
 
-    expect(screen.getByRole('tab', { name: 'By wallet' }).props.accessibilityState).toMatchObject({ selected: true });
-    expect(screen.getByRole('adjustable').props.accessibilityLabel).toBe('Expenses by wallet');
-    expect(screen.getByText('Everyday')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'By assignment' }).props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+    expect(screen.getByRole('adjustable').props.accessibilityLabel).toBe('Expenses by assignment');
+    expect(screen.getByText('You')).toBeTruthy();
   });
 
   it('draws a single group as the whole share', async () => {
@@ -352,14 +357,17 @@ describe('StatsScreen', () => {
     expect(fill?.map((node) => StyleSheet.flatten(node.props.style).width)).toContain('100%');
   });
 
-  it('opens the transactions of an archived category but not of deleted wallets', async () => {
-    fixture = STATS_FIXTURES.deletedWallets;
+  it('opens the transactions of deleted members and of an archived category', async () => {
+    fixture = STATS_FIXTURES.deletedMembers;
     renderStats();
     await settle();
-    fireEvent.press(screen.getByRole('tab', { name: 'By wallet' }));
+    fireEvent.press(screen.getByRole('tab', { name: 'By assignment' }));
 
-    fireEvent.press(screen.getByText('Deleted wallets'));
-    expect(currentRouteName()).toBe(ScreenNames.STATS_OVERVIEW_SCREEN);
+    fireEvent.press(screen.getByText('Deleted member'));
+    await settle();
+    expect(currentRouteName()).toBe(ScreenNames.STATS_TRANSACTIONS_SCREEN);
+    expect(shownFilter()).toMatchObject({ name: 'Deleted member', assignment: 'deleted_member' });
+    await backToStats();
 
     fixture = STATS_FIXTURES.archived;
     fireEvent.press(screen.getByText('Week'));
@@ -451,7 +459,7 @@ describe('StatsScreen', () => {
             spaceId: 1,
             idempotencyKey: `key-${stats.breakdown.expense.total.amount}`,
             data: {
-              wallet_id: 1,
+              assignment: { kind: 'space' },
               category_id: 1,
               transaction_type: TransactionType.EXPENSE,
               amount: '1.00',
@@ -576,7 +584,7 @@ describe('StatsScreen', () => {
     expect(toastCount()).toBe(0);
     expect(screen.getByText(STALE_BANNER)).toBeTruthy();
 
-    fireEvent.press(screen.getByText('By wallet'));
+    fireEvent.press(screen.getByText('By assignment'));
     await settle();
     expect(toastCount()).toBe(0);
 
@@ -695,7 +703,7 @@ describe('StatsScreen', () => {
     expect(feedParams()).toEqual([
       expect.objectContaining({ transaction_type: 'expense', kind: 'regular', category_id: housing.id }),
     ]);
-    expect(feedParams()[0]).not.toHaveProperty('wallet_id');
+    expect(feedParams()[0]).not.toHaveProperty('assignment');
     const context = within(screen.getByTestId('applied-filter'));
     expect(context.getByText('Expenses')).toBeTruthy();
     expect(context.getByText('Housing')).toBeTruthy();
@@ -743,47 +751,48 @@ describe('StatsScreen', () => {
     expect(feedParams().at(-1)).toMatchObject({ from: new Date(2026, 0, 1).toISOString() });
   });
 
-  it("opens a wallet row's regular income, comes back to the same view and opens another row", async () => {
+  it("opens an assignment row's regular income, comes back to the same view and opens another row", async () => {
     renderStats();
     await settle();
     fireEvent.press(screen.getByRole('tab', { name: 'Income' }));
     await settle();
-    fireEvent.press(screen.getByRole('tab', { name: 'By wallet' }));
+    fireEvent.press(screen.getByRole('tab', { name: 'By assignment' }));
     mockedRequest.mockClear();
 
-    const { period, by_wallet: byWallet } = fixture.breakdown.income;
-    const [first, second] = byWallet.primary_items;
-    const filterOf = (wallet: typeof first) => ({
+    const { period, by_assignment: byAssignment } = fixture.breakdown.income;
+    const [first, second] = byAssignment.primary_items;
+    const filterOf = (name: string, assignment: string) => ({
       spaceId: 1,
-      name: wallet.name,
-      icon: 'wallet',
-      color: wallet.color,
+      name,
       from: period.from,
       to: period.actual_to,
       timeZone: period.time_zone,
       transactionType: 'income',
       kind: 'regular',
-      walletId: wallet.id,
+      assignment,
     });
 
-    fireEvent.press(screen.getByText(first.name));
+    expect([first.key, second.key]).toEqual(['member:1', 'unassigned']);
+    fireEvent.press(screen.getByText('You'));
     await settle();
-    expect(shownFilter()).toEqual(filterOf(first));
-    expect(feedParams().at(-1)).toMatchObject({ transaction_type: 'income', kind: 'regular', wallet_id: first.id });
+    expect(shownFilter()).toEqual(filterOf('You', 'member:1'));
+    expect(feedParams().at(-1)).toMatchObject({ transaction_type: 'income', kind: 'regular', assignment: 'member:1' });
 
     await backToStats();
 
     expect(screen.getByRole('tab', { name: 'Income' }).props.accessibilityState).toMatchObject({ selected: true });
-    expect(screen.getByRole('tab', { name: 'By wallet' }).props.accessibilityState).toMatchObject({ selected: true });
-    expect(screen.getByRole('adjustable').props.accessibilityValue.text).toBe('Income, $4,050.00, 2 wallets');
+    expect(screen.getByRole('tab', { name: 'By assignment' }).props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+    expect(screen.getByRole('adjustable').props.accessibilityValue.text).toBe('Income, $4,050.00, 2 assignments');
     expect(statsRequests()).toHaveLength(0);
 
-    fireEvent.press(screen.getByText(second.name));
+    fireEvent.press(screen.getByText('No member assigned'));
     await settle();
 
     expect(statsStack()).toEqual([ScreenNames.STATS_OVERVIEW_SCREEN, ScreenNames.STATS_TRANSACTIONS_SCREEN]);
-    expect(shownFilter()).toEqual(filterOf(second));
-    expect(feedParams().at(-1)).toMatchObject({ wallet_id: second.id });
+    expect(shownFilter()).toEqual(filterOf('No member assigned', 'unassigned'));
+    expect(feedParams().at(-1)).toMatchObject({ assignment: 'unassigned' });
     expect(feedParams().at(-1)).not.toHaveProperty('category_id');
   });
 
@@ -849,41 +858,6 @@ describe('StatsScreen', () => {
       expect(screen.queryByTestId('applied-filter')).toBeNull();
       expect(feedParams()).toEqual([]);
     });
-  });
-
-  it('opens the composer once with a wallet created for Add transaction, delivered to the nested overview', async () => {
-    const wallet = { id: 9, wallet_name: 'Cash', design: 'slate', balance: 0 };
-    const answerRequest = mockedRequest.getMockImplementation()!;
-    mockedRequest.mockImplementation((config: RequestConfig) =>
-      config.url === '/spaces/1/wallets'
-        ? Promise.resolve({
-            data: {
-              total_balance: 0,
-              total_balance_currency: 'USD',
-              wallets: [{ wallet, total_spend: 0, total_income: 0 }],
-            },
-          })
-        : answerRequest(config),
-    );
-    const { store } = renderStats();
-    await settle();
-
-    act(() =>
-      navigationRef.navigate(ScreenNames.STATS_TAB, {
-        screen: ScreenNames.STATS_OVERVIEW_SCREEN,
-        params: { composeWith: { spaceId: 1, walletId: 9 } },
-      }),
-    );
-    await settle();
-
-    expect(statsStack()).toEqual([ScreenNames.STATS_OVERVIEW_SCREEN]);
-    expect(navigationRef.getCurrentRoute()?.params).toEqual({ composeWith: undefined });
-    expect(store.getState().transactionFlow.flow).toMatchObject({ spaceId: 1, view: { name: 'create' } });
-    const { draftId } = store.getState().transactionFlow.flow!;
-
-    await settle();
-
-    expect(store.getState().transactionFlow.flow?.draftId).toBe(draftId);
   });
 
   describe('without a space', () => {
@@ -965,7 +939,7 @@ describe('StatsScreen', () => {
             spaceId: 1,
             idempotencyKey: 'key-1',
             data: {
-              wallet_id: 1,
+              assignment: { kind: 'space' },
               category_id: 1,
               transaction_type: TransactionType.EXPENSE,
               amount: '242.35',

@@ -37,7 +37,7 @@ const SpacesSheet = ({ spaces, currentSpaceId, onSelect, onCreateNew }: Props) =
 
       <View style={styles.sheetHeader}>
         <Text style={styles.sheetTitle}>Your spaces</Text>
-        <Text style={styles.sheetSubtitle}>Each space keeps its own wallets, limits and currency.</Text>
+        <Text style={styles.sheetSubtitle}>Each space has its own currency, history, categories and limits.</Text>
       </View>
 
       <View style={styles.rows}>

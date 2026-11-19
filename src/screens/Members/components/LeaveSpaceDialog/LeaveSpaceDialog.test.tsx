@@ -38,12 +38,18 @@ const renderDialog = (props: Partial<ComponentProps<typeof LeaveSpaceDialog>> = 
 beforeEach(() => resetSheets());
 
 it.each([
-  ['a member', { isOwner: false, memberCount: 3 }, 'Leave this space?', 'You lose access to “Flat”.', 'Leave space'],
+  [
+    'a member',
+    { isOwner: false, memberCount: 3 },
+    'Leave this space?',
+    'You lose access to “Flat”. The space and its history stay with the other members; what you added or what’s assigned to you remains, labelled Former member.',
+    'Leave space',
+  ],
   [
     'an owner with other members',
     { isOwner: true, memberCount: 3 },
     'Leave this space?',
-    'You’re the owner, so leaving hands “Flat” to the next member.',
+    'You’re the owner, so leaving hands “Flat” to the next member. The space and its history stay with the other members; what you added or what’s assigned to you remains, labelled Former member.',
     'Leave space',
   ],
   [

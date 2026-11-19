@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { CommonActions } from '@react-navigation/native';
 
@@ -38,7 +38,17 @@ const StatsTransactions = ({ filter, onBack }: Props) => {
   useSpaceRefresh();
   const { lock: deleteLock, confirmation: deleteConfirmation } = useConfirmation();
   const { requestDelete } = useTransactionDelete(deleteLock);
-  const { openDetails } = useTransactionFlow();
+  // The row's own selection, so an edit that takes a record out of it says why it left the list.
+  const selection = useMemo(
+    () => ({
+      from: filter.from,
+      to: filter.to,
+      transactionType: filter.transactionType,
+      ...(filter.categoryId !== undefined ? { categoryId: filter.categoryId } : { assignment: filter.assignment }),
+    }),
+    [filter],
+  );
+  const { openDetails } = useTransactionFlow(selection);
 
   const visibleIdsRef = useRef<string[]>([]);
   const getVisibleIds = useCallback(() => visibleIdsRef.current, []);

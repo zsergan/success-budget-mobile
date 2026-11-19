@@ -1,7 +1,7 @@
-import { useCallback, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
 import {
   Banner,
@@ -13,23 +13,21 @@ import {
 } from '@components';
 import { usePeriod, useRefreshOnReturn } from '@hooks';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
+import { selectProfileId } from '@redux/state/profile/selectors';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { activateSpace } from '@redux/state/space/thunks';
 import { rangeSelection } from '@redux/state/transactionFlow/selection';
 import { ScreenNames, TransactionType } from '@shared/enums';
-import type { StatsStackNavigationProp } from '@shared/types';
+import type { StatsStackNavigationProp, StatsStackScreenProps } from '@shared/types';
 import { formatRangeLabel, hasComparison, isCurrentMonth, monthPeriodOf } from '@shared/utils';
-import CreateWalletSheet from './components/CreateWalletSheet/CreateWalletSheet';
 import StatsEmptyState from './components/StatsEmptyState/StatsEmptyState';
 import StatsFailure from './components/StatsFailure/StatsFailure';
 import StatsHeader from './components/StatsHeader/StatsHeader';
 import StatsList from './components/StatsList/StatsList';
 import { parseDateKey } from './format';
 import { toHistoryFilter } from './historyFilter';
-import useAddTransaction from './hooks/useAddTransaction';
-import useComposeWithNewWallet from './hooks/useComposeWithNewWallet';
 import useSpaceStatus from './hooks/useSpaceStatus';
-import useStatsData from './hooks/useStatsData';
+import useStatsData from '@hooks/useStatsData';
 import useStatsSelection from './hooks/useStatsSelection';
 import useUpdateFailure from './hooks/useUpdateFailure';
 import type { BreakdownGroup } from './statsItems';
@@ -40,11 +38,11 @@ import styles from './style';
 const StatsScreen = () => {
   const navigation = useNavigation<StatsStackNavigationProp<ScreenNames.STATS_OVERVIEW_SCREEN>>();
   const rangePickerRef = useRef<BottomSheetModal>(null);
-  const walletSheetRef = useRef<BottomSheetModal>(null);
   const spacesSheetRef = useRef<BottomSheetModal>(null);
   const { period, range, canReset, applyPeriod, selectCurrent, resetPeriod } = usePeriod();
   const { openCreate } = useTransactionFlow(rangeSelection(range));
   const spaceId = useAppSelector(selectCurrentSpaceId);
+  const selfId = useAppSelector(selectProfileId);
   const selection = useStatsSelection(JSON.stringify([spaceId, range.from, range.to]));
   const { breakdownType, mode } = selection;
   const {
@@ -61,6 +59,17 @@ const StatsScreen = () => {
   } = useStatsData(range, breakdownType);
   useRefreshOnReturn(refreshIfStale);
 
+  // Home's request: its month, type and grouping, once, and only in the space it was made in.
+  const focus = useRoute<StatsStackScreenProps<ScreenNames.STATS_OVERVIEW_SCREEN>['route']>().params?.focus;
+  useEffect(() => {
+    if (!focus) return;
+
+    navigation.setParams({ focus: undefined });
+    if (focus.spaceId !== spaceId) return;
+    applyPeriod(monthPeriodOf(focus.month));
+    selection.focus(focus.transactionType, focus.mode);
+  }, [navigation, focus, spaceId, applyPeriod, selection]);
+
   const dispatch = useAppDispatch();
   const space = useSpaceStatus();
 
@@ -74,21 +83,8 @@ const StatsScreen = () => {
     navigation.navigate(ScreenNames.CREATE_SPACE_SCREEN);
   };
 
-  const addTransaction = useAddTransaction({
-    onHasWallets: () => openCreate(TransactionType.EXPENSE),
-    onNoWallets: () => walletSheetRef.current?.present(),
-  });
-
-  const openCreateWallet = () => {
-    if (spaceId === null) return;
-
-    navigation.navigate(ScreenNames.ADD_WALLET_SCREEN, {
-      id: 'new',
-      addTransaction: { returnTo: ScreenNames.STATS_TAB, spaceId },
-    });
-  };
-
-  useComposeWithNewWallet(useCallback((walletId) => openCreate(TransactionType.EXPENSE, walletId), [openCreate]));
+  // A space needs no setup before its first transaction: the form opens at once.
+  const addTransaction = () => openCreate(TransactionType.EXPENSE);
 
   // Without a space the stats are skipped, so they could never leave their placeholders.
   const failure =
@@ -130,7 +126,7 @@ const StatsScreen = () => {
   const selectedSegmentKey = isSegmentShown ? selection.selectedSegmentKey : null;
 
   const openTransactions = (group: BreakdownGroup) => {
-    const filter = breakdown.data && spaceId !== null && toHistoryFilter(group, breakdown.data, spaceId);
+    const filter = breakdown.data && spaceId !== null && toHistoryFilter(group, breakdown.data, spaceId, selfId);
     if (filter) navigation.navigate(ScreenNames.STATS_TRANSACTIONS_SCREEN, { filter });
   };
 
@@ -158,10 +154,6 @@ const StatsScreen = () => {
     <>
       <BottomModal ref={rangePickerRef} dynamicSizing>
         <RangePickerSheet period={period} onApply={applyPeriod} />
-      </BottomModal>
-
-      <BottomModal ref={walletSheetRef} dynamicSizing>
-        <CreateWalletSheet onCreateWallet={openCreateWallet} />
       </BottomModal>
 
       <BottomModal ref={spacesSheetRef} dynamicSizing>

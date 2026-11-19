@@ -1,3 +1,4 @@
+import type { CreateTransactionRequest } from '@api/dto';
 import { createAppStore } from '@redux/Store';
 import { loginMe, logoutMe } from '@redux/state/auth/thunks';
 import { categoryApi } from '@redux/state/category/api';
@@ -5,7 +6,6 @@ import { limitApi } from '@redux/state/limit/api';
 import { memberApi } from '@redux/state/member/api';
 import { spaceApi } from '@redux/state/space/api';
 import { feedSelection, transactionApi } from '@redux/state/transaction/api';
-import { walletApi } from '@redux/state/wallet/api';
 import { AppColor, SpaceType, TransactionType } from '@shared/enums';
 import { baseApi } from './baseApi';
 import { createTransactionResponseDto, feedDto, transactionDto } from '@redux/state/transaction/fixtures';
@@ -34,8 +34,6 @@ const respond = ({ url, method }: RequestConfig) => {
   if (method !== 'GET' && mutationFails)
     throw { response: { status: (mutationError as { statusCode: number }).statusCode, data: mutationError } };
   if (method !== 'GET') return { data: mutationResponse };
-  if (url.endsWith('/wallets'))
-    return { data: { wallets: [], total_balance: 0, total_balance_currency: 'USD', delta_percent: 0 } };
   if (url.endsWith('/categories')) return { data: { incomes: [], expenses: [], archived: [] } };
   if (url.endsWith('/limits')) return { data: { total: null, categories: [], over_allocation: null } };
   if (url.endsWith('/latest')) return { data: null };
@@ -52,15 +50,21 @@ const resourceOf = ({ url, params }: RequestConfig) => {
   return `${spaceId}:${name}`;
 };
 
-// Home's latest records and the latest record. A history page is subscribed too but never asked for again: its
+// Home's month activity and the latest record. A history page is subscribed too but never asked for again: its
 // screen starts a new generation from the history revision instead.
-const ALL_HISTORY = ['1:feed:1970-01', '1:latest'];
+const ALL_HISTORY = ['1:feed:2026-01', '1:latest'];
 
 const subscribeToSpace = (store: ReturnType<typeof createAppStore>, spaceId: number) => {
-  store.dispatch(walletApi.endpoints.getWallets.initiate({ spaceId }));
   store.dispatch(categoryApi.endpoints.getCategories.initiate({ spaceId }));
   store.dispatch(limitApi.endpoints.getLimits.initiate({ spaceId }));
-  store.dispatch(transactionApi.endpoints.getRecentTransactions.initiate({ spaceId, timeZone: 'UTC' }));
+  store.dispatch(
+    transactionApi.endpoints.getRecentTransactions.initiate({
+      spaceId,
+      timeZone: 'UTC',
+      from: '2026-01-01T00:00:00.000Z',
+      to: '2026-01-31T23:59:59.999Z',
+    }),
+  );
   store.dispatch(
     transactionApi.endpoints.getTransactionsFeed.initiate({
       selection: feedSelection(
@@ -99,15 +103,13 @@ beforeEach(() => {
   mockedRequest.mockImplementation(async (config: RequestConfig) => respond(config));
 });
 
-const transactionData = {
-  wallet_id: 1,
+const transactionData: CreateTransactionRequest = {
+  assignment: { kind: 'space' },
   category_id: 1,
   transaction_type: TransactionType.EXPENSE,
   amount: '10',
   timestamp: '2026-01-05T00:00:00.000Z',
 };
-
-const walletData = { wallet_name: 'Cash', initial_balance: '0', design: AppColor.SLATE };
 
 const rules = [
   {
@@ -121,7 +123,7 @@ const rules = [
         }),
       ),
     response: createTransactionResponseDto(),
-    expected: [...ALL_HISTORY, '1:wallets', '1:limits', '1:categories'],
+    expected: [...ALL_HISTORY, '1:limits', '1:categories'],
   },
   {
     name: 'edit transaction',
@@ -135,8 +137,8 @@ const rules = [
           data: { amount: '20' },
         }),
       ),
-    response: { transaction: transactionDto({ version: 2 }), wallets: [{ id: 1, balance: 80, is_deleted: false }] },
-    expected: [...ALL_HISTORY, '1:wallets', '1:limits', '1:categories'],
+    response: { transaction: transactionDto({ version: 2 }) },
+    expected: [...ALL_HISTORY, '1:limits', '1:categories'],
   },
   {
     name: 'delete transaction',
@@ -150,7 +152,7 @@ const rules = [
         }),
       ),
     response: true,
-    expected: [...ALL_HISTORY, '1:wallets', '1:limits', '1:categories'],
+    expected: [...ALL_HISTORY, '1:limits', '1:categories'],
   },
   {
     name: 'create category',
@@ -213,40 +215,6 @@ const rules = [
       store.dispatch(limitApi.endpoints.deleteLimit.initiate({ spaceId: 1, limitId: 1 })),
     expected: ['1:categories', '1:limits'],
   },
-  {
-    name: 'create wallet without a starting balance',
-    mutate: (store: ReturnType<typeof createAppStore>) =>
-      store.dispatch(walletApi.endpoints.createWallet.initiate({ spaceId: 1, data: walletData })),
-    response: { wallet: { id: 1 }, transaction: null },
-    expected: ['1:wallets'],
-  },
-  {
-    name: 'create wallet with a starting balance',
-    mutate: (store: ReturnType<typeof createAppStore>) =>
-      store.dispatch(
-        walletApi.endpoints.createWallet.initiate({ spaceId: 1, data: { ...walletData, initial_balance: '50' } }),
-      ),
-    response: { wallet: { id: 1 }, transaction: { id: 'tx' } },
-    expected: [...ALL_HISTORY, '1:wallets'],
-  },
-  {
-    name: 'edit wallet',
-    mutate: (store: ReturnType<typeof createAppStore>) =>
-      store.dispatch(
-        walletApi.endpoints.updateWallet.initiate({
-          spaceId: 1,
-          walletId: 1,
-          data: { wallet_name: 'Card', design: AppColor.SLATE },
-        }),
-      ),
-    expected: [...ALL_HISTORY, '1:wallets'],
-  },
-  {
-    name: 'delete wallet',
-    mutate: (store: ReturnType<typeof createAppStore>) =>
-      store.dispatch(walletApi.endpoints.deleteWallet.initiate({ spaceId: 1, walletId: 1 })),
-    expected: [...ALL_HISTORY, '1:wallets'],
-  },
 ];
 
 describe('invalidation rules (docs/server-data.md)', () => {
@@ -291,7 +259,7 @@ describe('invalidation rules (docs/server-data.md)', () => {
     expect(await refetchedAfter(mutate)).toEqual(['1:categories', '1:limits']);
   });
 
-  it.each(['TRANSACTION_NOT_FOUND', 'TRANSACTION_VERSION_CONFLICT', 'WALLET_DELETED', 'CATEGORY_ARCHIVED'])(
+  it.each(['TRANSACTION_NOT_FOUND', 'TRANSACTION_VERSION_CONFLICT', 'CATEGORY_ARCHIVED', 'FORBIDDEN_CATEGORY'])(
     'a transaction write refused with %s refreshes what it shows to be stale',
     async (code) => {
       mutationFails = true;
@@ -308,7 +276,7 @@ describe('invalidation rules (docs/server-data.md)', () => {
         ),
       );
 
-      expect(refetched).toEqual([...ALL_HISTORY, '1:categories', '1:limits', '1:wallets'].sort());
+      expect(refetched).toEqual([...ALL_HISTORY, '1:categories', '1:limits'].sort());
     },
   );
 
@@ -392,6 +360,22 @@ describe('member and space rules', () => {
       name: 'revoke invite',
       mutate: (store: ReturnType<typeof createAppStore>) =>
         store.dispatch(memberApi.endpoints.revokeInvite.initiate({ spaceId: 1, inviteId: 3 })),
+      expected: ['/spaces/1/members'],
+    },
+    {
+      name: 'transaction write refused for a member who left',
+      mutate: (store: ReturnType<typeof createAppStore>) => {
+        mutationFails = true;
+        mutationError = { statusCode: 400, code: 'ASSIGNEE_NOT_MEMBER', message: 'Not a member' };
+
+        return store.dispatch(
+          transactionApi.endpoints.createTransaction.initiate({
+            spaceId: 1,
+            idempotencyKey: 'k',
+            data: transactionData,
+          }),
+        );
+      },
       expected: ['/spaces/1/members'],
     },
     {

@@ -1,27 +1,24 @@
 import type {
   CreateTransactionRequest,
-  CreateTransactionResponse,
   ErrorResponse,
   Transaction,
+  TransactionAssigneesResponse,
   TransactionFeedResponse,
   TransactionOperationResponse,
   TransactionsCountResponse,
+  TransactionWriteResponse,
   UpdateTransactionRequest,
-  UpdateTransactionResponse,
 } from '@api/dto';
 import { ApiErrorCode } from '@api/dto';
 import type {
-  CreateTransactionResult,
+  AssignmentKey,
+  TransactionAssigneesModel,
   TransactionFeedPageModel,
   TransactionModel,
-  UpdateTransactionResult,
+  TransactionWriteResult,
 } from '@api/models';
-import {
-  mapCreateTransactionResponse,
-  mapTransaction,
-  mapTransactionFeed,
-  mapUpdateTransactionResponse,
-} from '@api/models';
+import { mapTransaction, mapTransactionAssignees, mapTransactionFeed } from '@api/models';
+import type { HttpRequest } from '@redux/api/baseQuery';
 import type { SpaceArg } from '@redux/api/baseApi';
 import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { getDeviceTimeZone } from '@redux/state/statistics/selectors';
@@ -34,7 +31,8 @@ export interface TransactionsArg extends SpaceArg {
   // Absent lists both regular transactions and starting balances.
   kind?: TransactionKind;
   categoryId?: number;
-  walletId?: number;
+  // Absent lists every assignment.
+  assignment?: AssignmentKey;
 }
 
 // What the feed lists: one cursor belongs to exactly one selection.
@@ -65,8 +63,11 @@ export interface TransactionsCountArg extends TransactionsArg {
   q?: string;
 }
 
+// Home's activity: the newest records of the month it shows.
 export interface RecentTransactionsArg extends SpaceArg {
   timeZone: string;
+  from: string;
+  to: string;
 }
 
 export interface TransactionArg extends SpaceArg {
@@ -104,14 +105,17 @@ export const periodArg = (spaceId: number, { from, to }: { from: Date; to: Date 
   to: to.toISOString(),
 });
 
-const listParams = ({ from, to, transactionType, kind, categoryId, walletId }: TransactionsArg) => ({
+const listParams = ({ from, to, transactionType, kind, categoryId, assignment }: TransactionsArg) => ({
   from,
   to,
   ...(transactionType && { transaction_type: transactionType }),
   ...(kind && { kind }),
   ...(categoryId !== undefined && { category_id: categoryId }),
-  ...(walletId !== undefined && { wallet_id: walletId }),
+  ...(assignment && { assignment }),
 });
+
+// Every transaction route is on `/api/v2`: records belong to the space and carry an author and an assignment.
+const v2 = (request: HttpRequest): HttpRequest => ({ ...request, apiVersion: 2 });
 
 // Search text is trimmed and a blank one dropped, so equal searches are one selection.
 export const feedSelection = (
@@ -139,11 +143,16 @@ const feedParams = ({ selection, pageSize }: TransactionsFeedArg, { cursor, arou
   ...(aroundId && { around_id: aroundId }),
 });
 
-// Home's latest records: the whole range the server stores timestamps in, one short page and no more.
-export const WHOLE_HISTORY = { from: '1970-01-01T00:00:01Z', to: '2038-01-19T03:14:07.999Z' };
+// One short page and no more: the month's totals come from statistics, never from these rows.
 export const RECENT_TRANSACTIONS_LIMIT = 5;
 
-export const recentArg = (spaceId: number): RecentTransactionsArg => ({ spaceId, timeZone: getDeviceTimeZone() });
+// Built like `periodArg`, so Home and the early fetch for it share one entry for the same month.
+export const recentArg = (spaceId: number, range: { from: Date; to: Date }): RecentTransactionsArg => ({
+  spaceId,
+  timeZone: getDeviceTimeZone(),
+  from: range.from.toISOString(),
+  to: range.to.toISOString(),
+});
 
 // Pages kept per feed entry; scrolling further drops the farthest page and reads it again by cursor on the way back.
 export const FEED_MAX_PAGES = 10;
@@ -156,32 +165,37 @@ const writeHeaders = ({ idempotencyKey, version }: IdempotentArg & { version?: n
   ...(version !== undefined && { 'If-Match': `"${version}"` }),
 });
 
-// These refusals show the cached record, wallet or category is already out of date.
+// These refusals show the cached record, category or member list is already out of date.
 const STALE_STATE_CODES: string[] = [
   ApiErrorCode.TRANSACTION_NOT_FOUND,
   ApiErrorCode.TRANSACTION_VERSION_CONFLICT,
-  ApiErrorCode.WALLET_DELETED,
   ApiErrorCode.CATEGORY_ARCHIVED,
-  ApiErrorCode.FORBIDDEN_WALLET,
   ApiErrorCode.FORBIDDEN_CATEGORY,
+  ApiErrorCode.ASSIGNEE_NOT_MEMBER,
 ];
 
-// A write changes balances, limit spending and each category's transaction count.
+// A write changes history under both its old and new assignment, limit spending and each category's count. Tags are
+// per space, so every list, filter and statistics cycle of the space reads again, whatever selection it shows.
+export const TRANSACTION_WRITE_TAGS = ['Transactions', 'Limits', 'Categories'] as const;
+
 const invalidatesTransactionWrite = (_result: unknown, error: unknown, { spaceId }: SpaceArg) => {
   const code = (error as Partial<ErrorResponse> | undefined)?.code;
 
+  if (code === ApiErrorCode.ASSIGNEE_NOT_MEMBER) return spaceTags(spaceId, ...TRANSACTION_WRITE_TAGS, 'Members');
+
   return !error || (code !== undefined && STALE_STATE_CODES.includes(code))
-    ? spaceTags(spaceId, 'Transactions', 'Wallets', 'Limits', 'Categories')
+    ? spaceTags(spaceId, ...TRANSACTION_WRITE_TAGS)
     : [];
 };
 
 export const transactionApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getRecentTransactions: build.query<TransactionFeedPageModel, RecentTransactionsArg>({
-      query: ({ spaceId, timeZone }) => ({
-        url: `/spaces/${spaceId}/transactions/feed`,
-        params: { ...WHOLE_HISTORY, time_zone: timeZone, limit: RECENT_TRANSACTIONS_LIMIT },
-      }),
+      query: ({ spaceId, timeZone, from, to }) =>
+        v2({
+          url: `/spaces/${spaceId}/transactions/feed`,
+          params: { from, to, time_zone: timeZone, limit: RECENT_TRANSACTIONS_LIMIT },
+        }),
       transformResponse: (response: TransactionFeedResponse) => mapTransactionFeed(response),
       providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions'),
     }),
@@ -192,10 +206,11 @@ export const transactionApi = baseApi.injectEndpoints({
         getNextPageParam: ({ nextCursor }) => (nextCursor ? { cursor: nextCursor } : undefined),
         getPreviousPageParam: ({ previousCursor }) => (previousCursor ? { cursor: previousCursor } : undefined),
       },
-      query: ({ queryArg, pageParam }) => ({
-        url: `/spaces/${queryArg.selection.spaceId}/transactions/feed`,
-        params: feedParams(queryArg, pageParam),
-      }),
+      query: ({ queryArg, pageParam }) =>
+        v2({
+          url: `/spaces/${queryArg.selection.spaceId}/transactions/feed`,
+          params: feedParams(queryArg, pageParam),
+        }),
       transformResponse: (response: TransactionFeedResponse) => ({
         ...mapTransactionFeed(response),
         sequence: ++receivedPages,
@@ -211,57 +226,59 @@ export const transactionApi = baseApi.injectEndpoints({
       providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions'),
     }),
     getTransactionsCount: build.query<number, TransactionsCountArg>({
-      query: (arg) => ({
-        url: `/spaces/${arg.spaceId}/transactions/count`,
-        params: { ...listParams(arg), ...(arg.q && { q: arg.q }) },
-      }),
+      query: (arg) =>
+        v2({
+          url: `/spaces/${arg.spaceId}/transactions/count`,
+          params: { ...listParams(arg), ...(arg.q && { q: arg.q }) },
+        }),
       transformResponse: (response: TransactionsCountResponse) => response.count,
       providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions'),
     }),
     getLatestTransaction: build.query<TransactionModel | null, SpaceArg>({
-      query: ({ spaceId }) => ({ url: `/spaces/${spaceId}/transactions/latest` }),
+      query: ({ spaceId }) => v2({ url: `/spaces/${spaceId}/transactions/latest` }),
       transformResponse: (response: Transaction | null) => (response ? mapTransaction(response) : null),
       providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions'),
     }),
     getTransaction: build.query<TransactionModel, TransactionArg>({
-      query: ({ spaceId, transactionId }) => ({ url: `/spaces/${spaceId}/transactions/${transactionId}` }),
+      query: ({ spaceId, transactionId }) => v2({ url: `/spaces/${spaceId}/transactions/${transactionId}` }),
       transformResponse: (response: Transaction) => mapTransaction(response),
       providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions'),
     }),
     getTransactionOperation: build.query<CreateOperationStatus, TransactionOperationArg>({
-      query: ({ spaceId, operationId }) => ({ url: `/spaces/${spaceId}/transactions/operations/${operationId}` }),
+      query: ({ spaceId, operationId }) => v2({ url: `/spaces/${spaceId}/transactions/operations/${operationId}` }),
       transformResponse: ({ status, transaction }: TransactionOperationResponse) => ({
         status,
         transaction: transaction && mapTransaction(transaction),
       }),
       keepUnusedDataFor: 0,
     }),
-    createTransaction: build.mutation<CreateTransactionResult, CreateTransactionArg>({
-      query: ({ spaceId, data, ...arg }) => ({
-        url: `/spaces/${spaceId}/transactions`,
-        method: 'POST',
-        body: data,
-        headers: writeHeaders(arg),
-      }),
-      transformResponse: (response: CreateTransactionResponse) => mapCreateTransactionResponse(response),
+    // History's "Assigned to" filter: current members, former members with records, and whether any deleted account
+    // has records. Joining, leaving and reassigning all change it.
+    getTransactionAssignees: build.query<TransactionAssigneesModel, SpaceArg>({
+      query: ({ spaceId }) => v2({ url: `/spaces/${spaceId}/transactions/assignees` }),
+      transformResponse: (response: TransactionAssigneesResponse) => mapTransactionAssignees(response),
+      providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions', 'Members'),
+    }),
+    createTransaction: build.mutation<TransactionWriteResult, CreateTransactionArg>({
+      query: ({ spaceId, data, ...arg }) =>
+        v2({ url: `/spaces/${spaceId}/transactions`, method: 'POST', body: data, headers: writeHeaders(arg) }),
+      transformResponse: ({ transaction }: TransactionWriteResponse) => ({ transaction: mapTransaction(transaction) }),
       invalidatesTags: invalidatesTransactionWrite,
     }),
-    updateTransaction: build.mutation<UpdateTransactionResult, UpdateTransactionArg>({
-      query: ({ spaceId, transactionId, data, ...arg }) => ({
-        url: `/spaces/${spaceId}/transactions/${transactionId}`,
-        method: 'PATCH',
-        body: data,
-        headers: writeHeaders(arg),
-      }),
-      transformResponse: (response: UpdateTransactionResponse) => mapUpdateTransactionResponse(response),
+    updateTransaction: build.mutation<TransactionWriteResult, UpdateTransactionArg>({
+      query: ({ spaceId, transactionId, data, ...arg }) =>
+        v2({
+          url: `/spaces/${spaceId}/transactions/${transactionId}`,
+          method: 'PATCH',
+          body: data,
+          headers: writeHeaders(arg),
+        }),
+      transformResponse: ({ transaction }: TransactionWriteResponse) => ({ transaction: mapTransaction(transaction) }),
       invalidatesTags: invalidatesTransactionWrite,
     }),
     deleteTransaction: build.mutation<null, DeleteTransactionArg>({
-      query: ({ spaceId, transactionId, ...arg }) => ({
-        url: `/spaces/${spaceId}/transactions/${transactionId}`,
-        method: 'DELETE',
-        headers: writeHeaders(arg),
-      }),
+      query: ({ spaceId, transactionId, ...arg }) =>
+        v2({ url: `/spaces/${spaceId}/transactions/${transactionId}`, method: 'DELETE', headers: writeHeaders(arg) }),
       invalidatesTags: invalidatesTransactionWrite,
     }),
   }),
@@ -274,6 +291,7 @@ export const {
   useGetTransactionsCountQuery,
   useGetLatestTransactionQuery,
   useGetTransactionQuery,
+  useGetTransactionAssigneesQuery,
   useCreateTransactionMutation,
   useUpdateTransactionMutation,
   useDeleteTransactionMutation,

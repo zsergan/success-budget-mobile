@@ -101,6 +101,39 @@ const createStyles = ({ colors }: ColorTheme) =>
     propertyValueMuted: {
       color: colors.muted,
     },
+    personValue: {
+      flexShrink: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      columnGap: theme.spacing.sm,
+    },
+    personTexts: {
+      flexShrink: 1,
+      alignItems: 'flex-end',
+    },
+    propertySub: {
+      fontFamily: theme.fonts.medium,
+      fontSize: theme.fontSizes.caption,
+      lineHeight: theme.lineHeights.caption,
+      textAlign: 'right',
+      color: colors.muted,
+    },
+    importNote: {
+      borderRadius: theme.radius.md,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: 10,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      columnGap: theme.spacing.sm,
+      backgroundColor: colors.track,
+    },
+    importNoteText: {
+      flex: 1,
+      fontFamily: theme.fonts.medium,
+      fontSize: theme.fontSizes.caption,
+      lineHeight: 17,
+      color: colors.muted,
+    },
     divider: {
       height: 1,
       marginVertical: theme.spacing.md,

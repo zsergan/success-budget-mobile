@@ -17,7 +17,7 @@ constraints that are easy to break when adding a caller.
   only when the sheet closed itself (swipe, backdrop), so the owner can
   treat that as a cancel, while a close the owner asked for is not one.
 - Keep rendering the last content while the sheet animates away
-  (`ConfirmationSheet` and `WalletActionsSheet` cache it); the owner's
+  (`ConfirmationSheet` and History's `FilterSheet` cache it); the owner's
   value is already null by then.
 
 ## Keyboard
@@ -36,8 +36,7 @@ do: it dismisses the keyboard and shows the sheet once it has gone.
   backdrop, and `useBackPress` gives Android Back to the most recently
   enabled handler alone.
 - Anything else a sheet leads to (another sheet, a screen) waits until that
-  sheet has gone: close it, then act from its `onDismiss`
-  (see `useWalletActions`).
+  sheet has gone: close it, then act from its `onDismiss`.
 
 ## The transaction flow: a sheet and a screen
 
@@ -52,8 +51,8 @@ do: it dismisses the keyboard and shows the sheet once it has gone.
   opened from (`useCategoryCreation`).
 - `useEditorRoute` pushes the editor once the flow has a form and the sheet
   has finished closing. When the flow lets the form go (a save, Back, a
-  space switch) the editor removes exactly its own route and a wallet
-  screen it opened (`forEditor`), and the category list removes itself;
+  space switch) the editor removes exactly its own route, and the
+  category list removes itself;
   any other route on the stack stays, in focus if it was.
 - A picker that waits for the keyboard (`usePickerDelay`) opens only if it
   is still the last one asked for, on the same draft, with its screen in

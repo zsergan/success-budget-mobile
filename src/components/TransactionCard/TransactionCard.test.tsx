@@ -1,11 +1,15 @@
 import { Provider } from 'react-redux';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { mapTransaction } from '@api/models';
+import { baseApi } from '@redux/api/baseApi';
 import { createAppStore } from '@redux/Store';
 import { transactionDto } from '@redux/state/transaction/fixtures';
 import { deleteStarted } from '@redux/state/transactionFlow/slice';
-import { TransactionKind, TransactionType } from '@shared/enums';
+import { withProfile } from '@redux/state/profile/fixtures';
+import { spaceApi } from '@redux/state/space/api';
+import { activateSpace } from '@redux/state/space/thunks';
+import { SpaceType, TransactionKind, TransactionType } from '@shared/enums';
 import TransactionCard from './TransactionCard';
 
 jest.mock('@api/instance', () => ({
@@ -28,8 +32,44 @@ jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
   });
 });
 
-const renderCard = (overrides = {}) => {
+// Unmounting leaves each store's cache-removal and subscription-sync timers running past the test; the reset
+// clears the first, and fake timers keep the sync one, which the reset leaves, from outliving the test.
+jest.useFakeTimers();
+
+const stores: ReturnType<typeof createAppStore>[] = [];
+
+afterEach(() => {
+  cleanup();
+  stores.splice(0).forEach((store) => store.dispatch(baseApi.util.resetApiState()));
+  jest.clearAllTimers();
+});
+
+const renderCard = (overrides = {}, spaceType?: SpaceType) => {
   const store = createAppStore();
+  stores.push(store);
+  if (spaceType) {
+    withProfile(store, 7);
+    store.dispatch(
+      spaceApi.util.upsertQueryEntries([
+        {
+          endpointName: 'getSpaces',
+          arg: undefined,
+          value: [
+            {
+              id: 1,
+              name: 'Space',
+              type: spaceType,
+              currency: { id: 1, code: 'USD', name: 'US Dollar' },
+              role: 'owner',
+              member_count: 1,
+              created_at: '2026-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+      ]),
+    );
+    store.dispatch(activateSpace(1));
+  }
   const transaction = mapTransaction(transactionDto({ amount: '12.00', ...overrides }));
   const onPress = jest.fn();
   const onDelete = jest.fn();
@@ -71,25 +111,56 @@ describe('TransactionCard', () => {
     expect(screen.queryByLabelText('Delete')).toBeNull();
   });
 
-  it('shows the description, wallet and time as separate parts', () => {
+  it('shows the description, assignment and time as separate parts', () => {
     renderCard({ description: 'Dinner with Anna', timestamp: new Date(2026, 0, 5, 9, 10).toISOString() });
 
     expect(screen.getByText('Dinner with Anna')).toBeTruthy();
-    expect(screen.getByText('Cash')).toBeTruthy();
+    expect(screen.getByText('Zakhar')).toBeTruthy();
     expect(screen.getByText(' · 09:10')).toBeTruthy();
   });
 
-  it('starts the second line with the wallet when there is no description', () => {
+  it('starts the second line with the assignment when there is no description', () => {
     renderCard({ description: null });
 
     expect(screen.getAllByText('Food')).toHaveLength(1);
     expect(screen.queryByText(' · ')).toBeNull();
-    expect(screen.getByText('Cash')).toBeTruthy();
+    expect(screen.getByText('Zakhar')).toBeTruthy();
   });
 
-  it('names a deleted wallet', () => {
-    renderCard({ wallet: null });
+  it.each([
+    ['Whole space', { kind: 'space', user_id: null, name: null, status: null }],
+    ['No member assigned', { kind: 'unassigned', user_id: null, name: null, status: null }],
+    ['Lena · Former member', { kind: 'member', user_id: 31, name: 'Lena', status: 'former_member' }],
+    ['Deleted member', { kind: 'member', user_id: null, name: null, status: 'deleted' }],
+  ])('names the assignment %s', (label, assignment) => {
+    renderCard({ assignment });
 
-    expect(screen.getByText('Deleted wallet')).toBeTruthy();
+    expect(screen.getByText(label)).toBeTruthy();
+  });
+
+  it('leaves the ordinary You unsaid in a personal space, and names everything else', () => {
+    renderCard({ description: 'Market', timestamp: new Date(2026, 0, 5, 18, 20).toISOString() }, SpaceType.PERSONAL);
+
+    expect(screen.queryByText('You')).toBeNull();
+    expect(screen.getByText(' · 18:20')).toBeTruthy();
+  });
+
+  it('names the whole space in a personal space, and the user as You in a shared one', () => {
+    renderCard({ assignment: { kind: 'space', user_id: null, name: null, status: null } }, SpaceType.PERSONAL);
+    expect(screen.getByText('Whole space')).toBeTruthy();
+
+    screen.unmount();
+    renderCard({}, SpaceType.GROUP);
+    expect(screen.getByText('You')).toBeTruthy();
+  });
+
+  it('marks a record moved from wallets, and a starting balance as archived without an assignee', () => {
+    renderCard({ author: { user_id: 7, name: 'Zakhar', status: 'member', source: 'imported' } });
+    expect(screen.getByText('Imported')).toBeTruthy();
+
+    screen.unmount();
+    renderCard({ kind: TransactionKind.INITIAL_BALANCE, transaction_type: TransactionType.INCOME, description: null });
+    expect(screen.getByText('Archived')).toBeTruthy();
+    expect(screen.queryByText('Zakhar')).toBeNull();
   });
 });

@@ -1,3 +1,5 @@
+export { default as AssignmentAvatar } from './AssignmentAvatar/AssignmentAvatar';
+export type { AvatarSubject } from './AssignmentAvatar/AssignmentAvatar';
 export * from './Brand';
 export * from './Buttons';
 export { default as Carousel } from './Carousel/Carousel';
@@ -35,4 +37,3 @@ export * from './Toast';
 export { default as TransactionCard } from './TransactionCard/TransactionCard';
 export * from './TransactionFlow';
 export * from './Typography';
-export * from './Wallets';

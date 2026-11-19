@@ -25,7 +25,7 @@ const feedArg: TransactionsFeedArg = {
   selection: feedSelection(periodArg(1, { from: new Date(2026, 0, 1), to: new Date(2026, 1, 1) })),
   generation: 'g1',
 };
-const recent = recentArg(1);
+const recent = recentArg(1, { from: new Date(2026, 0, 1), to: new Date(2026, 1, 1) });
 const lunch = mapTransaction(transactionDto({ id: 'tx-1' }));
 const taxi = mapTransaction(transactionDto({ id: 'tx-2' }));
 const page = (items = [lunch, taxi]): TransactionFeedPage => ({

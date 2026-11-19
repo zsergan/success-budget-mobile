@@ -3,16 +3,7 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 
 import { httpBaseQuery } from './baseQuery';
 
-const TAG_TYPES = [
-  'Spaces',
-  'Profile',
-  'Currencies',
-  'Wallets',
-  'Categories',
-  'Limits',
-  'Transactions',
-  'Members',
-] as const;
+const TAG_TYPES = ['Spaces', 'Profile', 'Currencies', 'Categories', 'Limits', 'Transactions', 'Members'] as const;
 
 type TagType = (typeof TAG_TYPES)[number];
 

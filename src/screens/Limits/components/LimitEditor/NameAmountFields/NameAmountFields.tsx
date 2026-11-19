@@ -74,7 +74,9 @@ const NameAmountFields = ({ control, isGroup, isTotal, currencyCode, onNameChang
 
             <Text style={[styles.heroSub, !!error && styles.heroSubError]}>
               {error?.message ??
-                (isTotal ? 'Cap for every expense across all wallets' : 'Counted across all wallets together')}
+                (isTotal
+                  ? 'Cap for every expense in the space, whoever it’s assigned to'
+                  : 'Counted across the whole space, whoever it’s assigned to')}
             </Text>
           </View>
         )}

@@ -10,11 +10,13 @@ import { useAppDispatch, useAppSelector, useAppStore } from '@redux/hooks';
 import { hasOpenForm, selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { anotherStarted, autoCloseRestarted, autoCloseStopped, closed } from '@redux/state/transactionFlow/slice';
+import { whereSaved } from '@redux/state/transactionFlow/selection';
 import { checkFlowRecord, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackParamList } from '@shared/types';
 import { afterKeyboardHides } from '@shared/utils';
 import CreatedConfirmation from './CreatedConfirmation/CreatedConfirmation';
+import useAssignmentDefaults from './hooks/useAssignmentDefaults';
 import useEditorRoute from './hooks/useEditorRoute';
 import useFlowClose from './hooks/useFlowClose';
 import useFlowConfirmation from './hooks/useFlowConfirmation';
@@ -33,6 +35,7 @@ const TransactionFlowSheet = () => {
   const { lock: confirmLock, confirmation } = useFlowConfirmation();
   const { requestClose, back } = useFlowClose(confirmLock);
   const { requestDelete, retryDelete, undoCreate: deleteCreated } = useTransactionDelete(confirmLock);
+  const { forAnother } = useAssignmentDefaults();
 
   // The content stays on screen while the sheet animates away after the flow ended.
   const sheetFlow = flow && !hasOpenForm(flow) ? flow : null;
@@ -112,23 +115,25 @@ const TransactionFlowSheet = () => {
     void deleteCreated(current.created.transaction);
   };
 
-  // Leaves the confirmation for the record: Show for its row in Transactions, Open for its latest version.
-  const leaveCreated = (target: 'row' | 'record') => {
+  // Leaves the confirmation for the record: its details, over its row in its own period when the screen it was made
+  // from shows another one, so the period it went to is in view.
+  const leaveCreated = () => {
     const current = selectTransactionFlow(store.getState());
     if (!current?.created || current.isSaving) return;
 
-    const { spaceId, created } = current;
+    const { spaceId, created, selection } = current;
     const { id, timestamp } = created.transaction;
     dispatch(closed());
 
-    if (target === 'record') {
-      dispatch(openTransactionDetails({ spaceId, transaction: created.transaction }));
-    } else {
-      navigation.navigate(ScreenNames.HOME_SCREEN, {
-        screen: ScreenNames.TRANSACTIONS_TAB,
-        params: { reveal: { spaceId, transactionId: id, timestamp } },
-      });
+    if (whereSaved(created.transaction, selection) === 'otherPeriod') {
+      navigation.navigate(
+        ScreenNames.HOME_SCREEN,
+        selection?.origin === 'home'
+          ? { screen: ScreenNames.HOME_TAB, params: { showMonth: { spaceId, month: timestamp } } }
+          : { screen: ScreenNames.TRANSACTIONS_TAB, params: { reveal: { spaceId, transactionId: id, timestamp } } },
+      );
     }
+    dispatch(openTransactionDetails({ spaceId, transaction: created.transaction }));
   };
 
   const renderView = () => {
@@ -151,9 +156,15 @@ const TransactionFlowSheet = () => {
           <CreatedConfirmation
             flow={{ ...shown, created: shown.created }}
             onUndo={undoCreate}
-            onShow={() => leaveCreated('row')}
-            onOpenRecord={() => leaveCreated('record')}
-            onAddAnother={() => dispatch(anotherStarted({ now: new Date().toISOString() }))}
+            onView={leaveCreated}
+            onAddAnother={() =>
+              dispatch(
+                anotherStarted({
+                  now: new Date().toISOString(),
+                  assignment: forAnother(shown.spaceId, shown.draft?.assignment ?? null),
+                }),
+              )
+            }
             onDone={requestClose}
           />
         ) : null;

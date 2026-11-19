@@ -10,6 +10,9 @@ import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
 import { getActiveCategories } from '@redux/state/category/selectors';
 import { useGetLimitsQuery } from '@redux/state/limit/api';
+import { useGetMembersQuery } from '@redux/state/member/api';
+import { activeMemberIds } from '@redux/state/member/selectors';
+import { useGetProfileQuery } from '@redux/state/profile/api';
 import { selectCurrentSpaceCurrencyCode } from '@redux/state/space/selectors';
 import type { TransactionDraft } from '@redux/state/transactionFlow/draft';
 import { changedFields, getDraftErrors, hasDraftErrors } from '@redux/state/transactionFlow/draft';
@@ -17,8 +20,8 @@ import { hasUnsavedChanges, selectIsDeleting } from '@redux/state/transactionFlo
 import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { draftChanged } from '@redux/state/transactionFlow/slice';
 import { loadLatestRecord } from '@redux/state/transactionFlow/thunks';
-import { useGetWalletsQuery } from '@redux/state/wallet/api';
 import { TransactionType } from '@shared/enums';
+import { authorLabel } from '@shared/utils';
 import DeleteButton from '@components/TransactionFlow/DeleteButton/DeleteButton';
 import { deleteFailureAction, deleteFailureText } from '@components/TransactionFlow/deleteMessage';
 import Banner from '@components/Banner/Banner';
@@ -26,14 +29,14 @@ import type { ListLoad } from '../SectionLoad/SectionLoad';
 import { listLoad } from '../SectionLoad/SectionLoad';
 import ActionRow from './ActionRow/ActionRow';
 import AmountField from './AmountField/AmountField';
+import { buildAssignmentOptions } from './AssignmentPicker/assignmentOptions';
+import AssignmentPicker from './AssignmentPicker/AssignmentPicker';
 import CategoryGrid from './CategoryGrid/CategoryGrid';
 import { buildCategoryGrid } from './CategoryGrid/categoryLayout';
 import DetailsCard from './DetailsCard/DetailsCard';
 import { forecastLimit } from './LimitHint/limitForecast';
 import LimitHint from './LimitHint/LimitHint';
 import TypeToggle from './TypeToggle/TypeToggle';
-import useDefaultWallet from './useDefaultWallet';
-import WalletPicker from './WalletPicker/WalletPicker';
 
 import createStyles from './style';
 
@@ -43,7 +46,6 @@ interface Props {
   onBack: () => void;
   onOpenCategories: () => void;
   onOpenDate: () => void;
-  onCreateWallet: () => void;
   onCreateCategory: () => void;
   onDelete: () => void;
   onRetryDelete: () => void;
@@ -55,7 +57,6 @@ const TransactionEditor = ({
   onBack,
   onOpenCategories,
   onOpenDate,
-  onCreateWallet,
   onCreateCategory,
   onDelete,
   onRetryDelete,
@@ -69,12 +70,15 @@ const TransactionEditor = ({
   const [isScrolled, setScrolled] = useState(false);
   const [isLoadingLatest, setLoadingLatest] = useState(false);
   const [hasLatestFailed, setLatestFailed] = useState(false);
+  // The category a type change cleared, named until another is picked in the same draft.
+  const [cleared, setCleared] = useState<{ draftId: number; name: string; typeWord: string } | null>(null);
   const spaceArg = useSpaceArg();
-  const walletsQuery = useGetWalletsQuery(spaceArg);
+  const membersQuery = useGetMembersQuery(spaceArg);
+  const { currentData: members } = membersQuery;
+  const membersLoad = listLoad(membersQuery);
+  const { currentData: profile } = useGetProfileQuery();
   const categoriesQuery = useGetCategoriesQuery(spaceArg);
-  const { currentData: walletsOverview } = walletsQuery;
   const { currentData: allCategories } = categoriesQuery;
-  const walletsLoad = listLoad(walletsQuery);
   const categoriesLoad = listLoad(categoriesQuery);
   const { currentData: limits } = useGetLimitsQuery(spaceArg);
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
@@ -86,15 +90,11 @@ const TransactionEditor = ({
   const typeColor = isIncome ? colors.ok : colors.danger;
   const now = new Date();
 
-  const wallets = useMemo(() => walletsOverview?.wallets.map(({ wallet }) => wallet) ?? [], [walletsOverview]);
-  const activeWalletIds = useMemo(() => walletsOverview?.wallets.map(({ wallet }) => wallet.id), [walletsOverview]);
   const { incomes, expenses } = useMemo(() => getActiveCategories(allCategories), [allCategories]);
   const activeOf = (type: TransactionType) => (type === TransactionType.INCOME ? incomes : expenses);
   // Only the record's own archived category is offered, and only for its type.
   const archived = saved?.category.isArchived ? saved.category : null;
   const ownArchived = archived?.transactionType === draft.transactionType ? archived : null;
-
-  useDefaultWallet(flow, activeWalletIds);
 
   const fitsType = (categoryId: number | null, type: TransactionType) =>
     categoryId !== null &&
@@ -109,18 +109,50 @@ const TransactionEditor = ({
 
   const change = (patch: Parameters<typeof draftChanged>[0]) => dispatch(draftChanged(patch));
 
-  // A category of the other type cannot stay picked.
+  // A category of the other type cannot stay picked; amount, date, note and assignment stay as they are.
   const changeType = (transactionType: TransactionType) => {
     if (transactionType === draft.transactionType) return;
 
-    change({ transactionType, ...(!fitsType(draft.categoryId, transactionType) && { categoryId: null }) });
+    const isCleared = draft.categoryId !== null && !fitsType(draft.categoryId, transactionType);
+    const name = [...activeOf(draft.transactionType), ...(archived ? [archived] : [])].find(
+      ({ id }) => id === draft.categoryId,
+    )?.name;
+
+    if (isCleared && name) setCleared({ draftId: flow.draftId, name, typeWord: isIncome ? 'an income' : 'an expense' });
+    change({ transactionType, ...(isCleared && { categoryId: null }) });
   };
+  const clearedNote =
+    cleared?.draftId === flow.draftId && draft.categoryId === null
+      ? `${cleared.name} is ${cleared.typeWord} category, so it was cleared. Amount, date, note and assignment are kept.`
+      : undefined;
+
+  const selfId = profile?.id;
+  // A new record is dated now, also from an earlier month on Home; the form says which month is behind it.
+  const viewed = flow.selection;
+  const time = Date.parse(draft.timestamp);
+  const dateNote =
+    !isEdit && viewed?.origin === 'home' && (time < Date.parse(viewed.from) || time > Date.parse(viewed.to))
+      ? `You’re viewing ${new Date(viewed.from).toLocaleString('en-US', { month: 'long' })}`
+      : undefined;
+  const assignmentOptions = buildAssignmentOptions({
+    members,
+    self: profile && { id: profile.id, name: profile.name },
+    saved: saved?.assignment ?? null,
+  });
+  const authorNote = saved ? `Created by ${authorLabel(saved.author, selfId)}` : 'You’re the author';
+  const assigneeError =
+    flow.notice === 'assigneeLeft'
+      ? isEdit
+        ? `${flow.refusal ?? 'The member you chose'} left this space before your change was saved. Choose another option — your other edits are kept.`
+        : `${flow.refusal ?? 'The member you chose'} left this space while you were saving. Choose who this is assigned to — everything else is kept.`
+      : undefined;
 
   const errors = getDraftErrors(draft, {
     baseline: isEdit ? (flow.baseline ?? undefined) : undefined,
     now: now.getTime(),
     available: {
-      walletIds: activeWalletIds,
+      // The user is a member of the space they are in, whatever an older list says.
+      memberIds: members && [...(activeMemberIds(members) ?? []), ...(selfId === undefined ? [] : [selfId])],
       categoryIds: allCategories && [
         ...activeOf(draft.transactionType).map(({ id }) => id),
         ...(ownArchived ? [ownArchived.id] : []),
@@ -137,15 +169,14 @@ const TransactionEditor = ({
     !changed || changed.includes('categoryId') || changed.includes('transactionType')
       ? notLoaded(categoriesLoad, 'categories')
       : undefined;
-  const walletsNote = !changed || changed.includes('walletId') ? notLoaded(walletsLoad, 'wallets') : undefined;
-  const ready = !hasDraftErrors(errors) && !categoriesNote && !walletsNote && (!isEdit || isChanged) && !hasConflict;
+  const ready = !hasDraftErrors(errors) && !categoriesNote && (!isEdit || isChanged) && !hasConflict;
   // A typed value that is not an amount, and a date out of range, are explained at their fields; the footer names
   // what is still missing.
   const amountError = draft.amount.trim() ? errors.amount : undefined;
   const missing = [
     amountError ? undefined : errors.amount,
     categoriesNote ?? errors.category,
-    walletsNote ?? errors.wallet,
+    errors.assignment,
     errors.description,
   ];
   const helperText = hasConflict ? undefined : isEdit && !isChanged ? 'No changes yet' : missing.find(Boolean);
@@ -157,16 +188,6 @@ const TransactionEditor = ({
     now: now.getTime(),
   });
 
-  const hasDeletedWallet = isEdit && saved.wallet === null;
-  const hasNoWallets = activeWalletIds?.length === 0;
-  const walletHint = hasDeletedWallet
-    ? hasNoWallets
-      ? 'This wallet was deleted and you have no other wallets. Keep it, or create a new one to move the transaction.'
-      : 'This wallet was deleted. You can keep it or move the transaction to another wallet.'
-    : isEdit && draft.walletId === null
-      ? errors.wallet
-      : undefined;
-
   const loadLatest = async () => {
     setLoadingLatest(true);
     setLatestFailed(false);
@@ -175,7 +196,13 @@ const TransactionEditor = ({
     setLatestFailed(outcome === 'failed');
   };
 
-  const saveLabel = isEdit ? 'Save changes' : isIncome ? 'Save income' : 'Save expense';
+  const saveLabel = isEdit
+    ? 'Save changes'
+    : flow.operationId
+      ? 'Retry save'
+      : isIncome
+        ? 'Save income'
+        : 'Save expense';
 
   return (
     <View style={styles.root}>
@@ -225,6 +252,13 @@ const TransactionEditor = ({
             />
 
             <View style={styles.categoryBlock}>
+              {clearedNote && (
+                <View style={styles.clearedNote}>
+                  <Icon name="info" size={14} color={colors.warnText} strokeWidth={2} />
+                  <Text style={styles.clearedNoteText}>{clearedNote}</Text>
+                </View>
+              )}
+
               <CategoryGrid
                 load={categoriesLoad}
                 tiles={grid.tiles}
@@ -246,20 +280,22 @@ const TransactionEditor = ({
               {limitForecast && <LimitHint forecast={limitForecast} currencyCode={currencyCode} />}
             </View>
 
-            <WalletPicker
-              load={walletsLoad}
-              wallets={wallets}
-              hasDeletedWallet={hasDeletedWallet}
-              selectedId={draft.walletId}
-              hint={walletHint}
+            <AssignmentPicker
+              key={flow.draftId}
+              load={membersLoad}
+              options={assignmentOptions}
+              selected={draft.assignment}
+              authorNote={authorNote}
+              error={assigneeError}
+              selfId={selfId}
               typeColor={typeColor}
-              onSelect={(walletId) => change({ walletId })}
-              onCreate={onCreateWallet}
-              onRetry={walletsQuery.refetch}
+              onSelect={(assignment) => change({ assignment })}
+              onRetry={membersQuery.refetch}
             />
 
             <DetailsCard
               timestamp={draft.timestamp}
+              dateNote={dateNote}
               dateError={errors.timestamp}
               description={draft.description}
               descriptionError={errors.description}
@@ -312,6 +348,12 @@ const TransactionEditor = ({
                   : 'It was saved as shown here; nothing else is waiting to be saved.'
               }
             />
+          ) : flow.notice === 'saveRestored' ? (
+            <Banner
+              tone="warn"
+              title="This transaction wasn’t saved"
+              text="We restored your draft. Check it and retry: it’s sent under its original operation, so it can’t be added twice."
+            />
           ) : flow.notice === 'saveRefused' ? (
             <Banner tone="danger" title="The server refused this save" text={flow.refusal ?? ''} />
           ) : flow.notice === 'saveNotSent' ? (
@@ -319,6 +361,14 @@ const TransactionEditor = ({
               tone="danger"
               title="Not saved"
               text="It couldn’t be stored on this device first, so nothing was sent."
+              actionLabel="Try again"
+              onAction={onSave}
+            />
+          ) : flow.notice === 'saveBlocked' ? (
+            <Banner
+              tone="warn"
+              title="An earlier change isn’t confirmed yet"
+              text="It must reach the server before this one can be saved. Your edits are still here; trying again checks it first."
               actionLabel="Try again"
               onAction={onSave}
             />

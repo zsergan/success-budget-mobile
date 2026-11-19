@@ -18,6 +18,7 @@ type Props =
       onJumpToLatest: () => void;
     }
   | { variant: 'noMatches' }
+  | { variant: 'noFilterMatches'; activeRange: DateRange; onClearFilters: () => void }
   | { variant: 'noSearchMatches'; query: string; activeRange: DateRange; onClearSearch: () => void }
   | { variant: 'rangeError'; onRetry: () => void }
   | { variant: 'latestError'; onRetry: () => void };
@@ -68,12 +69,23 @@ const TransactionsEmptyState = (props: Props) => (
       />
     )}
 
+    {props.variant === 'noFilterMatches' && (
+      <EmptyState
+        variant="solid"
+        icon="filter"
+        title="Nothing matches these filters"
+        description={`No transactions of this type or assignment between ${formatRangeLabel(props.activeRange)}.`}
+        actionLabel="Clear filters"
+        onActionPress={props.onClearFilters}
+      />
+    )}
+
     {props.variant === 'noSearchMatches' && (
       <EmptyState
         variant="solid"
         icon="search"
         title={`No matches for “${quote(props.query)}”`}
-        description={`Nothing in descriptions, categories or wallet names between ${formatRangeLabel(props.activeRange)}. You can change the period above.`}
+        description={`Nothing in descriptions or categories between ${formatRangeLabel(props.activeRange)}. To see what’s assigned to someone, use the Assigned to filter.`}
         actionLabel="Clear search"
         onActionPress={props.onClearSearch}
       />

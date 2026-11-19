@@ -2,14 +2,16 @@ import type { AppColor, TransactionType } from '@shared/enums';
 import { TransactionKind } from '@shared/enums';
 import type { IconType } from '@shared/types';
 import type {
-  CreateTransactionResponse,
+  AssigneeOption,
+  AuthorSource,
   Money,
+  PersonStatus,
   Transaction,
+  TransactionAssigneesResponse,
+  TransactionAssignmentView,
   TransactionCategory,
   TransactionFeedResponse,
-  UpdateTransactionResponse,
-  Wallet,
-  WalletWithBalance,
+  TransactionPerson,
 } from '@api/dto';
 
 import { toMobileIcon } from './category';
@@ -23,6 +25,20 @@ export interface TransactionCategoryModel {
   isArchived: boolean;
 }
 
+// A user a record refers to, as the space knows them now; a deleted account has neither id nor name.
+export interface PersonModel {
+  userId: number | null;
+  name: string | null;
+  status: PersonStatus;
+}
+
+export interface AuthorModel extends PersonModel {
+  source: AuthorSource;
+}
+
+// Who the amount is for: one person (a member, a former member or a deleted account), the whole space, or nobody.
+export type AssignmentModel = { kind: 'member'; person: PersonModel } | { kind: 'space' } | { kind: 'unassigned' };
+
 export interface TransactionModel {
   id: string;
   kind: TransactionKind;
@@ -31,20 +47,14 @@ export interface TransactionModel {
   timestamp: string;
   description: string | null;
   version: number;
-  // null once the wallet is deleted.
-  wallet: Wallet | null;
   category: TransactionCategoryModel;
+  // Set by the server on create; no edit changes it.
+  author: AuthorModel;
+  assignment: AssignmentModel;
 }
 
-export interface CreateTransactionResult {
+export interface TransactionWriteResult {
   transaction: TransactionModel;
-  wallet: WalletWithBalance;
-  previousBalance: number;
-}
-
-export interface UpdateTransactionResult {
-  transaction: TransactionModel;
-  wallets: { id: number; balance: number; isDeleted: boolean }[];
 }
 
 export interface TransactionFeedSummary {
@@ -61,6 +71,24 @@ export interface TransactionFeedPageModel {
   dayTotals: { date: string; net: Money }[];
 }
 
+// The feed's and the breakdown's `assignment` value; the server's keys are passed through unchanged.
+export type AssignmentKey = 'space' | 'unassigned' | 'deleted_member' | `member:${number}`;
+
+export const memberKey = (userId: number): AssignmentKey => `member:${userId}`;
+
+export interface AssigneeOptionModel {
+  key: AssignmentKey;
+  userId: number;
+  name: string;
+  status: Exclude<PersonStatus, 'deleted'>;
+}
+
+export interface TransactionAssigneesModel {
+  members: AssigneeOptionModel[];
+  formerMembers: AssigneeOptionModel[];
+  hasDeletedMembers: boolean;
+}
+
 export const mapTransactionCategory = (dto: TransactionCategory): TransactionCategoryModel => ({
   id: dto.id,
   name: dto.name,
@@ -70,6 +98,13 @@ export const mapTransactionCategory = (dto: TransactionCategory): TransactionCat
   isArchived: dto.is_archived,
 });
 
+const mapPerson = ({ user_id, name, status }: TransactionPerson): PersonModel => ({ userId: user_id, name, status });
+
+export const mapAssignment = (dto: TransactionAssignmentView): AssignmentModel =>
+  dto.kind === 'member'
+    ? { kind: 'member', person: mapPerson({ user_id: dto.user_id, name: dto.name, status: dto.status ?? 'member' }) }
+    : { kind: dto.kind };
+
 export const mapTransaction = (dto: Transaction): TransactionModel => ({
   id: dto.id,
   kind: dto.kind,
@@ -78,8 +113,9 @@ export const mapTransaction = (dto: Transaction): TransactionModel => ({
   timestamp: dto.timestamp,
   description: dto.description,
   version: dto.version,
-  wallet: dto.wallet && { id: dto.wallet.id, wallet_name: dto.wallet.wallet_name, design: dto.wallet.design },
   category: mapTransactionCategory(dto.category),
+  author: { ...mapPerson(dto.author), source: dto.author.source },
+  assignment: mapAssignment(dto.assignment),
 });
 
 export const mapTransactionFeed = (dto: TransactionFeedResponse): TransactionFeedPageModel => ({
@@ -90,21 +126,25 @@ export const mapTransactionFeed = (dto: TransactionFeedResponse): TransactionFee
   dayTotals: dto.day_totals,
 });
 
-export const mapCreateTransactionResponse = (dto: CreateTransactionResponse): CreateTransactionResult => ({
-  transaction: mapTransaction(dto.transaction),
-  wallet: {
-    id: dto.wallet.id,
-    wallet_name: dto.wallet.wallet_name,
-    design: dto.wallet.design,
-    balance: dto.wallet.balance,
-  },
-  previousBalance: dto.previous_balance,
+const mapAssigneeOption = ({ key, user_id, name, status }: AssigneeOption): AssigneeOptionModel => ({
+  key: key as AssignmentKey,
+  userId: user_id,
+  name,
+  status,
 });
 
-export const mapUpdateTransactionResponse = (dto: UpdateTransactionResponse): UpdateTransactionResult => ({
-  transaction: mapTransaction(dto.transaction),
-  wallets: dto.wallets.map(({ id, balance, is_deleted }) => ({ id, balance, isDeleted: is_deleted })),
+export const mapTransactionAssignees = (dto: TransactionAssigneesResponse): TransactionAssigneesModel => ({
+  members: dto.members.map(mapAssigneeOption),
+  formerMembers: dto.former_members.map(mapAssigneeOption),
+  hasDeletedMembers: dto.has_deleted_members,
 });
+
+// The filter that lists a record's group: a deleted account's records are one group, whoever they were.
+export const assignmentKeyOf = (assignment: AssignmentModel): AssignmentKey => {
+  if (assignment.kind !== 'member') return assignment.kind;
+
+  return assignment.person.userId === null ? 'deleted_member' : memberKey(assignment.person.userId);
+};
 
 // The starting balance is read-only: no edit, no delete, and it is not income.
 export const isInitialBalance = (transaction: Pick<TransactionModel, 'kind'>) =>

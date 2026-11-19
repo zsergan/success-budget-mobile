@@ -3,10 +3,11 @@ import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
 import type { TransactionDraft } from './draft';
 import {
   createDraft,
-  defaultWalletId,
+  defaultAssignment,
   draftFromTransaction,
   getDraftErrors,
   isDraftChanged,
+  keptAssignment,
   normalizeAmount,
   toCreateRequest,
   toUpdateRequest,
@@ -22,7 +23,6 @@ const saved: TransactionModel = {
   timestamp: '2026-10-05T09:30:12.345Z',
   description: 'Lunch',
   version: 2,
-  wallet: { id: 1, wallet_name: 'Cash', design: AppColor.SLATE },
   category: {
     id: 4,
     name: 'Food',
@@ -31,7 +31,12 @@ const saved: TransactionModel = {
     color: AppColor.SLATE,
     isArchived: false,
   },
+  author: { userId: 7, name: 'Zakhar', status: 'member', source: 'recorded' },
+  assignment: { kind: 'member', person: { userId: 31, name: 'Lena', status: 'member' } },
 };
+
+const lena = { kind: 'member', userId: 31 } as const;
+const you = { kind: 'member', userId: 7 } as const;
 
 const baseline = draftFromTransaction(saved);
 const edit = (patch: Partial<TransactionDraft>) => ({ ...baseline, ...patch });
@@ -62,7 +67,7 @@ describe('normalizeAmount', () => {
 
 describe('amount errors', () => {
   const draft = {
-    ...createDraft({ transactionType: TransactionType.EXPENSE, walletId: 1, timestamp: '' }),
+    ...createDraft({ transactionType: TransactionType.EXPENSE, assignment: you, timestamp: '' }),
     categoryId: 4,
   };
   const amountError = (amount: string) => getDraftErrors({ ...draft, amount }, { now: NOW }).amount;
@@ -88,15 +93,18 @@ describe('isDraftChanged', () => {
   });
 
   it('sees a change, and none once every field is back where it was', () => {
-    const changed = edit({ amount: '70', walletId: 2, description: '' });
+    const changed = edit({ amount: '70', assignment: { kind: 'space' }, description: '' });
 
     expect(isDraftChanged(changed, baseline)).toBe(true);
-    expect(isDraftChanged({ ...changed, amount: '50.00', walletId: 1, description: 'Lunch' }, baseline)).toBe(false);
+    expect(isDraftChanged(edit({ assignment: you }), baseline)).toBe(true);
+    expect(isDraftChanged({ ...changed, amount: '50.00', assignment: lena, description: 'Lunch' }, baseline)).toBe(
+      false,
+    );
   });
 });
 
 describe('getDraftErrors', () => {
-  const fresh = createDraft({ transactionType: TransactionType.EXPENSE, walletId: 1, timestamp: saved.timestamp });
+  const fresh = createDraft({ transactionType: TransactionType.EXPENSE, assignment: you, timestamp: saved.timestamp });
 
   it('asks a new draft for an amount above zero and a category', () => {
     expect(getDraftErrors(fresh, { now: NOW })).toEqual({ amount: 'Enter an amount', category: 'Choose a category' });
@@ -123,17 +131,24 @@ describe('getDraftErrors', () => {
     expect(getDraftErrors(draft, { now: NOW })).toEqual({ timestamp: 'Pick a date after 1 January 1970' });
   });
 
-  it("takes only a wallet and a category still on offer, but keeps an edit's own", () => {
-    const available = { walletIds: [2], categoryIds: [5] };
+  it("takes only a member and a category still on offer, but keeps an edit's own", () => {
+    const available = { memberIds: [2], categoryIds: [5] };
     const draft = { ...fresh, amount: '5', categoryId: 4 };
 
     expect(getDraftErrors(draft, { now: NOW, available })).toEqual({
-      wallet: 'Choose a wallet',
+      assignment: 'Choose who it’s assigned to',
       category: 'Choose a category',
     });
     expect(getDraftErrors(edit({ amount: '70' }), { baseline, now: NOW, available })).toEqual({});
-    expect(getDraftErrors(edit({ walletId: 3 }), { baseline, now: NOW, available })).toEqual({
-      wallet: 'Choose a wallet',
+    expect(getDraftErrors(edit({ assignment: you }), { baseline, now: NOW, available })).toEqual({
+      assignment: 'Choose who it’s assigned to',
+    });
+    expect(getDraftErrors(edit({ assignment: { kind: 'unassigned' } }), { baseline, now: NOW, available })).toEqual({});
+  });
+
+  it('waits for a pick after the server refused a member who had left', () => {
+    expect(getDraftErrors(edit({ assignment: null }), { baseline, now: NOW })).toEqual({
+      assignment: 'Choose who it’s assigned to',
     });
   });
 
@@ -144,28 +159,38 @@ describe('getDraftErrors', () => {
     expect(getDraftErrors({ ...legacy, amount: '0' }, { baseline: legacy, now: NOW })).toEqual({});
   });
 
-  it('keeps a deleted wallet only while the record is still in it', () => {
-    const inDeleted = { ...baseline, walletId: null };
+  it("keeps a former member's or a deleted account's assignment only while it is unchanged", () => {
+    const deleted = { ...baseline, assignment: { kind: 'member', userId: null } } as const;
 
-    expect(getDraftErrors({ ...inDeleted, amount: '70' }, { baseline: inDeleted, now: NOW })).toEqual({});
-    expect(getDraftErrors({ ...baseline, walletId: null }, { baseline, now: NOW })).toEqual({
-      wallet: 'The deleted wallet can’t be picked again. Choose a wallet',
-    });
+    expect(
+      getDraftErrors({ ...baseline, amount: '70' }, { baseline, now: NOW, available: { memberIds: [7] } }),
+    ).toEqual({});
+    expect(getDraftErrors({ ...deleted, amount: '70' }, { baseline: deleted, now: NOW })).toEqual({});
+    expect(
+      getDraftErrors({ ...baseline, assignment: { kind: 'member', userId: null } }, { baseline, now: NOW }),
+    ).toEqual({ assignment: 'Choose who it’s assigned to' });
   });
 });
 
-describe('defaultWalletId', () => {
-  it('takes the first preferred wallet still active, else the first active one', () => {
-    expect(defaultWalletId([1, 2, 3], [9, 2])).toBe(2);
-    expect(defaultWalletId([1, 2, 3], [null])).toBe(1);
-    expect(defaultWalletId([], [2])).toBeNull();
+describe('assignment defaults', () => {
+  it('assigns a new transaction to the signed-in user', () => {
+    expect(defaultAssignment(7)).toEqual(you);
+    expect(defaultAssignment(undefined)).toEqual({ kind: 'space' });
+  });
+
+  it('repeats the last assignment for Add another while its member is known to be in the space', () => {
+    expect(keptAssignment(lena, { userId: 7, memberIds: [7, 31] })).toEqual(lena);
+    expect(keptAssignment(lena, { userId: 7 })).toEqual(you);
+    expect(keptAssignment(lena, { userId: 7, memberIds: [7] })).toEqual(you);
+    expect(keptAssignment({ kind: 'unassigned' }, { userId: 7, memberIds: [7] })).toEqual({ kind: 'unassigned' });
+    expect(keptAssignment(null, { userId: 7 })).toEqual(you);
   });
 });
 
 describe('requests', () => {
   it('sends the normalized values of a new transaction', () => {
     expect(toCreateRequest(edit({ amount: '12,5', description: '  ' }))).toEqual({
-      wallet_id: 1,
+      assignment: { kind: 'member', user_id: 31 },
       category_id: 4,
       transaction_type: TransactionType.EXPENSE,
       amount: '12.50',
@@ -174,12 +199,13 @@ describe('requests', () => {
     });
   });
 
-  it('sends the whole edit, leaving the wallet out to keep a deleted one', () => {
-    expect(toUpdateRequest(edit({ walletId: null }))).not.toHaveProperty('wallet_id');
-    expect(toUpdateRequest(edit({ walletId: 2 }))).toMatchObject({
-      wallet_id: 2,
+  it("sends the whole edit, leaving a deleted account's assignment out to keep it", () => {
+    expect(toUpdateRequest(edit({ assignment: { kind: 'member', userId: null } }))).not.toHaveProperty('assignment');
+    expect(toUpdateRequest(edit({ assignment: { kind: 'space' } }))).toMatchObject({
+      assignment: { kind: 'space' },
       amount: '50.00',
       description: 'Lunch',
     });
+    expect(toUpdateRequest(baseline)).toMatchObject({ assignment: { kind: 'member', user_id: 31 } });
   });
 });

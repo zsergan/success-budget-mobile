@@ -1,4 +1,4 @@
-import type { CategoryBreakdownItem, StatisticsBreakdown, StatisticsSummary, WalletBreakdownItem } from '@api/dto';
+import type { AssignmentBreakdownItem, CategoryBreakdownItem, StatisticsBreakdown, StatisticsSummary } from '@api/dto';
 import { AppColor, TransactionType } from '@shared/enums';
 import { buildStatsItems } from './statsItems';
 
@@ -15,17 +15,26 @@ const category = (id: number): CategoryBreakdownItem => ({
   percent: 10,
 });
 
-const wallet = (id: number): WalletBreakdownItem => ({
-  kind: 'wallet',
-  key: `wallet:${id}`,
-  id,
-  name: `Wallet ${id}`,
-  icon: null,
-  color: AppColor.INDIGO,
-  is_archived: false,
+const member = (id: number): AssignmentBreakdownItem => ({
+  kind: 'member',
+  key: `member:${id}`,
+  user_id: id,
+  name: `Member ${id}`,
+  status: 'member',
   opens_history: true,
   amount: '10.00',
   percent: 10,
+});
+
+const special = (kind: 'space' | 'unassigned'): AssignmentBreakdownItem => ({
+  kind,
+  key: kind,
+  user_id: null,
+  name: null,
+  status: null,
+  opens_history: true,
+  amount: '5.00',
+  percent: 5,
 });
 
 const service = { id: null, name: null, icon: null, color: null, is_archived: false, opens_history: false } as const;
@@ -47,19 +56,11 @@ const breakdown = (sourceCount = 8, type = TransactionType.EXPENSE): StatisticsB
         children: [category(3), category(4)],
       },
     },
-    by_wallet: {
+    by_assignment: {
       total_amount: '80.00',
       source_count: sourceCount,
-      primary_items: [wallet(1)],
-      deleted_wallets: {
-        ...service,
-        kind: 'deleted_wallets',
-        key: 'deleted_wallets',
-        amount: '5.00',
-        percent: 5,
-        wallets_count: 2,
-      },
-      other: { ...service, kind: 'other', key: 'other', amount: '5.00', percent: 5, children: [wallet(2)] },
+      primary_items: [member(1), special('space'), special('unassigned')],
+      other: { kind: 'other', key: 'other', opens_history: false, amount: '5.00', percent: 5, children: [member(2)] },
     },
   }) as StatisticsBreakdown;
 
@@ -102,18 +103,20 @@ describe('buildStatsItems', () => {
     expect(rows.map((row) => row.isLast)).toEqual([false, false, false, false, true]);
   });
 
-  it('puts deleted wallets before Other in the wallet breakdown', () => {
+  it('keeps the whole space and nobody as their own rows, before Other, in the assignment breakdown', () => {
     const items = buildStatsItems({
       breakdown: breakdown(),
       cycleSummary: undefined,
-      mode: 'wallet',
-      isOtherExpanded: false,
+      mode: 'assignment',
+      isOtherExpanded: true,
     });
 
     expect(keys(items).slice(4)).toEqual([
-      'expense:wallet:wallet:1',
-      'expense:wallet:deleted_wallets',
-      'expense:wallet:other',
+      'expense:assignment:member:1',
+      'expense:assignment:space',
+      'expense:assignment:unassigned',
+      'expense:assignment:other',
+      'expense:assignment:other:member:2',
     ]);
   });
 

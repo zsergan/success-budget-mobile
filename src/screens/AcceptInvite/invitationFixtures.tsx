@@ -149,7 +149,7 @@ export const invitationsShown = () =>
 export const codeFormsShown = () => screen.queryAllByText('Enter the 6-digit code from the invitation email.').length;
 
 export const isOnHome = () =>
-  invitationsShown() === 0 && codeFormsShown() === 0 && screen.queryByText('Recent activity') !== null;
+  invitationsShown() === 0 && codeFormsShown() === 0 && screen.queryByText('This month') !== null;
 
 export const sentTo = (url: string) =>
   mockRequest.mock.calls.map(([config]: [Request]) => config).filter((config) => config.url === url);

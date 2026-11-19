@@ -41,6 +41,11 @@ const LinkInvitation = ({ preview, isLoading, problem, waitSeconds }: Props) => 
             <Text style={styles.rowLabel}>Invitation expires</Text>
             <Text style={styles.rowValue}>{formatDateLong(preview.expires_at)}</Text>
           </View>
+
+          <Text style={styles.note}>
+            You’ll see the space’s full history, categories and limits, and can start adding transactions right away.
+            After you join, others can assign expenses or income to you.
+          </Text>
         </View>
       )}
 

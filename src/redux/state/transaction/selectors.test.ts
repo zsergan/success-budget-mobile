@@ -16,7 +16,8 @@ const row = (
   timestamp: '2026-01-05T10:00:00.000Z',
   description: null,
   version: 1,
-  wallet: { id: 1, wallet_name: 'Cash', design: AppColor.SLATE },
+  author: { userId: 7, name: 'Zakhar', status: 'member', source: 'recorded' },
+  assignment: { kind: 'member', person: { userId: 7, name: 'Zakhar', status: 'member' } },
   category: {
     id: 1,
     name: 'Food',

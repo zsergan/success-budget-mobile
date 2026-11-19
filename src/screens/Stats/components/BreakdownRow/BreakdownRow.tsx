@@ -12,6 +12,7 @@ import createStyles from './style';
 interface Props {
   group: BreakdownGroup;
   currency: string;
+  selfId?: number;
   isChild: boolean;
   isFirst: boolean;
   isOtherExpanded: boolean;
@@ -20,12 +21,22 @@ interface Props {
   onPress?: () => void;
 }
 
-const BreakdownRow = ({ group, currency, isChild, isFirst, isOtherExpanded, isSelected, isDimmed, onPress }: Props) => {
+const BreakdownRow = ({
+  group,
+  currency,
+  selfId,
+  isChild,
+  isFirst,
+  isOtherExpanded,
+  isSelected,
+  isDimmed,
+  onPress,
+}: Props) => {
   const colorTheme = useTheme().colorTheme;
   const { colors } = colorTheme;
   const styles = useThemedStyles(createStyles);
-  const { name, icon, color, iconColor, iconBackground } = getBreakdownAppearance(group, colorTheme);
-  const isDeleted = group.kind === 'deleted_wallets';
+  const { name, icon, color, iconColor, iconBackground, isMuted } = getBreakdownAppearance(group, colorTheme, selfId);
+  const isArchived = group.kind === 'category' && group.is_archived;
   const percent = `${group.percent.toFixed(1)}%`;
   const chevronIcon: IconType =
     group.kind !== 'other' ? 'chevron-right' : isOtherExpanded ? 'chevron-up' : 'chevron-down';
@@ -55,11 +66,11 @@ const BreakdownRow = ({ group, currency, isChild, isFirst, isOtherExpanded, isSe
       <View style={styles.body}>
         <View style={styles.titleRow}>
           <View style={styles.nameRow}>
-            <Text style={[styles.name, isDeleted && styles.nameMuted]} numberOfLines={1}>
+            <Text style={[styles.name, isMuted && styles.nameMuted]} numberOfLines={1}>
               {name}
             </Text>
 
-            {group.is_archived && <Text style={styles.archived}>Archived</Text>}
+            {isArchived && <Text style={styles.archived}>Archived</Text>}
           </View>
 
           <Text style={styles.amount}>{formatMoney(group.amount, currency)}</Text>
@@ -75,7 +86,7 @@ const BreakdownRow = ({ group, currency, isChild, isFirst, isOtherExpanded, isSe
       </View>
 
       <View style={styles.chevron}>
-        {!isDeleted && <Icon name={chevronIcon} size={13} color={colors.muted} strokeWidth={2} />}
+        <Icon name={chevronIcon} size={13} color={colors.muted} strokeWidth={2} />
       </View>
     </Pressable>
   );

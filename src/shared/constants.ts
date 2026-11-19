@@ -1,6 +1,5 @@
-import { AppColor } from '@shared/enums';
 import theme from '@shared/theme';
-import { resolveApiBaseUrl } from '@shared/utils/apiBaseUrl';
+import { resolveApiBaseUrl, withApiVersion } from '@shared/utils/apiBaseUrl';
 import { originOf } from '@shared/utils/inviteLink';
 
 const API_BASE_URLS = {
@@ -16,6 +15,8 @@ export const BASE_API_URL = resolveApiBaseUrl({
   overrideUrl: process.env.EXPO_PUBLIC_API_BASE_URL,
   isDevBuild: __DEV__,
 });
+// Transactions and statistics: space-owned records with an author and an assignment, no wallets.
+export const API_V2_BASE_URL = withApiVersion(BASE_API_URL, 2);
 // The backend serves invitation links from the root of its API host (PUBLIC_WEB_ORIGIN).
 export const INVITE_LINK_ORIGIN = originOf(BASE_API_URL);
 export const AUTH_TOKEN_KEY = 'sbm-AUTH_TOKEN_KEY';
@@ -36,14 +37,6 @@ export const INVITE_RATE_LIMIT_COOLDOWN_MS = 60_000;
 
 // The server keeps an Idempotency-Key's answer for 24 hours; past this a write is never resent on its own.
 export const IDEMPOTENCY_KEY_LIFETIME_MS = 23 * 60 * 60 * 1000;
-
-export const DEFAULT_WALLET_DESIGN = AppColor.SLATE;
-
-// A missing `design`, or a color newer than this build, falls back rather than crashing.
-const APP_COLORS: readonly string[] = Object.values(AppColor);
-
-export const resolveAppColor = (design?: AppColor): AppColor =>
-  design && APP_COLORS.includes(design) ? design : DEFAULT_WALLET_DESIGN;
 
 // Bottom padding a scrollable screen needs so its last row clears the floating Fab (58px button + 24px offset) with a visible gap, not just the tab bar underneath it.
 export const FAB_SCROLL_CLEARANCE = theme.spacing.xxl + 70;

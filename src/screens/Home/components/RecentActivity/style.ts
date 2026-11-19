@@ -38,6 +38,12 @@ const createStyles = ({ colors }: ColorTheme) =>
     groupItems: {
       rowGap: theme.spacing.sm,
     },
+    empty: {
+      fontFamily: theme.fonts.medium,
+      fontSize: theme.fontSizes.bodySm,
+      lineHeight: theme.lineHeights.bodySm,
+      color: colors.muted,
+    },
     loadingContainer: {
       height: 120,
       alignItems: 'center',

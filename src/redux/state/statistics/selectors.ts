@@ -25,7 +25,11 @@ export const toStatisticsQuery = (range: DateRange, timeZone: string): Statistic
 
 const sameMoneyCount = (a: MoneyCount, b: MoneyCount) => a.amount === b.amount && a.count === b.count;
 
-// The blocks are separate reads, so a change between them shows up as control sums that disagree.
+// The blocks are separate reads, so a change between them shows up as control sums that disagree. Home reads no
+// trend, so summary and breakdown are compared on their own.
+export const isBreakdownConsistent = (summary: StatisticsSummary, breakdown: StatisticsBreakdown) =>
+  sameMoneyCount(breakdown.total, summary[breakdown.transaction_type]);
+
 export const areStatisticsConsistent = (
   summary: StatisticsSummary,
   trend: StatisticsTrend,
@@ -33,7 +37,7 @@ export const areStatisticsConsistent = (
 ) =>
   sameMoneyCount(trend.totals.income, summary.income) &&
   sameMoneyCount(trend.totals.expense, summary.expense) &&
-  sameMoneyCount(breakdown.total, summary[breakdown.transaction_type]);
+  isBreakdownConsistent(summary, breakdown);
 
 // A device clock far enough ahead of the server's gets as_of rejected as being in the future.
 export const isAsOfRejected = (error: unknown) => {

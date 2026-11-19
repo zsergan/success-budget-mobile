@@ -29,7 +29,7 @@ interface RequestConfig {
     to?: string;
     transaction_type?: string;
     category_id?: number;
-    wallet_id?: number;
+    assignment?: string;
     cursor?: string;
   };
 }
@@ -53,7 +53,6 @@ const dto: Transaction = {
   timestamp: '2026-01-05T00:00:00.000Z',
   description: null,
   version: 1,
-  wallet: { id: 1, wallet_name: 'Cash', design: AppColor.SLATE, ...STAMPS },
   category: {
     id: 1,
     name: 'Food',
@@ -64,6 +63,8 @@ const dto: Transaction = {
     is_archived: false,
     ...STAMPS,
   },
+  author: { user_id: 7, name: 'Zakhar', status: 'member', source: 'recorded' },
+  assignment: { kind: 'space', user_id: null, name: null, status: null },
 };
 
 const january: DateRange = { from: new Date('2026-01-01'), to: new Date('2026-01-31'), preset: 'month' };
@@ -158,13 +159,11 @@ describe('a Stats selection', () => {
     kind: TransactionKind.REGULAR,
   };
   const category: HistoryFilter = { ...selection, name: 'Food', icon: 'grocery', color: AppColor.SLATE, categoryId: 1 };
-  const wallet: HistoryFilter = {
+  const lena: HistoryFilter = {
     ...selection,
     transactionType: TransactionType.INCOME,
-    name: 'Cash',
-    icon: 'wallet',
-    color: AppColor.INDIGO,
-    walletId: 3,
+    name: 'Lena',
+    assignment: 'member:31',
   };
   const feedParams = () =>
     mockedRequest.mock.calls
@@ -193,10 +192,10 @@ describe('a Stats selection', () => {
     unmount();
   });
 
-  it("asks for exactly a wallet's regular transactions of the breakdown's type", async () => {
+  it("asks for exactly an assignee's regular transactions of the breakdown's type", async () => {
     respondRange = () => rows('tx-1');
 
-    const { result, unmount } = renderForSpace(1, january, wallet);
+    const { result, unmount } = renderForSpace(1, january, lena);
     await waitFor(() => expect(result.current.viewState).toBe('ready'));
 
     expect(feedParams()).toEqual([
@@ -205,7 +204,7 @@ describe('a Stats selection', () => {
         to: '2026-09-30T09:15:42.123Z',
         transaction_type: TransactionType.INCOME,
         kind: TransactionKind.REGULAR,
-        wallet_id: 3,
+        assignment: 'member:31',
         time_zone: 'Pacific/Auckland',
       },
     ]);

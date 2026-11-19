@@ -46,7 +46,7 @@ const sent = () =>
   mockedRequest.mock.calls.map(([{ method, url, data, headers }]: [SentRequest]) => ({ method, url, data, headers }));
 
 const lunch: CreateTransactionRequest = {
-  wallet_id: 1,
+  assignment: { kind: 'space' },
   category_id: 1,
   transaction_type: TransactionType.EXPENSE,
   amount: '10',
@@ -183,8 +183,7 @@ describe('submitTransactionRequest', () => {
       version,
       data: { amount },
     });
-    const edited = (version: number) =>
-      answers({ transaction: transactionDto({ version }), wallets: [{ id: 1, balance: 80, is_deleted: false }] });
+    const edited = (version: number) => answers({ transaction: transactionDto({ version }) });
 
     mockedRequest.mockImplementationOnce(noAnswer).mockImplementationOnce(edited(2)).mockImplementationOnce(edited(3));
 
@@ -216,7 +215,12 @@ describe('submitTransactionRequest', () => {
 
     store.dispatch(spaceApi.endpoints.getSpaces.initiate());
     store.dispatch(
-      createOpened({ spaceId: 1, transactionType: TransactionType.EXPENSE, walletId: 1, now: lunch.timestamp }),
+      createOpened({
+        spaceId: 1,
+        transactionType: TransactionType.EXPENSE,
+        assignment: { kind: 'space' },
+        now: lunch.timestamp,
+      }),
     );
     mockedRequest.mockImplementation(fails(403, 'FORBIDDEN_SPACE'));
 

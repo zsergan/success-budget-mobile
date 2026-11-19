@@ -8,7 +8,7 @@ import createStyles from './style';
 const RULES = [
   'The period is always the calendar month — it starts on the 1st automatically.',
   'Nothing rolls over: unspent money does not become extra budget next month.',
-  'A limit counts spending across all wallets together.',
+  'A limit counts every expense in the space — every member, Whole space and No member assigned.',
 ];
 
 interface Props {

@@ -5,6 +5,7 @@ import type { ErrorResponse } from '@api/dto';
 import { getRejectValue } from '@api/errors';
 import { createHttpClient } from '@api/instance';
 import type { RootState } from '@redux/Store';
+import { API_V2_BASE_URL } from '@shared/constants';
 
 export interface HttpRequest {
   url: string;
@@ -14,6 +15,8 @@ export interface HttpRequest {
   headers?: Record<string, string>;
   // A 429 the caller explains itself keeps the generic toast quiet; a mutation's caller always does.
   isHandledRateLimit?: AxiosRequestConfig['isHandledRateLimit'];
+  // Transactions and statistics are on `/api/v2`; everything else stays on the client's `/api/v1`.
+  apiVersion?: 2;
 }
 
 const http = createHttpClient();
@@ -32,7 +35,7 @@ const sessionEndedError = (url: string): ErrorResponse => ({
 // A response that outlives the session it was sent in never reaches the cache
 // or an onQueryStarted side effect as a success, even if logout could not abort it.
 export const httpBaseQuery: BaseQueryFn<HttpRequest, unknown, ErrorResponse> = async (
-  { url, method = 'GET', body, params, headers, isHandledRateLimit },
+  { url, method = 'GET', body, params, headers, isHandledRateLimit, apiVersion },
   { signal, getState, type },
 ) => {
   const sessionKey = (getState() as RootState).auth.sessionKey;
@@ -48,6 +51,7 @@ export const httpBaseQuery: BaseQueryFn<HttpRequest, unknown, ErrorResponse> = a
       headers,
       signal,
       sessionKey,
+      ...(apiVersion === 2 && { baseURL: API_V2_BASE_URL }),
       ...(handlesRateLimit && { isHandledRateLimit: handlesRateLimit }),
     });
 

@@ -221,18 +221,18 @@ describe('auth stack', () => {
 
 const HomeTab = ({ navigation }: MainTabScreenProps<ScreenNames.HOME_TAB>) => (
   <RecentActivity
-    navigation={navigation}
-    hasWallets
+    isHidden={false}
     isLoading={false}
     hasError={false}
     onPressTransaction={jest.fn()}
     onDeleteTransaction={jest.fn()}
     onRetry={jest.fn()}
+    onViewAll={() => navigation.navigate(ScreenNames.TRANSACTIONS_TAB)}
   />
 );
 
 const SettingsTab = ({ navigation }: MainTabScreenProps<ScreenNames.SETTINGS_TAB>) => (
-  <ManagementSettingsSection navigation={navigation} categoriesLabel="3 categories" walletsLabel="1 wallet" />
+  <ManagementSettingsSection navigation={navigation} categoriesLabel="3 categories" />
 );
 
 const TransactionsTab = () => <Text>Transactions tab</Text>;
@@ -262,10 +262,10 @@ const renderSignedIn = () =>
   );
 
 describe('signed-in navigation', () => {
-  it('switches to the History tab from "See all"', () => {
+  it('switches to the History tab from "View all"', () => {
     renderSignedIn();
 
-    fireEvent.press(screen.getByText('See all'));
+    fireEvent.press(screen.getByText('View all'));
 
     expect(routeNames()).toEqual([ScreenNames.HOME_SCREEN]);
     expect(focusedTab()).toBe(ScreenNames.TRANSACTIONS_TAB);

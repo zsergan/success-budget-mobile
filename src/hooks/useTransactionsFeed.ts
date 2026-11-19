@@ -223,6 +223,8 @@ const useTransactionsFeed = (
     hasNextPageError: isFetchNextPageError,
     hasPreviousPageError: isFetchPreviousPageError,
     missedAroundId: current.missedAroundId,
+    // Why the first page failed, while it stays failed.
+    error: isError ? (error as Partial<ErrorResponse> | undefined) : undefined,
     loadNextPage,
     loadPreviousPage,
     refresh,

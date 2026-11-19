@@ -36,6 +36,8 @@ export type RootState = ReturnType<typeof rootReducer>;
 export interface ThunkExtra {
   // One attempt per write key at a time; whoever asks while it runs gets the same answer.
   runningWrites: Map<string, Promise<unknown>>;
+  // A user's stored writes being read back; until then nothing is known about what they left unsettled.
+  restoringWrites: Map<number, Promise<unknown>>;
 }
 
 export type AppListener = ListenerMiddlewareInstance<RootState, ThunkDispatch<RootState, ThunkExtra, UnknownAction>>;
@@ -60,7 +62,9 @@ export const createAppStore = (preloadedState?: Partial<RootState>) => {
     reducer: rootReducer,
     preloadedState,
     middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware({ thunk: { extraArgument: { runningWrites: new Map() } satisfies ThunkExtra } })
+      getDefaultMiddleware({
+        thunk: { extraArgument: { runningWrites: new Map(), restoringWrites: new Map() } satisfies ThunkExtra },
+      })
         .prepend(sessionListener.middleware)
         .concat(baseApi.middleware),
   });

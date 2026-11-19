@@ -60,6 +60,22 @@ const createStyles = ({ colors }: ColorTheme) =>
     categoryBlock: {
       rowGap: 10,
     },
+    clearedNote: {
+      borderRadius: 14,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: 10,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      columnGap: theme.spacing.sm,
+      backgroundColor: colors.warnSoft,
+    },
+    clearedNoteText: {
+      flex: 1,
+      fontFamily: theme.fonts.medium,
+      fontSize: theme.fontSizes.caption,
+      lineHeight: 17,
+      color: colors.text,
+    },
   });
 
 export default createStyles;

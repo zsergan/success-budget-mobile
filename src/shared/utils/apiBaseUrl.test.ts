@@ -1,4 +1,4 @@
-import { resolveApiBaseUrl } from './apiBaseUrl';
+import { resolveApiBaseUrl, withApiVersion } from './apiBaseUrl';
 
 const urls = {
   local: 'http://localhost:3000/api/v1',
@@ -42,5 +42,16 @@ describe('resolveApiBaseUrl', () => {
     expect(() => resolveApiBaseUrl({ urls, overrideUrl: 'http://api.example.com/api/v1', isDevBuild: true })).toThrow(
       'https://',
     );
+  });
+});
+
+describe('withApiVersion', () => {
+  it('moves the base URL to another API version on the same host', () => {
+    expect(withApiVersion(urls.local, 2)).toBe('http://localhost:3000/api/v2');
+    expect(withApiVersion('https://api.example.com/api/v1/', 2)).toBe('https://api.example.com/api/v2');
+  });
+
+  it('rejects a base URL that does not name its version', () => {
+    expect(() => withApiVersion('https://api.example.com/api', 2)).toThrow('/v1');
   });
 });

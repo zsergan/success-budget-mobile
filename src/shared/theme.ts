@@ -76,11 +76,12 @@ export interface ThemeElevation {
   toast: ViewStyle;
 }
 
-export interface WalletAppearance {
+// The slate gradient card the Total limit is drawn on, with its own text and inset tones.
+export interface GradientCardAppearance {
   gradient: [string, string];
   fg: string;
   dim: string;
-  // The translucent tint behind the Income/Expense boxes inside the card.
+  // The translucent tint behind the boxes inside the card.
   inner: string;
 }
 
@@ -93,7 +94,7 @@ export interface ColorTheme {
   scheme: ColorSchemeName;
   colors: ThemeColors;
   elevation: ThemeElevation;
-  wallets: Record<AppColor, WalletAppearance>;
+  gradientCard: GradientCardAppearance;
   categories: Record<AppColor, CategoryAppearance>;
 }
 
@@ -247,48 +248,24 @@ const darkElevation: ThemeElevation = {
   toast: { boxShadow: '0 8px 24px -6px rgba(0, 0, 0, 0.6)' },
 };
 
-// Wallet-card presets, per Home Page and Wallets.dc.html (angle/stops in WalletGradientBackground.tsx).
-const lightWallets: Record<AppColor, WalletAppearance> = {
-  [AppColor.SLATE]: { gradient: ['#2f3a4b', '#1d2430'], fg: '#fdfdfe', dim: '#a6b1c1', inner: 'rgba(253,253,254,.09)' },
-  [AppColor.AMBER]: { gradient: ['#c07d10', '#8a5406'], fg: '#fffaf0', dim: '#f0d5a6', inner: 'rgba(255,250,240,.14)' },
-  [AppColor.EVERGREEN]: {
-    gradient: ['#24614a', '#123528'],
-    fg: '#f2fbf6',
-    dim: '#9cc9b4',
-    inner: 'rgba(242,251,246,.12)',
-  },
-  [AppColor.INDIGO]: {
-    gradient: ['#36428a', '#1e2450'],
-    fg: '#f4f5ff',
-    dim: '#a8afdd',
-    inner: 'rgba(244,245,255,.12)',
-  },
-  [AppColor.CLAY]: { gradient: ['#984034', '#5e2419'], fg: '#fff5f2', dim: '#e0b0a4', inner: 'rgba(255,245,242,.13)' },
-  [AppColor.PLUM]: { gradient: ['#66305f', '#3a1a36'], fg: '#fdf3fc', dim: '#cfa8c9', inner: 'rgba(253,243,252,.13)' },
+// Per Limits.dc.html's Total limit card ("Slate gradient"); angle and stops in TotalLimitCard.
+const lightGradientCard: GradientCardAppearance = {
+  gradient: ['#2f3a4b', '#1d2430'],
+  fg: '#fdfdfe',
+  dim: '#a6b1c1',
+  inner: 'rgba(253,253,254,.09)',
 };
 
-const darkWallets: Record<AppColor, WalletAppearance> = {
-  [AppColor.SLATE]: { gradient: ['#1a2230', '#0f1520'], fg: '#f2f4f8', dim: '#8794a8', inner: 'rgba(255,176,32,.12)' },
-  [AppColor.AMBER]: { gradient: ['#5d3a05', '#331f02'], fg: '#ffe6b8', dim: '#c69a52', inner: 'rgba(255,200,107,.14)' },
-  [AppColor.EVERGREEN]: {
-    gradient: ['#12352a', '#0a1e18'],
-    fg: '#d6f0e2',
-    dim: '#6f9d87',
-    inner: 'rgba(77,192,123,.14)',
-  },
-  [AppColor.INDIGO]: {
-    gradient: ['#1c2250', '#111533'],
-    fg: '#dfe2ff',
-    dim: '#7d85c4',
-    inner: 'rgba(143,155,255,.16)',
-  },
-  [AppColor.CLAY]: { gradient: ['#5a231a', '#33130e'], fg: '#fbd9d0', dim: '#b5786a', inner: 'rgba(242,105,90,.15)' },
-  [AppColor.PLUM]: { gradient: ['#3a1a36', '#220f20'], fg: '#f2d6ee', dim: '#a97ba2', inner: 'rgba(217,143,208,.15)' },
+const darkGradientCard: GradientCardAppearance = {
+  gradient: ['#1a2230', '#0f1520'],
+  fg: '#f2f4f8',
+  dim: '#8794a8',
+  inner: 'rgba(255,176,32,.12)',
 };
 
 type Rgb = [number, number, number];
 
-// The wallet tones again, flat; see Categories.dc.html's COLORS array.
+// The app colours as flat tones; see Categories.dc.html's COLORS array.
 const CATEGORY_RGB: Record<ColorSchemeName, Record<AppColor, Rgb>> = {
   light: {
     [AppColor.SLATE]: [47, 58, 75],
@@ -324,14 +301,14 @@ export const colorThemes: Record<ColorSchemeName, ColorTheme> = {
     scheme: 'light',
     colors: lightColors,
     elevation: lightElevation,
-    wallets: lightWallets,
+    gradientCard: lightGradientCard,
     categories: buildCategories('light'),
   },
   dark: {
     scheme: 'dark',
     colors: darkColors,
     elevation: darkElevation,
-    wallets: darkWallets,
+    gradientCard: darkGradientCard,
     categories: buildCategories('dark'),
   },
 };

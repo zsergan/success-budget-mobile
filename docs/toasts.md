@@ -58,7 +58,7 @@ no queue: a message either shows now or is dropped.
   (`useFormSubmitHandler`, reading the sheet's `useSheetPresentation`); a
   close the sheet reverses puts it back in the form.
 - A failure of work started from a screen with no place of its own for
-  it (a transaction delete outside its sheet, a wallet check, a restore)
+  it (a transaction delete outside its sheet, a restore)
   is an error toast.
 - A problem that outlives the toast is a banner: stale figures, writes
   whose outcome is unknown (`PendingWritesBanner`).

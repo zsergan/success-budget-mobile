@@ -12,6 +12,8 @@ import { persistActiveSpace } from './storage';
 import { activateSpace, dropSpaceData, loseSpaceAccess, spaceSelected } from './thunks';
 
 const TRANSACTION_WRITES = ['createTransaction', 'updateTransaction', 'deleteTransaction'];
+// Reported by the pending write it settles, once that write is stored as one whose space is gone.
+const SELF_REPORTING_READS = ['getTransactionOperation'];
 
 // Keeps a valid space selected as the spaces list arrives: picks one when
 // none is selected, and moves off a space the user no longer belongs to.
@@ -46,7 +48,9 @@ export const startSpaceSelectionListener = (listener: AppListener) => {
     predicate: (action) => {
       if (!isRejectedWithValue(action)) return false;
 
-      const isRead = action.type.startsWith(`${baseApi.reducerPath}/executeQuery/`);
+      const isRead =
+        action.type.startsWith(`${baseApi.reducerPath}/executeQuery/`) &&
+        !SELF_REPORTING_READS.includes((action.meta.arg as { endpointName?: string }).endpointName ?? '');
       // Transaction writes report a lost space themselves, once they know it is not a stale answer.
       const isWrite =
         action.type.startsWith(`${baseApi.reducerPath}/executeMutation/`) &&
