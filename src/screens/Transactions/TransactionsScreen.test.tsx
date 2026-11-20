@@ -1145,8 +1145,7 @@ describe('TransactionsScreen', () => {
     const deep = (n: number) =>
       transactionDto({ id: `d${n}`, timestamp: new Date(2026, 8, 28 - n, 9).toISOString(), description: `d${n}` });
     mockedRequest.mockImplementation(({ url, params, method }: RequestConfig & { method?: string }) => {
-      if (method === 'PATCH')
-        return Promise.resolve({ data: { transaction: deep(5), wallets: [{ id: 1, balance: 1, is_deleted: false }] } });
+      if (method === 'PATCH') return Promise.resolve({ data: { transaction: deep(5) } });
       if (url !== FEED) return Promise.resolve({ data: null });
       if (params?.around_id) return Promise.resolve({ data: feedDto([deep(4), deep(5), deep(6)]) });
       const n = params?.cursor ? Number(String(params.cursor).slice(1)) : 0;

@@ -93,7 +93,7 @@ it('shows the step, context, consequences and a third action', () => {
   const discard = jest.fn();
   renderSheet({
     step: 'Step 1 of 2',
-    consequences: { tone: 'danger', title: 'What gets deleted', items: ['4 wallets', '6 limits'] },
+    consequences: { tone: 'danger', title: 'What gets deleted', items: ['4 categories', '6 limits'] },
     additionalAction: { label: 'Discard', tone: 'danger', onPress: discard },
     secondaryAction: { label: 'Back', onPress: jest.fn() },
   });

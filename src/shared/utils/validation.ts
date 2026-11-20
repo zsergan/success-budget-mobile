@@ -14,7 +14,6 @@ export const amountSchema = yup
     (value) => value !== undefined && value.trim() !== '' && Number.isFinite(Number(value)),
   );
 
-// amountSchema allows 0, since a starting balance may be empty; this variant requires more than zero.
 export const positiveAmountSchema = amountSchema.test(
   'is-positive',
   'Enter an amount greater than zero',

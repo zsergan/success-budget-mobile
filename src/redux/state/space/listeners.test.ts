@@ -200,7 +200,7 @@ describe('a read or a write refused for a space', () => {
   it('only asks for the spaces list again on any other 403', async () => {
     const store = await setUp();
 
-    await refuseRead(store, 'FORBIDDEN_WALLET');
+    await refuseRead(store, 'FORBIDDEN_CATEGORY');
 
     expect(store.getState().space.currentSpaceId).toBe(1);
     expect(mockedRequest).toHaveBeenLastCalledWith(expect.objectContaining({ url: '/spaces' }));

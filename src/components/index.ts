@@ -2,7 +2,6 @@ export { default as AssignmentAvatar } from './AssignmentAvatar/AssignmentAvatar
 export type { AvatarSubject } from './AssignmentAvatar/AssignmentAvatar';
 export * from './Brand';
 export * from './Buttons';
-export { default as Carousel } from './Carousel/Carousel';
 export { default as CategoryEditorSheet } from './CategoryEditor/CategoryEditorSheet';
 export { default as CategoryIconBox } from './CategoryIconBox/CategoryIconBox';
 export { default as CircleIcon } from './CircleIcon/CircleIcon';

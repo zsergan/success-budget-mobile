@@ -85,7 +85,7 @@ describe('classifyTransactionError', () => {
     [{ statusCode: 0, message: 'Could not reach the server.' }, 'uncertain'],
     [{ statusCode: 500, code: 'INTERNAL_SERVER_ERROR' }, 'uncertain'],
     [{ statusCode: 400, code: 'VALIDATION_FAILED' }, 'validation'],
-    [{ statusCode: 400, code: 'WALLET_DELETED' }, 'validation'],
+    [{ statusCode: 400, code: 'CATEGORY_ARCHIVED' }, 'validation'],
     [{ statusCode: 403, code: 'FORBIDDEN_CATEGORY' }, 'validation'],
     [{ statusCode: 409, code: 'TRANSACTION_VERSION_CONFLICT' }, 'conflict'],
     [{ statusCode: 404, code: 'TRANSACTION_NOT_FOUND' }, 'notFound'],

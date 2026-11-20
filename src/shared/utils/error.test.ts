@@ -6,7 +6,7 @@ describe('getErrorMessage', () => {
   });
 
   it('returns a generic message for a 5xx server error instead of the raw body', () => {
-    const error = { message: 'Internal Server Error', statusCode: 500, path: '/wallets', timestamp: '2026-01-01' };
+    const error = { message: 'Internal Server Error', statusCode: 500, path: '/limits', timestamp: '2026-01-01' };
 
     expect(getErrorMessage(error)).toBe('Something went wrong on our end. Please try again later.');
   });

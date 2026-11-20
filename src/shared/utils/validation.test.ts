@@ -40,7 +40,7 @@ describe('positiveAmountSchema', () => {
     await expect(positiveAmountSchema.validate('12.50')).resolves.toBe('12.50');
   });
 
-  it('rejects zero -- unlike plain amountSchema, which must allow it for a starting wallet balance', async () => {
+  it('rejects zero, which amountSchema alone accepts', async () => {
     await expect(amountSchema.validate('0')).resolves.toBe('0');
     await expect(positiveAmountSchema.validate('0')).rejects.toThrow('Enter an amount greater than zero');
   });

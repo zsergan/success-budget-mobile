@@ -33,11 +33,6 @@ const fixedThemeImports = {
       message: 'Take the active theme from useTheme() or a createStyles factory.',
     },
     {
-      name: '@shared/constants',
-      importNames: ['gradients', 'walletTextColors'],
-      message: 'Wallet colours are on useTheme().colorTheme.wallets.',
-    },
-    {
       name: '@shared/categoryColors',
       importNames: ['getCategoryStroke', 'getCategoryTint'],
       message: 'Category colours are on useTheme().colorTheme.categories.',

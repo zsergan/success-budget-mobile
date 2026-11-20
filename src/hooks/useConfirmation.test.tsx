@@ -27,7 +27,7 @@ const setUp = () => {
   const hook = renderHook(() => useConfirmation(), { wrapper });
 
   // Asks a question whose action runs `onConfirm` only while it still applies, as every owner's does.
-  const ask = (title = 'Delete wallet?') => {
+  const ask = (title = 'Delete limit?') => {
     const onConfirm = jest.fn();
     let settle: () => boolean = () => false;
     let isAsked = false;
@@ -77,7 +77,7 @@ it('asks, runs the chosen action once it closes, and is free again', () => {
 
   const first = ask();
   expect(first.isAsked).toBe(true);
-  expect(result.current.confirmation).toMatchObject({ title: 'Delete wallet?' });
+  expect(result.current.confirmation).toMatchObject({ title: 'Delete limit?' });
   expect(result.current.lock.isLocked()).toBe(true);
 
   first.confirm();
@@ -166,7 +166,7 @@ it('waits for the keyboard to go before showing a question', () => {
   expect(result.current.lock.isLocked()).toBe(true);
 
   keyboard.hide();
-  expect(result.current.confirmation).toMatchObject({ title: 'Delete wallet?' });
+  expect(result.current.confirmation).toMatchObject({ title: 'Delete limit?' });
 });
 
 it('shows nothing when the space changes while the keyboard goes', () => {

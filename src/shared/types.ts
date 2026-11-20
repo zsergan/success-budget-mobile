@@ -138,7 +138,6 @@ export type IconType =
   | 'archive'
   | 'users'
   | 'logout'
-  | 'wallet'
   | 'transfer'
   | 'home'
   | 'list'
