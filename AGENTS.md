@@ -41,9 +41,8 @@ use it, and nothing converts between currencies. Redux Toolkit + RTK Query, Reac
   the saved confirmation in one sheet; the route and the sheet follow
   this state, see `docs/sheets.md`; ends on logout or space switch),
   `pendingWrite` (transaction writes persisted per user before sending,
-  until their outcome is known; see `transaction/operations.ts`; writes
-  stored by builds before the v2 API are converted once and a create is
-  looked up by its operation id first, see `pendingWrite/legacy.ts`),
+  until their outcome is known, including those of builds before v2;
+  see `docs/transactions.md`),
   `spaceCreation` (the unanswered space creation's `Idempotency-Key`
   and exact body, persisted per user until its outcome is known; see
   `spaceCreation/thunks.ts`),
@@ -120,6 +119,8 @@ relying on or changing them.
   a new role is a token in `src/shared/theme.ts`. Details: `docs/theming.md`.
 - Known layout pitfalls (Plus Jakarta Sans clipping, nested safe areas):
   `docs/ui-pitfalls.md`.
+- Transactions (assignment, author, writes, pending writes, the upgrade
+  from wallets): `docs/transactions.md`.
 - Bottom sheets and confirmations (presence, keyboard, stacking, stale
   confirmations): `docs/sheets.md`.
 - Toasts (tickets, ownership, replacement, placement): `docs/toasts.md`.
