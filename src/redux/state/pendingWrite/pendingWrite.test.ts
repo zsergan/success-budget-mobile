@@ -640,6 +640,36 @@ describe('writes an older build left', () => {
     ]);
   });
 
+  it('converts them again after a restart until they are stored, and never doubles one', async () => {
+    await leaveLegacy([legacyCreate]);
+    const checking = [{ status: 'checking', found: undefined }];
+    // The storage mock is itself a jest.fn, so its own implementation is put back rather than restored.
+    const failOnce = (method: 'setItem' | 'removeItem', key: string) => {
+      const mock = AsyncStorage[method] as unknown as jest.Mock<Promise<void>, string[]>;
+      const original = mock.getMockImplementation()!;
+
+      mock.mockImplementation((...args) => {
+        if (args[0] !== key) return original(...args);
+        mock.mockImplementation(original);
+
+        return Promise.reject(new Error('disk full'));
+      });
+    };
+
+    failOnce('setItem', 'pendingTransactionWrites.v2.1');
+    expect(statuses(await restart())).toEqual(checking);
+    expect(await stored()).toEqual([]);
+    expect(await AsyncStorage.getItem(legacyKey())).not.toBeNull();
+
+    failOnce('removeItem', legacyKey());
+    expect(statuses(await restart())).toEqual(checking);
+    expect(await AsyncStorage.getItem(legacyKey())).not.toBeNull();
+
+    expect(statuses(await restart())).toEqual(checking);
+    expect(await stored()).toHaveLength(1);
+    expect(await AsyncStorage.getItem(legacyKey())).toBeNull();
+  });
+
   it('leaves another account’s writes in their old storage for that account', async () => {
     await leaveLegacy([legacyCreate], 1);
 
