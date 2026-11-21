@@ -31,7 +31,7 @@ const useTransactionDelete = (confirmLock: ConfirmLock, { leavesScreen = false }
   const report = useCallback(
     (
       ticket: ToastTicket,
-      { result, isShownInFlow }: DeleteOutcome,
+      { result, isShownInFlow, current }: DeleteOutcome,
       transaction: TransactionModel,
       spaceId: number,
       doneText: string,
@@ -49,12 +49,17 @@ const useTransactionDelete = (confirmLock: ConfirmLock, { leavesScreen = false }
         showDone({ tone: 'info', text: 'This transaction is no longer available', subject });
       } else if (isShownInFlow) {
         return;
-      } else if (result === 'conflict') {
+      } else if (result === 'conflict' || result === 'changed') {
+        // View opens the record as it is now, where the delete is confirmed again.
+        const shown = current ?? transaction;
         ticket.show({
           tone: 'warning',
           text: 'Not deleted — this transaction changed',
           subject,
-          action: { label: 'View', onPress: () => dispatch(openTransactionDetails({ spaceId, transaction })) },
+          action: {
+            label: 'View',
+            onPress: () => dispatch(openTransactionDetails({ spaceId, transaction: shown })),
+          },
         });
       } else if (result === 'uncertain') {
         ticket.show({

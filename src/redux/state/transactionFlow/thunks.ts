@@ -122,6 +122,8 @@ export interface DeleteOutcome {
   result: DeleteResult;
   // Whether the open sheet still waited on it when the answer came, and so explains it in place.
   isShownInFlow: boolean;
+  // With `changed`: the record as the server holds it now, for the user to confirm the delete against.
+  current?: TransactionModel;
 }
 
 // The one delete behind a list row and the sheet. One that got no answer is asked about again with its own key,
@@ -159,38 +161,34 @@ export const deleteTransaction =
 
     dispatch(deleteStarted({ transactionId }));
     const request = { type: 'delete', spaceId, transactionId, version: transaction.version } as const;
-    let { outcome } = await dispatch(submitTransactionRequest(request, memory));
+    const { outcome } = await dispatch(submitTransactionRequest(request, memory));
 
-    // An earlier delete of an older version refused for its version never applied, so this one, of the version now
-    // shown, still goes out.
-    const earlier = memory?.unresolved?.operation;
-    if (
-      earlier?.type === 'delete' &&
-      earlier.version !== transaction.version &&
-      outcome.status === 'failed' &&
-      outcome.failure.kind === 'conflict' &&
-      outcome.operation.idempotencyKey === earlier.idempotencyKey
-    ) {
-      ({ outcome } = await dispatch(submitTransactionRequest(request, null)));
-    }
-
+    // A record an earlier write changed is not deleted unseen: the user confirms again against what it is now. One
+    // whose current version could not be read is a change not loaded yet.
+    const current = outcome.status === 'recovered' ? outcome.transaction : undefined;
     const result: DeleteResult =
       outcome.status === 'succeeded'
         ? outcome.wasGone
           ? 'gone'
           : 'deleted'
-        : outcome.status !== 'failed' || outcome.failure.kind === 'accessLost'
-          ? 'stale'
-          : outcome.failure.kind === 'conflict'
-            ? 'conflict'
-            : outcome.failure.kind === 'uncertain'
-              ? 'uncertain'
-              : 'failed';
+        : current
+          ? 'changed'
+          : outcome.status !== 'failed' || outcome.failure.kind === 'accessLost'
+            ? 'stale'
+            : outcome.failure.kind === 'conflict' || outcome.failure.kind === 'unverified'
+              ? 'conflict'
+              : outcome.failure.kind === 'uncertain'
+                ? 'uncertain'
+                : 'failed';
+    const settled: DeleteOutcome = {
+      result,
+      isShownInFlow: selectIsFlowDeleting(getState(), transactionId),
+      ...(current && { current }),
+    };
 
-    const isShownInFlow = selectIsFlowDeleting(getState(), transactionId);
     if (result === 'deleted' || result === 'gone') dispatch(dropFromLists(spaceId, transactionId));
-    beforeSettled?.({ result, isShownInFlow });
-    dispatch(deleteSettled({ transactionId, result }));
+    beforeSettled?.(settled);
+    dispatch(deleteSettled({ transactionId, result, ...(current && { current }) }));
 
-    return { result, isShownInFlow };
+    return settled;
   };

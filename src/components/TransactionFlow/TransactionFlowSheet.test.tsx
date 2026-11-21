@@ -1374,6 +1374,134 @@ describe('TransactionFlowSheet', () => {
     expect(mockToasts.shown).toEqual([]);
   });
 
+  describe('after an earlier change of the record settles', () => {
+    // A write of the record left unconfirmed by an earlier run, at the version the details read.
+    const leaveEarlier = (store: ReturnType<typeof createAppStore>, type: 'update' | 'delete' = 'update') =>
+      act(() => {
+        const operation =
+          type === 'update'
+            ? { type, spaceId: 1, transactionId: 'tx-1', version: 2, data: { amount: '60.00' } }
+            : { type, spaceId: 1, transactionId: 'tx-1', version: 2 };
+        store.dispatch(
+          writesRestored({
+            userId: 1,
+            writes: [
+              {
+                status: 'unknown',
+                operation: { ...operation, idempotencyKey: 'earlier-key', firstSentAt: Date.now() },
+              },
+            ],
+          }),
+        );
+      });
+    const sentWith = (method: string) => mockedRequest.mock.calls.filter(([config]) => config.method === method);
+    const editAmount = async (amount: string) => {
+      fireEvent.press(screen.getByText('Edit'));
+      fireEvent.changeText(screen.getByLabelText('Amount'), amount);
+      fireEvent.press(screen.getByText('Save changes'));
+      await settle();
+    };
+
+    it('keeps the typed edit for review against the record read again, and saves it only at its version', async () => {
+      const { store, openDetails, flow } = renderFlow();
+      leaveEarlier(store);
+      openDetails();
+      await settle();
+      await editAmount('70');
+
+      expect(sentWith('PATCH')).toHaveLength(1);
+      stored = transactionDto({ amount: '60.00', version: 3 });
+      await act(async () => answerWrite({ data: { transaction: transactionDto({ amount: '60.00', version: 3 }) } }));
+      await settle();
+
+      expect(sentWith('PATCH')).toHaveLength(1);
+      expect(screen.getByText('This transaction changed')).toBeTruthy();
+      expect(flow()).toMatchObject({
+        view: { name: 'edit' },
+        saved: { version: 3, amount: '60.00' },
+        draft: { amount: '70' },
+        isSaving: false,
+      });
+
+      fireEvent.press(screen.getByText('Save changes'));
+      await act(async () => answerWrite({ data: { transaction: transactionDto({ amount: '70.00', version: 4 }) } }));
+      await settle();
+
+      expect(
+        sentWith('PATCH').map(([config]) => [config.headers['Idempotency-Key'], config.headers['If-Match']]),
+      ).toEqual([
+        ['earlier-key', '"2"'],
+        [expect.not.stringMatching('earlier-key'), '"3"'],
+      ]);
+      expect(flow()).toMatchObject({ view: { name: 'details' }, saved: { version: 4 } });
+    });
+
+    it('keeps the edit unsent and its values when the record cannot be read again, then reads it on Try again', async () => {
+      const { store, openDetails, flow } = renderFlow();
+      leaveEarlier(store);
+      openDetails();
+      await settle();
+      answerRead = () => Promise.reject(new Error('Network Error'));
+      await editAmount('70');
+      await act(async () => answerWrite({ data: { transaction: transactionDto({ amount: '60.00', version: 3 }) } }));
+      await settle();
+
+      expect(screen.getByText('Couldn’t load the latest version')).toBeTruthy();
+      expect(flow()).toMatchObject({ saved: { version: 2 }, draft: { amount: '70' }, isSaving: false });
+
+      answerRead = null;
+      stored = transactionDto({ amount: '60.00', version: 3 });
+      fireEvent.press(screen.getByText('Try again'));
+      await settle();
+
+      expect(screen.getByText('This transaction changed')).toBeTruthy();
+      expect(flow()).toMatchObject({ saved: { version: 3 }, draft: { amount: '70' } });
+      expect(sentWith('PATCH')).toHaveLength(1);
+    });
+
+    it('ends the edit as gone when the earlier delete went through, sending no edit', async () => {
+      const { store, openDetails, flow } = renderFlow();
+      leaveEarlier(store, 'delete');
+      openDetails();
+      await settle();
+      await editAmount('70');
+      await act(async () => answerWrite({ data: true }));
+      await settle();
+
+      expect(flow()).toMatchObject({ view: { name: 'gone' } });
+      expect(sentWith('PATCH')).toEqual([]);
+      expect(sentWith('DELETE')).toHaveLength(1);
+    });
+
+    it('asks again before deleting the record an earlier edit changed, and deletes it at its version', async () => {
+      const { store, openDetails, flow } = renderFlow();
+      leaveEarlier(store);
+      openDetails();
+      await settle();
+
+      pressFlowDelete();
+      answer('Delete transaction');
+      await settle();
+      stored = transactionDto({ amount: '60.00', version: 3 });
+      await act(async () => answerWrite({ data: { transaction: stored } }));
+      await settle();
+
+      expect(sentWith('DELETE')).toEqual([]);
+      expect(screen.getByText('This transaction changed')).toBeTruthy();
+      expect(flow()).toMatchObject({ view: { name: 'details' }, saved: { version: 3 }, isSaving: false });
+      expect(store.getState().transactionFlow.deletingIds).toEqual([]);
+
+      pressFlowDelete();
+      expect(asked()).toEqual(['Delete transaction?']);
+      answer('Delete transaction');
+      await act(async () => answerWrite({ data: true }));
+      await settle();
+
+      expect(sentWith('DELETE').map(([config]) => config.headers['If-Match'])).toEqual(['"3"']);
+      expect(flow()).toBeNull();
+    });
+  });
+
   it('keeps an edit unsent while an earlier edit of the record is unconfirmed, and keeps the draft', async () => {
     const { store, openDetails, flow } = renderFlow();
     act(() => {

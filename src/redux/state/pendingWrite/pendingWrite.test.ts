@@ -372,25 +372,141 @@ describe('a record with an unsettled edit or delete', () => {
     expect(await stored()).toMatchObject([{ status: 'unknown', operation: { transactionId: 'tx-1' } }]);
   });
 
-  it('settles the earlier edit first, then sends the new one at its version for the server to compare', async () => {
+  // Answers by method: the stored write, then the fresh read of the record, then anything new for it.
+  const route = (answer: Partial<Record<'PATCH' | 'DELETE' | 'GET', (config: SentRequest) => Promise<unknown>>>) =>
+    mockedRequest.mockImplementation((config: SentRequest) => {
+      const handler = answer[config.method as 'PATCH' | 'DELETE' | 'GET'];
+      return handler ? handler(config) : Promise.resolve({ data: null });
+    });
+  const record = (version: number, amount = '20.00') => answers(transactionDto({ id: 'tx-1', version, amount }));
+  const deferred = () => {
+    let resolve!: (value: unknown) => void;
+    let reject!: (reason: unknown) => void;
+    const promise = new Promise((res, rej) => ((resolve = res), (reject = rej)));
+    return { promise, resolve, reject };
+  };
+  const reads = () => sent().filter(({ method, url }) => method === 'GET' && url === '/spaces/1/transactions/tx-1');
+
+  it('sends only the stored edit while it runs, then hands back the record read again instead of the new edit', async () => {
     const store = await leftUnsettled();
-    mockedRequest.mockImplementationOnce(edited).mockImplementationOnce(refusal(409, 'TRANSACTION_VERSION_CONFLICT'));
+    const replay = deferred();
+    route({ PATCH: () => replay.promise, GET: record(4) });
+
+    const resumed = store.dispatch(resumePendingWrites());
+    const pending = submit(store, edit('tx-1', 3, '30.00'));
+    await jest.advanceTimersByTimeAsync(0);
+    expect(mutations()).toEqual([expect.objectContaining({ headers: expect.objectContaining({ 'If-Match': '"3"' }) })]);
+    expect(reads()).toEqual([]);
+
+    replay.resolve({ data: { transaction: transactionDto({ id: 'tx-1', version: 4 }) } });
+    await resumed;
+    const { outcome, memory } = await pending;
+
+    expect(outcome).toMatchObject({ status: 'recovered', reconciled: true, transaction: { version: 4 } });
+    expect(mutations()).toHaveLength(1);
+    expect(reads()).toHaveLength(1);
+    expect(await stored()).toEqual([]);
+
+    route({ PATCH: answers({ transaction: transactionDto({ id: 'tx-1', version: 5 }) }) });
+    expect((await submit(store, edit('tx-1', 4, '30.00'), memory)).outcome).toMatchObject({ status: 'succeeded' });
+    expect(mutations().map(({ headers, data }) => [headers?.['If-Match'], data])).toEqual([
+      ['"3"', { amount: '20.00' }],
+      ['"4"', { amount: '30.00' }],
+    ]);
+  });
+
+  it('takes the version from the fresh read when the record changed again after the stored edit', async () => {
+    const store = await leftUnsettled();
+    route({ PATCH: edited, GET: record(6, '99.00') });
 
     const { outcome } = await submit(store, edit('tx-1', 3, '30.00'));
 
-    expect(outcome).toMatchObject({ status: 'failed', failure: { kind: 'conflict' } });
-    expect(mutations().map(({ headers }) => headers?.['Idempotency-Key'])).toEqual(['key-1', 'key-2']);
+    expect(outcome).toMatchObject({ status: 'recovered', transaction: { version: 6, amount: '99.00' } });
+    expect(mutations()).toHaveLength(1);
+  });
+
+  it('reads the record again when the stored edit meets a newer version, and keeps the new edit unsent', async () => {
+    const store = await leftUnsettled();
+    route({ PATCH: refusal(409, 'TRANSACTION_VERSION_CONFLICT'), GET: record(7) });
+
+    const { outcome } = await submit(store, edit('tx-1', 3, '30.00'));
+
+    expect(outcome).toMatchObject({ status: 'recovered', reconciled: true, transaction: { version: 7 } });
+    expect(mutations()).toHaveLength(1);
     expect(await stored()).toEqual([]);
   });
 
-  it('finds the record gone when the earlier delete went through', async () => {
+  it('sends the new edit when the stored one was refused and the record never moved on', async () => {
+    const store = await leftUnsettled();
+    route({ PATCH: refusal(400, 'CATEGORY_ARCHIVED') });
+    mockedRequest.mockImplementationOnce(refusal(400, 'CATEGORY_ARCHIVED')).mockImplementationOnce(edited);
+
+    expect((await submit(store, edit('tx-1', 3, '30.00'))).outcome).toMatchObject({ status: 'succeeded' });
+    expect(reads()).toEqual([]);
+    expect(mutations().map(({ headers }) => headers?.['If-Match'])).toEqual(['"3"', '"3"']);
+  });
+
+  it('keeps the new edit unsent, and reads the record again on the next save, when the read gets no answer', async () => {
+    const store = await leftUnsettled();
+    route({ PATCH: edited, GET: noAnswer });
+
+    const first = await submit(store, edit('tx-1', 3, '30.00'));
+    expect(first.outcome).toMatchObject({ status: 'failed', failure: { kind: 'unverified' } });
+    expect(first.memory).toMatchObject({ recheck: 'tx-1' });
+
+    route({ GET: record(4) });
+    const second = await submit(store, edit('tx-1', 3, '30.00'), first.memory);
+
+    expect(second.outcome).toMatchObject({ status: 'recovered', transaction: { version: 4 } });
+    expect(second.memory).not.toHaveProperty('recheck');
+    expect(mutations()).toHaveLength(1);
+    expect(reads()).toHaveLength(2);
+  });
+
+  it('ends the edit as gone when the stored delete went through, without sending it', async () => {
     const store = await leftUnsettled(remove);
-    mockedRequest.mockImplementationOnce(answers(true)).mockImplementationOnce(refusal(404, 'TRANSACTION_NOT_FOUND'));
+    route({ DELETE: answers(true) });
 
     const { outcome } = await submit(store, edit('tx-1', 3));
 
     expect(outcome).toMatchObject({ status: 'failed', failure: { kind: 'notFound' } });
-    expect(mutations().map(({ method }) => method)).toEqual(['DELETE', 'PATCH']);
+    expect(mutations().map(({ method }) => method)).toEqual(['DELETE']);
+  });
+
+  it('finishes a delete as already gone when the stored delete went through', async () => {
+    const store = await leftUnsettled(remove);
+    route({ DELETE: answers(true) });
+
+    expect((await submit(store, remove)).outcome).toEqual({ status: 'succeeded', result: null, wasGone: true });
+    expect(mutations()).toHaveLength(1);
+  });
+
+  it('hands a delete the record changed by the stored edit, and deletes nothing unseen', async () => {
+    const store = await leftUnsettled();
+    route({ PATCH: edited, GET: record(4) });
+
+    const { outcome } = await submit(store, remove);
+
+    expect(outcome).toMatchObject({ status: 'recovered', transaction: { version: 4 } });
+    expect(mutations().map(({ method }) => method)).toEqual(['PATCH']);
+  });
+
+  it.each([
+    ['a logout', (store: ReturnType<typeof signIn>) => store.dispatch(logoutMe())],
+    ['a space switch', (store: ReturnType<typeof signIn>) => store.dispatch(activateSpace(2))],
+  ])('lets nothing of the read reach the context after %s', async (_name, leave) => {
+    const store = await leftUnsettled();
+    const read = deferred();
+    route({ PATCH: edited, GET: () => read.promise });
+
+    const pending = submit(store, edit('tx-1', 3, '30.00'));
+    await jest.advanceTimersByTimeAsync(0);
+    expect(reads()).toHaveLength(1);
+    await leave(store);
+    read.resolve({ data: transactionDto({ id: 'tx-1', version: 4 }) });
+
+    expect((await pending).outcome).toEqual({ status: 'stale' });
+    expect(mutations()).toHaveLength(1);
   });
 
   it('keeps one account’s unsettled edit from another account', async () => {

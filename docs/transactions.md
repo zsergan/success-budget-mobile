@@ -61,9 +61,19 @@ Every create, edit and delete goes through
   changed draft first settles the earlier attempt, and if that had
   created the record the form switches to editing it, so the change is
   saved as an edit instead of a second record.
-- An edit or a delete of a record waits for that record's earlier writes
-  whose outcome is unknown; while one stays unknown the new one is not
-  sent (`blocked`).
+- An edit or a delete of a record first settles that record's earlier
+  writes whose outcome is unknown, each with its own key and version,
+  also while the stored writes are still being read back. While one stays
+  unknown the new one is not sent (`blocked`).
+- When one of them applied, or met a newer version, the new write is not
+  sent either: the record is read again with a fresh request (a replayed
+  answer may predate another member's change), and the editor now edits
+  that version with the typed values kept (`recordChanged`); Save sends
+  them against it. A delete shows the record as it is now and asks again.
+  An earlier delete that went through ends an edit as gone and a delete
+  as already done. A read that fails sends nothing (`saveUnverified` in
+  the editor, a change to load in the details); the next Save reads it
+  again first.
 - Undo on a new record's confirmation is a delete at the version the
   create returned.
 - A write remembers its session and space. An answer after either changed
