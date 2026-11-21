@@ -10,6 +10,7 @@ import type { OperationMemory, TransactionRequest } from '@redux/state/transacti
 import { KEY_LIFETIME_MS, submitTransactionRequest } from '@redux/state/transaction/operations';
 import { TransactionType } from '@shared/enums';
 import { restorePendingWrites, resumePendingWrites, sendPendingWriteAgain } from './thunks';
+import { forgetPendingWrite } from './storage';
 
 const mockedRequest = jest.fn();
 let mockKeys = 0;
@@ -53,6 +54,14 @@ const operation = (status: 'applied' | 'deleted') =>
     deleted_at: null,
     transaction: status === 'applied' ? transactionDto({ version: 2 }) : null,
   });
+
+// An answer held until the test gives it, so the order of answers is the test's.
+const deferred = () => {
+  let resolve!: (value: unknown) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise((res, rej) => ((resolve = res), (reject = rej)));
+  return { promise, resolve, reject };
+};
 
 const sent = () =>
   mockedRequest.mock.calls.map(([{ method, url, data, headers }]: [SentRequest]) => ({ method, url, data, headers }));
@@ -379,12 +388,6 @@ describe('a record with an unsettled edit or delete', () => {
       return handler ? handler(config) : Promise.resolve({ data: null });
     });
   const record = (version: number, amount = '20.00') => answers(transactionDto({ id: 'tx-1', version, amount }));
-  const deferred = () => {
-    let resolve!: (value: unknown) => void;
-    let reject!: (reason: unknown) => void;
-    const promise = new Promise((res, rej) => ((resolve = res), (reject = rej)));
-    return { promise, resolve, reject };
-  };
   const reads = () => sent().filter(({ method, url }) => method === 'GET' && url === '/spaces/1/transactions/tx-1');
 
   it('sends only the stored edit while it runs, then hands back the record read again instead of the new edit', async () => {
@@ -706,6 +709,188 @@ describe('writes an older build left', () => {
       expect((await resend(store, 2)).outcome).toMatchObject({ status: 'failed', failure: { kind: 'notSent' } });
       expect(posts()).toEqual([]);
       expect(statuses(store)).toEqual([{ status: 'retry', found: undefined }]);
+    });
+  });
+
+  describe('a restored create checked and saved at once', () => {
+    const lookUp = '/spaces/1/transactions/operations/key-1';
+    const missing = refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND');
+    const save = (store: ReturnType<typeof signIn>) =>
+      submit(store, { type: 'create', spaceId: 1, data: lunch, operationId: 'key-1' });
+    const lookups = () => sent().filter(({ url }) => url === lookUp);
+    // Each lookup and each create is answered by the next held answer of its kind.
+    const hold = () => {
+      const checks: ReturnType<typeof deferred>[] = [];
+      const creates: ReturnType<typeof deferred>[] = [];
+      const next = (queue: ReturnType<typeof deferred>[]) => {
+        const answer = deferred();
+        queue.push(answer);
+        return answer.promise;
+      };
+      mockedRequest.mockImplementation((config: SentRequest) =>
+        config.url === lookUp
+          ? next(checks)
+          : config.method === 'POST'
+            ? next(creates)
+            : Promise.resolve({ data: null }),
+      );
+      return { checks, creates };
+    };
+    const checking = async () => {
+      await leaveLegacy([legacyCreate]);
+      return restart();
+    };
+    const turns = () => jest.advanceTimersByTimeAsync(0);
+
+    it('waits for the check, sends once, and is checked again after a restart while unanswered', async () => {
+      const store = await checking();
+      const { checks, creates } = hold();
+
+      const resumed = store.dispatch(resumePendingWrites());
+      await turns();
+      const saving = save(store);
+      await turns();
+      expect(sent()).toEqual([expect.objectContaining({ method: 'GET', url: lookUp })]);
+
+      checks[0].reject(await missing().catch((error) => error));
+      await resumed;
+      await turns();
+
+      expect(posts()).toEqual([
+        expect.objectContaining({ data: convertedLunch, headers: { 'Idempotency-Key': 'key-1' } }),
+      ]);
+      expect(await stored()).toMatchObject([{ status: 'sending', operation: { data: convertedLunch, spaceId: 1 } }]);
+
+      const next = await restart();
+      expect(statuses(next)).toEqual([{ status: 'checking', found: undefined }]);
+      mockedRequest.mockImplementation(operation('applied'));
+      await next.dispatch(resumePendingWrites());
+
+      expect(sent()).toEqual([expect.objectContaining({ method: 'GET', url: lookUp })]);
+      expect(statuses(next)).toEqual([{ status: 'found', found: 'tx-1' }]);
+      creates[0].reject(new Error('Network Error'));
+      await saving;
+    });
+
+    it('lets no check mark it unsaved while its resend is unanswered, and sends one create for every trigger', async () => {
+      const store = await checking();
+      const { checks, creates } = hold();
+
+      const firstResume = store.dispatch(resumePendingWrites());
+      await turns();
+      const saving = save(store);
+      const secondSave = save(store);
+      await turns();
+      checks[0].reject(await missing().catch((error) => error));
+      await turns();
+      const lateResume = store.dispatch(resumePendingWrites());
+      await turns();
+
+      expect(lookups()).toHaveLength(1);
+      expect(posts()).toHaveLength(1);
+      expect(store.getState().pendingWrite.writes).toMatchObject([{ status: 'sending' }]);
+
+      creates[0].reject(new Error('timeout of 20000ms exceeded'));
+      expect((await saving).outcome).toMatchObject({ status: 'failed', failure: { kind: 'uncertain' } });
+      expect((await secondSave).outcome).toMatchObject({ status: 'failed', failure: { kind: 'uncertain' } });
+      await Promise.all([firstResume, lateResume]);
+
+      expect(posts()).toHaveLength(1);
+      expect(await stored()).toMatchObject([{ status: 'checking', operation: { idempotencyKey: 'key-1' } }]);
+    });
+
+    it('leaves nothing to retry once the resend went through', async () => {
+      const store = await checking();
+      const { checks, creates } = hold();
+
+      const resumed = store.dispatch(resumePendingWrites());
+      await turns();
+      const saving = save(store);
+      checks[0].reject(await missing().catch((error) => error));
+      await resumed;
+      await turns();
+      const lateResume = store.dispatch(resumePendingWrites());
+      creates[0].resolve({ data: createTransactionResponseDto() });
+
+      expect((await saving).outcome).toMatchObject({ status: 'succeeded' });
+      await lateResume;
+      expect(lookups()).toHaveLength(1);
+      expect(store.getState().pendingWrite.writes).toEqual([]);
+      expect(await stored()).toEqual([]);
+    });
+
+    it.each([
+      ['applied', operation('applied'), { status: 'found', transaction: { id: 'tx-1' } }],
+      ['deleted since', operation('deleted'), { status: 'found', transaction: null }],
+    ])('sends no create when the check finds it %s', async (_name, answer, expected) => {
+      const store = await checking();
+      const { checks } = hold();
+
+      const resumed = store.dispatch(resumePendingWrites());
+      await turns();
+      const saving = save(store);
+      checks[0].resolve(await answer());
+      await resumed;
+
+      expect((await saving).outcome).toMatchObject(expected);
+      expect(posts()).toEqual([]);
+    });
+
+    it('keeps a draft discarded during the check discarded', async () => {
+      const store = await checking();
+      const { checks } = hold();
+
+      const resumed = store.dispatch(resumePendingWrites());
+      await turns();
+      store.dispatch(forgetPendingWrite('key-1'));
+      checks[0].reject(await missing().catch((error) => error));
+      await resumed;
+      await turns();
+
+      expect(store.getState().pendingWrite.writes).toEqual([]);
+      expect(await stored()).toEqual([]);
+    });
+
+    it('keeps it to its account through a logout and another account’s session', async () => {
+      const store = await checking();
+      const { checks } = hold();
+
+      const resumed = store.dispatch(resumePendingWrites());
+      await turns();
+      await store.dispatch(logoutMe());
+      checks[0].reject(await missing().catch((error) => error));
+      await resumed;
+
+      expect(await stored()).toMatchObject([{ status: 'checking' }]);
+      const other = await restart(2);
+      await other.dispatch(resumePendingWrites());
+      expect(sent()).toEqual([]);
+      expect(await stored(1)).toMatchObject([{ status: 'checking' }]);
+    });
+
+    it('sends nothing, and keeps it to retry, when the resend cannot be stored first', async () => {
+      const store = await checking();
+      const { checks } = hold();
+      const setItem = AsyncStorage.setItem as unknown as jest.Mock<Promise<void>, string[]>;
+      const original = setItem.getMockImplementation()!;
+      setItem.mockImplementation((key, value) =>
+        value.includes('"status":"sending"') ? Promise.reject(new Error('disk full')) : original(key, value),
+      );
+
+      try {
+        const resumed = store.dispatch(resumePendingWrites());
+        await turns();
+        const saving = save(store);
+        checks[0].reject(await missing().catch((error) => error));
+        await resumed;
+
+        expect((await saving).outcome).toMatchObject({ status: 'failed', failure: { kind: 'notSent' } });
+      } finally {
+        setItem.mockImplementation(original);
+      }
+      expect(posts()).toEqual([]);
+      expect(statuses(store)).toEqual([{ status: 'retry', found: undefined }]);
+      expect(await stored()).toMatchObject([{ status: 'retry' }]);
     });
   });
 

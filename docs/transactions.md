@@ -91,6 +91,15 @@ known (`pendingWrite` slice, `storage.ts`):
 - A create whose key outlived its server lifetime is looked up by its
   operation id instead of being resent; one the server has no trace of
   waits for the user to send it again under the same id.
+- A check of a create by its operation id and a send of it take turns
+  under one lock per account, space and operation (`runningWrites`): a
+  Save during a check waits for its answer (applied: the record is shown;
+  deleted: the create is dropped; missing: it is sent once), and a check
+  or another send during a send joins it. A check's answer applies only
+  to the attempt it was made for, so it never marks a resend that is
+  still unanswered as unsaved, nor brings back a discarded draft. A
+  resend still unanswered when the app closes is checked by its
+  operation id on the next launch before anything is sent.
 - A create in a space the user lost stays stored, offered for review and
   discarding only; it can be saved nowhere.
 - Writes outlive a logout and wait for the same user's next session;

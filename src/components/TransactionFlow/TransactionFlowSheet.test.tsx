@@ -18,6 +18,7 @@ import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import { mapTransaction } from '@api/models';
 import { closed, CREATED_AUTO_CLOSE_MS, createOpened, restoredOpened } from '@redux/state/transactionFlow/slice';
 import { writesRestored } from '@redux/state/pendingWrite/slice';
+import { restorePendingWrites, resumePendingWrites } from '@redux/state/pendingWrite/thunks';
 import type { DraftAssignment } from '@redux/state/transactionFlow/draft';
 import type { ViewSelection } from '@redux/state/transactionFlow/selection';
 import { checkFlowRecord, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
@@ -1195,6 +1196,86 @@ describe('TransactionFlowSheet', () => {
       data: { client_operation_id: 'legacy-key', amount: '42.10', assignment: { kind: 'space' } },
     });
     expect(flow()?.view.name).toBe('created');
+  });
+
+  it('saves a restored draft only after a check already running answers, and checks it again after a restart', async () => {
+    const { store, flow } = renderFlow();
+    const draft = {
+      transactionType: TransactionType.EXPENSE,
+      amount: '42.10',
+      categoryId: 1,
+      assignment: { kind: 'space' } as const,
+      timestamp: '2026-01-05T10:00:00.000Z',
+      description: '',
+    };
+    const body = {
+      assignment: { kind: 'space' } as const,
+      category_id: 1,
+      transaction_type: TransactionType.EXPENSE,
+      amount: '42.10',
+      timestamp: '2026-01-05T10:00:00.000Z',
+      description: null,
+      client_operation_id: 'legacy-key',
+    };
+    let answerCheck!: (reason: unknown) => void;
+    answerOperation = () => new Promise((_resolve, reject) => (answerCheck = reject));
+    const lookups = () =>
+      mockedRequest.mock.calls.filter(([config]) => config.url === '/spaces/1/transactions/operations/legacy-key');
+    const posts = () => mockedRequest.mock.calls.filter(([config]) => config.method === 'POST');
+
+    act(() => {
+      store.dispatch(
+        writesRestored({
+          userId: 1,
+          writes: [
+            {
+              status: 'checking',
+              operation: {
+                type: 'create',
+                spaceId: 1,
+                data: body,
+                idempotencyKey: 'legacy-key',
+                firstSentAt: Date.now(),
+                recovered: true,
+              },
+            },
+          ],
+        }),
+      );
+      store.dispatch(restoredOpened({ spaceId: 1, operationId: 'legacy-key', draft }));
+    });
+    await settle();
+    const checking = store.dispatch(resumePendingWrites());
+    await settle();
+    fireEvent.press(screen.getByText('Retry save'));
+    await settle();
+
+    expect(lookups()).toHaveLength(1);
+    expect(posts()).toEqual([]);
+
+    await act(async () => answerCheck(refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND')));
+    await act(async () => void (await checking));
+    await settle();
+
+    expect(posts()).toEqual([[expect.objectContaining({ headers: { 'Idempotency-Key': 'legacy-key' } })]]);
+    expect(store.getState().pendingWrite.writes).toMatchObject([{ status: 'sending' }]);
+    expect(flow()).toMatchObject({ isSaving: true });
+
+    // The app closes before the resend is answered: the next run asks about the operation before sending anything.
+    const next = createAppStore();
+    withProfile(next);
+    next.dispatch(activateSpace(1));
+    await act(async () => void (await next.dispatch(restorePendingWrites(1))));
+    expect(next.getState().pendingWrite.writes).toMatchObject([
+      { status: 'checking', operation: { idempotencyKey: 'legacy-key', data: body, spaceId: 1 } },
+    ]);
+    mockedRequest.mockClear();
+    answerOperation = defaultAnswerOperation;
+    await act(async () => void (await next.dispatch(resumePendingWrites())));
+
+    expect(lookups()).toHaveLength(1);
+    expect(posts()).toEqual([]);
+    expect(next.getState().pendingWrite.writes).toMatchObject([{ status: 'found' }]);
   });
 
   it('starts another transaction on the same type and assignment', async () => {

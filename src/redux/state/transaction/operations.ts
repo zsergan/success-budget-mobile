@@ -4,7 +4,7 @@ import type { CreateTransactionRequest, ErrorResponse, UpdateTransactionRequest 
 import { ApiErrorCode } from '@api/dto';
 import type { TransactionModel, TransactionWriteResult } from '@api/models';
 import { spaceTags } from '@redux/api/baseApi';
-import type { AppThunk, RootState } from '@redux/Store';
+import type { AppThunk, RootState, RunningWrite } from '@redux/Store';
 import { IDEMPOTENCY_KEY_LIFETIME_MS } from '@shared/constants';
 import { selectPendingWrite, selectUnsettledRecordWrites } from '../pendingWrite/selectors';
 import type { PendingWriteStatus } from '../pendingWrite/slice';
@@ -239,17 +239,56 @@ const isOutcomeUnknown = (error: unknown) => {
 
 // Stores the write before it goes out and keeps it until its outcome is known, through a closed form or a restart.
 // Nothing is sent when it cannot be stored first.
+// Whose write it is, where, and which: a write of one account or space never waits for another's.
+export const writeLockKey = (
+  userId: number,
+  { spaceId, idempotencyKey }: Pick<StoredOperation, 'spaceId' | 'idempotencyKey'>,
+) => `${userId}:${spaceId}:${idempotencyKey}`;
+
+// What a check of a create found that leaves nothing to send: it applied, was deleted, or its space is gone.
+const isSettledByCheck = (result: WriteResult) =>
+  result.kind === 'applied' ||
+  result.kind === 'deleted' ||
+  result.kind === 'stale' ||
+  (result.kind === 'refused' && classifyTransactionError(result.error) === 'accessLost');
+
+// Holds the write's lock while `run` works; only its own entry is released, never one a later attempt holds.
+export const holdWriteLock = <T>(
+  runningWrites: Map<string, RunningWrite>,
+  lock: string,
+  kind: RunningWrite['kind'],
+  run: () => Promise<T>,
+): Promise<T> => {
+  const entry: RunningWrite = { kind, promise: Promise.resolve() };
+  const promise = run().finally(() => {
+    if (runningWrites.get(lock) === entry) runningWrites.delete(lock);
+  });
+
+  entry.promise = promise;
+  runningWrites.set(lock, entry);
+
+  return promise;
+};
+
 export const settleWrite =
   (operation: TransactionOperation): AppThunk<Promise<WriteResult>> =>
   (dispatch, getState, { runningWrites }) => {
     if (getState().auth.sessionKey !== operation.sessionKey) return Promise.resolve({ kind: 'stale' });
     const key = operation.idempotencyKey;
-    const running = runningWrites.get(key) as Promise<WriteResult> | undefined;
-    if (running) return running;
+    const userId = selectProfileId(getState()) ?? getState().pendingWrite.userId ?? undefined;
+    if (userId === undefined) return Promise.resolve({ kind: 'notSent' });
 
-    const run = (async (): Promise<WriteResult> => {
-      const userId = selectProfileId(getState()) ?? getState().pendingWrite.userId ?? undefined;
-      if (userId === undefined) return { kind: 'notSent' };
+    const lock = writeLockKey(userId, operation);
+    const running = runningWrites.get(lock);
+    if (running?.kind === 'send') return running.promise as Promise<WriteResult>;
+
+    return holdWriteLock(runningWrites, lock, 'send', async (): Promise<WriteResult> => {
+      // A check of this create already asked: what it found applies first, and decides whether anything is sent.
+      if (running) {
+        const checked = (await running.promise.catch(() => null)) as WriteResult | null;
+        if (checked && isSettledByCheck(checked)) return checked;
+        if (getState().auth.sessionKey !== operation.sessionKey) return { kind: 'stale' };
+      }
 
       const previous = selectPendingWrite(getState(), key);
       const isRetry = previous !== undefined;
@@ -297,11 +336,7 @@ export const settleWrite =
       if (isAccessLost) dispatch(loseSpaceAccess(operation.spaceId));
 
       return result;
-    })().finally(() => runningWrites.delete(key));
-
-    runningWrites.set(key, run);
-
-    return run;
+    });
   };
 
 export const runTransactionOperation =
