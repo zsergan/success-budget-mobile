@@ -13,6 +13,8 @@ interface BackdropProps {
 const mockSheet: {
   snapPoints?: (number | string)[];
   enableDynamicSizing?: boolean;
+  maxDynamicContentSize?: number;
+  handleComponent?: (() => ReactElement) | null;
   enableContentPanningGesture?: boolean;
   keyboardBlurBehavior?: string;
   stackBehavior?: string;
@@ -49,6 +51,8 @@ jest.mock('@gorhom/bottom-sheet', () => {
     React.useImperativeHandle(ref, () => ({ snapToIndex: mockSheet.snapToIndex }));
     mockSheet.snapPoints = props.snapPoints;
     mockSheet.enableDynamicSizing = props.enableDynamicSizing;
+    mockSheet.maxDynamicContentSize = props.maxDynamicContentSize;
+    mockSheet.handleComponent = props.handleComponent;
     mockSheet.enableContentPanningGesture = props.enableContentPanningGesture;
     mockSheet.keyboardBlurBehavior = props.keyboardBlurBehavior;
     mockSheet.stackBehavior = props.stackBehavior;
@@ -104,6 +108,48 @@ describe('BottomModal fitted to its content', () => {
     layOut(5000);
 
     expect(mockSheet.snapPoints).toEqual([WINDOW_HEIGHT - TOP_INSET - 8]);
+  });
+});
+
+describe('BottomModal sized by the library', () => {
+  const renderDynamic = (props: Partial<ComponentProps<typeof BottomModal>> = {}) =>
+    render(
+      <SafeAreaProvider
+        initialMetrics={{
+          frame: { x: 0, y: 0, width: 400, height: WINDOW_HEIGHT },
+          insets: { top: TOP_INSET, right: 0, bottom: 34, left: 0 },
+        }}
+      >
+        <BottomModal dynamicSizing {...props}>
+          <Text>content</Text>
+        </BottomModal>
+      </SafeAreaProvider>,
+    );
+
+  it('fits the content up to the screen below the top inset, the handle included, with no snap point of its own', () => {
+    renderDynamic();
+
+    expect(mockSheet.enableDynamicSizing).toBe(true);
+    expect(mockSheet.snapPoints).toBeUndefined();
+    expect(mockSheet.maxDynamicContentSize).toBe(WINDOW_HEIGHT - TOP_INSET - 8);
+    expect(mockSheet.enableContentPanningGesture).toBe(true);
+  });
+
+  it('shows the handle only when asked', () => {
+    renderDynamic();
+    expect(mockSheet.handleComponent).toBeNull();
+
+    renderDynamic({ showHandle: true });
+    render(mockSheet.handleComponent!());
+
+    expect(screen.getByTestId('bottom-sheet-handle')).toBeTruthy();
+  });
+
+  it('keeps a sheet fitted outside the library unbounded by it, with its handle', () => {
+    renderSheet('content');
+
+    expect(mockSheet.maxDynamicContentSize).toBeUndefined();
+    expect(mockSheet.handleComponent).toEqual(expect.any(Function));
   });
 });
 

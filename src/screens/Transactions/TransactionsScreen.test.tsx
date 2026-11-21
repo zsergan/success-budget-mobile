@@ -29,7 +29,7 @@ jest.mock('react-native-reanimated', () => ({
 }));
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = jest.requireActual('react');
-  const { ScrollView, View } = jest.requireActual('react-native');
+  const { Pressable, ScrollView, View } = jest.requireActual('react-native');
 
   const BottomSheetModal = React.forwardRef(function BottomSheetModal(
     { children, onDismiss }: { children: ReactNode; onDismiss?: () => void },
@@ -44,7 +44,18 @@ jest.mock('@gorhom/bottom-sheet', () => {
       },
     }));
 
-    return isOpen ? children : null;
+    // A swipe or the backdrop: the sheet closes without its owner asking.
+    const closeByItself = () => {
+      setOpen(false);
+      onDismiss?.();
+    };
+
+    return isOpen ? (
+      <>
+        {children}
+        <Pressable testID="sheet-closes-itself" onPress={closeByItself} />
+      </>
+    ) : null;
   });
 
   return {
@@ -195,6 +206,125 @@ describe('TransactionsScreen', () => {
       fireEvent.press(screen.getByText('Mark · Former member'));
       await settle();
       expect(listRequests().at(-1)?.params).toMatchObject({ assignment: 'member:40' });
+    });
+
+    const option = (name: string | RegExp, selected = false) => screen.getByRole('button', { name, selected });
+
+    it('applies a type, shows it chosen on the next opening, and goes back to all types', async () => {
+      renderTransactions(undefined);
+      await settle();
+
+      fireEvent.press(screen.getByLabelText('All types. Change filter'));
+      expect(option('All types', true)).toBeTruthy();
+      fireEvent.press(option('Expenses'));
+      await settle();
+
+      expect(screen.queryByRole('button', { name: 'Income' })).toBeNull();
+      expect(listRequests().at(-1)?.params).toMatchObject({ transaction_type: 'expense' });
+
+      fireEvent.press(screen.getByLabelText('Expenses. Change filter'));
+      expect(option('Expenses', true)).toBeTruthy();
+      fireEvent.press(option('Income'));
+      await settle();
+      expect(listRequests().at(-1)?.params).toMatchObject({ transaction_type: 'income' });
+
+      fireEvent.press(screen.getByLabelText('Income. Change filter'));
+      fireEvent.press(option('All types'));
+      await settle();
+      expect(listRequests().at(-1)?.params).not.toHaveProperty('transaction_type');
+    });
+
+    it('applies an assignment, shows it chosen on the next opening, and goes back to all transactions', async () => {
+      renderTransactions(undefined);
+      await settle();
+
+      fireEvent.press(screen.getByLabelText('All transactions. Change filter'));
+      fireEvent.press(option('Lena'));
+      await settle();
+      expect(listRequests().at(-1)?.params).toMatchObject({ assignment: 'member:31' });
+
+      fireEvent.press(screen.getByLabelText('Lena. Change filter'));
+      expect(option('Lena', true)).toBeTruthy();
+      fireEvent.press(option(/^All transactions/));
+      await settle();
+      expect(listRequests().at(-1)?.params).not.toHaveProperty('assignment');
+    });
+
+    it('keeps the other filter when one of them changes', async () => {
+      renderTransactions(undefined);
+      await settle();
+
+      fireEvent.press(screen.getByLabelText('All types. Change filter'));
+      fireEvent.press(option('Expenses'));
+      await settle();
+      fireEvent.press(screen.getByLabelText('All transactions. Change filter'));
+      fireEvent.press(option(/^Whole space/));
+      await settle();
+      expect(listRequests().at(-1)?.params).toMatchObject({ transaction_type: 'expense', assignment: 'space' });
+
+      fireEvent.press(screen.getByLabelText('Expenses. Change filter'));
+      fireEvent.press(option('All types'));
+      await settle();
+      expect(listRequests().at(-1)?.params).not.toHaveProperty('transaction_type');
+      expect(listRequests().at(-1)?.params).toMatchObject({ assignment: 'space' });
+    });
+
+    it('shows choices that change while the Assigned to sheet is open', async () => {
+      const store = renderTransactions(undefined);
+      await settle();
+      fireEvent.press(screen.getByLabelText('All transactions. Change filter'));
+      expect(screen.queryByText('Olga')).toBeNull();
+
+      mockedRequest.mockImplementation(({ url }: RequestConfig) =>
+        Promise.resolve({
+          data: url.endsWith('/assignees')
+            ? {
+                ...assignees,
+                members: [...assignees.members, { key: 'member:50', user_id: 50, name: 'Olga', status: 'member' }],
+              }
+            : url === FEED
+              ? feedDto([taxi])
+              : null,
+        }),
+      );
+      act(() => {
+        store.dispatch(baseApi.util.invalidateTags(spaceTags(1, 'Members')));
+      });
+      await settle();
+
+      fireEvent.press(option('Olga'));
+      await settle();
+      expect(listRequests().at(-1)?.params).toMatchObject({ assignment: 'member:50' });
+    });
+
+    it.each([
+      ['Type', 'Expenses. Change filter', 'Income'],
+      ['Assigned to', 'Lena. Change filter', 'You'],
+    ])('leaves the %s filter as it was when its sheet is swiped away', async (_name, chip, other) => {
+      renderTransactions({
+        focus: {
+          spaceId: 1,
+          month: august,
+          transactionType: TransactionType.EXPENSE,
+          assignment: 'member:31',
+          assignmentName: 'Lena',
+        },
+      });
+      await settle();
+      const requests = listRequests().length;
+
+      fireEvent.press(screen.getByLabelText(chip));
+      expect(option(other)).toBeTruthy();
+      fireEvent.press(screen.getByTestId('sheet-closes-itself'));
+      await settle();
+
+      expect(screen.queryByRole('button', { name: other })).toBeNull();
+      expect(listRequests()).toHaveLength(requests);
+      expect(screen.getByLabelText('Expenses. Change filter')).toBeTruthy();
+      expect(screen.getByLabelText('Lena. Change filter')).toBeTruthy();
+
+      fireEvent.press(screen.getByLabelText(chip));
+      expect(option(other)).toBeTruthy();
     });
 
     it('opens a record shown from elsewhere around it, unfiltered, even when the filtered list had it', async () => {

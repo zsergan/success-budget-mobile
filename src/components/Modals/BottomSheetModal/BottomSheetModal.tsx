@@ -20,13 +20,18 @@ export const FITTED_SHEET_HANDLE_HEIGHT = 24;
 interface Props {
   children: ReactNode;
   onDismiss?: () => void;
-  /** Size the sheet to a content whose root is one BottomSheetView or BottomSheetScrollView holding all of it. */
+  /**
+   * Size the sheet to a content whose root is one BottomSheetView or BottomSheetScrollView holding all of it, up to
+   * the screen below the top inset; a longer scroll view scrolls.
+   */
   dynamicSizing?: boolean;
   /**
    * Size the sheet to its whole content, measured here, up to the screen: for content with a header and actions
    * around an inner scroll view, which the library's dynamic sizing would size to that scroll view alone.
    */
   fitContent?: boolean;
+  /** Shows the drag handle above the content. Defaults to fitContent. */
+  showHandle?: boolean;
   /** Fixed snap point when neither sizing is set. Defaults to '85%'. */
   snapPoint?: string;
   /** Replaces the backdrop's own close, for a sheet that decides itself whether it may close. */
@@ -48,6 +53,7 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
     onDismiss,
     dynamicSizing = false,
     fitContent = false,
+    showHandle = fitContent,
     snapPoint = '85%',
     onBackdropPress,
     stackBehavior,
@@ -130,9 +136,10 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
           : [fitContent ? Math.min(contentHeight + FITTED_SHEET_HANDLE_HEIGHT, maxHeight) : snapPoint]
       }
       enableDynamicSizing={dynamicSizing}
+      maxDynamicContentSize={dynamicSizing ? maxHeight : undefined}
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.background}
-      handleComponent={fitContent ? renderHandle : null}
+      handleComponent={showHandle ? renderHandle : null}
       enableContentPanningGesture={!fitContent}
       enablePanDownToClose={isDismissible}
       onDismiss={handleDismiss}
