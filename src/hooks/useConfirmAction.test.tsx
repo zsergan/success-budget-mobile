@@ -89,13 +89,13 @@ it('keeps the dialog open with the error, clears it on retry and on reopening', 
   await act(async () => {
     const running = result.current.confirm(failing.action);
 
-    failing.reject({ message: 'Wallet has transactions', statusCode: 409 });
+    failing.reject({ message: 'Category has transactions', statusCode: 409 });
     await running;
   });
 
   expect(result.current.target).toEqual({ id: 7 });
   expect(result.current.isPending).toBe(false);
-  expect(result.current.error).toBe('Wallet has transactions');
+  expect(result.current.error).toBe('Category has transactions');
 
   const retry = deferred();
   const running = startConfirm(result, retry.action);

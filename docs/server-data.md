@@ -1,86 +1,81 @@
 # Server data: dependencies and invalidation
 
-Reference for moving server data onto RTK Query. It records which cached
-data each successful mutation makes stale, based on the backend services
-(`success-budget-backend`, `main` at `fd0d717`) and on the Redux thunks in
-`src/redux/state/*/thunks.ts` at `f9cc9c1`.
-
-All server data, including spaces, members, the profile and currencies,
-now follows the "Stale" column through RTK Query tags (`src/redux/state/<domain>/api.ts`, checked by
-`src/redux/api/invalidation.test.ts`); the "Refreshed today" and "Gap"
-columns and the lifecycle section record the thunk-era behavior.
-Invalidation happens only after a successful mutation (an empty body
-counts as success), so a failed or session-stale write refreshes nothing.
-One exception: a limit create or edit rejected with
-`400 CATEGORY_ARCHIVED` refreshes Limits and Categories,
-because the error itself shows a category was archived elsewhere.
-Likewise a transaction write refused with `TRANSACTION_NOT_FOUND`,
-`TRANSACTION_VERSION_CONFLICT`, `CATEGORY_ARCHIVED` or
-`FORBIDDEN_CATEGORY` refreshes everything a transaction write does, since
-the cached record or category is behind the server; one refused with
-`ASSIGNEE_NOT_MEMBER` refreshes Members too, as the member it named has
-left.
-An invitation resend refreshes Members after any answer except one that
-outlived its session: a refused or unanswered resend may still have
-scheduled an email, a `429` moves the cooldown and a `404` means the
-invitation ended.
-A space creation left unanswered past its key's lifetime refreshes
-Spaces without being sent again, so the user sees whether it was created;
-creating it anyway starts a new attempt under a new key, as the old one
-may no longer be known to the server.
-An invitation accept refused with `409 SPACE_ALREADY_MEMBER` counts as
-joined: it refreshes Spaces and selects the space the answer names.
-A transaction request refused with `403 FORBIDDEN_SPACE` removes every
-cached entry of that space and refreshes Spaces, whose fallback moves the
-selection to a space the user still belongs to.
-Any read refused with `403` for the current space refreshes Spaces too;
-once the list no longer has the space, the selection moves off it and its
-cached entries are removed.
-No transaction list is loaded whole any more: Home and the initial-load
-gate share one `History.Recent` entry of five records, the Transactions
-tab reads `History.Feed` page by page, and every total (`summary`, a
-day's `net`, the picker's count) comes from the server. The tab asks for
-`History.Latest` only while its period is empty; Home, which lists the
-whole history, never needs it. `GET /transactions` (the whole period as
-one array, once `History.Range`) is removed from the backend and answers
-`404`.
-`src/redux/api/scenarios.test.tsx` covers the user-visible scenarios
-end to end.
+Reference for the RTK Query cache: what each resource holds, which
+mutations make it stale and how the cache follows the session and the
+selected space. The rules are checked by
+`src/redux/api/invalidation.test.ts`; `src/redux/api/scenarios.test.tsx`
+covers the user-visible scenarios end to end.
 
 Transactions and statistics are read and written through `/api/v2`
 (`apiVersion: 2` on the request; the backend's
 `docs/transactions-v2-contract.md`): a record belongs to its space and
 carries an `author` and an `assignment` (a member, the whole space or
 nobody), and a breakdown groups by assignment. Every other resource stays
-on `/api/v1`. A transaction write (create, edit, reassignment, delete)
-invalidates the space's `Transactions`, `Limits` and `Categories` tags;
-tags are per space, so every history selection and statistics cycle of the
-space reads again, under the record's old assignment as well as its new
-one.
+on `/api/v1`. There are no wallets: no wallet request, tag or cache entry
+exists.
+
+Invalidation happens only after a successful mutation (an empty body
+counts as success), so a failed or session-stale write refreshes nothing.
+The exceptions are refusals that prove the cache is behind the server:
+
+- A limit create or edit rejected with `400 CATEGORY_ARCHIVED` refreshes
+  Limits and Categories.
+- A transaction write refused with `TRANSACTION_NOT_FOUND`,
+  `TRANSACTION_VERSION_CONFLICT`, `CATEGORY_ARCHIVED` or
+  `FORBIDDEN_CATEGORY` refreshes everything a transaction write does; one
+  refused with `ASSIGNEE_NOT_MEMBER` refreshes Members too, as the member
+  it named has left.
+- An invitation resend refreshes Members after any answer except one that
+  outlived its session: a refused or unanswered resend may still have
+  scheduled an email, a `429` moves the cooldown and a `404` means the
+  invitation ended.
+- A space creation left unanswered past its key's lifetime refreshes
+  Spaces without being sent again, so the user sees whether it was
+  created; creating it anyway starts a new attempt under a new key, as the
+  old one may no longer be known to the server.
+- An invitation accept refused with `409 SPACE_ALREADY_MEMBER` counts as
+  joined: it refreshes Spaces and selects the space the answer names.
+- A transaction request refused with `403 FORBIDDEN_SPACE` removes every
+  cached entry of that space and refreshes Spaces, whose fallback moves
+  the selection to a space the user still belongs to. Any other read
+  refused with `403` for the current space refreshes Spaces too; once the
+  list no longer has the space, the selection moves off it and its cached
+  entries are removed.
+
+No transaction list is loaded whole: Home reads one `History.Recent`
+entry per month (the current month's is also asked for early by the
+session data), the Transactions tab reads `History.Feed` page
+by page, and every total (`summary`, a day's `net`, the picker's count)
+comes from the server. The tab asks for `History.Latest` only while its
+period is empty; Home never needs it.
 
 ## Cached resources
 
-Every resource except Profile and Currencies is scoped to the active space.
+Every resource except Spaces, Profile, Currencies and `InvitePreview` is
+scoped to a space: its argument carries `spaceId`, and so do its cache
+entry and tags.
 
-| Key              | Endpoint                                                        | Client state today    | Contents that other mutations can change                                                                                                                                                                 |
-| ---------------- | --------------------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Spaces`         | `GET /spaces`                                                   | `space.spaces`        | Caller's `role`, `member_count`, space list itself                                                                                                                                                       |
-| `Profile`        | `GET /users/profile`                                            | `profile`             | — (no mutation endpoint)                                                                                                                                                                                 |
-| `Currencies`     | `GET /currencies`                                               | `currency.currencies` | — (reference data)                                                                                                                                                                                       |
-| `Categories`     | `GET /spaces/:id/categories`                                    | `category`            | `transaction_count` (all transactions of the space), `limit: {id, name}` membership, `is_active`/`archived_at`, `sort`                                                                                   |
-| `Limits`         | `GET /spaces/:id/limits?time_zone=`                             | `limit`               | `spent`/`in_percent` per limit over the device zone's month returned as `period` (every expense of the space, whatever its assignment), embedded category `name`/`icon`/`color`, `over_allocation`       |
-| `History.Recent` | `GET /spaces/:id/transactions/feed?from=1970…&to=2038…&limit=5` | — (RTK Query only)    | Home's latest five records of the whole history and their days' `net`; one entry shared with the initial-load gate, never paged further                                                                  |
-| `History.Latest` | `GET /spaces/:id/transactions/latest`                           | `transaction.latest`  | Single most recent row (or `null`); tells "no transactions at all" apart from "none in this period"                                                                                                      |
-| `History.Count`  | `GET /spaces/:id/transactions/count?from&to[&q]`                | — (RTK Query only)    | `summary.count` of the same `History.Feed` selection, initial balances included; the period picker's counter                                                                                             |
-| `Assignees`      | `GET /spaces/:id/transactions/assignees`                        | — (RTK Query only)    | History's "Assigned to" filter: current members, former members with records, whether a deleted account has records; provides `Transactions` and `Members`                                               |
-| `History.Feed`   | `GET /spaces/:id/transactions/feed?from&to&time_zone[&q]`       | — (RTK Query only)    | Cursor pages of rows (same row shape) with the selection's `summary` and each listed day's `net`; one entry per selection and load generation; the Transactions tab, its search and the Stats drill-down |
-| `Members`        | `GET /spaces/:id/members`                                       | `member.members`      | Member rows and pending invite rows with their email delivery state                                                                                                                                      |
-| `InvitePreview`  | `POST /spaces/invites/preview`                                  | — (RTK Query only)    | Not scoped to a space and provides no tags; one entry per link token, read again after a restart rather than stored                                                                                      |
-| `Statistics`     | `GET /spaces/:id/statistics/{summary,trend,breakdown}`          | — (RTK Query only)    | Every transaction sum and count; category names, colors and archived state; people's names and membership                                                                                                |
+| Key              | Endpoint                                                      | Contents that other mutations can change                                                                                                                                                                 |
+| ---------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Spaces`         | `GET /spaces`                                                 | Caller's `role`, `member_count`, space list itself                                                                                                                                                       |
+| `Profile`        | `GET /users/profile`                                          | — (no mutation endpoint)                                                                                                                                                                                 |
+| `Currencies`     | `GET /currencies`                                             | — (reference data)                                                                                                                                                                                       |
+| `Categories`     | `GET /spaces/:id/categories`                                  | `transaction_count` (all transactions of the space), `limit: {id, name}` membership, `is_active`/`archived_at`, `sort`                                                                                   |
+| `Limits`         | `GET /spaces/:id/limits?time_zone=`                           | `spent`/`in_percent` per limit over the device zone's month returned as `period` (every expense of the space, whatever its assignment), embedded category `name`/`icon`/`color`, `over_allocation`       |
+| `History.Recent` | `GET /spaces/:id/transactions/feed?from&to&time_zone&limit=5` | Home's latest five records of the month it shows and their days' `net`; the current month's entry is shared with the session data                                                                        |
+| `History.Latest` | `GET /spaces/:id/transactions/latest`                         | Single most recent row (or `null`); tells "no transactions at all" apart from "none in this period"                                                                                                      |
+| `History.Count`  | `GET /spaces/:id/transactions/count?from&to[&q]`              | `summary.count` of the same `History.Feed` selection, initial balances included; the period picker's counter                                                                                             |
+| `History.Feed`   | `GET /spaces/:id/transactions/feed?from&to&time_zone[&q]`     | Cursor pages of rows (same row shape) with the selection's `summary` and each listed day's `net`; one entry per selection and load generation; the Transactions tab, its search and the Stats drill-down |
+| `Transaction`    | `GET /spaces/:id/transactions/:transactionId`                 | One record as its details show it, with its `version`, `author` and `assignment`                                                                                                                         |
+| `Operation`      | `GET /spaces/:id/transactions/operations/:operationId`        | Whether a create applied (and its record, or `null` if deleted since); provides no tags, always read afresh and dropped at once (`docs/transactions.md`)                                                 |
+| `Assignees`      | `GET /spaces/:id/transactions/assignees`                      | History's "Assigned to" filter: current members, former members with records, whether a deleted account has records; provides `Transactions` and `Members`                                               |
+| `Members`        | `GET /spaces/:id/members`                                     | Member rows and pending invite rows with their email delivery state                                                                                                                                      |
+| `InvitePreview`  | `POST /spaces/invites/preview`                                | Not scoped to a space and provides no tags; one entry per link token, read again after a restart rather than stored                                                                                      |
+| `Statistics`     | `GET /spaces/:id/statistics/{summary,trend,breakdown}`        | Every transaction sum and count; category names, colors and archived state; people's names and membership                                                                                                |
 
 "History" below means all of `History.Recent`, `History.Latest`,
-`History.Count` and `History.Feed`; in the thunk-era columns and the
-lifecycle section, `History.Range` is the former whole-period list.
+`History.Count`, `History.Feed`, `Transaction` and `Assignees`: every
+entry that provides the space's `Transactions` tag.
 
 `History.Feed` is an infinite query (`getTransactionsFeed`), read through
 `useTransactionsFeed`. Its pages provide no tags, so an invalidation never
@@ -116,36 +111,36 @@ details changes nothing in the list.
 
 ## Invalidation rules
 
-"Stale" is what the server actually changes. "Refreshed today" is what the
-client re-fetches after the mutation succeeds (only when the space context
-is still the one the mutation ran against). Gaps are the difference.
-Space-scoped endpoints are written without their `/spaces/:id` prefix.
+What each successful mutation invalidates, which is what the server
+changes. Space-scoped endpoints are written without their `/spaces/:id`
+prefix, and their tags carry that space's id.
 
-| Successful mutation             | Endpoint                                                                         | Stale                                                                                                          | Refreshed today                                                                                      | Gap                              |
-| ------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------- |
-| Create transaction              | `POST /transactions`                                                             | History; Limits (spent, if expense in current month); Categories (`transaction_count`)                         | `History.Recent`, Wallets, Limits, `History.Range` + `History.Latest` (via `dataRevision`)           | **Categories**                   |
-| Delete transaction              | `DELETE /transactions/:id`                                                       | Same as create                                                                                                 | — (`deleteTransaction` exists in `transaction.api.ts`, no thunk or UI)                               | Whole row once wired             |
-| Edit transaction                | `PATCH /transactions/:id`                                                        | Same as create                                                                                                 | — (new endpoint)                                                                                     | —                                |
-| Create category                 | `POST /categories`                                                               | Categories                                                                                                     | Categories                                                                                           | —                                |
-| Edit category (name/icon/color) | `PUT /categories/:id`                                                            | Categories; Limits (embedded category); History (embedded category)                                            | Categories, `History.Range`, `History.Latest`                                                        | **Limits**, **`History.Recent`** |
-| Archive category                | `PUT /categories/:id` with `is_active: 0`                                        | Categories; Limits (category unlinked, limit deleted if it was its last category); History (embedded category) | Categories, `History.Range`, `History.Latest`                                                        | **Limits**, **`History.Recent`** |
-| Restore category                | `PUT /categories/:id` with `is_active: 1`                                        | Categories; History (embedded category). Limit membership is not restored.                                     | Categories, `History.Range`, `History.Latest`                                                        | **`History.Recent`**             |
-| Delete category → archived      | `DELETE /categories/:id`, `{archived: true}`                                     | Same as archive                                                                                                | Categories                                                                                           | **Limits**, **History**          |
-| Delete category → removed       | `DELETE /categories/:id`, `{archived: false}` (only when it has no transactions) | Categories; Limits (category unlinked, limit deleted if it was its last category)                              | Categories                                                                                           | **Limits**                       |
-| Reorder categories              | `PUT /categories/reorder`                                                        | Categories                                                                                                     | Categories                                                                                           | —                                |
-| Create / edit / delete limit    | `POST`, `PUT`, `DELETE /limits[/:id]`                                            | Limits; Categories (`limit: {id, name}` of every category added, removed or renamed)                           | Limits                                                                                               | **Categories**                   |
-| Invite member                   | `POST /spaces/:id/invites`                                                       | Members                                                                                                        | Members                                                                                              | —                                |
-| Resend invite                   | `POST /spaces/:id/invites/:inviteId/resend`                                      | Members (`email_status`, `can_resend`, `resend_after_seconds`)                                                 | Members, also after a refusal or no answer                                                           | —                                |
-| Revoke invite                   | `DELETE /spaces/:id/invites/:inviteId`                                           | Members                                                                                                        | Members                                                                                              | —                                |
-| Remove another member (owner)   | `DELETE /spaces/:id/members/:userId`                                             | Members; Spaces (`member_count`)                                                                               | Members, Spaces                                                                                      | —                                |
-| Leave space                     | `DELETE /spaces/:id/members/:self`                                               | Spaces (space gone, or ownership moved to the oldest member); active space may no longer be accessible         | `activateSpace(null)`, then Spaces, whose fallback activates the next space and reloads all its data | —                                |
-| Accept invite                   | `POST /spaces/invites/accept`                                                    | Spaces; the joined space becomes active                                                                        | Activates the joined space, then Spaces                                                              | —                                |
-| Create space                    | `POST /spaces`                                                                   | Spaces; the new space becomes active                                                                           | Activates it, then Spaces                                                                            | —                                |
-| Delete space                    | `DELETE /spaces/:id`                                                             | Spaces; fallback if it was active                                                                              | Spaces (fallback via `fetchSpaces`); thunk exists, no UI                                             | —                                |
+| Successful mutation                        | Endpoint                                                                         | Invalidates                                                                                               |
+| ------------------------------------------ | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Create transaction                         | `POST /transactions` (v2)                                                        | History; Statistics; Limits (spent); Categories (`transaction_count`)                                     |
+| Edit or reassign transaction               | `PATCH /transactions/:id` (v2, `If-Match`)                                       | Same as create; the record leaves its old assignment's lists and joins the new one's                      |
+| Delete transaction (also Undo of a create) | `DELETE /transactions/:id` (v2, `If-Match`)                                      | Same as create                                                                                            |
+| Create category                            | `POST /categories`                                                               | Categories                                                                                                |
+| Edit category (name/icon/color)            | `PUT /categories/:id`                                                            | Categories; Limits (embedded category); History and Statistics (embedded category)                        |
+| Archive category                           | `PUT /categories/:id` with `is_active: 0`                                        | Categories; Limits (category unlinked, limit deleted if it was its last category); History and Statistics |
+| Restore category                           | `PUT /categories/:id` with `is_active: 1`                                        | Categories; Limits; History and Statistics. Limit membership is not restored.                             |
+| Delete category → archived                 | `DELETE /categories/:id`, `{archived: true}`                                     | Same as archive                                                                                           |
+| Delete category → removed                  | `DELETE /categories/:id`, `{archived: false}` (only when it has no transactions) | Categories; Limits (category unlinked, limit deleted if it was its last category)                         |
+| Reorder categories                         | `PUT /categories/reorder`                                                        | Categories                                                                                                |
+| Create / edit / delete limit               | `POST`, `PUT`, `DELETE /limits[/:id]`                                            | Limits; Categories (`limit: {id, name}` of every category added, removed or renamed)                      |
+| Invite member                              | `POST /spaces/:id/invites`                                                       | Members                                                                                                   |
+| Resend invite                              | `POST /spaces/:id/invites/:inviteId/resend`                                      | Members (`email_status`, `can_resend`, `resend_after_seconds`), also after a refusal or no answer         |
+| Revoke invite                              | `DELETE /spaces/:id/invites/:inviteId`                                           | Members                                                                                                   |
+| Remove another member (owner)              | `DELETE /spaces/:id/members/:userId`                                             | Members (also `Assignees` and Statistics, which name people by membership); Spaces (`member_count`)       |
+| Leave space                                | `DELETE /spaces/:id/members/:self`                                               | Spaces; the selection then moves to another space (see "Space selection")                                 |
+| Accept invite                              | `POST /spaces/invites/accept`                                                    | Spaces; the joined space is selected                                                                      |
+| Create space                               | `POST /spaces` (`Idempotency-Key`)                                               | Spaces; the new space is selected                                                                         |
 
-A space activation (switch, create, accept, leave) makes every space-scoped
-resource stale; sign-in and sign-out make everything stale. Both are
-described in the lifecycle section.
+Statistics follows through `getStatisticsRevision` (see "Statistics"),
+which provides the space's `Transactions`, `Categories` and `Members`
+tags. Selecting a space makes nothing stale: each space has its own
+entries, and sign-in and sign-out start from an empty cache. Both are
+described in "Lifecycle".
 
 ### Staleness with no local mutation
 
@@ -165,15 +160,23 @@ described in the lifecycle section.
   it renders the screen again, so a current period moves onto the new
   month, and refreshes the space's data regardless of the 30 s limit.
 
-## Notes for the RTK Query design
+## Transaction reads and writes
 
 - Every transaction read and write result is the backend's v2
-  transaction view (`docs/transactions-v2-contract.md`): `kind`,
-  `version`, `author` (with `source`), `assignment` (people resolved to
-  `member`, `former_member` or `deleted`) and a compact `category` without
-  `transaction_count`, `limit` or `sort`, mapped to
-  `TransactionCategoryModel` rather than the Categories API's
-  `CategoryModel`. There is no wallet.
+  transaction view: `kind`, `version`, `author` (with `source`),
+  `assignment` (people resolved to `member`, `former_member` or
+  `deleted`) and a compact `category` without `transaction_count`,
+  `limit` or `sort`, mapped to `TransactionCategoryModel` rather than the
+  Categories API's `CategoryModel`.
+- A write carries an `Idempotency-Key`; an edit or a delete also sends
+  the version it was based on as `If-Match`, so a change made elsewhere
+  meanwhile is refused with `TRANSACTION_VERSION_CONFLICT` instead of
+  overwritten. A create also carries the key as `client_operation_id`,
+  which `Operation` looks up. How outcomes are handled and kept across
+  restarts: `docs/transactions.md`.
+- A write changes history under its old and its new assignment, so it
+  invalidates the space's tags, not entries of one selection: every list,
+  filter and statistics cycle of the space reads again.
 - A transaction created outside the currently cached period does not
   change `History.Recent`/`History.Feed` rows, but invalidating them
   anyway is correct and cheap; no need to match on timestamps.
@@ -196,108 +199,76 @@ A new cycle for the same space and period keeps each block's last successful
 result on screen, flagged as updating or, if its request failed, as not
 updated. A new space, period or zone drops them in the same render.
 
-## Current lifecycle behavior
-
-What the hand-written slices and hooks do today. RTK Query replaces most of
-this machinery, so each point here is either something to keep or
-something to drop on purpose.
+## Lifecycle
 
 ### Loading
 
-- **Boot and sign-in.** The `launch` slice runs one attempt at a time:
-  fonts, the stored token, the session check (profile), then the spaces
-  list and the selected space's wallets. A failed required request is a
-  retryable failure on the Launch screen, never an open app without its
-  data; once open, a space switch or a background refresh never brings
-  the Launch screen back. See `docs/launch.md`.
-- **Sign-in.** `fetchSpaces` keeps the current space if it is still in
-  the list, otherwise activates the personal space, otherwise the lowest
-  id. Every change of `currentSpaceId` then dispatches `fetchWallets`,
-  `fetchLimits`, `fetchCategories` and `fetchTransactions` (`History.Recent`).
-- **Screen-owned fetches.** The Transactions tab fetches `History.Range`
-  and `History.Latest` on mount and whenever the period, the space or
-  `transaction.dataRevision` changes; `dataRevision` is bumped by
-  `transactionsInvalidated` after mutations that affect history. The
-  Members screen fetches `Members` on mount and on space change. Sign-up
-  and Create Space fetch `Currencies` on mount.
+- **Launch and sign-in.** The `launch` slice loads the profile and the
+  spaces list and restores the saved space before the app opens; a failed
+  required request is a retryable failure on the Launch screen. See
+  `docs/launch.md`. No space-scoped data is required to open the app.
+- **Session data.** `useSessionData` (`src/navigation/`) keeps the
+  profile and spaces subscribed and, once the app is open, asks early for
+  the selected space's Categories, Limits and current-month
+  `History.Recent`. Everything else is read by the screen that shows it.
+- **What a refresh looks like.** Views read `currentData` and take their
+  state from `getLoadState`: a spinner or skeleton only while their
+  argument has no result yet; a background refetch, failed or not, keeps
+  the last result on screen, and `hasRefreshError` lets the screen say it
+  could not be brought up to date.
 - **Returns and a new month.** See "Staleness with no local mutation"
-  above; there is no refetch on reconnect, pull-to-refresh or interval.
-- **Stale responses.** Each list fetch stores its `requestId` on pending
-  and ignores a fulfilled/rejected action with a different id, so an older
-  request cannot overwrite a newer one. `fetchSpaces` additionally only
-  runs its fallback activation if it is still the current request.
-  `fetchCurrencies` has no such guard.
-- **What a refresh looks like.** Home, Limits and Categories show a
-  spinner only while their list is empty; a background refresh keeps the
-  old data on screen with no indicator. `History.Range` clears its rows
-  when the period changes but keeps them for a refresh of the same period,
-  yet the Transactions screen still swaps to its skeleton for every range
-  fetch. `History.Latest` resets to `undefined` on every fetch. Members
-  exposes a separate `isRefreshing` state.
-- **Mutation state.** `isCreating` (transaction) and `isDeleting` (limit,
-  category) live in the slices; other forms track submission locally. A
-  failed wallet/category/limit mutation writes the same slice `error` the
-  list fetch uses; member mutations keep their errors local on purpose.
+  above; there is no refetch on reconnect or on an interval. History has
+  pull-to-refresh.
 
 ### Errors and retry
 
-- **No automatic retries.** Every retry is a user action.
-- **Manual retry, shown only when there is no data to fall back on:**
-  Home recent activity (`fetchTransactions`), Home wallets
-  (`fetchWallets`), Limits (`fetchLimits`), Categories (`fetchCategories`),
-  Transactions period and latest (separate `rangeError` / `latestError`
-  states with their own retry), Members (`fetchMembers`). When a refresh
-  fails while data is present, the old data stays; Home, Transactions and
-  Stats say so in a banner with Retry, and Stats also shows an error toast
-  once per failed attempt (`docs/toasts.md`).
-- **No retry at all** for `fetchSpaces` or `fetchProfile`. If the initial
-  `fetchSpaces` fails, no space is ever activated and nothing space-scoped
-  loads until the next sign-in. If `fetchProfile` fails, leaving a space
-  rejects without a request because the caller's user id is unknown.
+- **No automatic retries** of reads. A retry is a user action: a Retry
+  where the screen has no data, or a banner with Retry where a refresh of
+  shown data failed (Home, Transactions and Stats; Stats also shows an
+  error toast once per failed attempt, `docs/toasts.md`). Pending
+  transaction writes are the exception: they are sent again on their own
+  (`docs/transactions.md`).
 - **Network failures** are turned into a truthy `ErrorResponse`
   (`statusCode: 0`) by `getRejectValue`, so they never look like an empty
   successful result. A response keeps its HTTP status and `Retry-After`
-  whatever its body; only the API's own JSON error passes its fields on, and
-  anything else (an empty body, a proxy's HTML page, other JSON) gets a
-  message of the app's own.
-- **401** from the axios instance dispatches `logoutMe`, but only if the
-  request carried the token that is still stored.
+  whatever its body; only the API's own JSON error passes its fields on,
+  and anything else (an empty body, a proxy's HTML page, other JSON) gets
+  a message of the app's own.
+- **401** from the axios instance ends the session, but only if the
+  request carried the token of the session still current.
 - **429** shows the generic rate-limit toast only for a request nothing
   on screen explains: mutations and requests passing `isHandledRateLimit`
-  report it where they were made. `inviteMember` additionally starts a
-  cooldown from `Retry-After` that outlives space switches.
+  report it where they were made. `inviteMember` also starts a cooldown
+  from `Retry-After` that outlives space switches.
 
-### Space switch
+### Space selection
 
-- `activateSpace(id)` is the only way to change the active space; activating
-  the current space is a no-op. Triggers: `SpaceSwitcher`, the
-  `fetchSpaces` fallback, `addSpace`, `acceptInvite`, `leaveSpace`.
-- It dispatches `spaceContextChanged` with a new, never-reused
-  `contextKey`. In the same reducer pass wallet, category, limit and
-  transaction reset to their initial state except `hasLoaded` and set
-  `isLoading: true`; member resets fully (including `hasLoaded`) except the
-  invite cooldown. Spaces, profile and currencies are kept.
-- Dropping `requestId` in that reset is what makes a late response for the
-  previous space unmatchable.
-- Mutation thunks capture `contextKey` before their request and skip their
-  follow-up refreshes and `transactionsInvalidated` if it changed while
-  the request was in flight.
-- After the switch the new space's data loads through the same effects as
-  on sign-in (the session data subscriptions, plus the Transactions and
-  Members screens if mounted).
+- `activateSpace(id)` is the only way to change the selected space;
+  selecting the current one is a no-op. Triggers: `SpaceSwitcher`, the
+  launch, the spaces-list fallback, creating a space, accepting an
+  invitation and leaving a space (all through `space/thunks.ts`, which
+  check the session is still current). The id is saved per account.
+- When the spaces list arrives without the selected space, the selection
+  moves to the personal space, otherwise the lowest id, and the old
+  space's cached entries are removed (`dropSpaceData`).
+- A switch resets nothing in the cache: every space-scoped entry is keyed
+  by its `spaceId`, and views reading `currentData` never show another
+  space's result. An open transaction ends (`transactionFlow`), and a
+  confirmation asked in the old space is dropped (`docs/sheets.md`).
+- A transaction write captures its session and space; an answer that
+  arrives after either changed surfaces nothing in the current one, while
+  the write itself stays pending until its outcome is known.
 
 ### Sign-out
 
-- Triggered from Settings or by a 401. `logoutMe` deletes the token
-  (a storage failure still logs out) and, on fulfilled, every slice resets
-  to its initial state. `space.contextKey` keeps counting up and
-  `auth.sessionKey` is incremented, so nothing from the ended session can
-  match the next one.
+- Triggered from Settings or by a 401. `logoutMe` deletes the token (a
+  storage failure still logs out); on fulfilled every slice resets and
+  `resetApiState` empties the cache and aborts running requests.
+  `auth.sessionKey` is incremented, and `httpBaseQuery` turns any answer
+  to a request of an ended session into a stale error (`isStale`), so it
+  reaches neither the cache nor a side effect.
+- Pending transaction writes and an unanswered space creation stay in
+  storage for the same user's next session.
 - `RootNavigator` swaps to the auth stack, unmounting every signed-in
-  screen.
-- In-flight requests: list fetches are dropped by the `requestId` reset;
-  `addSpace`, `acceptInvite` and `leaveSpace` check `isSessionActive`
-  before activating anything; `inviteMember` checks `sessionKey` so a late
-  429 can't start a cooldown in the next session.
-- There is no server-side logout call; the token is only forgotten
-  locally.
+  screen. There is no server-side logout call; the token is only
+  forgotten locally.

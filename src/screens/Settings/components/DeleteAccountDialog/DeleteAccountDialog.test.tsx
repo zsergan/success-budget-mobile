@@ -65,7 +65,7 @@ it('walks through its three steps and never offers to delete', () => {
 it('does not count one space as the whole account', () => {
   renderDialog();
 
-  expect(screen.queryByText(/\d+ (wallet|limit|categor)/)).toBeNull();
+  expect(screen.queryByText(/\d+ (limit|categor)/)).toBeNull();
 });
 
 it('starts over after it is closed', () => {

@@ -4,7 +4,13 @@ import type { AppThunk } from '@redux/Store';
 import { selectProfileId } from '../profile/selectors';
 import { loseSpaceAccess } from '../space/thunks';
 import type { StoredOperation, TransactionOperation, WriteResult } from '../transaction/operations';
-import { classifyTransactionError, lookUpCreate, settleWrite } from '../transaction/operations';
+import {
+  classifyTransactionError,
+  holdWriteLock,
+  lookUpCreate,
+  settleWrite,
+  writeLockKey,
+} from '../transaction/operations';
 import type { RetiredEdit } from './legacy';
 import { selectPendingWrite } from './selectors';
 import type { PendingWrite } from './slice';
@@ -45,18 +51,18 @@ export interface ResumedWrite {
   wasLookedUp: boolean;
 }
 
-// An older build's create, asked about by its operation id in the space it was made in, before anything is sent: it
-// had applied, it applied and was deleted since, nothing applied, or there is no answer yet.
-const checkLegacyCreate =
-  (write: PendingWrite, sessionKey: number): AppThunk<Promise<WriteResult>> =>
+const applyCheck =
+  (write: PendingWrite, operation: TransactionOperation, userId: number): AppThunk<Promise<WriteResult>> =>
   async (dispatch, getState) => {
-    const operation = inSession(write.operation, sessionKey);
-    const userId = getState().pendingWrite.userId;
     const result = await dispatch(lookUpCreate(operation, { kind: 'expired' }));
 
     if (result.kind === 'stale' || getState().pendingWrite.userId !== userId) return result;
 
     const key = operation.idempotencyKey;
+    // Only the attempt this check was made for takes its answer: a write discarded, or sent again, since is left alone.
+    const current = selectPendingWrite(getState(), key);
+    if (current?.status !== 'checking' || current.operation !== write.operation) return result;
+
     if (result.kind === 'applied') dispatch(writeSettled({ key, status: 'found', found: result.transaction }));
     else if (result.kind === 'deleted') dispatch(writeSettled({ key, status: null }));
     else if (result.kind === 'expired') dispatch(writeSettled({ key, status: 'retry' }));
@@ -69,6 +75,23 @@ const checkLegacyCreate =
     }
 
     return result;
+  };
+
+// An older build's create, asked about by its operation id in the space it was made in, before anything is sent: it
+// had applied, it applied and was deleted since, nothing applied, or there is no answer yet. It holds the write's lock,
+// so a send asked for meanwhile waits for its answer, and a check asked for during a send joins that send.
+const checkLegacyCreate =
+  (write: PendingWrite, sessionKey: number): AppThunk<Promise<WriteResult>> =>
+  (dispatch, getState, { runningWrites }) => {
+    const operation = inSession(write.operation, sessionKey);
+    const userId = getState().pendingWrite.userId;
+    if (userId === null) return Promise.resolve({ kind: 'stale' });
+
+    const lock = writeLockKey(userId, operation);
+    const running = runningWrites.get(lock);
+    if (running) return running.promise as Promise<WriteResult>;
+
+    return holdWriteLock(runningWrites, lock, 'check', () => dispatch(applyCheck(write, operation, userId)));
   };
 
 // Sends every unsettled write again with its own key, looks up a create whose key ran out, and asks about an older

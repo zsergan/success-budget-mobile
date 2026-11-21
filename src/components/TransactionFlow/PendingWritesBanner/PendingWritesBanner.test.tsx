@@ -186,14 +186,14 @@ describe('PendingWritesBanner', () => {
     mockedRequest.mockImplementation(({ headers }: { headers: Record<string, string> }) =>
       headers['Idempotency-Key'] === 'key-2'
         ? Promise.reject({
-            response: { status: 422, data: { statusCode: 422, code: 'SOMETHING', message: 'Wallet is closed' } },
+            response: { status: 422, data: { statusCode: 422, code: 'SOMETHING', message: 'Category is archived' } },
           })
         : Promise.resolve({ data: createTransactionResponseDto() }),
     );
 
     await act(async () => fireEvent.press(screen.getByText('Check status')));
 
-    expect(screen.getByText('An earlier save was refused: Wallet is closed')).toBeTruthy();
+    expect(screen.getByText('An earlier save was refused: Category is archived')).toBeTruthy();
     expect(toastCount()).toBe(1);
   });
 

@@ -33,9 +33,16 @@ const rootReducer = combineReducers({
 
 export type RootState = ReturnType<typeof rootReducer>;
 
+// A send of a stored write, or a check of a create by its operation id (`writeLockKey`).
+export interface RunningWrite {
+  kind: 'send' | 'check';
+  promise: Promise<unknown>;
+}
+
 export interface ThunkExtra {
-  // One attempt per write key at a time; whoever asks while it runs gets the same answer.
-  runningWrites: Map<string, Promise<unknown>>;
+  // One attempt per write at a time: a send or a check asked for while one runs joins it, and a send asked for during
+  // a check waits for its answer.
+  runningWrites: Map<string, RunningWrite>;
   // A user's stored writes being read back; until then nothing is known about what they left unsettled.
   restoringWrites: Map<number, Promise<unknown>>;
 }

@@ -88,7 +88,6 @@ export const resetInvitationWorld = () => {
   server.reads = {
     '/users/profile': [ok({ id: 7, email: 'anna@example.com', name: 'Anna' })],
     '/spaces': [ok([personal])],
-    '/spaces/1/wallets': [ok({ wallets: [], total_balance: 0, total_balance_currency: 'EUR', delta_percent: 0 })],
   };
   mockRequest.mockImplementation(route);
   urlListeners.clear();

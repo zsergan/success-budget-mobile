@@ -10,6 +10,7 @@ import type { OperationMemory, TransactionRequest } from '@redux/state/transacti
 import { KEY_LIFETIME_MS, submitTransactionRequest } from '@redux/state/transaction/operations';
 import { TransactionType } from '@shared/enums';
 import { restorePendingWrites, resumePendingWrites, sendPendingWriteAgain } from './thunks';
+import { forgetPendingWrite } from './storage';
 
 const mockedRequest = jest.fn();
 let mockKeys = 0;
@@ -53,6 +54,14 @@ const operation = (status: 'applied' | 'deleted') =>
     deleted_at: null,
     transaction: status === 'applied' ? transactionDto({ version: 2 }) : null,
   });
+
+// An answer held until the test gives it, so the order of answers is the test's.
+const deferred = () => {
+  let resolve!: (value: unknown) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise((res, rej) => ((resolve = res), (reject = rej)));
+  return { promise, resolve, reject };
+};
 
 const sent = () =>
   mockedRequest.mock.calls.map(([{ method, url, data, headers }]: [SentRequest]) => ({ method, url, data, headers }));
@@ -372,25 +381,135 @@ describe('a record with an unsettled edit or delete', () => {
     expect(await stored()).toMatchObject([{ status: 'unknown', operation: { transactionId: 'tx-1' } }]);
   });
 
-  it('settles the earlier edit first, then sends the new one at its version for the server to compare', async () => {
+  // Answers by method: the stored write, then the fresh read of the record, then anything new for it.
+  const route = (answer: Partial<Record<'PATCH' | 'DELETE' | 'GET', (config: SentRequest) => Promise<unknown>>>) =>
+    mockedRequest.mockImplementation((config: SentRequest) => {
+      const handler = answer[config.method as 'PATCH' | 'DELETE' | 'GET'];
+      return handler ? handler(config) : Promise.resolve({ data: null });
+    });
+  const record = (version: number, amount = '20.00') => answers(transactionDto({ id: 'tx-1', version, amount }));
+  const reads = () => sent().filter(({ method, url }) => method === 'GET' && url === '/spaces/1/transactions/tx-1');
+
+  it('sends only the stored edit while it runs, then hands back the record read again instead of the new edit', async () => {
     const store = await leftUnsettled();
-    mockedRequest.mockImplementationOnce(edited).mockImplementationOnce(refusal(409, 'TRANSACTION_VERSION_CONFLICT'));
+    const replay = deferred();
+    route({ PATCH: () => replay.promise, GET: record(4) });
+
+    const resumed = store.dispatch(resumePendingWrites());
+    const pending = submit(store, edit('tx-1', 3, '30.00'));
+    await jest.advanceTimersByTimeAsync(0);
+    expect(mutations()).toEqual([expect.objectContaining({ headers: expect.objectContaining({ 'If-Match': '"3"' }) })]);
+    expect(reads()).toEqual([]);
+
+    replay.resolve({ data: { transaction: transactionDto({ id: 'tx-1', version: 4 }) } });
+    await resumed;
+    const { outcome, memory } = await pending;
+
+    expect(outcome).toMatchObject({ status: 'recovered', reconciled: true, transaction: { version: 4 } });
+    expect(mutations()).toHaveLength(1);
+    expect(reads()).toHaveLength(1);
+    expect(await stored()).toEqual([]);
+
+    route({ PATCH: answers({ transaction: transactionDto({ id: 'tx-1', version: 5 }) }) });
+    expect((await submit(store, edit('tx-1', 4, '30.00'), memory)).outcome).toMatchObject({ status: 'succeeded' });
+    expect(mutations().map(({ headers, data }) => [headers?.['If-Match'], data])).toEqual([
+      ['"3"', { amount: '20.00' }],
+      ['"4"', { amount: '30.00' }],
+    ]);
+  });
+
+  it('takes the version from the fresh read when the record changed again after the stored edit', async () => {
+    const store = await leftUnsettled();
+    route({ PATCH: edited, GET: record(6, '99.00') });
 
     const { outcome } = await submit(store, edit('tx-1', 3, '30.00'));
 
-    expect(outcome).toMatchObject({ status: 'failed', failure: { kind: 'conflict' } });
-    expect(mutations().map(({ headers }) => headers?.['Idempotency-Key'])).toEqual(['key-1', 'key-2']);
+    expect(outcome).toMatchObject({ status: 'recovered', transaction: { version: 6, amount: '99.00' } });
+    expect(mutations()).toHaveLength(1);
+  });
+
+  it('reads the record again when the stored edit meets a newer version, and keeps the new edit unsent', async () => {
+    const store = await leftUnsettled();
+    route({ PATCH: refusal(409, 'TRANSACTION_VERSION_CONFLICT'), GET: record(7) });
+
+    const { outcome } = await submit(store, edit('tx-1', 3, '30.00'));
+
+    expect(outcome).toMatchObject({ status: 'recovered', reconciled: true, transaction: { version: 7 } });
+    expect(mutations()).toHaveLength(1);
     expect(await stored()).toEqual([]);
   });
 
-  it('finds the record gone when the earlier delete went through', async () => {
+  it('sends the new edit when the stored one was refused and the record never moved on', async () => {
+    const store = await leftUnsettled();
+    route({ PATCH: refusal(400, 'CATEGORY_ARCHIVED') });
+    mockedRequest.mockImplementationOnce(refusal(400, 'CATEGORY_ARCHIVED')).mockImplementationOnce(edited);
+
+    expect((await submit(store, edit('tx-1', 3, '30.00'))).outcome).toMatchObject({ status: 'succeeded' });
+    expect(reads()).toEqual([]);
+    expect(mutations().map(({ headers }) => headers?.['If-Match'])).toEqual(['"3"', '"3"']);
+  });
+
+  it('keeps the new edit unsent, and reads the record again on the next save, when the read gets no answer', async () => {
+    const store = await leftUnsettled();
+    route({ PATCH: edited, GET: noAnswer });
+
+    const first = await submit(store, edit('tx-1', 3, '30.00'));
+    expect(first.outcome).toMatchObject({ status: 'failed', failure: { kind: 'unverified' } });
+    expect(first.memory).toMatchObject({ recheck: 'tx-1' });
+
+    route({ GET: record(4) });
+    const second = await submit(store, edit('tx-1', 3, '30.00'), first.memory);
+
+    expect(second.outcome).toMatchObject({ status: 'recovered', transaction: { version: 4 } });
+    expect(second.memory).not.toHaveProperty('recheck');
+    expect(mutations()).toHaveLength(1);
+    expect(reads()).toHaveLength(2);
+  });
+
+  it('ends the edit as gone when the stored delete went through, without sending it', async () => {
     const store = await leftUnsettled(remove);
-    mockedRequest.mockImplementationOnce(answers(true)).mockImplementationOnce(refusal(404, 'TRANSACTION_NOT_FOUND'));
+    route({ DELETE: answers(true) });
 
     const { outcome } = await submit(store, edit('tx-1', 3));
 
     expect(outcome).toMatchObject({ status: 'failed', failure: { kind: 'notFound' } });
-    expect(mutations().map(({ method }) => method)).toEqual(['DELETE', 'PATCH']);
+    expect(mutations().map(({ method }) => method)).toEqual(['DELETE']);
+  });
+
+  it('finishes a delete as already gone when the stored delete went through', async () => {
+    const store = await leftUnsettled(remove);
+    route({ DELETE: answers(true) });
+
+    expect((await submit(store, remove)).outcome).toEqual({ status: 'succeeded', result: null, wasGone: true });
+    expect(mutations()).toHaveLength(1);
+  });
+
+  it('hands a delete the record changed by the stored edit, and deletes nothing unseen', async () => {
+    const store = await leftUnsettled();
+    route({ PATCH: edited, GET: record(4) });
+
+    const { outcome } = await submit(store, remove);
+
+    expect(outcome).toMatchObject({ status: 'recovered', transaction: { version: 4 } });
+    expect(mutations().map(({ method }) => method)).toEqual(['PATCH']);
+  });
+
+  it.each([
+    ['a logout', (store: ReturnType<typeof signIn>) => store.dispatch(logoutMe())],
+    ['a space switch', (store: ReturnType<typeof signIn>) => store.dispatch(activateSpace(2))],
+  ])('lets nothing of the read reach the context after %s', async (_name, leave) => {
+    const store = await leftUnsettled();
+    const read = deferred();
+    route({ PATCH: edited, GET: () => read.promise });
+
+    const pending = submit(store, edit('tx-1', 3, '30.00'));
+    await jest.advanceTimersByTimeAsync(0);
+    expect(reads()).toHaveLength(1);
+    await leave(store);
+    read.resolve({ data: transactionDto({ id: 'tx-1', version: 4 }) });
+
+    expect((await pending).outcome).toEqual({ status: 'stale' });
+    expect(mutations()).toHaveLength(1);
   });
 
   it('keeps one account’s unsettled edit from another account', async () => {
@@ -593,6 +712,188 @@ describe('writes an older build left', () => {
     });
   });
 
+  describe('a restored create checked and saved at once', () => {
+    const lookUp = '/spaces/1/transactions/operations/key-1';
+    const missing = refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND');
+    const save = (store: ReturnType<typeof signIn>) =>
+      submit(store, { type: 'create', spaceId: 1, data: lunch, operationId: 'key-1' });
+    const lookups = () => sent().filter(({ url }) => url === lookUp);
+    // Each lookup and each create is answered by the next held answer of its kind.
+    const hold = () => {
+      const checks: ReturnType<typeof deferred>[] = [];
+      const creates: ReturnType<typeof deferred>[] = [];
+      const next = (queue: ReturnType<typeof deferred>[]) => {
+        const answer = deferred();
+        queue.push(answer);
+        return answer.promise;
+      };
+      mockedRequest.mockImplementation((config: SentRequest) =>
+        config.url === lookUp
+          ? next(checks)
+          : config.method === 'POST'
+            ? next(creates)
+            : Promise.resolve({ data: null }),
+      );
+      return { checks, creates };
+    };
+    const checking = async () => {
+      await leaveLegacy([legacyCreate]);
+      return restart();
+    };
+    const turns = () => jest.advanceTimersByTimeAsync(0);
+
+    it('waits for the check, sends once, and is checked again after a restart while unanswered', async () => {
+      const store = await checking();
+      const { checks, creates } = hold();
+
+      const resumed = store.dispatch(resumePendingWrites());
+      await turns();
+      const saving = save(store);
+      await turns();
+      expect(sent()).toEqual([expect.objectContaining({ method: 'GET', url: lookUp })]);
+
+      checks[0].reject(await missing().catch((error) => error));
+      await resumed;
+      await turns();
+
+      expect(posts()).toEqual([
+        expect.objectContaining({ data: convertedLunch, headers: { 'Idempotency-Key': 'key-1' } }),
+      ]);
+      expect(await stored()).toMatchObject([{ status: 'sending', operation: { data: convertedLunch, spaceId: 1 } }]);
+
+      const next = await restart();
+      expect(statuses(next)).toEqual([{ status: 'checking', found: undefined }]);
+      mockedRequest.mockImplementation(operation('applied'));
+      await next.dispatch(resumePendingWrites());
+
+      expect(sent()).toEqual([expect.objectContaining({ method: 'GET', url: lookUp })]);
+      expect(statuses(next)).toEqual([{ status: 'found', found: 'tx-1' }]);
+      creates[0].reject(new Error('Network Error'));
+      await saving;
+    });
+
+    it('lets no check mark it unsaved while its resend is unanswered, and sends one create for every trigger', async () => {
+      const store = await checking();
+      const { checks, creates } = hold();
+
+      const firstResume = store.dispatch(resumePendingWrites());
+      await turns();
+      const saving = save(store);
+      const secondSave = save(store);
+      await turns();
+      checks[0].reject(await missing().catch((error) => error));
+      await turns();
+      const lateResume = store.dispatch(resumePendingWrites());
+      await turns();
+
+      expect(lookups()).toHaveLength(1);
+      expect(posts()).toHaveLength(1);
+      expect(store.getState().pendingWrite.writes).toMatchObject([{ status: 'sending' }]);
+
+      creates[0].reject(new Error('timeout of 20000ms exceeded'));
+      expect((await saving).outcome).toMatchObject({ status: 'failed', failure: { kind: 'uncertain' } });
+      expect((await secondSave).outcome).toMatchObject({ status: 'failed', failure: { kind: 'uncertain' } });
+      await Promise.all([firstResume, lateResume]);
+
+      expect(posts()).toHaveLength(1);
+      expect(await stored()).toMatchObject([{ status: 'checking', operation: { idempotencyKey: 'key-1' } }]);
+    });
+
+    it('leaves nothing to retry once the resend went through', async () => {
+      const store = await checking();
+      const { checks, creates } = hold();
+
+      const resumed = store.dispatch(resumePendingWrites());
+      await turns();
+      const saving = save(store);
+      checks[0].reject(await missing().catch((error) => error));
+      await resumed;
+      await turns();
+      const lateResume = store.dispatch(resumePendingWrites());
+      creates[0].resolve({ data: createTransactionResponseDto() });
+
+      expect((await saving).outcome).toMatchObject({ status: 'succeeded' });
+      await lateResume;
+      expect(lookups()).toHaveLength(1);
+      expect(store.getState().pendingWrite.writes).toEqual([]);
+      expect(await stored()).toEqual([]);
+    });
+
+    it.each([
+      ['applied', operation('applied'), { status: 'found', transaction: { id: 'tx-1' } }],
+      ['deleted since', operation('deleted'), { status: 'found', transaction: null }],
+    ])('sends no create when the check finds it %s', async (_name, answer, expected) => {
+      const store = await checking();
+      const { checks } = hold();
+
+      const resumed = store.dispatch(resumePendingWrites());
+      await turns();
+      const saving = save(store);
+      checks[0].resolve(await answer());
+      await resumed;
+
+      expect((await saving).outcome).toMatchObject(expected);
+      expect(posts()).toEqual([]);
+    });
+
+    it('keeps a draft discarded during the check discarded', async () => {
+      const store = await checking();
+      const { checks } = hold();
+
+      const resumed = store.dispatch(resumePendingWrites());
+      await turns();
+      store.dispatch(forgetPendingWrite('key-1'));
+      checks[0].reject(await missing().catch((error) => error));
+      await resumed;
+      await turns();
+
+      expect(store.getState().pendingWrite.writes).toEqual([]);
+      expect(await stored()).toEqual([]);
+    });
+
+    it('keeps it to its account through a logout and another account’s session', async () => {
+      const store = await checking();
+      const { checks } = hold();
+
+      const resumed = store.dispatch(resumePendingWrites());
+      await turns();
+      await store.dispatch(logoutMe());
+      checks[0].reject(await missing().catch((error) => error));
+      await resumed;
+
+      expect(await stored()).toMatchObject([{ status: 'checking' }]);
+      const other = await restart(2);
+      await other.dispatch(resumePendingWrites());
+      expect(sent()).toEqual([]);
+      expect(await stored(1)).toMatchObject([{ status: 'checking' }]);
+    });
+
+    it('sends nothing, and keeps it to retry, when the resend cannot be stored first', async () => {
+      const store = await checking();
+      const { checks } = hold();
+      const setItem = AsyncStorage.setItem as unknown as jest.Mock<Promise<void>, string[]>;
+      const original = setItem.getMockImplementation()!;
+      setItem.mockImplementation((key, value) =>
+        value.includes('"status":"sending"') ? Promise.reject(new Error('disk full')) : original(key, value),
+      );
+
+      try {
+        const resumed = store.dispatch(resumePendingWrites());
+        await turns();
+        const saving = save(store);
+        checks[0].reject(await missing().catch((error) => error));
+        await resumed;
+
+        expect((await saving).outcome).toMatchObject({ status: 'failed', failure: { kind: 'notSent' } });
+      } finally {
+        setItem.mockImplementation(original);
+      }
+      expect(posts()).toEqual([]);
+      expect(statuses(store)).toEqual([{ status: 'retry', found: undefined }]);
+      expect(await stored()).toMatchObject([{ status: 'retry' }]);
+    });
+  });
+
   it('looks a restored create up when its key went with another body, and never adds it twice', async () => {
     const store = signIn();
     mockedRequest
@@ -638,6 +939,36 @@ describe('writes an older build left', () => {
         headers: { 'Idempotency-Key': 'key-3', 'If-Match': '"1"' },
       },
     ]);
+  });
+
+  it('converts them again after a restart until they are stored, and never doubles one', async () => {
+    await leaveLegacy([legacyCreate]);
+    const checking = [{ status: 'checking', found: undefined }];
+    // The storage mock is itself a jest.fn, so its own implementation is put back rather than restored.
+    const failOnce = (method: 'setItem' | 'removeItem', key: string) => {
+      const mock = AsyncStorage[method] as unknown as jest.Mock<Promise<void>, string[]>;
+      const original = mock.getMockImplementation()!;
+
+      mock.mockImplementation((...args) => {
+        if (args[0] !== key) return original(...args);
+        mock.mockImplementation(original);
+
+        return Promise.reject(new Error('disk full'));
+      });
+    };
+
+    failOnce('setItem', 'pendingTransactionWrites.v2.1');
+    expect(statuses(await restart())).toEqual(checking);
+    expect(await stored()).toEqual([]);
+    expect(await AsyncStorage.getItem(legacyKey())).not.toBeNull();
+
+    failOnce('removeItem', legacyKey());
+    expect(statuses(await restart())).toEqual(checking);
+    expect(await AsyncStorage.getItem(legacyKey())).not.toBeNull();
+
+    expect(statuses(await restart())).toEqual(checking);
+    expect(await stored()).toHaveLength(1);
+    expect(await AsyncStorage.getItem(legacyKey())).toBeNull();
   });
 
   it('leaves another account’s writes in their old storage for that account', async () => {

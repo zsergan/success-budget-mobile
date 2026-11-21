@@ -22,7 +22,7 @@ export interface TinyButtonProps {
   variant?: 'filled' | 'plain';
   title?: string;
   icon?: IconType;
-  /** Set false to render the icon bare, without its circular background — for chips like "Add wallet" that show a plain icon. */
+  /** Set false to render the icon bare, without its circular background — for a bare icon such as a header Back. */
   iconWrap?: boolean;
   strokeWidth?: number;
   color?: string;

@@ -168,12 +168,17 @@ describe('deleteTransaction', () => {
         }),
       () => Promise.resolve({ data: true }),
     ];
-    mockedRequest.mockImplementation(({ method }: { method: string }) =>
-      method === 'DELETE' ? deleteAnswers.shift()!() : new Promise(() => {}),
+    const newer = { ...lunch, version: lunch.version + 1 };
+    // The conflict of the earlier delete has the record read again: it is at the version the new delete names.
+    mockedRequest.mockImplementation(({ method, url }: { method: string; url: string }) =>
+      method === 'DELETE'
+        ? deleteAnswers.shift()!()
+        : url.endsWith('/transactions/tx-1')
+          ? Promise.resolve({ data: transactionDto({ id: 'tx-1', version: newer.version }) })
+          : new Promise(() => {}),
     );
     await store.dispatch(deleteTransaction({ spaceId: 1, transaction: lunch }));
 
-    const newer = { ...lunch, version: lunch.version + 1 };
     expect(await store.dispatch(deleteTransaction({ spaceId: 1, transaction: newer }))).toMatchObject({
       result: 'deleted',
     });

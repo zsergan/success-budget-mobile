@@ -44,7 +44,7 @@ describe('useStatsSelection', () => {
   it('drops the segment on a change of type or grouping, and does not bring it back', () => {
     const { result } = setup();
 
-    act(() => result.current.selectSegment('wallet:1'));
+    act(() => result.current.selectSegment('member:1'));
     act(() => result.current.changeBreakdownType(TransactionType.INCOME));
     expect(result.current.selectedSegmentKey).toBeNull();
 
@@ -78,7 +78,7 @@ describe('useStatsSelection', () => {
     });
     act(() => {
       result.current.toggleOther();
-      result.current.selectSegment('wallet:1');
+      result.current.selectSegment('member:1');
       result.current.selectTrend('2026-W39');
     });
     rerender({ scope: 'october' });

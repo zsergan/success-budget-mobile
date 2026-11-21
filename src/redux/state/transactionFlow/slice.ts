@@ -35,6 +35,9 @@ export type FlowCheck = 'pending' | 'done' | 'failed';
 // `saveRecovered`: an unconfirmed earlier save turned out to have applied; later changes wait for a new save.
 // `saveFound`: an earlier attempt of this create had applied, so the details show that record instead.
 // `saveRestored`: a create an older build never got applied; its draft is back for the user to check and send again.
+// `saveUnverified`: an earlier change of the record applied, and its current version could not be read to save against.
+// `recordChanged`: an earlier change of the record went through first; the form or the details show it as it is now,
+// and the user's edits or delete wait for them to confirm again.
 // `assigneeLeft`: the member picked left the space before the save went through; `refusal` names them.
 // `movedOut`: an edit took the record out of what the screen it was opened from lists; the details stay on it.
 export type FlowNotice =
@@ -49,13 +52,16 @@ export type FlowNotice =
   | 'saveRecovered'
   | 'saveFound'
   | 'saveRestored'
+  | 'saveUnverified'
+  | 'recordChanged'
   | 'assigneeLeft'
   | 'movedOut';
 
 export type SaveNotice = Extract<FlowNotice, `save${string}`>;
 
-// `gone`: the record was already gone, by an earlier attempt or another member.
-export type DeleteResult = 'deleted' | 'gone' | 'conflict' | 'failed' | 'uncertain' | 'stale';
+// `gone`: the record was already gone, by an earlier attempt or another member. `changed`: an earlier write changed
+// it first, so nothing was deleted; the record now shown is confirmed again.
+export type DeleteResult = 'deleted' | 'gone' | 'changed' | 'conflict' | 'failed' | 'uncertain' | 'stale';
 
 export const CREATED_AUTO_CLOSE_MS = 5000;
 
@@ -373,7 +379,10 @@ const transactionFlowSlice = createSlice({
     },
     // The form now edits the record an earlier save made, from what the server holds; the draft keeps the changes
     // typed since, so they show as changes of that record.
-    recordRecovered: (state, { payload }: DraftScoped<{ transaction: TransactionModel }>) => {
+    recordRecovered: (
+      state,
+      { payload }: DraftScoped<{ transaction: TransactionModel; notice?: 'saveRecovered' | 'recordChanged' }>,
+    ) => {
       const flow = flowOf(state, payload.draftId);
       if (!flow) return;
 
@@ -381,7 +390,7 @@ const transactionFlowSlice = createSlice({
       flow.saved = payload.transaction;
       flow.check = 'done';
       flow.baseline = draftFromTransaction(payload.transaction);
-      flow.notice = 'saveRecovered';
+      flow.notice = payload.notice ?? 'saveRecovered';
       flow.refusal = null;
       if (flow.view.name === 'create') flow.view = { name: 'edit' };
       else if (flow.view.name === 'dateTime') flow.view.form = 'edit';
@@ -481,7 +490,10 @@ const transactionFlowSlice = createSlice({
       flow.autoCloseAt = null;
       flow.notice = null;
     },
-    deleteSettled: (state, { payload }: PayloadAction<{ transactionId: string; result: DeleteResult }>) => {
+    deleteSettled: (
+      state,
+      { payload }: PayloadAction<{ transactionId: string; result: DeleteResult; current?: TransactionModel }>,
+    ) => {
       state.deletingIds = state.deletingIds.filter((id) => id !== payload.transactionId);
       const flow = state.flow;
       if (!flow?.isSaving || recordIdOf(flow) !== payload.transactionId) return;
@@ -492,7 +504,17 @@ const transactionFlowSlice = createSlice({
       }
 
       flow.isSaving = false;
-      if (payload.result !== 'stale') flow.notice = DELETE_NOTICES[payload.result];
+      if (payload.result === 'stale') return;
+      // The record as it is now replaces the one shown; a draft being edited keeps its values against it. A record
+      // just created and changed since keeps its confirmation, where Undo waits for the latest version.
+      if (payload.result === 'changed' && payload.current && flow.saved?.id === payload.current.id) {
+        flow.saved = payload.current;
+        flow.check = 'done';
+        if (flow.draft) flow.baseline = draftFromTransaction(payload.current);
+        flow.notice = 'recordChanged';
+        return;
+      }
+      flow.notice = DELETE_NOTICES[payload.result === 'changed' ? 'conflict' : payload.result];
     },
     closed: (state) => {
       if (idleFlow(state)) state.flow = null;

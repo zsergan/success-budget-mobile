@@ -85,7 +85,7 @@ describe('classifyTransactionError', () => {
     [{ statusCode: 0, message: 'Could not reach the server.' }, 'uncertain'],
     [{ statusCode: 500, code: 'INTERNAL_SERVER_ERROR' }, 'uncertain'],
     [{ statusCode: 400, code: 'VALIDATION_FAILED' }, 'validation'],
-    [{ statusCode: 400, code: 'WALLET_DELETED' }, 'validation'],
+    [{ statusCode: 400, code: 'CATEGORY_ARCHIVED' }, 'validation'],
     [{ statusCode: 403, code: 'FORBIDDEN_CATEGORY' }, 'validation'],
     [{ statusCode: 409, code: 'TRANSACTION_VERSION_CONFLICT' }, 'conflict'],
     [{ statusCode: 404, code: 'TRANSACTION_NOT_FOUND' }, 'notFound'],
@@ -151,7 +151,7 @@ describe('submitTransactionRequest', () => {
     ]);
   });
 
-  it('stops at what settling the earlier attempt finds, without sending the change', async () => {
+  it('reads the record again when the earlier attempt meets a newer version, without sending the change', async () => {
     const { submit } = setUp();
     const edit = (amount: string): TransactionRequest => ({
       type: 'update',
@@ -161,17 +161,17 @@ describe('submitTransactionRequest', () => {
       data: { amount },
     });
 
-    mockedRequest.mockImplementationOnce(noAnswer).mockImplementationOnce(fails(409, 'TRANSACTION_VERSION_CONFLICT'));
+    mockedRequest
+      .mockImplementationOnce(noAnswer)
+      .mockImplementationOnce(fails(409, 'TRANSACTION_VERSION_CONFLICT'))
+      .mockImplementationOnce(answers(transactionDto({ amount: '45.00', version: 5 })));
 
     await submit(edit('20'));
     const outcome = await submit(edit('30'));
 
-    expect(outcome).toMatchObject({
-      status: 'failed',
-      failure: { kind: 'conflict' },
-      operation: { data: { amount: '20' } },
-    });
-    expect(sent()).toHaveLength(2);
+    expect(outcome).toMatchObject({ status: 'recovered', transaction: { amount: '45.00', version: 5 } });
+    expect(outcome).not.toHaveProperty('reconciled');
+    expect(sent().map(({ method }) => method)).toEqual(['PATCH', 'PATCH', 'GET']);
   });
 
   it('hands back the version an unanswered edit made, and sends the change only when saved against it', async () => {
@@ -185,16 +185,22 @@ describe('submitTransactionRequest', () => {
     });
     const edited = (version: number) => answers({ transaction: transactionDto({ version }) });
 
-    mockedRequest.mockImplementationOnce(noAnswer).mockImplementationOnce(edited(2)).mockImplementationOnce(edited(3));
+    // The replayed answer says version 2; another member has saved version 3 since, which the fresh read shows.
+    mockedRequest
+      .mockImplementationOnce(noAnswer)
+      .mockImplementationOnce(edited(2))
+      .mockImplementationOnce(answers(transactionDto({ version: 3 })))
+      .mockImplementationOnce(edited(4));
 
     await submit(edit('20', 1));
-    expect(await submit(edit('30', 1))).toMatchObject({ status: 'recovered', transaction: { version: 2 } });
-    expect(await submit(edit('30', 2))).toMatchObject({ status: 'succeeded', result: { transaction: { version: 3 } } });
+    expect(await submit(edit('30', 1))).toMatchObject({ status: 'recovered', transaction: { version: 3 } });
+    expect(await submit(edit('30', 3))).toMatchObject({ status: 'succeeded', result: { transaction: { version: 4 } } });
 
-    expect(sent().map(({ headers }) => headers)).toEqual([
-      { 'Idempotency-Key': 'key-1', 'If-Match': '"1"' },
-      { 'Idempotency-Key': 'key-1', 'If-Match': '"1"' },
-      { 'Idempotency-Key': 'key-2', 'If-Match': '"2"' },
+    expect(sent().map(({ method, headers }) => [method, headers])).toEqual([
+      ['PATCH', { 'Idempotency-Key': 'key-1', 'If-Match': '"1"' }],
+      ['PATCH', { 'Idempotency-Key': 'key-1', 'If-Match': '"1"' }],
+      ['GET', undefined],
+      ['PATCH', { 'Idempotency-Key': 'key-2', 'If-Match': '"3"' }],
     ]);
   });
 

@@ -348,6 +348,24 @@ const TransactionEditor = ({
                   : 'It was saved as shown here; nothing else is waiting to be saved.'
               }
             />
+          ) : flow.notice === 'recordChanged' ? (
+            <Banner
+              tone="warn"
+              title="This transaction changed"
+              text={
+                isChanged
+                  ? 'An earlier change reached the server first, so the form now shows the latest version. Your edits are still here: review them and save again.'
+                  : 'An earlier change reached the server first, so the form now shows the latest version.'
+              }
+            />
+          ) : flow.notice === 'saveUnverified' ? (
+            <Banner
+              tone="warn"
+              title="Couldn’t load the latest version"
+              text="An earlier change of this transaction reached the server, but its latest version couldn’t be loaded to save against. Your edits are still here; trying again loads it first."
+              actionLabel="Try again"
+              onAction={onSave}
+            />
           ) : flow.notice === 'saveRestored' ? (
             <Banner
               tone="warn"

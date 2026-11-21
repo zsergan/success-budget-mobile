@@ -29,6 +29,7 @@ const SAVE_NOTICES: Partial<Record<TransactionFailureKind, SaveNotice>> = {
   expired: 'saveExpired',
   notSent: 'saveNotSent',
   blocked: 'saveBlocked',
+  unverified: 'saveUnverified',
 };
 
 // Named as the save starts: a refusal refreshes the members, and the list that comes back no longer has them.
@@ -100,8 +101,10 @@ const useFlowSave = () => {
       return;
     }
 
+    // Made against an older version: the form now edits the record as it is, the typed values kept to review and save.
     if (outcome.status === 'recovered') {
-      return void dispatch(recordRecovered({ ...scope, transaction: outcome.transaction }));
+      const notice = outcome.reconciled ? 'recordChanged' : 'saveRecovered';
+      return void dispatch(recordRecovered({ ...scope, transaction: outcome.transaction, notice }));
     }
 
     if (outcome.status === 'failed' && saved) {

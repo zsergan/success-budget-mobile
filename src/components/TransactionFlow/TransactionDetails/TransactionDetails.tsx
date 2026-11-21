@@ -211,6 +211,12 @@ const TransactionDetails = ({
               isBusy={isLoadingLatest}
               onAction={loadLatest}
             />
+          ) : notice === 'recordChanged' ? (
+            <Banner
+              tone="warn"
+              title="This transaction changed"
+              text="An earlier change reached the server first, so it wasn’t deleted. This is its latest version: delete it again if you still want to."
+            />
           ) : notice === 'movedOut' ? (
             <Banner tone="success" title="Saved" text={movedOutText(transaction, selection, selfId)} />
           ) : notice === 'saveFound' ? (
