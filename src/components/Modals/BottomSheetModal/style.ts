@@ -7,6 +7,13 @@ const createStyles = ({ colors }: ColorTheme) =>
       flex: 1,
       alignItems: 'center',
     },
+    // Laid out apart from the sheet's own height, which follows this measurement and would otherwise feed back into it.
+    fittedContent: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+    },
     background: {
       borderRadius: 28,
       backgroundColor: colors.elevated,

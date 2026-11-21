@@ -5,6 +5,7 @@ import { useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomSheetBackdropProps, BottomSheetModalProps } from '@gorhom/bottom-sheet';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
+import { Easing, ReduceMotion } from 'react-native-reanimated';
 
 import { ToastSheetPresence } from '@components/Toast/ToastProvider';
 import useThemedStyles from '@hooks/useThemedStyles';
@@ -16,6 +17,13 @@ import useReturnToRest from './useReturnToRest';
 
 export type Ref = BottomSheetModal;
 export const FITTED_SHEET_HANDLE_HEIGHT = 24;
+
+// Every sheet opens and closes the same way; with Reduce Motion on, the system skips the movement.
+export const SHEET_ANIMATION = {
+  duration: 250,
+  easing: Easing.out(Easing.cubic),
+  reduceMotion: ReduceMotion.System,
+};
 
 interface Props {
   children: ReactNode;
@@ -128,6 +136,7 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
     <BottomSheetModal
       ref={sheetRef}
       index={0}
+      animationConfigs={SHEET_ANIMATION}
       stackBehavior={stackBehavior}
       animatedIndex={animatedIndex}
       snapPoints={
@@ -155,7 +164,10 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
           // Dynamic sizing needs the content itself as the measured root; an extra BottomSheetView here would compete with it.
           children
         ) : fitContent ? (
-          <View style={{ maxHeight: maxHeight - FITTED_SHEET_HANDLE_HEIGHT }} onLayout={handleContentLayout}>
+          <View
+            style={[styles.fittedContent, { maxHeight: maxHeight - FITTED_SHEET_HANDLE_HEIGHT }]}
+            onLayout={handleContentLayout}
+          >
             {children}
           </View>
         ) : (

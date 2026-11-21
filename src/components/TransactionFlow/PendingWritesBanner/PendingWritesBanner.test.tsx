@@ -18,6 +18,8 @@ import { TransactionType } from '@shared/enums';
 import PendingWritesBanner from './PendingWritesBanner';
 
 const mockedRequest = jest.fn();
+jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
+jest.mock('react-native-reanimated', () => jest.requireActual('react-native-reanimated/mock'));
 jest.mock('@api/instance', () => ({
   ApiClient: () => ({}),
   createHttpClient: () => ({ request: (...args: unknown[]) => mockedRequest(...args) }),

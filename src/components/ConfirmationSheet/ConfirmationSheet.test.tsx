@@ -8,6 +8,8 @@ import ConfirmationSheet from './ConfirmationSheet';
 
 const mockSheet: { props?: { onDismiss?: () => void; enablePanDownToClose?: boolean } } = {};
 
+jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
+jest.mock('react-native-reanimated', () => jest.requireActual('react-native-reanimated/mock'));
 jest.mock('@components/Modals/BottomSheetModal/useReturnToRest', () => () => ({
   animatedIndex: undefined,
   watch: () => {},

@@ -63,6 +63,8 @@ const mockSheet: {
 // The confirmation sheet the flow pushes above itself.
 const mockConfirmation: { props?: SheetProps; swipeDown?: () => void } = {};
 
+jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
+jest.mock('react-native-reanimated', () => jest.requireActual('react-native-reanimated/mock'));
 jest.mock(
   '@components/Modals/BottomSheetModal/useReturnToRest',
   () => jest.requireActual('@components/ConfirmationSheet/testing').useReturnToRestMock,

@@ -18,6 +18,8 @@ import useConfirmation from '@hooks/useConfirmation';
 import useTransactionDelete from './useTransactionDelete';
 
 let mockKeys = 0;
+jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
+jest.mock('react-native-reanimated', () => jest.requireActual('react-native-reanimated/mock'));
 jest.mock('expo-crypto', () => ({ randomUUID: () => `key-${(mockKeys += 1)}` }));
 jest.mock('expo-secure-store');
 const mockedRequest = jest.fn();
