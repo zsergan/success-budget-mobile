@@ -38,7 +38,7 @@ const DetailsCard = ({
   const [isFocused, setFocused] = useState(false);
   const counter = `${descriptionLength(description)}/${DESCRIPTION_MAX_LENGTH}`;
 
-  useRevealWhileFocused(descriptionRef, isFocused, description);
+  const reveal = useRevealWhileFocused(descriptionRef, isFocused);
 
   return (
     <View style={styles.section}>
@@ -57,7 +57,7 @@ const DetailsCard = ({
           <Icon name="chevron-right" size={14} color={colors.muted} strokeWidth={2} />
         </TouchableOpacity>
 
-        <View ref={descriptionRef} style={styles.descriptionRow}>
+        <View ref={descriptionRef} style={styles.descriptionRow} onLayout={reveal.onLayout}>
           <View style={styles.descriptionIcon}>
             <Icon name="note" size={17} color={colors.muted} strokeWidth={1.8} />
           </View>

@@ -5,7 +5,12 @@ import theme from '@shared/theme';
 import { sectionLabel } from '../sectionStyle';
 
 // The digits step down as they grow, so the largest amount still fits on one line beside the currency.
-export const amountFontSize = (value: string) => (value.length > 9 ? 30 : value.length > 6 ? 36 : 44);
+const LARGEST_AMOUNT_FONT_SIZE = 44;
+export const amountFontSize = (value: string) =>
+  value.length > 9 ? 30 : value.length > 6 ? 36 : LARGEST_AMOUNT_FONT_SIZE;
+
+// Bold's + and − both advance 0.66 em; the slot fits them at the largest tier, so no tier or sign moves the digits.
+export const signSlotWidth = (fontScale: number) => Math.ceil(0.66 * LARGEST_AMOUNT_FONT_SIZE * fontScale);
 
 const createStyles = ({ colors }: ColorTheme) =>
   StyleSheet.create({
@@ -23,11 +28,11 @@ const createStyles = ({ colors }: ColorTheme) =>
     rowActive: {
       borderBottomWidth: 2,
     },
-    // SemiBold under-measures its width in a content-sized text (see cde3346).
+    // Plus Jakarta Sans under-measures its own width; a full-width text in a fixed slot keeps the glyph whole (see cde3346).
     sign: {
+      width: '100%',
       fontFamily: theme.fonts.bold,
-      letterSpacing: -1.3,
-      paddingRight: 2,
+      textAlign: 'right',
     },
     input: {
       flex: 1,

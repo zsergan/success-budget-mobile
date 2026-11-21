@@ -20,6 +20,31 @@ constraints that are easy to break when adding a caller.
   (`ConfirmationSheet` and History's `FilterSheet` cache it); the owner's
   value is already null by then.
 
+## Sizing and motion
+
+Pick the sizing by the shape of the content:
+
+- `dynamicSizing`: the content's root is one `BottomSheetView` or
+  `BottomSheetScrollView` holding all of it (History's `FilterSheet`, the
+  range picker). The library measures it, waits for that before opening,
+  and caps it below the top inset; a longer scroll view scrolls.
+  `showHandle` adds the drag handle.
+- `fitContent`: a header and actions around an inner scroll view (the
+  transaction flow, confirmations, Date & time). The library's sizing
+  would see only that inner scroll view, so the wrapper measures the whole
+  content itself. That content is laid out apart from the sheet's height
+  (absolutely, capped by the screen): inside the library's container its
+  height followed the snap point measured from it, and a first opening
+  grew about 20 pt a frame before it settled.
+- Neither: a fixed `snapPoint`.
+
+Every sheet opens and closes with `SHEET_ANIMATION`: 250 ms, cubic
+ease-out, no bounce. Don't pass other timings from a screen. With Reduce
+Motion on, the system setting skips the movement and the close still
+reports `onDismiss`. A sheet whose content mounts a heavy native view (the
+date picker) can stall the UI thread while it opens; a timing animation
+then skips the stalled frames instead of slowing down.
+
 ## Keyboard
 
 A sheet that rises with the keyboard stays risen if it renders as the
@@ -99,7 +124,10 @@ do: it dismisses the keyboard and shows the sheet once it has gone.
 
 ## Tests
 
-Real reanimated cannot load in Jest. Mock the sheet with
+Real reanimated cannot load in Jest, and the wrapper imports it for its
+timing: a suite that renders the real wrapper mocks
+`react-native-worklets` and `react-native-reanimated` with their own
+mocks. Mock the sheet with
 `@components/ConfirmationSheet/testing` (see its header); it tracks the
 open sheets, and `holdDismissals()` keeps a closing sheet on screen so a
 test can check that nothing opens before it has gone.

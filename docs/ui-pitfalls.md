@@ -29,6 +29,15 @@ tightly to the text and view it at native resolution. For a precise
 check, measure pixels, using a known layout size in the same screenshot
 (such as a button's fixed height) to convert pixels to points.
 
+## Scrolling while the keyboard resizes the view
+
+`KeyboardAvoidingView` animates a scroll view to its new height with the
+keyboard, but `onLayout` reports the final height at once. A `scrollTo`
+sent then is cut short natively, to the offset the old, taller frame
+allowed. Content that fitted before the keyboard does not move at all.
+Check the field again from `keyboardDidShow`, once the geometry has
+settled, as `FieldReveal` does. Typing must not be what fixes it.
+
 ## Nested safe areas double the bottom inset
 
 `SafeAreaProvider` (in `App.tsx`) measures the device safe area once and

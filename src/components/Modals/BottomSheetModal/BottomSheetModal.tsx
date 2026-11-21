@@ -5,6 +5,7 @@ import { useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomSheetBackdropProps, BottomSheetModalProps } from '@gorhom/bottom-sheet';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
+import { Easing, ReduceMotion } from 'react-native-reanimated';
 
 import { ToastSheetPresence } from '@components/Toast/ToastProvider';
 import useThemedStyles from '@hooks/useThemedStyles';
@@ -17,16 +18,28 @@ import useReturnToRest from './useReturnToRest';
 export type Ref = BottomSheetModal;
 export const FITTED_SHEET_HANDLE_HEIGHT = 24;
 
+// Every sheet opens and closes the same way; with Reduce Motion on, the system skips the movement.
+export const SHEET_ANIMATION = {
+  duration: 250,
+  easing: Easing.out(Easing.cubic),
+  reduceMotion: ReduceMotion.System,
+};
+
 interface Props {
   children: ReactNode;
   onDismiss?: () => void;
-  /** Size the sheet to a content whose root is one BottomSheetView or BottomSheetScrollView holding all of it. */
+  /**
+   * Size the sheet to a content whose root is one BottomSheetView or BottomSheetScrollView holding all of it, up to
+   * the screen below the top inset; a longer scroll view scrolls.
+   */
   dynamicSizing?: boolean;
   /**
    * Size the sheet to its whole content, measured here, up to the screen: for content with a header and actions
    * around an inner scroll view, which the library's dynamic sizing would size to that scroll view alone.
    */
   fitContent?: boolean;
+  /** Shows the drag handle above the content. Defaults to fitContent. */
+  showHandle?: boolean;
   /** Fixed snap point when neither sizing is set. Defaults to '85%'. */
   snapPoint?: string;
   /** Replaces the backdrop's own close, for a sheet that decides itself whether it may close. */
@@ -48,6 +61,7 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
     onDismiss,
     dynamicSizing = false,
     fitContent = false,
+    showHandle = fitContent,
     snapPoint = '85%',
     onBackdropPress,
     stackBehavior,
@@ -122,6 +136,7 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
     <BottomSheetModal
       ref={sheetRef}
       index={0}
+      animationConfigs={SHEET_ANIMATION}
       stackBehavior={stackBehavior}
       animatedIndex={animatedIndex}
       snapPoints={
@@ -130,9 +145,10 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
           : [fitContent ? Math.min(contentHeight + FITTED_SHEET_HANDLE_HEIGHT, maxHeight) : snapPoint]
       }
       enableDynamicSizing={dynamicSizing}
+      maxDynamicContentSize={dynamicSizing ? maxHeight : undefined}
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.background}
-      handleComponent={fitContent ? renderHandle : null}
+      handleComponent={showHandle ? renderHandle : null}
       enableContentPanningGesture={!fitContent}
       enablePanDownToClose={isDismissible}
       onDismiss={handleDismiss}
@@ -148,7 +164,10 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
           // Dynamic sizing needs the content itself as the measured root; an extra BottomSheetView here would compete with it.
           children
         ) : fitContent ? (
-          <View style={{ maxHeight: maxHeight - FITTED_SHEET_HANDLE_HEIGHT }} onLayout={handleContentLayout}>
+          <View
+            style={[styles.fittedContent, { maxHeight: maxHeight - FITTED_SHEET_HANDLE_HEIGHT }]}
+            onLayout={handleContentLayout}
+          >
             {children}
           </View>
         ) : (

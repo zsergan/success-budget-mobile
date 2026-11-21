@@ -40,7 +40,8 @@ const FilterSheet = <Value,>({ content, selfId, onClose }: Props<Value>) => {
   return (
     <BottomModal
       ref={ref}
-      fitContent
+      dynamicSizing
+      showHandle
       onDismiss={() => {
         if (settleDismiss()) onClose();
       }}

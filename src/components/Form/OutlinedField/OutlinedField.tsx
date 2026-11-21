@@ -47,7 +47,7 @@ const OutlinedField = ({
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const rootRef = useRef<View>(null);
-  useRevealWhileFocused(rootRef, !!isFocused, error ?? hint);
+  const reveal = useRevealWhileFocused(rootRef, !!isFocused);
 
   const boxStyle = [
     styles.box,
@@ -69,7 +69,7 @@ const OutlinedField = ({
   );
 
   return (
-    <View ref={rootRef} style={[styles.root, containerStyle]}>
+    <View ref={rootRef} style={[styles.root, containerStyle]} onLayout={reveal.onLayout}>
       {label && <Text style={[styles.label, !!error && styles.labelError]}>{label}</Text>}
 
       {onPress ? (

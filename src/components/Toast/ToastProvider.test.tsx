@@ -15,6 +15,8 @@ import type { ToastMessage, ToastTicket } from './message';
 import ToastHost from './ToastHost/ToastHost';
 import ToastProvider, { useToastControl } from './ToastProvider';
 
+jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
+jest.mock('react-native-reanimated', () => jest.requireActual('react-native-reanimated/mock'));
 jest.mock('@gorhom/bottom-sheet', () => jest.requireActual('@components/ConfirmationSheet/testing').bottomSheetMock);
 jest.mock(
   '@components/Modals/BottomSheetModal/useReturnToRest',
