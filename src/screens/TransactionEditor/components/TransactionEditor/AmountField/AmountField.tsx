@@ -1,9 +1,9 @@
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { useEffect, useRef, useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Text, TextInput, useWindowDimensions, View } from 'react-native';
 
-import createStyles, { amountFontSize } from './style';
+import createStyles, { amountFontSize, signSlotWidth } from './style';
 
 interface Props {
   value: string;
@@ -23,6 +23,7 @@ const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currency
   const styles = useThemedStyles(createStyles);
   const inputRef = useRef<TextInput>(null);
   const [isFocused, setFocused] = useState(false);
+  const { fontScale } = useWindowDimensions();
 
   // Focused once, on the open of a new transaction; never on Edit or on the way back from a picker.
   useEffect(() => {
@@ -38,11 +39,16 @@ const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currency
       <Text style={styles.label}>Amount</Text>
 
       <View style={[styles.row, { borderBottomColor: lineColor }, (isFocused || !!error) && styles.rowActive]}>
-        {hasValue && (
-          <Text style={[styles.sign, { color: typeColor, fontSize }]} accessibilityElementsHidden>
+        <View
+          testID="amount-sign-slot"
+          style={{ width: signSlotWidth(fontScale) }}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          <Text style={[styles.sign, { color: typeColor, fontSize, opacity: hasValue ? 1 : 0 }]}>
             {isIncome ? '+' : '−'}
           </Text>
-        )}
+        </View>
 
         <TextInput
           keyboardAppearance={scheme}
