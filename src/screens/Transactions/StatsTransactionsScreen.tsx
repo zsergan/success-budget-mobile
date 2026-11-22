@@ -10,7 +10,7 @@ import {
   useTransactionDelete,
   useTransactionFlow,
 } from '@components';
-import { useConfirmation, useSpaceRefresh } from '@hooks';
+import { useConfirmation, useSpaceRefresh, useThemedStyles } from '@hooks';
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { TransactionType } from '@shared/enums';
@@ -26,7 +26,7 @@ import TransactionsList from './components/TransactionsList/TransactionsList';
 import { feedListProps } from './feedListProps';
 import useTransactionsData from './hooks/useTransactionsData';
 
-import styles from './style';
+import createStyles from './style';
 
 interface Props {
   // The Stats row this list stands for; fixed for as long as the screen is open.
@@ -36,6 +36,7 @@ interface Props {
 
 const StatsTransactions = ({ filter, onBack }: Props) => {
   useSpaceRefresh();
+  const styles = useThemedStyles(createStyles);
   const { lock: deleteLock, confirmation: deleteConfirmation } = useConfirmation();
   const { requestDelete } = useTransactionDelete(deleteLock);
   // The row's own selection, so an edit that takes a record out of it says why it left the list.

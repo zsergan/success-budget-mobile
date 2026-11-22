@@ -3,7 +3,7 @@ import { Provider } from 'react-redux';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ScrollView, SectionList, StyleSheet, VirtualizedList } from 'react-native';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 
 import { baseApi, spaceTags } from '@redux/api/baseApi';
 import { createAppStore } from '@redux/Store';
@@ -464,6 +464,24 @@ describe('TransactionsScreen', () => {
     expect(screen.getByText('No transactions yet')).toBeTruthy();
   });
 
+  it('keeps the title, the period and the filters above the list, with the totals and the rows inside it', async () => {
+    mockedRequest.mockImplementation(({ url }: RequestConfig) =>
+      Promise.resolve({ data: url === FEED ? feedDto([taxi]) : null }),
+    );
+    renderTransactions(undefined);
+    await settle();
+    const list = within(screen.getByTestId('transactions-list'));
+
+    expect(list.getByText('Taxi')).toBeTruthy();
+    expect(list.getByText('Income')).toBeTruthy();
+    expect(list.getByTestId('search-status')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Search transactions' })).toBeTruthy();
+    expect(list.queryByText('Transactions')).toBeNull();
+    expect(list.queryByRole('button', { name: 'Search transactions' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'All types. Change filter' })).toBeTruthy();
+    expect(list.queryByRole('button', { name: 'All types. Change filter' })).toBeNull();
+  });
+
   it('says a refresh failed while it keeps the rows it had, and retries it', async () => {
     let failList = false;
     mockedRequest.mockImplementation(({ url }: RequestConfig) => {
@@ -760,6 +778,34 @@ describe('TransactionsScreen', () => {
       });
       expect(screen.queryByText('Taxi')).toBeNull();
       expect(screen.getByText('Coffee')).toBeTruthy();
+    });
+
+    it("drops a search and the filters left on for Home's whole month", async () => {
+      renderTransactions({
+        focus: { spaceId: 1, month: august, transactionType: TransactionType.EXPENSE, assignment: 'space' },
+      });
+      await settle();
+      const field = await openSearch();
+      fireEvent.changeText(field, 'coffee');
+      fireEvent(field, 'submitEditing');
+      await settle();
+      expect(listRequests().at(-1)?.params).toMatchObject({ q: 'coffee', assignment: 'space' });
+
+      act(() => {
+        navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB, {
+          focus: { spaceId: 1, month: new Date(2026, 8, 1).toISOString() },
+        });
+      });
+      await settle();
+
+      const params = listRequests().at(-1)?.params;
+      expect(params).toMatchObject({ from: new Date(2026, 8, 1).toISOString() });
+      expect(params).not.toHaveProperty('q');
+      expect(params).not.toHaveProperty('transaction_type');
+      expect(params).not.toHaveProperty('assignment');
+      expect(screen.getByLabelText('All types. Change filter')).toBeTruthy();
+      expect(screen.getByLabelText('All transactions. Change filter')).toBeTruthy();
+      expect(screen.queryByText('Search results')).toBeNull();
     });
 
     it("sends at once on the keyboard's Search key, and says when nothing matches", async () => {

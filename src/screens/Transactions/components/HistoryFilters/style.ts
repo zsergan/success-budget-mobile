@@ -13,7 +13,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     chip: {
       maxWidth: '100%',
-      height: 34,
+      minHeight: 34,
       borderRadius: 17,
       flexDirection: 'row',
       alignItems: 'center',
@@ -26,7 +26,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     chipBody: {
       flexShrink: 1,
-      height: 34,
+      minHeight: 34,
       paddingLeft: 10,
       paddingRight: 10,
       flexDirection: 'row',
@@ -46,7 +46,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       color: colors.onSecondary,
     },
     clear: {
-      height: 34,
+      alignSelf: 'stretch',
       paddingRight: 12,
       justifyContent: 'center',
     },
