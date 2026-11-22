@@ -30,7 +30,7 @@ const useTransactionFlow = (selection: ViewSelection | null = null) => {
         createOpened({
           spaceId,
           transactionType,
-          assignment: forNew(),
+          assignment: forNew(spaceId),
           now: new Date().toISOString(),
           selection: selectionRef.current,
         }),

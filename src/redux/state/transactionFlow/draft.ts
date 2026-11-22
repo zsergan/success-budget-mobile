@@ -1,6 +1,7 @@
 import type { CreateTransactionRequest, TransactionAssignment, UpdateTransactionRequest } from '@api/dto';
 import type { AssignmentModel, TransactionModel } from '@api/models';
 import type { TransactionType } from '@shared/enums';
+import { SpaceType } from '@shared/enums';
 
 // Who the form assigns the amount to. A member's null id is the record's own deleted account, kept as it is.
 export type DraftAssignment = { kind: 'member'; userId: number | null } | { kind: 'space' } | { kind: 'unassigned' };
@@ -216,19 +217,25 @@ export const getDraftErrors = (
   return errors;
 };
 
-// A new transaction is the user's own unless they choose otherwise.
-export const defaultAssignment = (userId: number | undefined): DraftAssignment =>
-  userId === undefined ? { kind: 'space' } : { kind: 'member', userId };
+export interface AssignmentContext {
+  // Undefined while the spaces or the profile are not known.
+  spaceType: SpaceType | undefined;
+  userId: number | undefined;
+}
+
+// A shared space's transaction is the whole space's, a personal one the user's own; unknown, the whole space.
+export const defaultAssignment = ({ spaceType, userId }: AssignmentContext): DraftAssignment =>
+  spaceType === SpaceType.PERSONAL && userId !== undefined ? { kind: 'member', userId } : { kind: 'space' };
 
 // Add another repeats the last assignment while its member is known to be in the space.
 export const keptAssignment = (
   last: DraftAssignment | null,
-  { userId, memberIds }: { userId: number | undefined; memberIds?: number[] },
+  { memberIds, ...context }: AssignmentContext & { memberIds?: number[] },
 ): DraftAssignment => {
-  if (!last) return defaultAssignment(userId);
+  if (!last) return defaultAssignment(context);
   if (last.kind !== 'member') return last;
 
-  return last.userId !== null && memberIds?.includes(last.userId) ? last : defaultAssignment(userId);
+  return last.userId !== null && memberIds?.includes(last.userId) ? last : defaultAssignment(context);
 };
 
 export const hasDraftErrors = (errors: DraftErrors) => Object.keys(errors).length > 0;

@@ -1,5 +1,5 @@
 import type { TransactionModel } from '@api/models';
-import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
+import { AppColor, SpaceType, TransactionKind, TransactionType } from '@shared/enums';
 import type { TransactionDraft } from './draft';
 import {
   createDraft,
@@ -173,17 +173,33 @@ describe('getDraftErrors', () => {
 });
 
 describe('assignment defaults', () => {
-  it('assigns a new transaction to the signed-in user', () => {
-    expect(defaultAssignment(7)).toEqual(you);
-    expect(defaultAssignment(undefined)).toEqual({ kind: 'space' });
+  const personal = { spaceType: SpaceType.PERSONAL, userId: 7 };
+  const group = { spaceType: SpaceType.GROUP, userId: 7 };
+
+  it('assigns a new transaction to the whole space in a group space and to the user in a personal one', () => {
+    expect(defaultAssignment(group)).toEqual({ kind: 'space' });
+    expect(defaultAssignment(personal)).toEqual(you);
+  });
+
+  it('falls back to the whole space while the space type or the user is not known', () => {
+    expect(defaultAssignment({ spaceType: undefined, userId: 7 })).toEqual({ kind: 'space' });
+    expect(defaultAssignment({ spaceType: SpaceType.PERSONAL, userId: undefined })).toEqual({ kind: 'space' });
   });
 
   it('repeats the last assignment for Add another while its member is known to be in the space', () => {
-    expect(keptAssignment(lena, { userId: 7, memberIds: [7, 31] })).toEqual(lena);
-    expect(keptAssignment(lena, { userId: 7 })).toEqual(you);
-    expect(keptAssignment(lena, { userId: 7, memberIds: [7] })).toEqual(you);
-    expect(keptAssignment({ kind: 'unassigned' }, { userId: 7, memberIds: [7] })).toEqual({ kind: 'unassigned' });
-    expect(keptAssignment(null, { userId: 7 })).toEqual(you);
+    expect(keptAssignment(lena, { ...group, memberIds: [7, 31] })).toEqual(lena);
+    expect(keptAssignment(you, { ...personal, memberIds: [7] })).toEqual(you);
+    expect(keptAssignment({ kind: 'unassigned' }, { ...personal, memberIds: [7] })).toEqual({ kind: 'unassigned' });
+    expect(keptAssignment({ kind: 'space' }, personal)).toEqual({ kind: 'space' });
+  });
+
+  it("uses the space's default for Add another when the last member is gone or not known", () => {
+    expect(keptAssignment(lena, group)).toEqual({ kind: 'space' });
+    expect(keptAssignment(lena, { ...group, memberIds: [7] })).toEqual({ kind: 'space' });
+    expect(keptAssignment(lena, { ...personal, memberIds: [7] })).toEqual(you);
+    expect(keptAssignment({ kind: 'member', userId: null }, { ...personal, memberIds: [7] })).toEqual(you);
+    expect(keptAssignment(null, group)).toEqual({ kind: 'space' });
+    expect(keptAssignment(null, personal)).toEqual(you);
   });
 });
 

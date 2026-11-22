@@ -55,7 +55,7 @@ const AssignmentPicker = ({
   const people = options.filter(({ isPerson }) => isPerson);
   // With nobody else in the space, the user's own pick stays one row until they ask for the other two values.
   const isCompact = !isOpened && load === 'ready' && people.length === 1 && picked === people[0] && !picked.isGone;
-  const { shown, hidden } = visibleOptions(options, selected, isExpanded);
+  const { shown, hidden, moreAt } = visibleOptions(options, selected, isExpanded);
   const selectedStyle = { backgroundColor: hexToRgba(typeColor, 0.09), borderColor: typeColor };
 
   const note = picked?.isGone
@@ -96,7 +96,7 @@ const AssignmentPicker = ({
 
   const chips = (
     <View style={styles.chips}>
-      {shown.map(chip)}
+      {shown.slice(0, moreAt).map(chip)}
 
       {load === 'loading' && (
         <View style={styles.ghostRow} accessibilityLabel="Loading members">
@@ -117,6 +117,8 @@ const AssignmentPicker = ({
           <Text style={[styles.chipText, styles.mutedText]}>{`${hidden} more`}</Text>
         </TouchableOpacity>
       )}
+
+      {shown.slice(moreAt).map(chip)}
     </View>
   );
 

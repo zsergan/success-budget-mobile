@@ -8,9 +8,11 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 
-import type { Category, GetCategoriesResponse, GetLimitsResponse } from '@api/dto';
+import type { Category, GetCategoriesResponse, GetLimitsResponse, Space, SpaceMember } from '@api/dto';
 import { createAppStore } from '@redux/Store';
 import { withProfile } from '@redux/state/profile/fixtures';
+import { memberApi } from '@redux/state/member/api';
+import { spaceApi } from '@redux/state/space/api';
 import { activateSpace } from '@redux/state/space/thunks';
 import { transactionApi } from '@redux/state/transaction/api';
 import { createTransactionResponseDto, transactionDto } from '@redux/state/transaction/fixtures';
@@ -23,7 +25,7 @@ import type { DraftAssignment } from '@redux/state/transactionFlow/draft';
 import type { ViewSelection } from '@redux/state/transactionFlow/selection';
 import { checkFlowRecord, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { baseApi, spaceTags } from '@redux/api/baseApi';
-import { ScreenNames, AppColor, TransactionKind, TransactionType } from '@shared/enums';
+import { ScreenNames, AppColor, SpaceType, TransactionKind, TransactionType } from '@shared/enums';
 import { renderWithTheme } from '@components/ThemeProvider/themeTestUtils';
 import { createToastRecorder } from '@components/Toast/testing';
 import { colorThemes } from '@shared/theme';
@@ -32,6 +34,7 @@ import { useBackPress, useSheetPresence } from '@hooks';
 import { TransactionCategoriesScreen, TransactionEditorScreen } from '@screens/TransactionEditor';
 import type { RootStackParamList } from '@shared/types';
 import TransactionFlowSheet from './TransactionFlowSheet';
+import useTransactionFlow from './useTransactionFlow';
 
 interface SheetProps {
   children: ReactNode;
@@ -269,10 +272,14 @@ const respond = ({ url, method }: { url: string; method: string }) => {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
+// What Home shows beside the sheet; a test can add the app's own way of starting a transaction.
+let homeExtra: ReactNode = null;
+
 const renderHome = () => (
   <>
     <TransactionFlowSheet />
     <Text>Home</Text>
+    {homeExtra}
   </>
 );
 const renderInvite = () => <Text>Join a space</Text>;
@@ -305,9 +312,10 @@ const WITH_EDITOR = [ScreenNames.HOME_SCREEN, ScreenNames.TRANSACTION_EDITOR_SCR
 // The back swipe, like any other removal of the top route.
 const swipeBack = () => act(() => navigationRef.goBack());
 
-const renderFlow = () => {
+const renderFlow = (spaceType?: SpaceType) => {
   const store = createAppStore();
   withProfile(store);
+  if (spaceType) withSpaces(store, spaceType);
 
   store.dispatch(activateSpace(1));
 
@@ -333,6 +341,28 @@ const renderFlow = () => {
 };
 
 // Keeps the record's cache entry, as an open screen would, so a failed read could fall back on it.
+// The spaces as the signed-in app holds them, so the flow knows the active space's type.
+const withSpaces = (store: ReturnType<typeof createAppStore>, type: SpaceType) => {
+  const currency = { id: 1, code: 'USD', name: 'US Dollar' };
+  const space = (id: number, spaceType: SpaceType): Space => ({
+    id,
+    name: `Space ${id}`,
+    type: spaceType,
+    currency,
+    created_at: '2026-01-01T00:00:00.000Z',
+    role: 'owner',
+    member_count: 1,
+  });
+  const other = type === SpaceType.GROUP ? SpaceType.PERSONAL : SpaceType.GROUP;
+
+  store.dispatch(
+    spaceApi.util.upsertQueryEntries([
+      { endpointName: 'getSpaces', arg: undefined, value: [space(1, type), space(2, other)] },
+    ]),
+  );
+  store.dispatch(spaceApi.endpoints.getSpaces.initiate());
+};
+
 const holdRecordInCache = (store: ReturnType<typeof createAppStore>) =>
   store.dispatch(transactionApi.endpoints.getTransaction.initiate({ spaceId: 1, transactionId: 'tx-1' }));
 
@@ -1281,6 +1311,7 @@ describe('TransactionFlowSheet', () => {
   });
 
   it('starts another transaction on the same type and assignment', async () => {
+    membersResponse = [memberRow(1, 'Anna')];
     const { open, flow } = renderFlow();
 
     open();
@@ -2530,9 +2561,200 @@ describe('TransactionFlowSheet', () => {
   });
 
   describe('assigned to', () => {
+    // How the app's screens start a new transaction: with the defaults of the active space.
+    const OpenNew = () => {
+      const { openCreate } = useTransactionFlow();
+
+      return (
+        <>
+          <Text onPress={() => openCreate()}>New expense</Text>
+          <Text onPress={() => openCreate(TransactionType.INCOME)}>New income</Text>
+        </>
+      );
+    };
+
+    beforeEach(() => {
+      homeExtra = <OpenNew />;
+    });
+
+    afterEach(() => {
+      homeExtra = null;
+    });
+
     const team = [memberRow(1, 'Anna'), memberRow(31, 'Lena'), memberRow(40, 'Mark'), pendingInvite];
     const lastPost = () => mockedRequest.mock.calls.filter(([config]) => config.method === 'POST').at(-1)?.[0];
     const lastPatch = () => mockedRequest.mock.calls.filter(([config]) => config.method === 'PATCH').at(-1)?.[0];
+
+    it.each([
+      [SpaceType.GROUP, 'New expense', { kind: 'space' }],
+      [SpaceType.GROUP, 'New income', { kind: 'space' }],
+      [SpaceType.PERSONAL, 'New expense', { kind: 'member', userId: 1 }],
+      [SpaceType.PERSONAL, 'New income', { kind: 'member', userId: 1 }],
+    ])('starts a new transaction in a %s space (%s) on its default', async (spaceType, action, assignment) => {
+      membersResponse = spaceType === SpaceType.GROUP ? team : [memberRow(1, 'Anna')];
+      const { flow } = renderFlow(spaceType);
+
+      fireEvent.press(screen.getByText(action));
+      await settle();
+
+      expect(flow()?.draft?.assignment).toEqual(assignment);
+    });
+
+    it('starts on the whole space, listed first, in a group space with only the user', async () => {
+      membersResponse = [memberRow(1, 'Anna')];
+      const { flow } = renderFlow(SpaceType.GROUP);
+
+      fireEvent.press(screen.getByText('New expense'));
+      await settle();
+
+      expect(flow()?.draft?.assignment).toEqual({ kind: 'space' });
+      expect(screen.queryByText('Tap to assign to Whole space or No member assigned')).toBeNull();
+      expect(screen.getByRole('button', { name: 'Whole space' }).props.accessibilityState).toMatchObject({
+        selected: true,
+      });
+      const chips = screen.getAllByRole('button', { name: /^(Whole space|You \(Anna\)|No member assigned)$/ });
+      expect(chips.map(({ props }) => props.accessibilityLabel)).toEqual([
+        'Whole space',
+        'You (Anna)',
+        'No member assigned',
+      ]);
+    });
+
+    it('keeps the default while the members load, fail and load again', async () => {
+      let failMembers = true;
+      membersResponse = () =>
+        failMembers ? Promise.reject(new Error('Network Error')) : Promise.resolve({ data: team });
+      const { flow } = renderFlow(SpaceType.PERSONAL);
+
+      fireEvent.press(screen.getByText('New expense'));
+      expect(screen.getByLabelText('Loading members')).toBeTruthy();
+      await settle();
+      expect(flow()?.draft?.assignment).toEqual({ kind: 'member', userId: 1 });
+
+      failMembers = false;
+      fireEvent.press(screen.getByLabelText('Retry loading members'));
+      await settle();
+
+      expect(screen.getByRole('button', { name: 'Mark' })).toBeTruthy();
+      expect(flow()?.draft?.assignment).toEqual({ kind: 'member', userId: 1 });
+    });
+
+    it('keeps the assignment through a change of type', async () => {
+      membersResponse = team;
+      const { flow } = renderFlow(SpaceType.GROUP);
+
+      fireEvent.press(screen.getByText('New expense'));
+      await settle();
+      fireEvent.press(screen.getByText('Income'));
+      expect(flow()?.draft?.assignment).toEqual({ kind: 'space' });
+
+      fireEvent.press(screen.getByRole('button', { name: 'Lena' }));
+      fireEvent.press(screen.getByText('Expense'));
+      expect(flow()?.draft?.assignment).toEqual({ kind: 'member', userId: 31 });
+    });
+
+    it.each([
+      [SpaceType.GROUP, { kind: 'space' }],
+      [SpaceType.PERSONAL, { kind: 'member', userId: 1 }],
+    ])('starts another in a %s space on its default once the last member has left', async (spaceType, fallback) => {
+      membersResponse = team;
+      const { store, open, flow } = renderFlow(spaceType);
+
+      open(TransactionType.EXPENSE, { kind: 'member', userId: 31 });
+      await settle();
+      fillExpense();
+      fireEvent.press(screen.getByText('Save expense'));
+      await act(async () => answerWrite({ data: createTransactionResponseDto() }));
+      act(() => {
+        store.dispatch(
+          memberApi.util.upsertQueryEntries([
+            {
+              endpointName: 'getMembers',
+              arg: { spaceId: 1 },
+              value: [memberRow(1, 'Anna'), memberRow(40, 'Mark')] as SpaceMember[],
+            },
+          ]),
+        );
+      });
+
+      fireEvent.press(screen.getByText('Add another'));
+
+      expect(flow()?.draft?.assignment).toEqual(fallback);
+    });
+
+    it.each([
+      [{ kind: 'space' }, { kind: 'space' }],
+      [{ kind: 'unassigned' }, { kind: 'unassigned' }],
+      [
+        { kind: 'member', userId: 31 },
+        { kind: 'member', userId: 31 },
+      ],
+    ])('starts another on the last assignment %j while it is still valid', async (last, expected) => {
+      membersResponse = team;
+      const { open, flow } = renderFlow(SpaceType.PERSONAL);
+
+      open(TransactionType.EXPENSE, last as DraftAssignment);
+      await settle();
+      fillExpense();
+      fireEvent.press(screen.getByText('Save expense'));
+      await act(async () => answerWrite({ data: createTransactionResponseDto() }));
+      fireEvent.press(screen.getByText('Add another'));
+
+      expect(flow()?.draft?.assignment).toEqual(expected);
+    });
+
+    it.each([
+      ['a member', { kind: 'member', user_id: 31, name: 'Lena', status: 'member' }, { kind: 'member', userId: 31 }],
+      ['the whole space', { kind: 'space', user_id: null, name: null, status: null }, { kind: 'space' }],
+      ['nobody', { kind: 'unassigned', user_id: null, name: null, status: null }, { kind: 'unassigned' }],
+      [
+        'a former member',
+        { kind: 'member', user_id: 40, name: 'Mark', status: 'former_member' },
+        { kind: 'member', userId: 40 },
+      ],
+      [
+        'a deleted account',
+        { kind: 'member', user_id: null, name: null, status: 'deleted' },
+        { kind: 'member', userId: null },
+      ],
+    ])('edits a record assigned to %s without changing its assignment', async (_name, assignment, expected) => {
+      membersResponse = [memberRow(1, 'Anna'), memberRow(31, 'Lena')];
+      stored = transactionDto({ assignment } as Parameters<typeof transactionDto>[0]);
+      const { openDetails, flow } = renderFlow(SpaceType.PERSONAL);
+
+      openDetails();
+      await settle();
+      fireEvent.press(screen.getByText('Edit'));
+      await settle();
+
+      expect(flow()?.draft?.assignment).toEqual(expected);
+      expect(screen.getByText('No changes yet')).toBeTruthy();
+    });
+
+    it('keeps a restored draft on its stored member in a group space', async () => {
+      membersResponse = team;
+      const { store, flow } = renderFlow(SpaceType.GROUP);
+
+      act(() => {
+        store.dispatch(
+          restoredOpened({
+            spaceId: 1,
+            operationId: 'restored-key',
+            draft: {
+              transactionType: TransactionType.EXPENSE,
+              amount: '42.10',
+              categoryId: 1,
+              assignment: { kind: 'member', userId: 31 },
+              timestamp: '2026-01-05T10:00:00.000Z',
+              description: '',
+            },
+          }),
+        );
+      });
+      await settle();
+
+      expect(flow()?.draft?.assignment).toEqual({ kind: 'member', userId: 31 });
+    });
 
     it('starts on the user, offers the members and the two special values, and sends the pick', async () => {
       membersResponse = team;
