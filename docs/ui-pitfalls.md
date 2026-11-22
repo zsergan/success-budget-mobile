@@ -82,3 +82,17 @@ system text size grows. Use `minHeight` with a little vertical padding,
 and let a name line `flexWrap` so its badge drops under the name instead
 of truncating it (`MemberRow`). A side-by-side header (label and count)
 needs `flexWrap` too.
+
+## A single-line TextInput shorter than its font's line
+
+A UITextField lays its text out on the font's whole line box, which for
+Plus Jakarta Sans is 1.26 em (hhea ascent + descent) times the system
+text scale. Shorter than that, iOS clips the digits and the caret, pushes
+a sign beside them out of place, and draws the placeholder smaller than
+the typed text. Seen on the Amount field (44 pt digits in a 54 pt input)
+at accessibility text sizes.
+
+The fix: size the input from the line box at the system text size, not a
+fixed height, and let its row grow (`minHeight`); see `amountInputHeight`
+in `AmountField/style.ts`. A field whose font size changes as it fills
+takes the height of its largest size, so the row never moves.

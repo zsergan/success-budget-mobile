@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import AmountField from './AmountField';
+import { amountFontSize, amountInputHeight } from './style';
 
 type FieldProps = Partial<Parameters<typeof AmountField>[0]>;
 
@@ -21,6 +22,7 @@ const slotWidth = () =>
   StyleSheet.flatten(screen.getByTestId('amount-sign-slot', { includeHiddenElements: true }).props.style).width;
 const sign = () => screen.getByText(/^[+−]$/, { includeHiddenElements: true });
 const signOpacity = () => StyleSheet.flatten(sign().props.style).opacity;
+const inputHeight = () => StyleSheet.flatten(screen.getByLabelText('Amount').props.style).height;
 
 describe('AmountField', () => {
   it('keeps the sign slot one width from empty to the first character and back', () => {
@@ -63,6 +65,25 @@ describe('AmountField', () => {
     screen.rerender(field({ value }));
 
     expect(slotWidth()).toBe(width);
+  });
+
+  it('keeps the input one height from empty through every tier and back to empty', () => {
+    render(field({}));
+    const height = inputHeight();
+
+    ['1', '1234567', '1234567890.5', ''].forEach((value) => {
+      screen.rerender(field({ value }));
+      expect(inputHeight()).toBe(height);
+    });
+    screen.rerender(field({ value: '', isIncome: true }));
+    expect(inputHeight()).toBe(height);
+  });
+
+  it("fits the largest tier's whole line, caret included, and grows with the system text size", () => {
+    const lineOf = (fontScale: number) => 1.26 * amountFontSize('1') * fontScale;
+
+    [1, 1.35, 2.35].forEach((fontScale) => expect(amountInputHeight(fontScale)).toBeGreaterThan(lineOf(fontScale)));
+    expect(amountInputHeight(2)).toBeGreaterThan(amountInputHeight(1));
   });
 
   it('passes the typed text to onChange unchanged, with no sign in it', () => {

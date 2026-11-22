@@ -12,6 +12,13 @@ export const amountFontSize = (value: string) =>
 // Bold's + and − both advance 0.66 em; the slot fits them at the largest tier, so no tier or sign moves the digits.
 export const signSlotWidth = (fontScale: number) => Math.ceil(0.66 * LARGEST_AMOUNT_FONT_SIZE * fontScale);
 
+// The font's line box is 1.26 em: a UITextField shorter than that clips the digits and caret and shrinks the placeholder.
+// Sized for the largest tier at the system text size, so stepping down a tier never moves the row.
+const LINE_HEIGHT_EM = 1.26;
+const CARET_ROOM = 2;
+export const amountInputHeight = (fontScale: number) =>
+  Math.ceil(LINE_HEIGHT_EM * LARGEST_AMOUNT_FONT_SIZE * fontScale) + CARET_ROOM;
+
 const createStyles = ({ colors }: ColorTheme) =>
   StyleSheet.create({
     root: {
@@ -19,7 +26,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     label: sectionLabel(colors),
     row: {
-      height: 64,
+      minHeight: 64,
       flexDirection: 'row',
       alignItems: 'center',
       columnGap: 3,
@@ -37,7 +44,6 @@ const createStyles = ({ colors }: ColorTheme) =>
     input: {
       flex: 1,
       minWidth: 0,
-      height: 54,
       padding: 0,
       fontFamily: theme.fonts.bold,
       letterSpacing: -1.3,
