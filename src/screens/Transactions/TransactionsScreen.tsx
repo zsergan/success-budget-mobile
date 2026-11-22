@@ -9,12 +9,13 @@ import {
   BottomSheetModal as BottomModal,
   ConfirmationSheet,
   Fab,
+  PeriodBar,
   RangePickerSheet,
   ScreenFrame,
   useTransactionDelete,
   useTransactionFlow,
 } from '@components';
-import { usePeriod, useConfirmation, useSpaceRefresh } from '@hooks';
+import { usePeriod, useConfirmation, useSpaceRefresh, useThemedStyles } from '@hooks';
 import type { AssignmentKey } from '@api/models';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { selectProfileId } from '@redux/state/profile/selectors';
@@ -25,8 +26,8 @@ import { monthPeriodOf, toDateRange } from '@shared/utils';
 import { TransactionType } from '@shared/enums';
 import type { ScreenNames } from '@shared/enums';
 import type { MainTabNavigationProp, MainTabScreenProps, RevealTransaction } from '@shared/types';
-import type { SearchStatus } from './components/FilterBar/FilterBar';
-import FilterBar from './components/FilterBar/FilterBar';
+import type { SearchStatus } from './components/HistorySummary/HistorySummary';
+import HistorySummary from './components/HistorySummary/HistorySummary';
 import RangeCount from './components/RangeCount/RangeCount';
 import TransactionsSkeleton from './components/Skeleton/TransactionsSkeleton';
 import TransactionsEmptyState from './components/TransactionsEmptyState/TransactionsEmptyState';
@@ -42,7 +43,7 @@ import useTransactionsData from './hooks/useTransactionsData';
 import { feedListProps } from './feedListProps';
 import { MAX_SEARCH_LENGTH } from './search';
 
-import styles from './style';
+import createStyles from './style';
 
 const HIGHLIGHT_MS = 2500;
 
@@ -69,6 +70,7 @@ const TransactionsScreen = () => {
   const { lock: deleteLock, confirmation: deleteConfirmation } = useConfirmation();
   const { requestDelete } = useTransactionDelete(deleteLock);
   const rangePickerRef = useRef<BottomSheetModal>(null);
+  const styles = useThemedStyles(createStyles);
 
   const handleOpenPicker = () => rangePickerRef.current?.present();
 
@@ -298,7 +300,38 @@ const TransactionsScreen = () => {
         />
       </BottomModal>
 
-      <ScreenFrame edges={['top', 'left', 'right']} blurredStatusBar>
+      <ScreenFrame edges={['top', 'left', 'right']}>
+        {/* What the list is of stays in view while it scrolls; the search field keeps one instance through its motion. */}
+        <View style={styles.header}>
+          <TransactionsHeader
+            isSearching={search.isSearching}
+            query={search.query}
+            error={search.isTooLong ? `Search is limited to ${MAX_SEARCH_LENGTH} characters` : null}
+            onOpen={openSearch}
+            onCancel={cancelSearch}
+            onChangeQuery={search.change}
+            onSubmit={search.submit}
+            onClear={search.clear}
+          />
+
+          <PeriodBar
+            period={period}
+            onPresetPress={selectCurrent}
+            onOpenPicker={handleOpenPicker}
+            onReset={resetPeriod}
+          />
+
+          <HistoryFilters
+            filters={filters}
+            onOpenType={() => setOpenFilter('type')}
+            onOpenAssignment={() => setOpenFilter('assignment')}
+            onClearType={() => changeFilters(({ transactionType: _type, ...rest }) => rest)}
+            onClearAssignment={() =>
+              changeFilters(({ assignment: _assignment, assignmentName: _name, ...rest }) => rest)
+            }
+          />
+        </View>
+
         <TransactionsList
           {...feedListProps(data)}
           onPressTransaction={openDetails}
@@ -312,37 +345,12 @@ const TransactionsScreen = () => {
           }}
           header={
             <>
-              <TransactionsHeader
-                isSearching={search.isSearching}
-                query={search.query}
-                error={search.isTooLong ? `Search is limited to ${MAX_SEARCH_LENGTH} characters` : null}
-                onOpen={openSearch}
-                onCancel={cancelSearch}
-                onChangeQuery={search.change}
-                onSubmit={search.submit}
-                onClear={search.clear}
-              />
-
-              <FilterBar
-                period={period}
+              <HistorySummary
                 income={income}
                 expense={expense}
                 isLoading={viewState === 'loading'}
                 search={searchStatus}
                 currencyCode={currencyCode}
-                onPresetPress={selectCurrent}
-                onOpenPicker={handleOpenPicker}
-                onReset={resetPeriod}
-              />
-
-              <HistoryFilters
-                filters={filters}
-                onOpenType={() => setOpenFilter('type')}
-                onOpenAssignment={() => setOpenFilter('assignment')}
-                onClearType={() => changeFilters(({ transactionType: _type, ...rest }) => rest)}
-                onClearAssignment={() =>
-                  changeFilters(({ assignment: _assignment, assignmentName: _name, ...rest }) => rest)
-                }
               />
 
               <PendingWritesBanner style={styles.banner} />

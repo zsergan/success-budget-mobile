@@ -1,24 +1,14 @@
 import { StyleSheet } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 
-import { CURRENT_MONTH } from '@shared/utils';
-import type { SearchStatus } from './FilterBar';
-import FilterBar from './FilterBar';
+import type { SearchStatus } from './HistorySummary';
+import HistorySummary from './HistorySummary';
 
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => jest.requireActual('react-native-reanimated/mock'));
 
 const bar = (props: { search?: SearchStatus; income?: string | null; isLoading?: boolean }) => (
-  <FilterBar
-    period={CURRENT_MONTH}
-    income={null}
-    expense={null}
-    isLoading={false}
-    onPresetPress={jest.fn()}
-    onOpenPicker={jest.fn()}
-    onReset={jest.fn()}
-    {...props}
-  />
+  <HistorySummary income={null} expense={null} isLoading={false} {...props} />
 );
 const renderBar = (props: Parameters<typeof bar>[0]) => render(bar(props));
 
@@ -27,7 +17,7 @@ const heightOf = (style: unknown) => {
   return (height ?? lineHeight) + 2 * Number(marginVertical);
 };
 
-describe('FilterBar', () => {
+describe('HistorySummary', () => {
   it.each<[string, SearchStatus | undefined]>([
     ['no search', undefined],
     ['searching', { state: 'searching' }],

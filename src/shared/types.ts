@@ -117,6 +117,7 @@ export type IconType =
   | 'check'
   | 'back'
   | 'forward'
+  | 'arrow-right'
   | 'chevron-down'
   | 'chevron-up'
   | 'chevron-right'

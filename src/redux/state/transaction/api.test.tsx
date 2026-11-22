@@ -82,7 +82,7 @@ describe('transactionApi', () => {
           from: '2026-09-30T21:00:00.000Z',
           to: '2026-10-31T20:59:59.999Z',
           time_zone: 'Europe/Moscow',
-          limit: 5,
+          limit: 3,
         },
       }),
     );

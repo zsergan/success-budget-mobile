@@ -4,7 +4,7 @@ import type { ViewToken } from 'react-native';
 import { ActivityIndicator, ScrollView, SectionList, Text, TouchableOpacity, View } from 'react-native';
 
 import type { Money } from '@api/dto';
-import { TransactionCard, useScreenTopInset } from '@components';
+import { TransactionCard } from '@components';
 import { useTheme, useThemedStyles } from '@hooks';
 import type { TransactionModel } from '@api/models';
 import type { DayGroup } from '@shared/utils';
@@ -123,7 +123,6 @@ const TransactionsList = ({
   onRetryPage,
 }: Props) => {
   const styles = useThemedStyles(createStyles);
-  const topInset = useScreenTopInset();
   const listRef = useRef<SectionList<TransactionModel, Section>>(null);
   const scrolledToRef = useRef<string | null>(null);
   // A scroll that had to land near the row, not on it, is repeated once the row is rendered and measured.
@@ -140,16 +139,16 @@ const TransactionsList = ({
     data: group.items,
   }));
 
-  // A lit row is brought to the middle; a restored one to the top, just below the status bar.
+  // A lit row is brought to the middle; a restored one to the top of the list.
   const targetId = highlightId ?? restoreId;
   const target = useMemo<ScrollTarget | null>(
     () =>
       highlightId
         ? { id: highlightId, viewPosition: 0.4, viewOffset: 0 }
         : restoreId
-          ? { id: restoreId, viewPosition: 0, viewOffset: topInset }
+          ? { id: restoreId, viewPosition: 0, viewOffset: 0 }
           : null,
-    [highlightId, restoreId, topInset],
+    [highlightId, restoreId],
   );
 
   const shownKeyRef = useRef(selectionKey);
@@ -201,8 +200,9 @@ const TransactionsList = ({
   return (
     <SectionList
       ref={listRef}
+      testID="transactions-list"
       style={styles.body}
-      contentContainerStyle={[styles.container, { paddingTop: topInset }]}
+      contentContainerStyle={styles.container}
       sections={sections}
       keyExtractor={(item) => item.id}
       stickySectionHeadersEnabled={false}

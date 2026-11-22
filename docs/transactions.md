@@ -19,17 +19,26 @@ are in `docs/server-data.md`, the sheet and editor route in
   personal history tells shared and unassigned records apart. A starting
   balance (`kind: initial_balance`) is read-only and shown as archived,
   with no assignee.
-- The picker (`AssignmentPicker/assignmentOptions.ts`) offers the
-  signed-in user first, the other current members (never a pending
-  invitation), then Whole space and Unassigned. Until the members load it
-  offers the user alone; a long list shows five people and the picked one
-  behind More. Two people of one name are told apart by email.
+- The picker (`AssignmentPicker/assignmentOptions.ts`) offers Whole space
+  first, then the signed-in user, the other current members (never a
+  pending invitation), an edited record's own former member or deleted
+  account, and No member assigned last. Until the members load it offers
+  the user alone among people; a long list shows five people and the
+  picked one, in that order, with the rest behind More. Two people of one
+  name are told apart by email. In a space with nobody else, the user's
+  own pick stays one row until opened.
 
 ## Defaults and changes
 
-- A new transaction is the user's own (`defaultAssignment`). Add another
-  repeats the last assignment while that member is still known to be in
-  the space (`keptAssignment`), otherwise the user's own.
+- A new transaction is assigned by the type of the flow's space
+  (`defaultAssignment`): Whole space in a group space, even one with only
+  the user, and the user in a personal space. While the space's type or
+  the profile is not known, Whole space. The default is read once, when
+  the form starts: members or the profile loading later never change it.
+- Add another repeats the last assignment (`keptAssignment`): Whole space
+  and No member assigned always, a member while still known to be in the
+  space; otherwise the space's default. Neither default touches an edit,
+  a restored draft or a pending write's body.
 - An edit starts from the record. A former member or a deleted account it
   is assigned to stays on offer, marked as gone, only while unchanged: an
   update leaves out an assignment it does not change, and a deleted

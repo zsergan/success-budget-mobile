@@ -3,7 +3,7 @@ import useThemedStyles from '@hooks/useThemedStyles';
 import { useEffect, useRef, useState } from 'react';
 import { Text, TextInput, useWindowDimensions, View } from 'react-native';
 
-import createStyles, { amountFontSize, signSlotWidth } from './style';
+import createStyles, { amountFontSize, amountInputHeight, signSlotWidth } from './style';
 
 interface Props {
   value: string;
@@ -60,7 +60,7 @@ const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currency
           placeholder="0"
           placeholderTextColor={colors.muted}
           inputMode="decimal"
-          style={[styles.input, { color: typeColor, fontSize }]}
+          style={[styles.input, { color: typeColor, fontSize, height: amountInputHeight(fontScale) }]}
           selectionColor={typeColor}
           returnKeyType="done"
           accessibilityLabel="Amount"

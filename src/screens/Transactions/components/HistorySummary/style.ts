@@ -11,6 +11,7 @@ const SEARCH_ROW_HEIGHT = 20;
 const createStyles = ({ colors }: ColorTheme) =>
   StyleSheet.create({
     root: {
+      paddingTop: theme.spacing.xs,
       rowGap: theme.spacing.sm,
     },
     totalsRow: {
@@ -55,8 +56,6 @@ const createStyles = ({ colors }: ColorTheme) =>
       backgroundColor: colors.track,
     },
     searchRow: {
-      // 14 below the presets, as in the design, with the root's row gap.
-      marginTop: 6,
       height: SEARCH_ROW_HEIGHT,
       flexDirection: 'row',
       alignItems: 'center',

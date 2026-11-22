@@ -17,8 +17,9 @@ const createStyles = ({ colors }: ColorTheme) =>
     header: {
       paddingVertical: theme.spacing.md,
     },
+    // Grows with the title under large text; the field, laid over it, takes the row's height in both modes.
     row: {
-      height: BUTTON_SIZE,
+      minHeight: BUTTON_SIZE,
       justifyContent: 'center',
     },
     title: {

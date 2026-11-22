@@ -7,6 +7,7 @@ const UI_ICON_PATHS = {
   check: 'M5 13l4 4L19 7',
   back: 'M15 5l-7 7 7 7',
   forward: 'M9 5l7 7-7 7',
+  'arrow-right': 'M5 12h14M13 6l6 6-6 6',
   'chevron-down': 'M6 9l6 6 6-6',
   'chevron-up': 'M6 15l6-6 6 6',
   'chevron-right': 'M9 6l6 6-6 6',

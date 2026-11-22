@@ -12,7 +12,15 @@ import { selectProfileId } from '@redux/state/profile/selectors';
 import { selectIsPersonalSpace } from '@redux/state/space/selectors';
 import { selectIsDeleting } from '@redux/state/transactionFlow/selectors';
 import Icon from '../Icon/Icon';
-import { assignmentLabel, formatAmount, formatDateHHMM, formatMoneyAmount, isOwnAssignment } from '@shared/utils';
+import {
+  assignmentLabel,
+  formatAmount,
+  formatDateHHMM,
+  formatMoneyAmount,
+  formatRowDay,
+  isOwnAssignment,
+  toZonedDay,
+} from '@shared/utils';
 import { TransactionType } from '@shared/enums';
 
 import createStyles from './style';
@@ -30,6 +38,8 @@ interface Props {
   timeZone?: string;
   // Home's hidden amounts: the row says what it is, not how much.
   isAmountHidden?: boolean;
+  // Names the row's day before its time, where no day header above it does.
+  showsDay?: boolean;
   onPress?: (transaction: TransactionModel) => void;
   // Swiping left offers Delete; `onSettled` slides the row back once the confirmation closes.
   onDelete?: (transaction: TransactionModel, onSettled: () => void) => void;
@@ -41,6 +51,7 @@ const TransactionCard = ({
   isHighlighted = false,
   timeZone,
   isAmountHidden = false,
+  showsDay = false,
   onPress,
   onDelete,
 }: Props) => {
@@ -60,6 +71,10 @@ const TransactionCard = ({
   const shownAssignment =
     isSystem || (isPersonal && isOwnAssignment(assignment, selfId)) ? null : assignmentLabel(assignment, selfId);
   const tag = isSystem ? 'Archived' : author.source === 'imported' ? 'Imported' : null;
+  const time = formatDateHHMM(transaction.timestamp, timeZone);
+  const when = showsDay
+    ? `${formatRowDay(toZonedDay(new Date(transaction.timestamp), timeZone), toZonedDay(new Date(), timeZone))}, ${time}`
+    : time;
 
   // A row being deleted stays put, dimmed, until the server answers.
   const card = (
@@ -134,9 +149,7 @@ const TransactionCard = ({
             </Text>
           )}
 
-          <Text style={[styles.meta, styles.fixed]}>
-            {`${description || shownAssignment ? ' · ' : ''}${formatDateHHMM(transaction.timestamp, timeZone)}`}
-          </Text>
+          <Text style={[styles.meta, styles.fixed]}>{`${description || shownAssignment ? ' · ' : ''}${when}`}</Text>
         </View>
       </View>
     </Pressable>

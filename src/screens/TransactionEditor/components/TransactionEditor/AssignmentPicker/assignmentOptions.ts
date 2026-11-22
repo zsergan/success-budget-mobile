@@ -37,26 +37,25 @@ const person = (userId: number, name: string, isSelf: boolean): AssignmentOption
   isPerson: true,
 });
 
-const SPECIALS: AssignmentOption[] = [
-  {
-    key: 'space',
-    value: { kind: 'space' },
-    subject: { kind: 'space' },
-    label: WHOLE_SPACE_LABEL,
-    fullName: WHOLE_SPACE_LABEL,
-    isGone: false,
-    isPerson: false,
-  },
-  {
-    key: 'unassigned',
-    value: { kind: 'unassigned' },
-    subject: { kind: 'unassigned' },
-    label: UNASSIGNED_LABEL,
-    fullName: UNASSIGNED_LABEL,
-    isGone: false,
-    isPerson: false,
-  },
-];
+const WHOLE_SPACE: AssignmentOption = {
+  key: 'space',
+  value: { kind: 'space' },
+  subject: { kind: 'space' },
+  label: WHOLE_SPACE_LABEL,
+  fullName: WHOLE_SPACE_LABEL,
+  isGone: false,
+  isPerson: false,
+};
+
+const UNASSIGNED: AssignmentOption = {
+  key: 'unassigned',
+  value: { kind: 'unassigned' },
+  subject: { kind: 'unassigned' },
+  label: UNASSIGNED_LABEL,
+  fullName: UNASSIGNED_LABEL,
+  isGone: false,
+  isPerson: false,
+};
 
 // The record's person when the members known now do not include them: someone who left, a deleted account, or
 // (while the members load) whoever it was saved with.
@@ -88,8 +87,8 @@ const savedPerson = (saved: AssignmentModel, activeIds: Set<number> | null): Ass
   };
 };
 
-// Who a transaction can be assigned to: the record's own person who left first, then the signed-in user, the other
-// members (never a pending invitation) and the two special values. Until the members load, the user alone.
+// Who a transaction can be assigned to: the whole space, the signed-in user, the other members (never a pending
+// invitation), the record's own person who left, and nobody. Until the members load, the user alone among people.
 export const buildAssignmentOptions = ({ members, self, saved }: Input): AssignmentOption[] => {
   const active = members?.flatMap((member) => (member.type === 'member' ? [member] : []));
   const activeIds = active ? new Set(active.map(({ user_id }) => user_id)) : null;
@@ -111,22 +110,26 @@ export const buildAssignmentOptions = ({ members, self, saved }: Input): Assignm
   const kept = saved && savedPerson(saved, activeIds);
   const extra = kept && !people.some(({ key }) => key === kept.key) ? kept : null;
 
-  return [...(extra ? [extra] : []), ...people, ...SPECIALS];
+  return [WHOLE_SPACE, ...people, ...(extra ? [extra] : []), UNASSIGNED];
 };
 
 export const PEOPLE_SHOWN = 5;
 
-// A long list shows its first people and the picked one; the rest wait behind More, so the form never grows unbounded.
+// A long list shows its first people and the picked one, in the list's order; the rest wait behind More, so the form
+// never grows unbounded. `moreAt` is where More (or the loading people) goes: after the people, before nobody.
 export const visibleOptions = (options: AssignmentOption[], selected: DraftAssignment | null, isExpanded: boolean) => {
   const people = options.filter(({ isPerson }) => isPerson);
-  if (isExpanded || people.length <= PEOPLE_SHOWN + 1) return { shown: options, hidden: 0 };
+  const beforeNobody = (shown: AssignmentOption[]) => {
+    const index = shown.findIndex(({ key }) => key === UNASSIGNED.key);
+    return index < 0 ? shown.length : index;
+  };
+  if (isExpanded || people.length <= PEOPLE_SHOWN + 1)
+    return { shown: options, hidden: 0, moreAt: beforeNobody(options) };
 
   const first = people.slice(0, PEOPLE_SHOWN);
   const picked = people.find(({ value }) => isSameAssignment(value, selected));
-  const shownPeople = picked && !first.includes(picked) ? [...first, picked] : first;
+  const shownPeople = new Set(picked ? [...first, picked] : first);
+  const shown = options.filter((option) => !option.isPerson || shownPeople.has(option));
 
-  return {
-    shown: [...shownPeople, ...options.filter(({ isPerson }) => !isPerson)],
-    hidden: people.length - shownPeople.length,
-  };
+  return { shown, hidden: people.length - shownPeople.size, moreAt: beforeNobody(shown) };
 };
