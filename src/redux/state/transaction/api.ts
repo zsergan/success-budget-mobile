@@ -144,7 +144,7 @@ const feedParams = ({ selection, pageSize }: TransactionsFeedArg, { cursor, arou
 });
 
 // One short page and no more: the month's totals come from statistics, never from these rows.
-export const RECENT_TRANSACTIONS_LIMIT = 5;
+export const RECENT_TRANSACTIONS_LIMIT = 3;
 
 // Built like `periodArg`, so Home and the early fetch for it share one entry for the same month.
 export const recentArg = (spaceId: number, range: { from: Date; to: Date }): RecentTransactionsArg => ({

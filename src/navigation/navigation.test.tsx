@@ -11,7 +11,7 @@ import WelcomeScreen from '@screens/Welcome/WelcomeScreen';
 import SignInScreen from '@screens/Auth/Screens/SignIn/SignInScreen';
 import SignUpScreen from '@screens/Auth/Screens/SignUp/SignUpScreen';
 import VerifyEmailScreen from '@screens/Auth/Screens/VerifyEmail/VerifyEmailScreen';
-import RecentActivity from '@screens/Home/components/RecentActivity/RecentActivity';
+import RecentTransactions from '@screens/Home/components/RecentTransactions/RecentTransactions';
 import ManagementSettingsSection from '@screens/Settings/components/ManagementSettingsSection/ManagementSettingsSection';
 import { ScreenNames } from '@shared/enums';
 import type { MainTabParamList, MainTabScreenProps, RootStackParamList, RootStackScreenProps } from '@shared/types';
@@ -220,7 +220,8 @@ describe('auth stack', () => {
 });
 
 const HomeTab = ({ navigation }: MainTabScreenProps<ScreenNames.HOME_TAB>) => (
-  <RecentActivity
+  <RecentTransactions
+    monthLabel="September"
     isHidden={false}
     isLoading={false}
     hasError={false}
@@ -262,10 +263,10 @@ const renderSignedIn = () =>
   );
 
 describe('signed-in navigation', () => {
-  it('switches to the History tab from "View all"', () => {
+  it('switches to the History tab from the recent transactions', () => {
     renderSignedIn();
 
-    fireEvent.press(screen.getByText('View all'));
+    fireEvent.press(screen.getByText('All transactions for September'));
 
     expect(routeNames()).toEqual([ScreenNames.HOME_SCREEN]);
     expect(focusedTab()).toBe(ScreenNames.TRANSACTIONS_TAB);

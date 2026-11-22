@@ -5,9 +5,6 @@ import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme) =>
   StyleSheet.create({
-    container: {
-      marginBottom: theme.spacing.lg,
-    },
     pill: {
       alignSelf: 'flex-start',
       flexDirection: 'row',

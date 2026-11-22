@@ -3,7 +3,7 @@ import { Text } from 'react-native';
 import { Provider } from 'react-redux';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 
 import type { Space } from '@api/dto';
 import { withSheetHost } from '@components/ConfirmationSheet/testing';
@@ -124,7 +124,7 @@ beforeEach(() => {
 });
 
 describe('HomeScreen', () => {
-  it("shows the month's net, top spending, spending by assignment and activity, all of one month", async () => {
+  it("shows the month's net, top spending, spending by assignment and recent transactions, all of one month", async () => {
     renderHome();
     await settle();
 
@@ -138,14 +138,15 @@ describe('HomeScreen', () => {
     expect(screen.getByText('Spending by assignment')).toBeTruthy();
     expect(screen.getByText('Whole space')).toBeTruthy();
     expect(screen.getByText('No member assigned')).toBeTruthy();
-    expect(screen.getByText('Activity')).toBeTruthy();
+    expect(screen.getByText('Recent transactions')).toBeTruthy();
+    expect(screen.getByText('Latest transactions in September')).toBeTruthy();
 
     const [summary] = requests('/statistics/summary');
     const [breakdown] = requests('/statistics/breakdown');
     const [feed] = requests('/transactions/feed');
     expect(summary.params).toMatchObject({ period: 'month', anchor_date: '2026-09-01' });
     expect(breakdown.params).toMatchObject({ transaction_type: 'expense', as_of: summary.params?.as_of });
-    expect(feed.params).toMatchObject({ from: new Date(2026, 8, 1).toISOString(), limit: 5 });
+    expect(feed.params).toMatchObject({ from: new Date(2026, 8, 1).toISOString(), limit: 3 });
     expect(requests('/statistics/trend')).toEqual([]);
   });
 
@@ -243,7 +244,77 @@ describe('HomeScreen', () => {
     });
   });
 
-  it('hides every amount on request, the activity included', async () => {
+  it('keeps the space and the month above the scrolling dashboard', async () => {
+    renderHome();
+    await settle();
+    const dashboard = within(screen.getByTestId('home-dashboard'));
+
+    expect(screen.getByText('Family budget')).toBeTruthy();
+    expect(dashboard.queryByText('Family budget')).toBeNull();
+    expect(screen.getByText('September 2026')).toBeTruthy();
+    expect(dashboard.queryByText('September 2026')).toBeNull();
+    expect(dashboard.queryByLabelText('Previous month')).toBeNull();
+    expect(dashboard.getByText('September net')).toBeTruthy();
+    expect(dashboard.getByText('Recent transactions')).toBeTruthy();
+  });
+
+  it('opens History on the whole month from the preview, with no type or assignment', async () => {
+    renderHome();
+    await settle();
+
+    fireEvent.press(screen.getByRole('button', { name: 'All transactions for September' }));
+
+    expect(navigationRef.getCurrentRoute()).toMatchObject({
+      name: ScreenNames.TRANSACTIONS_TAB,
+      params: { focus: { spaceId: 1, month: new Date(2026, 8, 1).toISOString() } },
+    });
+    const { focus } = navigationRef.getCurrentRoute()?.params as MainTabParamList[ScreenNames.TRANSACTIONS_TAB] & {
+      focus: object;
+    };
+    expect(Object.keys(focus).sort()).toEqual(['month', 'spaceId']);
+  });
+
+  it("names an earlier year's month with its year, in the preview and its History button", async () => {
+    renderHome();
+    await settle();
+
+    for (let month = 0; month < 9; month += 1) fireEvent.press(screen.getByLabelText('Previous month'));
+    await settle();
+
+    expect(screen.getByText('December 2025')).toBeTruthy();
+    expect(screen.getByText('Latest transactions in December 2025')).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'All transactions for December 2025' }));
+    expect(navigationRef.getCurrentRoute()?.params).toMatchObject({
+      focus: { spaceId: 1, month: new Date(2025, 11, 1).toISOString() },
+    });
+  });
+
+  it('opens the month a record was saved to, in its own space only, and takes the request off the route', async () => {
+    renderHome();
+    await settle();
+
+    act(() =>
+      navigationRef.navigate(ScreenNames.HOME_TAB, {
+        showMonth: { spaceId: 2, month: new Date(2026, 6, 4, 9).toISOString() },
+      }),
+    );
+    await settle();
+    expect(screen.getByText('September 2026')).toBeTruthy();
+
+    act(() =>
+      navigationRef.navigate(ScreenNames.HOME_TAB, {
+        showMonth: { spaceId: 1, month: new Date(2026, 6, 4, 9).toISOString() },
+      }),
+    );
+    await settle();
+
+    expect(screen.getByText('July 2026')).toBeTruthy();
+    expect(screen.getByText('Latest transactions in July')).toBeTruthy();
+    expect(requests('/transactions/feed').at(-1)?.params).toMatchObject({ from: new Date(2026, 6, 1).toISOString() });
+    expect(navigationRef.getCurrentRoute()?.params).toEqual({ showMonth: undefined });
+  });
+
+  it('hides every amount on request, the recent transactions included', async () => {
     renderHome();
     await settle();
 

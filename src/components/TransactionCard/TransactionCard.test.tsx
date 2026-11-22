@@ -44,7 +44,7 @@ afterEach(() => {
   jest.clearAllTimers();
 });
 
-const renderCard = (overrides = {}, spaceType?: SpaceType) => {
+const renderCard = (overrides = {}, spaceType?: SpaceType, { showsDay = false } = {}) => {
   const store = createAppStore();
   stores.push(store);
   if (spaceType) {
@@ -76,7 +76,13 @@ const renderCard = (overrides = {}, spaceType?: SpaceType) => {
 
   render(
     <Provider store={store}>
-      <TransactionCard transaction={transaction} currencyCode="USD" onPress={onPress} onDelete={onDelete} />
+      <TransactionCard
+        transaction={transaction}
+        currencyCode="USD"
+        showsDay={showsDay}
+        onPress={onPress}
+        onDelete={onDelete}
+      />
     </Provider>,
   );
 
@@ -117,6 +123,17 @@ describe('TransactionCard', () => {
     expect(screen.getByText('Dinner with Anna')).toBeTruthy();
     expect(screen.getByText('Zakhar')).toBeTruthy();
     expect(screen.getByText(' · 09:10')).toBeTruthy();
+  });
+
+  const now = new Date();
+  it.each([
+    ['today', new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 10), true, ' · Today, 09:10'],
+    ['last year', new Date(now.getFullYear() - 1, 2, 4, 18, 5), true, ` · Mar 4, ${now.getFullYear() - 1}, 18:05`],
+    ['no day asked for', new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 10), false, ' · 09:10'],
+  ])('names the day before the time only when asked to: %s', (_name, date, showsDay, text) => {
+    renderCard({ description: null, timestamp: date.toISOString() }, undefined, { showsDay });
+
+    expect(screen.getByText(text)).toBeTruthy();
   });
 
   it('starts the second line with the assignment when there is no description', () => {

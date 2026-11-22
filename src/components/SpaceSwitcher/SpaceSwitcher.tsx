@@ -41,7 +41,7 @@ const SpaceSwitcher = ({ navigation }: Props) => {
   if (!currentSpace) return null;
 
   return (
-    <View style={styles.container}>
+    <View>
       <TouchableOpacity style={styles.pill} onPress={() => sheetRef.current?.present()} activeOpacity={0.7}>
         <View style={styles.iconBox}>
           <Icon name={currentSpace.type === SpaceType.PERSONAL ? 'user' : 'users'} size={16} />

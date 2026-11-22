@@ -9,7 +9,7 @@ export interface DayGroup {
   items: TransactionModel[];
 }
 
-export const formatGroupLabel = (value: Date | string, now = new Date()) => {
+const formatDay = (value: Date | string, now: Date, withWeekday: boolean) => {
   const date = new Date(value);
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
@@ -18,12 +18,17 @@ export const formatGroupLabel = (value: Date | string, now = new Date()) => {
   if (compareDays(date, yesterday)) return 'Yesterday';
 
   return date.toLocaleString('en-US', {
-    weekday: 'short',
+    ...(withWeekday && { weekday: 'short' }),
     day: 'numeric',
     month: 'short',
     ...(date.getFullYear() !== now.getFullYear() && { year: 'numeric' }),
   });
 };
+
+export const formatGroupLabel = (value: Date | string, now = new Date()) => formatDay(value, now, true);
+
+// A row's own day where no day header names it: "Today", "Yesterday", "Aug 29", or "Aug 29, 2024" in another year.
+export const formatRowDay = (value: Date | string, now = new Date()) => formatDay(value, now, false);
 
 // Rows of one day stay together in list order, wherever a page boundary fell.
 // Days are the device's unless a zone is given, e.g. the one the server summed its day totals in.

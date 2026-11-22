@@ -6,7 +6,6 @@ import theme from '@shared/theme';
 const createStyles = ({ colors }: ColorTheme) =>
   StyleSheet.create({
     root: {
-      marginTop: theme.spacing.md,
       flexDirection: 'row',
       alignItems: 'center',
       columnGap: theme.spacing.md,
