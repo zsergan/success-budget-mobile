@@ -8,6 +8,7 @@ export { default as useCurrencyOptions } from './useCurrencyOptions';
 export type { ConfirmLock } from './useConfirmation';
 export { default as useFormSubmitHandler } from './useFormSubmitHandler';
 export { default as useKeyboardHeight } from './useKeyboardHeight';
+export { default as useLayout } from './useLayout';
 export { default as usePendingWrites } from './usePendingWrites';
 export { default as usePendingWritesSync } from './usePendingWritesSync';
 export { default as usePeriod } from './usePeriod';

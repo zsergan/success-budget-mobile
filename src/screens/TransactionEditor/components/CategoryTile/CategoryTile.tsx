@@ -1,7 +1,8 @@
-import { Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
 import useCategoryAppearance from '@hooks/useCategoryAppearance';
+import useLayout from '@hooks/useLayout';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import type { CategoryColor } from '@shared/categoryColors';
@@ -9,10 +10,8 @@ import type { IconType } from '@shared/types';
 
 import createStyles from './style';
 
-const LARGE_TEXT_SCALE = 1.15;
-
 // Four tiles in a row; three once the system text is large enough to cut the names short.
-export const useCategoryColumns = () => (useWindowDimensions().fontScale > LARGE_TEXT_SCALE ? 3 : 4);
+export const useCategoryColumns = () => (useLayout().isLargeText ? 3 : 4);
 
 type Props = {
   name: string;

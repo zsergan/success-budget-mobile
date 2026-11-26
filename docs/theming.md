@@ -44,6 +44,9 @@ and is stored under `THEME_PREFERENCE_KEY`. Startup and native surfaces:
   const styles = useThemedStyles(createStyles);
   ```
 
+  A factory can also take the `Layout` as a second argument, for insets and
+  text that follow the phone and the system text size: `docs/layout.md`.
+
 - **Colours outside a stylesheet** (icon and SVG colours, spinners, gradients,
   placeholders, chart data) come from `useTheme().colorTheme` in the
   component. A colour map belongs inside the component or behind a function

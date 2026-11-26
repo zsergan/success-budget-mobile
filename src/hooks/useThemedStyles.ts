@@ -1,24 +1,38 @@
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
 
+import useLayout from './useLayout';
 import useTheme from './useTheme';
 
-export type ThemedStyleFactory<T> = (theme: ColorTheme) => T;
+export type ThemedStyleFactory<T> = (theme: ColorTheme, layout: Layout) => T;
 
-const cache = new WeakMap<ThemedStyleFactory<unknown>, Map<ColorTheme, unknown>>();
+const cache = new WeakMap<ThemedStyleFactory<unknown>, Map<ColorTheme, Map<string, unknown>>>();
 
-// A factory runs once per theme; every component using it shares the result until the theme changes.
-export const getThemedStyles = <T>(factory: ThemedStyleFactory<T>, theme: ColorTheme): T => {
+// A factory that ignores the layout is built once per theme, whatever the screen and text size.
+const layoutKey = (factory: ThemedStyleFactory<unknown>, { sizeClass, isShort, fontScale }: Layout) =>
+  factory.length < 2 ? '' : `${sizeClass}|${isShort}|${fontScale}`;
+
+// A factory runs once per theme and layout; every component using it shares the result until either changes.
+export const getThemedStyles = <T>(factory: ThemedStyleFactory<T>, theme: ColorTheme, layout: Layout): T => {
   let byTheme = cache.get(factory);
   if (!byTheme) {
     byTheme = new Map();
     cache.set(factory, byTheme);
   }
 
-  if (!byTheme.has(theme)) byTheme.set(theme, factory(theme));
+  let byLayout = byTheme.get(theme);
+  if (!byLayout) {
+    byLayout = new Map();
+    byTheme.set(theme, byLayout);
+  }
 
-  return byTheme.get(theme) as T;
+  const key = layoutKey(factory, layout);
+  if (!byLayout.has(key)) byLayout.set(key, factory(theme, layout));
+
+  return byLayout.get(key) as T;
 };
 
-const useThemedStyles = <T>(factory: ThemedStyleFactory<T>): T => getThemedStyles(factory, useTheme().colorTheme);
+const useThemedStyles = <T>(factory: ThemedStyleFactory<T>): T =>
+  getThemedStyles(factory, useTheme().colorTheme, useLayout());
 
 export default useThemedStyles;
