@@ -6,9 +6,9 @@ import { inset } from '@shared/layout';
 import theme from '@shared/theme';
 
 // Below the status bar and above the screen's bottom edge, as in the design's frame; the bottom one clears the
-// home indicator's area on its own.
-export const TOP_GAP = 44;
-export const BOTTOM_GAP = 40;
+// home indicator's area on its own. A phone with a home button has neither a notch nor an indicator to clear.
+export const screenGaps = ({ isShort }: Pick<Layout, 'isShort'>) =>
+  isShort ? { top: theme.spacing.xxl, bottom: theme.spacing.xxl } : { top: 44, bottom: 40 };
 
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({

@@ -6,7 +6,7 @@ import { capRole, inset } from '@shared/layout';
 import theme from '@shared/theme';
 
 // Above the screen's bottom edge, as in the design's frame; it clears the home indicator's area on its own.
-export const BOTTOM_GAP = 38;
+export const bottomGap = ({ isShort }: Pick<Layout, 'isShort'>) => (isShort ? theme.spacing.xxl : 38);
 
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
