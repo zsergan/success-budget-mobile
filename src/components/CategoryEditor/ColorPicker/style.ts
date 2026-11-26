@@ -1,18 +1,20 @@
 import { Platform, StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
 const MONOSPACE = Platform.select({ ios: 'Menlo', default: 'monospace' });
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
-      rowGap: theme.spacing.xs,
+      rowGap: scaleSpace(theme.spacing.xs, layout),
     },
     colorRow: {
       flexDirection: 'row',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
     },
     colorSwatch: {
       flex: 1,
@@ -46,10 +48,10 @@ const createStyles = ({ colors }: ColorTheme) =>
       backgroundColor: colors.elevated,
     },
     panel: {
-      marginTop: theme.spacing.xs,
+      marginTop: scaleSpace(theme.spacing.xs, layout),
       borderRadius: 18,
-      padding: 14,
-      rowGap: theme.spacing.md,
+      padding: scaleSpace(14, layout),
+      rowGap: scaleSpace(theme.spacing.md, layout),
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.hairline,
@@ -58,17 +60,17 @@ const createStyles = ({ colors }: ColorTheme) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
     },
     panelTitle: {
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       color: colors.text,
     },
     panelStatus: {
       flexShrink: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
       color: colors.muted,
     },
     svArea: {
@@ -112,27 +114,27 @@ const createStyles = ({ colors }: ColorTheme) =>
     hexRow: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      columnGap: 10,
+      columnGap: scaleSpace(10, layout),
     },
     hexColumn: {
       flex: 1,
       minWidth: 0,
-      rowGap: 5,
+      rowGap: scaleSpace(5, layout),
     },
     previewColumn: {
       alignItems: 'center',
-      rowGap: 5,
+      rowGap: scaleSpace(5, layout),
     },
     fieldLabel: {
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
       letterSpacing: 0.6,
       color: colors.muted,
     },
     hexField: {
       minHeight: 44,
       borderRadius: 12,
-      paddingHorizontal: theme.spacing.md,
+      paddingHorizontal: scaleSpace(theme.spacing.md, layout),
       justifyContent: 'center',
       backgroundColor: colors.elevated,
       borderWidth: 1.5,
@@ -144,9 +146,9 @@ const createStyles = ({ colors }: ColorTheme) =>
       borderColor: colors.danger,
     },
     hexInput: {
-      paddingVertical: theme.spacing.sm,
+      paddingVertical: scaleSpace(theme.spacing.sm, layout),
       fontFamily: MONOSPACE,
-      fontSize: 15,
+      fontSize: scaleFont(15, layout),
       fontWeight: '600',
       color: colors.text,
     },
@@ -159,19 +161,19 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     hexError: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: 17,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(17, layout),
       color: colors.danger,
     },
     panelNote: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: 17,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(17, layout),
       color: colors.muted,
     },
     panelActions: {
       flexDirection: 'row',
-      columnGap: 10,
+      columnGap: scaleSpace(10, layout),
     },
     cancelButton: {
       flex: 1,
@@ -184,7 +186,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     cancelText: {
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
       color: colors.text,
     },
     applyButton: {
@@ -200,7 +202,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     applyText: {
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
       color: colors.onSecondary,
     },
     applyTextDisabled: {

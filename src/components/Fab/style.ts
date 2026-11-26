@@ -1,18 +1,20 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors, elevation }: ColorTheme) =>
+const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
       // left/right: 0 + paddingRight gives a deterministic full-width box instead of Yoga's shrink-wrap under `right` alone.
       position: 'absolute',
       left: 0,
       right: 0,
-      bottom: theme.spacing.xxl,
+      bottom: scaleSpace(theme.spacing.xxl, layout),
       alignItems: 'flex-end',
-      paddingRight: theme.spacing.xl,
+      paddingRight: scaleSpace(theme.spacing.xl, layout),
     },
     fab: {
       width: 58,
@@ -24,17 +26,17 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       ...elevation.fab,
     },
     menu: {
-      rowGap: theme.spacing.sm,
-      marginBottom: theme.spacing.md - 2,
+      rowGap: scaleSpace(theme.spacing.sm, layout),
+      marginBottom: scaleSpace(theme.spacing.md, layout) - 2,
       alignItems: 'flex-end',
     },
     menuItem: {
       minHeight: 44,
       borderRadius: theme.radius.md,
-      paddingHorizontal: theme.spacing.lg,
+      paddingHorizontal: scaleSpace(theme.spacing.lg, layout),
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.sm + 1,
+      columnGap: scaleSpace(theme.spacing.sm, layout) + 1,
       backgroundColor: colors.elevated,
       ...elevation.modal,
     },
@@ -42,8 +44,8 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       // Plus Jakarta Sans under-measures; see cde3346.
       paddingRight: 2,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.label,
-      lineHeight: theme.lineHeights.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
+      lineHeight: scaleFont(theme.lineHeights.label, layout),
       color: colors.text,
     },
   });

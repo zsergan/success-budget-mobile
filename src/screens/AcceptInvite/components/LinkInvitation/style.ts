@@ -2,17 +2,17 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { textRole } from '@shared/layout';
+import { scaleFont, scaleSpace, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
-      rowGap: theme.spacing.lg,
+      rowGap: scaleSpace(theme.spacing.lg, layout),
     },
     card: {
-      rowGap: theme.spacing.md,
-      padding: theme.spacing.lg,
+      rowGap: scaleSpace(theme.spacing.md, layout),
+      padding: scaleSpace(theme.spacing.lg, layout),
       borderRadius: theme.radius.lg,
       backgroundColor: colors.surface,
       ...elevation.card,
@@ -27,25 +27,25 @@ const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
     row: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      columnGap: theme.spacing.md,
+      columnGap: scaleSpace(theme.spacing.md, layout),
     },
     rowLabel: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodySm,
-      lineHeight: theme.lineHeights.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodySm, layout),
       color: colors.muted,
     },
     note: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: 17,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(17, layout),
       color: colors.muted,
     },
     rowValue: {
       flexShrink: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
-      lineHeight: theme.lineHeights.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodySm, layout),
       color: colors.text,
       textAlign: 'right',
       // Plus Jakarta Sans under-measures its own width and clips the last glyph (see cde3346).

@@ -1,6 +1,8 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
 import { BAR_AREA_HEIGHT } from './trendAdapter';
@@ -8,7 +10,7 @@ import { BAR_AREA_HEIGHT } from './trendAdapter';
 export const CHART_HEIGHT = 136;
 export const TOOLTIP_WIDTH = 150;
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
       height: CHART_HEIGHT,
@@ -23,7 +25,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     column: {
       alignItems: 'center',
-      gap: 5,
+      gap: scaleSpace(5, layout),
       borderRadius: 8,
     },
     columnSelected: {
@@ -45,8 +47,8 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     label: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: 9,
-      lineHeight: 11,
+      fontSize: scaleFont(9, layout),
+      lineHeight: scaleFont(11, layout),
       letterSpacing: 0.2,
       color: colors.muted,
     },
@@ -55,8 +57,8 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     sub: {
       fontFamily: theme.fonts.medium,
-      fontSize: 9,
-      lineHeight: 11,
+      fontSize: scaleFont(9, layout),
+      lineHeight: scaleFont(11, layout),
       color: colors.muted,
       fontVariant: ['tabular-nums'],
     },
@@ -77,9 +79,9 @@ const createStyles = ({ colors }: ColorTheme) =>
       width: TOOLTIP_WIDTH,
       zIndex: 5,
       borderRadius: 12,
-      paddingVertical: 9,
-      paddingHorizontal: 11,
-      gap: 5,
+      paddingVertical: scaleSpace(9, layout),
+      paddingHorizontal: scaleSpace(11, layout),
+      gap: scaleSpace(5, layout),
       backgroundColor: colors.elevated,
       borderWidth: 1,
       borderColor: colors.hairline,
@@ -91,15 +93,15 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     tooltipTitle: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: 11,
-      lineHeight: 14,
+      fontSize: scaleFont(11, layout),
+      lineHeight: scaleFont(14, layout),
       color: colors.text,
       fontVariant: ['tabular-nums'],
     },
     tooltipRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
+      gap: scaleSpace(6, layout),
     },
     tooltipSwatch: {
       width: 7,
@@ -109,14 +111,14 @@ const createStyles = ({ colors }: ColorTheme) =>
     tooltipLabel: {
       flex: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: 11,
-      lineHeight: 14,
+      fontSize: scaleFont(11, layout),
+      lineHeight: scaleFont(14, layout),
       color: colors.muted,
     },
     tooltipValue: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: 11,
-      lineHeight: 14,
+      fontSize: scaleFont(11, layout),
+      lineHeight: scaleFont(14, layout),
       color: colors.text,
       fontVariant: ['tabular-nums'],
     },

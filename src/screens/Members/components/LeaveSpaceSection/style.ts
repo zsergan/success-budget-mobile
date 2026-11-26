@@ -1,12 +1,14 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     section: {
-      rowGap: theme.spacing.sm,
+      rowGap: scaleSpace(theme.spacing.sm, layout),
     },
     leaveButton: {
       minHeight: 52,
@@ -14,7 +16,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      columnGap: theme.spacing.sm + 1,
+      columnGap: scaleSpace(theme.spacing.sm, layout) + 1,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: `${colors.danger}66`,
@@ -24,13 +26,13 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     leaveButtonText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
       color: colors.danger,
     },
     hint: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.muted,
       textAlign: 'center',
     },

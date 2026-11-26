@@ -30,10 +30,18 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   });
 ```
 
-- **Insets, not sizes, follow the width.** `inset(value, layout)` keeps a
+- **Text and gaps follow the width a little.** In a style factory, sizes from
+  the theme and literal font sizes, line heights, gaps, margins and paddings
+  go through `scaleFont(size, layout)` (half the width difference from the
+  393pt design, as react-native-size-matters' `moderateScale` does: about
+  -2.5% on an SE, +6% on a Pro Max) and `scaleSpace(size, layout)` (the width
+  ratio, clamped to 0.9-1.1). A hero figure passes `factor` 1 to follow the
+  width fully. Components that compute geometry from module constants (the
+  toast) keep design sizes.
+- **Screen insets follow the width class.** `inset(value, layout)` keeps a
   design value on a `regular` phone, takes 20% off on a `compact` one and adds
   10% on a `large` one; `screenPadding(layout)` is the screen's side padding.
-  Text, icons, radii and hit targets keep their design size on every phone.
+  Icons, radii and hit targets keep their design size on every phone.
 - **Text follows the system size.** `allowFontScaling={false}` is only for a
   glyph inside a fixed-size graphic, such as an avatar's initial.
   Headings are capped through `textRole` (display and `titleLg` at 1.3×,

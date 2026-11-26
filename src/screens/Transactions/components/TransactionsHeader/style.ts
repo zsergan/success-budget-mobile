@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { textRole } from '@shared/layout';
+import { scaleFont, scaleSpace, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 // The search button is as tall as the field it grows into, so the header keeps one height in both modes.
@@ -17,7 +17,7 @@ const CLEAR_SIZE = 22;
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     header: {
-      paddingVertical: theme.spacing.md,
+      paddingVertical: scaleSpace(theme.spacing.md, layout),
     },
     // Grows with the title under large text; the field, laid over it, takes the row's height in both modes.
     row: {
@@ -62,18 +62,18 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       position: 'absolute',
       top: 0,
       bottom: 0,
-      left: FIELD_ICON_LEFT + ICON_SIZE + theme.spacing.sm,
+      left: FIELD_ICON_LEFT + ICON_SIZE + scaleSpace(theme.spacing.sm, layout),
       right: 9,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: theme.spacing.sm,
+      gap: scaleSpace(theme.spacing.sm, layout),
     },
     input: {
       flex: 1,
       height: '100%',
       padding: 0,
       fontFamily: theme.fonts.semiBold,
-      fontSize: 15,
+      fontSize: scaleFont(15, layout),
       color: colors.text,
     },
     inputEmpty: {
@@ -95,15 +95,15 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       // Plus Jakarta SemiBold under-measures a hugging label and clips its last glyph (see cde3346).
       paddingRight: 2,
       fontFamily: theme.fonts.semiBold,
-      fontSize: 15,
-      lineHeight: theme.lineHeights.label,
+      fontSize: scaleFont(15, layout),
+      lineHeight: scaleFont(theme.lineHeights.label, layout),
       color: colors.text,
     },
     error: {
-      marginTop: theme.spacing.sm,
+      marginTop: scaleSpace(theme.spacing.sm, layout),
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.danger,
     },
   });

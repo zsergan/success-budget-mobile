@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 import { FITTED_SHEET_HANDLE_HEIGHT } from '@components/Modals/BottomSheetModal/BottomSheetModal';
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { screenPadding, textRole } from '@shared/layout';
+import { scaleFont, scaleSpace, screenPadding, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 // The title sits 20 below the 5 pt grabber, which the design draws 8 from the top of the sheet.
@@ -27,14 +27,14 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     step: {
       fontFamily: theme.fonts.bold,
-      fontSize: 11.5,
-      lineHeight: theme.lineHeights.micro,
+      fontSize: scaleFont(11.5, layout),
+      lineHeight: scaleFont(theme.lineHeights.micro, layout),
       letterSpacing: theme.letterSpacing.micro,
       textTransform: 'uppercase',
       color: colors.muted,
     },
     heading: {
-      rowGap: theme.spacing.sm,
+      rowGap: scaleSpace(theme.spacing.sm, layout),
     },
     title: {
       fontFamily: theme.fonts.bold,
@@ -44,40 +44,40 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     description: {
       fontFamily: theme.fonts.medium,
-      fontSize: 15,
-      lineHeight: theme.lineHeights.bodyLg,
+      fontSize: scaleFont(15, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodyLg, layout),
       color: colors.muted,
     },
     consequences: {
-      rowGap: 7,
-      padding: 14,
+      rowGap: scaleSpace(7, layout),
+      padding: scaleSpace(14, layout),
       borderRadius: 16,
     },
     consequencesTitle: {
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.bodySm,
-      lineHeight: theme.lineHeights.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodySm, layout),
     },
     consequence: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      columnGap: 9,
+      columnGap: scaleSpace(9, layout),
     },
     bullet: {
       width: BULLET_SIZE,
       height: BULLET_SIZE,
-      marginTop: (theme.lineHeights.bodySm - BULLET_SIZE) / 2,
+      marginTop: (scaleFont(theme.lineHeights.bodySm, layout) - BULLET_SIZE) / 2,
       borderRadius: BULLET_SIZE / 2,
     },
     consequenceText: {
       flex: 1,
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodySm,
-      lineHeight: theme.lineHeights.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodySm, layout),
       color: colors.text,
     },
     footer: {
-      rowGap: 10,
+      rowGap: scaleSpace(10, layout),
       paddingTop: SLOT_GAP,
       paddingHorizontal: screenPadding(layout),
     },
@@ -89,26 +89,26 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     message: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      columnGap: 10,
-      paddingVertical: theme.spacing.md,
-      paddingHorizontal: 14,
+      columnGap: scaleSpace(10, layout),
+      paddingVertical: scaleSpace(theme.spacing.md, layout),
+      paddingHorizontal: scaleSpace(14, layout),
       borderRadius: 16,
     },
     messageIcon: {
-      marginTop: (theme.lineHeights.bodySm - 16) / 2,
+      marginTop: (scaleFont(theme.lineHeights.bodySm, layout) - 16) / 2,
     },
     messageText: {
       flex: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
-      lineHeight: theme.lineHeights.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodySm, layout),
       color: colors.text,
     },
     note: {
       textAlign: 'center',
       fontFamily: theme.fonts.medium,
-      fontSize: 12.5,
-      lineHeight: 18,
+      fontSize: scaleFont(12.5, layout),
+      lineHeight: scaleFont(18, layout),
       color: colors.muted,
     },
   });

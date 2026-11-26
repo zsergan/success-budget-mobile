@@ -1,27 +1,28 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { fitHeight } from '@shared/layout';
+import { fitHeight, scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     button: {
       flexDirection: 'row',
-      columnGap: theme.spacing.xs,
+      columnGap: scaleSpace(theme.spacing.xs, layout),
       alignItems: 'center',
     },
     filledButton: {
-      paddingHorizontal: theme.spacing.md,
+      paddingHorizontal: scaleSpace(theme.spacing.md, layout),
       backgroundColor: colors.track,
       borderRadius: 11,
     },
     // Sized by the taller of the label and the icon circle, so an icon-only button keeps its height too.
     smButton: {
-      ...fitHeight(32, Math.max(theme.lineHeights.caption, 16)),
+      ...fitHeight(32, Math.max(scaleFont(theme.lineHeights.caption, layout), 16)),
     },
     mdButton: {
-      ...fitHeight(40, Math.max(theme.lineHeights.label, 24)),
+      ...fitHeight(40, Math.max(scaleFont(theme.lineHeights.label, layout), 24)),
     },
     lgButton: {
       width: 34,
@@ -59,22 +60,22 @@ const createStyles = ({ colors }: ColorTheme) =>
       // Plus Jakarta Sans under-measures; see cde3346.
       paddingRight: 2,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.text,
     },
     mdTitle: {
       paddingRight: 2,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.label,
-      lineHeight: theme.lineHeights.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
+      lineHeight: scaleFont(theme.lineHeights.label, layout),
       color: colors.text,
     },
     lgTitle: {
       paddingRight: 2,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.label,
-      lineHeight: theme.lineHeights.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
+      lineHeight: scaleFont(theme.lineHeights.label, layout),
       color: colors.text,
     },
     plainTitle: {

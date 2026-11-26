@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { screenPadding, textRole } from '@shared/layout';
+import { scaleFont, scaleSpace, screenPadding, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
@@ -12,11 +12,11 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     header: {
       paddingHorizontal: screenPadding(layout),
-      paddingTop: theme.spacing.sm,
-      paddingBottom: 10,
+      paddingTop: scaleSpace(theme.spacing.sm, layout),
+      paddingBottom: scaleSpace(10, layout),
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.md,
+      columnGap: scaleSpace(theme.spacing.md, layout),
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: 'transparent',
     },
@@ -53,28 +53,28 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     content: {
       paddingHorizontal: screenPadding(layout),
-      paddingTop: 10,
-      paddingBottom: 28,
-      rowGap: theme.spacing.xl,
+      paddingTop: scaleSpace(10, layout),
+      paddingBottom: scaleSpace(28, layout),
+      rowGap: scaleSpace(theme.spacing.xl, layout),
     },
     // The limit depends on the picked category, so its hint sits right under the grid.
     categoryBlock: {
-      rowGap: 10,
+      rowGap: scaleSpace(10, layout),
     },
     clearedNote: {
       borderRadius: 14,
-      paddingHorizontal: theme.spacing.md,
-      paddingVertical: 10,
+      paddingHorizontal: scaleSpace(theme.spacing.md, layout),
+      paddingVertical: scaleSpace(10, layout),
       flexDirection: 'row',
       alignItems: 'flex-start',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
       backgroundColor: colors.warnSoft,
     },
     clearedNoteText: {
       flex: 1,
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: 17,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(17, layout),
       color: colors.text,
     },
   });

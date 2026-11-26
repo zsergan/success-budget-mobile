@@ -1,19 +1,21 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     section: {
-      rowGap: theme.spacing.sm - 2,
+      rowGap: scaleSpace(theme.spacing.sm, layout) - 2,
     },
     sectionLabel: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
       letterSpacing: 0.7,
       textTransform: 'uppercase',
-      paddingLeft: theme.spacing.xs,
+      paddingLeft: scaleSpace(theme.spacing.xs, layout),
       color: colors.muted,
     },
     card: {

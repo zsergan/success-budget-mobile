@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { screenPadding, textRole } from '@shared/layout';
+import { scaleSpace, screenPadding, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
@@ -12,8 +12,8 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       width: '100%',
     },
     topBlock: {
-      paddingTop: theme.spacing.lg,
-      rowGap: theme.spacing.md + 2,
+      paddingTop: scaleSpace(theme.spacing.lg, layout),
+      rowGap: scaleSpace(theme.spacing.md, layout) + 2,
     },
     handle: {
       width: 44,
@@ -30,7 +30,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     headerTitle: {
       flex: 1,
-      marginRight: theme.spacing.sm,
+      marginRight: scaleSpace(theme.spacing.sm, layout),
       fontFamily: theme.fonts.semiBold,
       ...textRole('titleSm', layout),
       letterSpacing: theme.letterSpacing.titleSm,
@@ -46,11 +46,11 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     body: {
       flex: 1,
-      marginTop: theme.spacing.md,
+      marginTop: scaleSpace(theme.spacing.md, layout),
     },
     container: {
-      marginHorizontal: theme.spacing.xl,
-      rowGap: theme.spacing.xl,
+      marginHorizontal: scaleSpace(theme.spacing.xl, layout),
+      rowGap: scaleSpace(theme.spacing.xl, layout),
     },
   });
 

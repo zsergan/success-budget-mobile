@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { inset } from '@shared/layout';
+import { inset, scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
 // Below the status bar and above the screen's bottom edge, as in the design's frame; the bottom one clears the
@@ -23,33 +23,33 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     body: {
       flex: 1,
       justifyContent: 'center',
-      rowGap: 18,
+      rowGap: scaleSpace(18, layout),
       // 12pt above the middle of the room between the lockup and the buttons, as the design's bottom padding of 24
       // puts it, while keeping a gap to both when a short screen has no room to spare.
-      paddingTop: theme.spacing.xxl,
-      paddingBottom: theme.spacing.xxl * 2,
+      paddingTop: scaleSpace(theme.spacing.xxl, layout),
+      paddingBottom: scaleSpace(theme.spacing.xxl, layout) * 2,
     },
     headline: {
       fontFamily: theme.fonts.bold,
-      fontSize: 40,
-      lineHeight: 44,
+      fontSize: scaleFont(40, layout),
+      lineHeight: scaleFont(44, layout),
       letterSpacing: -1.5,
       color: colors.text,
     },
     description: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodyLg,
-      lineHeight: 25,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
+      lineHeight: scaleFont(25, layout),
       color: colors.muted,
     },
     points: {
-      rowGap: 11,
-      marginTop: 6,
+      rowGap: scaleSpace(11, layout),
+      marginTop: scaleSpace(6, layout),
     },
     point: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 10,
+      columnGap: scaleSpace(10, layout),
     },
     pointIconBox: {
       width: 26,
@@ -62,18 +62,18 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     pointLabel: {
       flex: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.label,
-      lineHeight: theme.lineHeights.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
+      lineHeight: scaleFont(theme.lineHeights.label, layout),
       color: colors.text,
     },
     footer: {
-      rowGap: 11,
+      rowGap: scaleSpace(11, layout),
     },
     footerNote: {
-      marginTop: theme.spacing.xs,
+      marginTop: scaleSpace(theme.spacing.xs, layout),
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       textAlign: 'center',
       color: colors.muted,
     },

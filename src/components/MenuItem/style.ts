@@ -1,12 +1,14 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors, elevation }: ColorTheme) =>
+const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
-      padding: theme.spacing.md,
+      padding: scaleSpace(theme.spacing.md, layout),
       borderRadius: theme.radius.sm,
       backgroundColor: colors.surface,
       flexDirection: 'row',
@@ -17,12 +19,12 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
     labelContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
     },
     label: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodyLg,
-      lineHeight: theme.lineHeights.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodyLg, layout),
       color: colors.text,
     },
   });

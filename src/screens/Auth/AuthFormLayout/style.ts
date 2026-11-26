@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { capRole, inset } from '@shared/layout';
+import { capRole, inset, scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
 // Above the screen's bottom edge, as in the design's frame; it clears the home indicator's area on its own.
@@ -15,49 +15,49 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     content: {
       flexGrow: 1,
-      paddingTop: 10,
+      paddingTop: scaleSpace(10, layout),
     },
     backRow: {
       flexDirection: 'row',
     },
     header: {
-      marginTop: 26,
-      rowGap: 9,
+      marginTop: scaleSpace(26, layout),
+      rowGap: scaleSpace(9, layout),
     },
     illustration: {
       width: 64,
       height: 64,
       borderRadius: 22,
-      marginBottom: 8,
+      marginBottom: scaleSpace(8, layout),
       alignItems: 'center',
       justifyContent: 'center',
     },
     title: {
       fontFamily: theme.fonts.bold,
-      fontSize: capRole('titleLg', 30, layout),
-      lineHeight: capRole('titleLg', 36, layout),
+      fontSize: capRole('titleLg', scaleFont(30, layout), layout),
+      lineHeight: capRole('titleLg', scaleFont(36, layout), layout),
       letterSpacing: -1.1,
       color: colors.text,
     },
     description: {
       fontFamily: theme.fonts.medium,
-      fontSize: 14.5,
-      lineHeight: 22,
+      fontSize: scaleFont(14.5, layout),
+      lineHeight: scaleFont(22, layout),
       color: colors.muted,
     },
     body: {
-      marginTop: 22,
+      marginTop: scaleSpace(22, layout),
     },
     spacer: {
       flex: 1,
       minHeight: 20,
     },
     footer: {
-      rowGap: 11,
+      rowGap: scaleSpace(11, layout),
     },
     footerPinned: {
-      paddingTop: 12,
-      paddingBottom: 12,
+      paddingTop: scaleSpace(12, layout),
+      paddingBottom: scaleSpace(12, layout),
       paddingHorizontal: inset(26, layout),
       backgroundColor: colors.bg,
     },
@@ -67,13 +67,13 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       flexWrap: 'wrap',
       alignItems: 'center',
       justifyContent: 'center',
-      columnGap: 6,
-      rowGap: theme.spacing.xs,
+      columnGap: scaleSpace(6, layout),
+      rowGap: scaleSpace(theme.spacing.xs, layout),
     },
     promptText: {
       fontFamily: theme.fonts.medium,
-      fontSize: 13.5,
-      lineHeight: 18,
+      fontSize: scaleFont(13.5, layout),
+      lineHeight: scaleFont(18, layout),
       color: colors.muted,
     },
   });

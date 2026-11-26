@@ -1,34 +1,36 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 import { hexToRgba } from '@shared/utils';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     footer: {
-      marginTop: theme.spacing.md,
-      marginHorizontal: theme.spacing.xl,
-      rowGap: theme.spacing.sm,
+      marginTop: scaleSpace(theme.spacing.md, layout),
+      marginHorizontal: scaleSpace(theme.spacing.xl, layout),
+      rowGap: scaleSpace(theme.spacing.sm, layout),
     },
     resetNote: {
       borderRadius: theme.radius.sm,
-      padding: theme.spacing.sm + 2,
+      padding: scaleSpace(theme.spacing.sm, layout) + 2,
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.sm - 1,
+      columnGap: scaleSpace(theme.spacing.sm, layout) - 1,
       backgroundColor: colors.track,
     },
     resetNoteText: {
       flex: 1,
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.muted,
     },
     footerRow: {
       flexDirection: 'row',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
     },
     deleteButton: {
       width: 54,
@@ -46,7 +48,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      columnGap: 9,
+      columnGap: scaleSpace(9, layout),
       backgroundColor: colors.track,
     },
     saveButtonReady: {
@@ -58,7 +60,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     saveButtonText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
       letterSpacing: -0.1,
       color: colors.muted,
     },

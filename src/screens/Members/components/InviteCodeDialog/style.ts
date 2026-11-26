@@ -2,15 +2,15 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { textRole } from '@shared/layout';
+import { scaleSpace, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     codeContainer: {
       alignItems: 'center',
-      paddingVertical: theme.spacing.lg,
-      paddingHorizontal: 14,
+      paddingVertical: scaleSpace(theme.spacing.lg, layout),
+      paddingHorizontal: scaleSpace(14, layout),
       borderRadius: 16,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.line,

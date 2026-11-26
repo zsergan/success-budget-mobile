@@ -1,7 +1,9 @@
 import { Platform, StyleSheet } from 'react-native';
 
 import { LAUNCH_LOCKUP_RAISE, STACKED_LOCKUP_HEIGHT, STACKED_MARK_HEIGHT } from '@components/Brand/launchLayout';
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
 // From the bottom of the screen, as in the design; never less than the home indicator's area.
@@ -18,7 +20,7 @@ const lockupTop = Platform.select({
   default: -LAUNCH_LOCKUP_RAISE - STACKED_LOCKUP_HEIGHT / 2,
 });
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
       flex: 1,
@@ -37,37 +39,37 @@ const createStyles = ({ colors }: ColorTheme) =>
       left: 0,
       right: 0,
       bottom: 0,
-      marginTop: lockupTop + STACKED_LOCKUP_HEIGHT + theme.spacing.xxl,
+      marginTop: lockupTop + STACKED_LOCKUP_HEIGHT + scaleSpace(theme.spacing.xxl, layout),
     },
     belowContent: {
       flexGrow: 1,
       justifyContent: 'flex-end',
-      paddingHorizontal: 44,
+      paddingHorizontal: scaleSpace(44, layout),
     },
     progress: {
       alignItems: 'center',
-      rowGap: theme.spacing.md + 2,
+      rowGap: scaleSpace(theme.spacing.md, layout) + 2,
       // Wider than the design's 40 a side: RN measures the long-wait note a touch wider than the browser does, and the
       // note is designed to fit on one line.
-      marginHorizontal: -theme.spacing.md,
+      marginHorizontal: -scaleSpace(theme.spacing.md, layout),
     },
     status: {
       alignSelf: 'stretch',
       alignItems: 'center',
-      rowGap: 5,
+      rowGap: scaleSpace(5, layout),
     },
     statusText: {
       alignSelf: 'stretch',
       fontFamily: theme.fonts.semiBold,
-      fontSize: 12.5,
+      fontSize: scaleFont(12.5, layout),
       textAlign: 'center',
       color: colors.muted,
     },
     statusSub: {
       alignSelf: 'stretch',
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: 17,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(17, layout),
       textAlign: 'center',
       color: colors.muted,
     },

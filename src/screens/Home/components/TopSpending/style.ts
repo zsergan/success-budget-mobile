@@ -2,28 +2,29 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
 // Shared by Home's two breakdown blocks.
 export const createBreakdownStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     title: {
-      marginTop: 26,
+      marginTop: scaleSpace(26, layout),
     },
     card: {
-      marginTop: theme.spacing.sm,
+      marginTop: scaleSpace(theme.spacing.sm, layout),
       borderRadius: 18,
-      paddingHorizontal: theme.spacing.md + 2,
+      paddingHorizontal: scaleSpace(theme.spacing.md, layout) + 2,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.hairline,
     },
     row: {
       minHeight: 58,
-      paddingVertical: theme.spacing.sm + 2,
+      paddingVertical: scaleSpace(theme.spacing.sm, layout) + 2,
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.md,
+      columnGap: scaleSpace(theme.spacing.md, layout),
     },
     rowSeparated: {
       borderTopWidth: 1,
@@ -35,21 +36,21 @@ export const createBreakdownStyles = ({ colors }: ColorTheme, layout: Layout) =>
     body: {
       flex: 1,
       minWidth: 0,
-      rowGap: 6,
+      rowGap: scaleSpace(6, layout),
     },
     // Under large text the amount took the whole line and cut the name to a letter or two; it goes below instead.
     line: {
       flexDirection: layout.isLargeText ? 'column' : 'row',
       alignItems: layout.isLargeText ? 'flex-start' : 'center',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
       rowGap: 2,
     },
     name: {
       flex: layout.isLargeText ? undefined : 1,
       minWidth: 0,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.label,
-      lineHeight: theme.lineHeights.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
+      lineHeight: scaleFont(theme.lineHeights.label, layout),
       color: colors.text,
     },
     nameMuted: {
@@ -57,8 +58,8 @@ export const createBreakdownStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     amount: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.label,
-      lineHeight: theme.lineHeights.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
+      lineHeight: scaleFont(theme.lineHeights.label, layout),
       color: colors.text,
     },
     track: {
@@ -74,15 +75,15 @@ export const createBreakdownStyles = ({ colors }: ColorTheme, layout: Layout) =>
     sub: {
       marginTop: 2,
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.muted,
     },
     empty: {
-      marginTop: theme.spacing.sm,
+      marginTop: scaleSpace(theme.spacing.sm, layout),
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodySm,
-      lineHeight: theme.lineHeights.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodySm, layout),
       color: colors.muted,
     },
     more: {
@@ -96,19 +97,19 @@ export const createBreakdownStyles = ({ colors }: ColorTheme, layout: Layout) =>
     moreText: {
       paddingRight: 2,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       color: colors.text,
     },
     placeholder: {
       minHeight: 96,
       alignItems: 'center',
       justifyContent: 'center',
-      rowGap: theme.spacing.sm,
+      rowGap: scaleSpace(theme.spacing.sm, layout),
     },
     retry: {
       paddingRight: 2,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       color: colors.text,
       textDecorationLine: 'underline',
     },

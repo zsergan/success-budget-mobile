@@ -1,20 +1,22 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
-      marginTop: theme.spacing.md,
-      rowGap: theme.spacing.lg,
+      marginTop: scaleSpace(theme.spacing.md, layout),
+      rowGap: scaleSpace(theme.spacing.lg, layout),
     },
     block: {
       borderRadius: 6,
       backgroundColor: colors.track,
     },
     group: {
-      rowGap: theme.spacing.md,
+      rowGap: scaleSpace(theme.spacing.md, layout),
     },
     groupHeader: {
       flexDirection: 'row',
@@ -32,7 +34,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     row: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
     },
     iconBox: {
       width: 42,
@@ -41,7 +43,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     textColumn: {
       flex: 1,
-      rowGap: 7,
+      rowGap: scaleSpace(7, layout),
     },
     textLine: {
       height: 11,

@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
 const TOTAL_LINE_HEIGHT = 22;
@@ -12,21 +13,21 @@ const SEARCH_ROW_HEIGHT = 20;
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
-      paddingTop: theme.spacing.xs,
-      rowGap: theme.spacing.sm,
+      paddingTop: scaleSpace(theme.spacing.xs, layout),
+      rowGap: scaleSpace(theme.spacing.sm, layout),
     },
     // Half a row each would break the amounts over several lines under large text; the cards stack instead.
     totalsRow: {
       flexDirection: layout.isLargeText ? 'column' : 'row',
-      columnGap: theme.spacing.sm,
-      rowGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
+      rowGap: scaleSpace(theme.spacing.sm, layout),
     },
     totalCard: {
       flex: layout.isLargeText ? undefined : 1,
       borderRadius: 14,
-      paddingVertical: 11,
-      paddingHorizontal: 13,
-      rowGap: 3,
+      paddingVertical: scaleSpace(11, layout),
+      paddingHorizontal: scaleSpace(13, layout),
+      rowGap: scaleSpace(3, layout),
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.hairline,
@@ -34,16 +35,16 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     totalLabelRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 5,
+      columnGap: scaleSpace(5, layout),
     },
     totalLabel: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
       color: colors.muted,
     },
     totalValue: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: 17,
+      fontSize: scaleFont(17, layout),
       lineHeight: TOTAL_LINE_HEIGHT,
       letterSpacing: -0.4,
       color: colors.text,
@@ -67,12 +68,12 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     searchLabelRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
     },
     searchLabel: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.micro,
-      lineHeight: theme.lineHeights.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
+      lineHeight: scaleFont(theme.lineHeights.micro, layout),
       letterSpacing: 0.8,
       textTransform: 'uppercase',
       color: colors.muted,
@@ -81,8 +82,8 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       // Plus Jakarta SemiBold under-measures a hugging label and clips its last glyph (see cde3346).
       paddingRight: 2,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.micro,
-      lineHeight: theme.lineHeights.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
+      lineHeight: scaleFont(theme.lineHeights.micro, layout),
       color: colors.muted,
     },
   });

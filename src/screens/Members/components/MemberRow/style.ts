@@ -1,15 +1,17 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     row: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.md,
-      padding: theme.spacing.sm + 2,
+      columnGap: scaleSpace(theme.spacing.md, layout),
+      padding: scaleSpace(theme.spacing.sm, layout) + 2,
       borderRadius: 16,
       backgroundColor: colors.surface,
       borderWidth: 1,
@@ -28,7 +30,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     rowInitials: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
       letterSpacing: 0.3,
       color: colors.text,
     },
@@ -38,25 +40,25 @@ const createStyles = ({ colors }: ColorTheme) =>
     rowText: {
       flex: 1,
       minWidth: 0,
-      rowGap: 3,
+      rowGap: scaleSpace(3, layout),
     },
     // With large text the badge drops under the name instead of cutting it short.
     rowNameLine: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       alignItems: 'center',
-      columnGap: theme.spacing.xs + 3,
+      columnGap: scaleSpace(theme.spacing.xs, layout) + 3,
       rowGap: 2,
     },
     rowName: {
       flexShrink: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
       color: colors.text,
     },
     rowTag: {
       minHeight: 19,
-      paddingHorizontal: theme.spacing.xs + 3,
+      paddingHorizontal: scaleSpace(theme.spacing.xs, layout) + 3,
       paddingVertical: 1,
       borderRadius: 6,
       alignItems: 'center',
@@ -68,7 +70,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     rowTagText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: 10,
+      fontSize: scaleFont(10, layout),
       letterSpacing: 0.3,
       color: colors.text,
     },
@@ -95,7 +97,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     rowMeta: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
       color: colors.muted,
     },
     rowRemove: {

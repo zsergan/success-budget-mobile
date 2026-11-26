@@ -1,12 +1,14 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
 const MIN_HEIGHT = 52;
 const OUTLINE_WIDTH = 1;
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     // Grows with its label under large system text instead of clipping it; 52 tall at the default size.
     action: {
@@ -14,9 +16,9 @@ const createStyles = ({ colors }: ColorTheme) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      columnGap: 9,
-      paddingHorizontal: theme.spacing.md,
-      paddingVertical: (MIN_HEIGHT - theme.lineHeights.bodyLg) / 2,
+      columnGap: scaleSpace(9, layout),
+      paddingHorizontal: scaleSpace(theme.spacing.md, layout),
+      paddingVertical: (MIN_HEIGHT - scaleFont(theme.lineHeights.bodyLg, layout)) / 2,
       borderRadius: 16,
     },
     neutral: {
@@ -27,7 +29,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     // The border sits outside the padding, so it keeps the same height as a filled action.
     outline: {
-      paddingVertical: (MIN_HEIGHT - theme.lineHeights.bodyLg) / 2 - OUTLINE_WIDTH,
+      paddingVertical: (MIN_HEIGHT - scaleFont(theme.lineHeights.bodyLg, layout)) / 2 - OUTLINE_WIDTH,
       borderWidth: OUTLINE_WIDTH,
       borderColor: colors.line,
     },
@@ -38,8 +40,8 @@ const createStyles = ({ colors }: ColorTheme) =>
       flexShrink: 1,
       textAlign: 'center',
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.bodyLg,
-      lineHeight: theme.lineHeights.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodyLg, layout),
       // Plus Jakarta Sans under-measures its own width and clips the last glyph (see cde3346).
       paddingRight: 2,
     },

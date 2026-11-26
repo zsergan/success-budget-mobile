@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { screenPadding } from '@shared/layout';
+import { scaleFont, scaleSpace, screenPadding } from '@shared/layout';
 import theme from '@shared/theme';
 
 const CARD_RADIUS = 18;
@@ -16,13 +16,13 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       flex: 1,
     },
     content: {
-      paddingTop: theme.spacing.sm,
+      paddingTop: scaleSpace(theme.spacing.sm, layout),
       paddingHorizontal: screenPadding(layout),
-      paddingBottom: theme.spacing.xxl,
+      paddingBottom: scaleSpace(theme.spacing.xxl, layout),
     },
     cardTop: {
-      paddingTop: theme.spacing.lg,
-      paddingBottom: 14,
+      paddingTop: scaleSpace(theme.spacing.lg, layout),
+      paddingBottom: scaleSpace(14, layout),
       alignItems: 'center',
       borderTopLeftRadius: CARD_RADIUS,
       borderTopRightRadius: CARD_RADIUS,
@@ -32,14 +32,14 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       backgroundColor: colors.surface,
     },
     cardMiddle: {
-      paddingHorizontal: 6,
+      paddingHorizontal: scaleSpace(6, layout),
       borderLeftWidth: 1,
       borderRightWidth: 1,
       borderColor: colors.hairline,
       backgroundColor: colors.surface,
     },
     cardBottom: {
-      paddingBottom: theme.spacing.sm,
+      paddingBottom: scaleSpace(theme.spacing.sm, layout),
       borderBottomWidth: 1,
       borderBottomLeftRadius: CARD_RADIUS,
       borderBottomRightRadius: CARD_RADIUS,
@@ -48,10 +48,10 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       minHeight: BREAKDOWN_PLACEHOLDER_HEIGHT,
     },
     emptyCard: {
-      paddingVertical: theme.spacing.xxl,
+      paddingVertical: scaleSpace(theme.spacing.xxl, layout),
       paddingHorizontal: screenPadding(layout),
       alignItems: 'center',
-      rowGap: 10,
+      rowGap: scaleSpace(10, layout),
       borderRadius: CARD_RADIUS,
       borderWidth: 1,
       borderColor: colors.hairline,
@@ -69,15 +69,15 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       alignSelf: 'stretch',
       textAlign: 'center',
       fontFamily: theme.fonts.semiBold,
-      fontSize: 15,
+      fontSize: scaleFont(15, layout),
       color: colors.text,
     },
     emptyText: {
       alignSelf: 'stretch',
       textAlign: 'center',
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: 17,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(17, layout),
       color: colors.muted,
     },
   });

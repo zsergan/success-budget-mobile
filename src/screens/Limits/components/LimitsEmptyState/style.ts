@@ -1,27 +1,29 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     emptyBlock: {
-      marginTop: theme.spacing.lg,
-      rowGap: theme.spacing.lg,
+      marginTop: scaleSpace(theme.spacing.lg, layout),
+      rowGap: scaleSpace(theme.spacing.lg, layout),
     },
     rules: {
-      rowGap: theme.spacing.sm + 1,
+      rowGap: scaleSpace(theme.spacing.sm, layout) + 1,
     },
     ruleRow: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
     },
     ruleText: {
       flex: 1,
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.muted,
     },
   });

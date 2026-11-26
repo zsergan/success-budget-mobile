@@ -1,48 +1,50 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 import { sectionLabel, sectionNote } from '../sectionStyle';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     section: {
-      rowGap: 10,
+      rowGap: scaleSpace(10, layout),
     },
     labelRow: {
       minHeight: 24,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      columnGap: 10,
+      columnGap: scaleSpace(10, layout),
     },
     label: sectionLabel(colors),
     pill: {
       maxWidth: '72%',
       minHeight: 24,
       borderRadius: 8,
-      paddingHorizontal: 9,
+      paddingHorizontal: scaleSpace(9, layout),
       justifyContent: 'center',
     },
     // Plus Jakarta Sans under-measures its own width and clips the last glyph (see cde3346).
     pillText: {
       paddingRight: 2,
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.muted,
     },
     // The tiles' own bottom margin is the gap between rows; the last row's is taken back.
     grid: {
-      marginHorizontal: -theme.spacing.xs,
-      marginBottom: -theme.spacing.md,
+      marginHorizontal: -scaleSpace(theme.spacing.xs, layout),
+      marginBottom: -scaleSpace(theme.spacing.md, layout),
       flexDirection: 'row',
       flexWrap: 'wrap',
     },
     ghostCell: {
-      marginBottom: theme.spacing.md,
+      marginBottom: scaleSpace(theme.spacing.md, layout),
       alignItems: 'center',
-      rowGap: 7,
+      rowGap: scaleSpace(7, layout),
     },
     ghostBox: {
       width: 54,
@@ -53,16 +55,16 @@ const createStyles = ({ colors }: ColorTheme) =>
     ghostName: {
       width: 44,
       height: 9,
-      marginVertical: 3,
+      marginVertical: scaleSpace(3, layout),
       borderRadius: 5,
       backgroundColor: colors.track,
     },
     empty: {
       borderRadius: 18,
-      paddingVertical: 18,
-      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: scaleSpace(18, layout),
+      paddingHorizontal: scaleSpace(theme.spacing.lg, layout),
       alignItems: 'center',
-      rowGap: theme.spacing.sm,
+      rowGap: scaleSpace(theme.spacing.sm, layout),
       backgroundColor: colors.surface,
       borderWidth: 1.5,
       borderStyle: 'dashed',
@@ -72,38 +74,38 @@ const createStyles = ({ colors }: ColorTheme) =>
       alignSelf: 'stretch',
       textAlign: 'center',
       fontFamily: theme.fonts.bold,
-      fontSize: 15,
-      lineHeight: theme.lineHeights.label,
+      fontSize: scaleFont(15, layout),
+      lineHeight: scaleFont(theme.lineHeights.label, layout),
       color: colors.text,
     },
     emptyText: {
       textAlign: 'center',
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: 17,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(17, layout),
       color: colors.muted,
     },
     createButton: {
-      marginTop: theme.spacing.xs,
+      marginTop: scaleSpace(theme.spacing.xs, layout),
       minHeight: 40,
       borderRadius: 13,
-      paddingHorizontal: theme.spacing.lg,
+      paddingHorizontal: scaleSpace(theme.spacing.lg, layout),
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 7,
+      columnGap: scaleSpace(7, layout),
       backgroundColor: colors.secondary,
     },
     // Plus Jakarta Sans under-measures its own width and clips the last glyph (see cde3346).
     createButtonText: {
       paddingRight: 2,
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
       color: colors.onSecondary,
     },
     noteRow: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
     },
     note: sectionNote(colors),
   });

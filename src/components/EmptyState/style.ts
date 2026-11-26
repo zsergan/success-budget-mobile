@@ -2,17 +2,17 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { screenPadding, textRole } from '@shared/layout';
+import { scaleFont, scaleSpace, screenPadding, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
       borderRadius: theme.radius.lg,
-      paddingVertical: theme.spacing.xxl,
+      paddingVertical: scaleSpace(theme.spacing.xxl, layout),
       paddingHorizontal: screenPadding(layout),
       alignItems: 'center',
-      rowGap: theme.spacing.lg,
+      rowGap: scaleSpace(theme.spacing.lg, layout),
       borderWidth: 1.5,
       borderStyle: 'dashed',
       borderColor: colors.hairline,
@@ -30,7 +30,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       // stretch so title/description's own width: '100%' resolves against a real width, not an ambiguous shrink-wrap parent.
       alignSelf: 'stretch',
       alignItems: 'center',
-      rowGap: theme.spacing.xs + 2,
+      rowGap: scaleSpace(theme.spacing.xs, layout) + 2,
     },
     title: {
       // Plus Jakarta Sans under-measures; see cde3346.
@@ -45,8 +45,8 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       // Without width: '100%' this can silently fail to wrap and overflow the screen instead.
       width: '100%',
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodySm,
-      lineHeight: theme.lineHeights.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodySm, layout),
       color: colors.muted,
       textAlign: 'center',
     },

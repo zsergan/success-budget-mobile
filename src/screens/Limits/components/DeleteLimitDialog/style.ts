@@ -1,8 +1,10 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleSpace } from '@shared/layout';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     // A group's categories, up to four, in one tile.
     tile: {
@@ -15,7 +17,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       justifyContent: 'center',
       columnGap: 1,
       rowGap: 1,
-      padding: 4,
+      padding: scaleSpace(4, layout),
       backgroundColor: colors.track,
     },
   });
