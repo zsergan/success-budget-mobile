@@ -2,13 +2,13 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { textRole } from '@shared/layout';
+import { screenPadding, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     title: {
-      paddingHorizontal: theme.spacing.xl,
+      paddingHorizontal: screenPadding(layout),
       paddingTop: theme.spacing.sm,
       fontFamily: theme.fonts.bold,
       ...textRole('titleSm', layout),
@@ -16,7 +16,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       color: colors.text,
     },
     body: {
-      paddingHorizontal: theme.spacing.xl,
+      paddingHorizontal: screenPadding(layout),
       paddingBottom: theme.spacing.lg,
       rowGap: theme.spacing.md,
     },
@@ -58,7 +58,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     footer: {
       paddingTop: theme.spacing.md,
-      paddingHorizontal: theme.spacing.xl,
+      paddingHorizontal: screenPadding(layout),
       rowGap: theme.spacing.xs,
     },
   });

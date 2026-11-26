@@ -3,8 +3,8 @@ import { StyleSheet } from 'react-native';
 import { FITTED_SHEET_HANDLE_HEIGHT } from '@components/Modals/BottomSheetModal/BottomSheetModal';
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { textRole } from '@shared/layout';
-import theme, { horizontalScreenPadding } from '@shared/theme';
+import { screenPadding, textRole } from '@shared/layout';
+import theme from '@shared/theme';
 
 // The title sits 20 below the 5 pt grabber, which the design draws 8 from the top of the sheet.
 const TITLE_TOP = 8 + 5 + 20;
@@ -23,7 +23,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     bodyContent: {
       rowGap: SLOT_GAP,
       paddingTop: TITLE_TOP - FITTED_SHEET_HANDLE_HEIGHT,
-      paddingHorizontal: horizontalScreenPadding,
+      paddingHorizontal: screenPadding(layout),
     },
     step: {
       fontFamily: theme.fonts.bold,
@@ -79,7 +79,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     footer: {
       rowGap: 10,
       paddingTop: SLOT_GAP,
-      paddingHorizontal: horizontalScreenPadding,
+      paddingHorizontal: screenPadding(layout),
     },
     // Only once the body scrolls, so the pinned actions stay apart from the content passing under them.
     footerDivided: {

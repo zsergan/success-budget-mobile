@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { ScrollView, View, Dimensions } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import type { TinyButtonProps } from '@components/Buttons/TinyButton/TinyButton';
 import TinyButton from '@components/Buttons/TinyButton/TinyButton';
 
-import styles from './style';
+import useLayout from '@hooks/useLayout';
+import useThemedStyles from '@hooks/useThemedStyles';
+
+import createStyles from './style';
 
 export type RadioButtons<T> = Omit<TinyButtonProps, 'onPress'> & {
   value: T;
@@ -26,7 +29,8 @@ const RadioGroup = <T extends number | string>({
   limitRows = true,
   radioGroupContainerStyle,
 }: Props<T>) => {
-  const screenWidth = Dimensions.get('window').width;
+  const styles = useThemedStyles(createStyles);
+  const screenWidth = useLayout().width;
   const [maxWidth, setMaxWidth] = useState<number | undefined>(limitRows ? undefined : screenWidth);
 
   const handleContentSizeChange = (contentWidth: number) => {

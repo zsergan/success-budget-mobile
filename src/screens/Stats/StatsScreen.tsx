@@ -11,7 +11,7 @@ import {
   SpacesSheet,
   useTransactionFlow,
 } from '@components';
-import { usePeriod, useRefreshOnReturn } from '@hooks';
+import { usePeriod, useRefreshOnReturn, useThemedStyles } from '@hooks';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
 import { selectProfileId } from '@redux/state/profile/selectors';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
@@ -33,9 +33,10 @@ import useUpdateFailure from './hooks/useUpdateFailure';
 import type { BreakdownGroup } from './statsItems';
 import { buildStatsItems } from './statsItems';
 import { getStatsViewState } from './statsViewState';
-import styles from './style';
+import createStyles from './style';
 
 const StatsScreen = () => {
+  const styles = useThemedStyles(createStyles);
   const navigation = useNavigation<StatsStackNavigationProp<ScreenNames.STATS_OVERVIEW_SCREEN>>();
   const rangePickerRef = useRef<BottomSheetModal>(null);
   const spacesSheetRef = useRef<BottomSheetModal>(null);

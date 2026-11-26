@@ -2,8 +2,6 @@ import type { ViewStyle } from 'react-native';
 
 import { AppColor } from '@shared/enums';
 
-export const horizontalScreenPadding = 20;
-
 export type ColorSchemeName = 'light' | 'dark';
 
 export interface ThemeColors {
