@@ -1,10 +1,11 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
 import theme from '@shared/theme';
 
 // Shared by Home's two breakdown blocks.
-export const createBreakdownStyles = ({ colors }: ColorTheme) =>
+export const createBreakdownStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     title: {
       marginTop: 26,
@@ -36,13 +37,15 @@ export const createBreakdownStyles = ({ colors }: ColorTheme) =>
       minWidth: 0,
       rowGap: 6,
     },
+    // Under large text the amount took the whole line and cut the name to a letter or two; it goes below instead.
     line: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: layout.isLargeText ? 'column' : 'row',
+      alignItems: layout.isLargeText ? 'flex-start' : 'center',
       columnGap: theme.spacing.sm,
+      rowGap: 2,
     },
     name: {
-      flex: 1,
+      flex: layout.isLargeText ? undefined : 1,
       minWidth: 0,
       fontFamily: theme.fonts.semiBold,
       fontSize: theme.fontSizes.label,
