@@ -7,6 +7,7 @@ import type { ViewSelection } from '@redux/state/transactionFlow/selection';
 import { createOpened } from '@redux/state/transactionFlow/slice';
 import { openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { TransactionType } from '@shared/enums';
+import { deviceToday } from '@shared/utils';
 import useAssignmentDefaults from './hooks/useAssignmentDefaults';
 
 // Starts the one transaction flow of the active space: a new transaction's form opens as a screen and a record's
@@ -31,7 +32,7 @@ const useTransactionFlow = (selection: ViewSelection | null = null) => {
           spaceId,
           transactionType,
           assignment: forNew(spaceId),
-          now: new Date().toISOString(),
+          today: deviceToday(),
           selection: selectionRef.current,
         }),
       );

@@ -5,7 +5,7 @@ import { mapLimitsResponse } from '@api/models';
 import type { SpaceArg } from '@redux/api/baseApi';
 import { baseApi, invalidatesOnSuccess, spaceTags } from '@redux/api/baseApi';
 import { isApiError } from '@shared/utils/error';
-import { getDeviceTimeZone } from '../statistics/selectors';
+import { getDeviceTimeZone } from '@shared/utils/timeZone';
 
 interface LimitArg extends SpaceArg {
   limitId: number;

@@ -21,7 +21,7 @@ import type { TransactionFlow } from '@redux/state/transactionFlow/slice';
 import { draftChanged } from '@redux/state/transactionFlow/slice';
 import { loadLatestRecord } from '@redux/state/transactionFlow/thunks';
 import { TransactionType } from '@shared/enums';
-import { authorLabel } from '@shared/utils';
+import { authorLabel, deviceToday, formatCalendarDate, isWithinDates } from '@shared/utils';
 import DeleteButton from '@components/TransactionFlow/DeleteButton/DeleteButton';
 import { deleteFailureAction, deleteFailureText } from '@components/TransactionFlow/deleteMessage';
 import Banner from '@components/Banner/Banner';
@@ -88,7 +88,7 @@ const TransactionEditor = ({
   const isDeleting = useAppSelector((state) => !!saved && selectIsDeleting(state, saved.id));
   const isIncome = draft.transactionType === TransactionType.INCOME;
   const typeColor = isIncome ? colors.ok : colors.danger;
-  const now = new Date();
+  const today = deviceToday();
 
   const { incomes, expenses } = useMemo(() => getActiveCategories(allCategories), [allCategories]);
   const activeOf = (type: TransactionType) => (type === TransactionType.INCOME ? incomes : expenses);
@@ -127,12 +127,11 @@ const TransactionEditor = ({
       : undefined;
 
   const selfId = profile?.id;
-  // A new record is dated now, also from an earlier month on Home; the form says which month is behind it.
+  // A new record is dated today, also from an earlier month on Home; the form says which month is behind it.
   const viewed = flow.selection;
-  const time = Date.parse(draft.timestamp);
   const dateNote =
-    !isEdit && viewed?.origin === 'home' && (time < Date.parse(viewed.from) || time > Date.parse(viewed.to))
-      ? `You’re viewing ${new Date(viewed.from).toLocaleString('en-US', { month: 'long' })}`
+    !isEdit && viewed?.origin === 'home' && !isWithinDates(draft.date, viewed)
+      ? `You’re viewing ${formatCalendarDate(viewed.fromDate, { month: 'long' })}`
       : undefined;
   const assignmentOptions = buildAssignmentOptions({
     members,
@@ -149,7 +148,7 @@ const TransactionEditor = ({
 
   const errors = getDraftErrors(draft, {
     baseline: isEdit ? (flow.baseline ?? undefined) : undefined,
-    now: now.getTime(),
+    today,
     available: {
       // The user is a member of the space they are in, whatever an older list says.
       memberIds: members && [...(activeMemberIds(members) ?? []), ...(selfId === undefined ? [] : [selfId])],
@@ -185,7 +184,7 @@ const TransactionEditor = ({
     limits,
     original: saved && { ...saved, categoryId: saved.category.id },
     draft,
-    now: now.getTime(),
+    today,
   });
 
   const loadLatest = async () => {
@@ -294,9 +293,9 @@ const TransactionEditor = ({
             />
 
             <DetailsCard
-              timestamp={draft.timestamp}
+              date={draft.date}
               dateNote={dateNote}
-              dateError={errors.timestamp}
+              dateError={errors.date}
               description={draft.description}
               descriptionError={errors.description}
               onOpenDate={onOpenDate}

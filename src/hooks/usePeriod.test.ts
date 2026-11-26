@@ -21,7 +21,7 @@ describe('usePeriod', () => {
   it('opens the month of a past transaction as a Month, and Reset returns to this month', () => {
     const { result } = renderHook(() => usePeriod());
 
-    act(() => result.current.openMonthOf('2026-08-29T10:00:00.000Z'));
+    act(() => result.current.openMonthOf('2026-08-29'));
 
     expect(result.current.period).toEqual({ kind: 'past', unit: 'month', anchor: new Date(2026, 7, 1) });
     expect(result.current.range).toMatchObject({ from: new Date(2026, 7, 1), preset: 'month' });

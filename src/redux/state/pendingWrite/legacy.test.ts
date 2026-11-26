@@ -17,7 +17,7 @@ describe('migrateLegacyWrites', () => {
     const { writes } = migrateLegacyWrites([
       { status: 'unknown', operation: { type: 'create', idempotencyKey: 'key-1', data: body, ...at } },
     ]);
-    const { wallet_id: _walletId, ...rest } = body;
+    const { wallet_id: _walletId, timestamp: _timestamp, ...rest } = body;
 
     expect(writes).toEqual([
       {
@@ -26,7 +26,13 @@ describe('migrateLegacyWrites', () => {
           type: 'create',
           idempotencyKey: 'key-1',
           ...at,
-          data: { ...rest, assignment: { kind: 'space' }, client_operation_id: 'key-1' },
+          data: {
+            ...rest,
+            date: '2026-01-05',
+            time_zone: 'America/Chicago',
+            assignment: { kind: 'space' },
+            client_operation_id: 'key-1',
+          },
           recovered: true,
         },
       },

@@ -26,10 +26,11 @@ import { autoClosed, autoCloseStopped, CREATED_AUTO_CLOSE_MS } from '@redux/stat
 import type { TransactionWriteResult } from '@api/models';
 import { TransactionType } from '@shared/enums';
 import theme from '@shared/theme';
-import { assignmentLabel, formatAmount, formatDateLong, formatDayMonth, hexToRgba } from '@shared/utils';
+import type { CalendarDate } from '@shared/utils';
+import { assignmentLabel, calendarYear, deviceToday, formatAmount, formatCalendarDate, hexToRgba } from '@shared/utils';
 import { deleteFailureAction, deleteFailureText } from '../deleteMessage';
 import Banner from '@components/Banner/Banner';
-import { formatDateTime } from '../format';
+import { formatTransactionDate } from '../format';
 
 import createStyles from './style';
 
@@ -45,10 +46,12 @@ interface Props {
   onDone: () => void;
 }
 
-const savedToLabel = (timestamp: string) =>
-  new Date(timestamp).getFullYear() === new Date().getFullYear()
-    ? formatDayMonth(timestamp)
-    : formatDateLong(timestamp);
+const savedToLabel = (date: CalendarDate) =>
+  formatCalendarDate(date, {
+    day: 'numeric',
+    month: 'short',
+    ...(calendarYear(date) !== calendarYear(deviceToday()) && { year: 'numeric' }),
+  });
 
 // Shown only after the API confirmed the create. It closes by itself after a while unless touched.
 const CreatedConfirmation = ({ flow, onUndo, onView, onAddAnother, onDone }: Props) => {
@@ -162,7 +165,7 @@ const CreatedConfirmation = ({ flow, onUndo, onView, onAddAnother, onDone }: Pro
 
           <View style={[styles.fact, styles.factSeparated]}>
             <Text style={styles.factLabel}>Date</Text>
-            <Text style={styles.factValue}>{formatDateTime(transaction.timestamp)}</Text>
+            <Text style={styles.factValue}>{formatTransactionDate(transaction.date)}</Text>
           </View>
         </View>
 
@@ -176,7 +179,7 @@ const CreatedConfirmation = ({ flow, onUndo, onView, onAddAnother, onDone }: Pro
             />
             <Text style={styles.hiddenText}>
               {place === 'otherPeriod'
-                ? `Saved to ${savedToLabel(transaction.timestamp)} — outside the period you’re viewing.`
+                ? `Saved to ${savedToLabel(transaction.date)} — outside the period you’re viewing.`
                 : 'Saved outside the filter you’re viewing, so the list doesn’t show it.'}
             </Text>
           </View>

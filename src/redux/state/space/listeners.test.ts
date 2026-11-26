@@ -182,7 +182,7 @@ describe('a read or a write refused for a space', () => {
   it('ends the space when a page of its history is refused with FORBIDDEN_SPACE, and drops the pages', async () => {
     const store = await setUp();
     const feedArg = {
-      selection: feedSelection({ spaceId: 1, from: '2026-01-01T00:00:00.000Z', to: '2026-01-31T23:59:59.999Z' }),
+      selection: feedSelection({ spaceId: 1, fromDate: '2026-01-01', toDate: '2026-01-31' }),
       generation: 'g1',
     };
 

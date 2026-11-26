@@ -7,7 +7,7 @@ import { useAppSelector } from '@redux/hooks';
 import { selectProfileId } from '@redux/state/profile/selectors';
 import { TransactionType } from '@shared/enums';
 import type { HistoryFilter, IconType } from '@shared/types';
-import { assignmentKeyColor, assignmentKeyIcon, formatMoneyAmount, formatRangeLabel } from '@shared/utils';
+import { assignmentKeyColor, assignmentKeyIcon, formatMoneyAmount, formatDatesLabel } from '@shared/utils';
 
 import createStyles from './style';
 
@@ -25,7 +25,7 @@ const AppliedFilter = ({ filter, total, currencyCode }: Props) => {
   const selfId = useAppSelector(selectProfileId);
   const styles = useThemedStyles(createStyles);
   const isExpense = filter.transactionType === TransactionType.EXPENSE;
-  const range = formatRangeLabel({ from: new Date(filter.from), to: new Date(filter.to) }, filter.timeZone);
+  const range = formatDatesLabel(filter);
 
   const tag = (icon: IconType, color: string, label: string, strokeWidth: number) => (
     <View style={styles.tag}>

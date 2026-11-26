@@ -83,15 +83,14 @@ interface RequestConfig {
 }
 
 const FEED = '/spaces/1/transactions/feed';
-const ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const navigationRef = createNavigationContainerRef<MainTabParamList>();
 
-const august = new Date(2026, 7, 12, 9).toISOString();
+const august = '2026-08-12';
 const taxi = transactionDto({
   id: 'tx-aug',
-  timestamp: august,
+  date: august,
   category: { ...transactionDto().category, name: 'Taxi' },
 });
 
@@ -138,7 +137,7 @@ beforeEach(() => {
   mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
     if (url !== FEED) return Promise.resolve({ data: null });
 
-    return Promise.resolve({ data: feedDto(params?.from === new Date(2026, 7, 1).toISOString() ? [taxi] : []) });
+    return Promise.resolve({ data: feedDto(params?.from_date === '2026-08-01' ? [taxi] : []) });
   });
 });
 
@@ -172,7 +171,7 @@ describe('TransactionsScreen', () => {
       await settle();
 
       expect(listRequests().at(-1)?.params).toMatchObject({
-        from: new Date(2026, 7, 1).toISOString(),
+        from_date: '2026-08-01',
         transaction_type: 'expense',
         kind: 'regular',
         assignment: 'member:31',
@@ -328,7 +327,7 @@ describe('TransactionsScreen', () => {
     });
 
     it('opens a record shown from elsewhere around it, unfiltered, even when the filtered list had it', async () => {
-      const newer = transactionDto({ id: 'tx-newer', timestamp: new Date(2026, 7, 30, 9).toISOString() });
+      const newer = transactionDto({ id: 'tx-newer', date: '2026-08-30' });
       mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
         if (url.endsWith('/assignees')) return Promise.resolve({ data: assignees });
         if (url !== FEED) return Promise.resolve({ data: null });
@@ -343,15 +342,14 @@ describe('TransactionsScreen', () => {
       const { landings, restore } = spyLandings();
       act(() =>
         navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB, {
-          reveal: { spaceId: 1, transactionId: 'tx-aug', timestamp: august },
+          reveal: { spaceId: 1, transactionId: 'tx-aug', date: august },
         }),
       );
       await settle();
 
       expect(listRequests().at(-1)?.params).toEqual({
-        from: new Date(2026, 7, 1).toISOString(),
-        to: new Date(2026, 7, 31, 23, 59, 59, 999).toISOString(),
-        time_zone: ZONE,
+        from_date: '2026-08-01',
+        to_date: '2026-08-31',
         around_id: 'tx-aug',
       });
       expect(screen.queryByLabelText('Remove the Lena filter')).toBeNull();
@@ -378,14 +376,13 @@ describe('TransactionsScreen', () => {
 
   it("opens a revealed record's month around it and takes the request off the route", async () => {
     renderTransactions({
-      reveal: { spaceId: 1, transactionId: 'tx-aug', timestamp: august },
+      reveal: { spaceId: 1, transactionId: 'tx-aug', date: august },
     });
     await settle();
 
     expect(listRequests().at(-1)?.params).toEqual({
-      from: new Date(2026, 7, 1).toISOString(),
-      to: new Date(2026, 7, 31, 23, 59, 59, 999).toISOString(),
-      time_zone: ZONE,
+      from_date: '2026-08-01',
+      to_date: '2026-08-31',
       around_id: 'tx-aug',
     });
     expect(screen.getByText('Taxi')).toBeTruthy();
@@ -394,7 +391,7 @@ describe('TransactionsScreen', () => {
 
   it('lands on a revealed row once it is measured, and fades it only after it has been on screen', async () => {
     const { landings, restore } = spyLandings();
-    renderTransactions({ reveal: { spaceId: 1, transactionId: 'tx-aug', timestamp: august } });
+    renderTransactions({ reveal: { spaceId: 1, transactionId: 'tx-aug', date: august } });
     await settle();
 
     const list = screen.UNSAFE_getByType(SectionList);
@@ -427,15 +424,15 @@ describe('TransactionsScreen', () => {
   });
 
   it('ignores a reveal meant for another space', async () => {
-    renderTransactions({ reveal: { spaceId: 2, transactionId: 'tx-aug', timestamp: august } });
+    renderTransactions({ reveal: { spaceId: 2, transactionId: 'tx-aug', date: august } });
     await settle();
 
-    expect(listRequests().every(({ params }) => params?.from === new Date(2026, 8, 1).toISOString())).toBe(true);
+    expect(listRequests().every(({ params }) => params?.from_date === '2026-09-01')).toBe(true);
   });
 
   it('drops a day once its last row is deleted, then picks the empty state for the whole history', async () => {
-    const today = transactionDto({ id: 'tx-today', timestamp: new Date(2026, 8, 28, 9).toISOString() });
-    const earlier = transactionDto({ id: 'tx-earlier', timestamp: new Date(2026, 8, 20, 9).toISOString() });
+    const today = transactionDto({ id: 'tx-today', date: '2026-09-28' });
+    const earlier = transactionDto({ id: 'tx-earlier', date: '2026-09-20' });
     let rows = [today, earlier];
     mockedRequest.mockImplementation(({ url }: RequestConfig & { method?: string }) => {
       if (url === FEED) return Promise.resolve({ data: feedDto(rows) });
@@ -511,7 +508,7 @@ describe('TransactionsScreen', () => {
 
   it('shows each day with the server total and loads older rows at the end of the list', async () => {
     const september = (id: string, day: number) =>
-      transactionDto({ id, timestamp: new Date(2026, 8, day, 9).toISOString(), description: id });
+      transactionDto({ id, date: `2026-09-${String(day).padStart(2, '0')}`, description: id });
     let failNext = true;
     mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
       if (url !== FEED) return Promise.resolve({ data: null });
@@ -555,7 +552,7 @@ describe('TransactionsScreen', () => {
   });
 
   it('opens the month at the revealed row and reads newer rows above it on the way up', async () => {
-    const newer = transactionDto({ id: 'tx-newer', timestamp: new Date(2026, 7, 20).toISOString() });
+    const newer = transactionDto({ id: 'tx-newer', date: '2026-08-20' });
     mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
       if (url !== FEED) return Promise.resolve({ data: null });
 
@@ -566,7 +563,7 @@ describe('TransactionsScreen', () => {
       });
     });
 
-    renderTransactions({ reveal: { spaceId: 1, transactionId: 'tx-aug', timestamp: august } });
+    renderTransactions({ reveal: { spaceId: 1, transactionId: 'tx-aug', date: august } });
     await settle();
 
     expect(listRequests().map(({ params }) => params?.around_id)).toEqual(['tx-aug']);
@@ -587,7 +584,7 @@ describe('TransactionsScreen', () => {
 
   it('keeps ten pages while scrolling on, and reads the dropped newer ones again on the way back', async () => {
     const pageRow = (n: number) =>
-      transactionDto({ id: `p${n}`, timestamp: new Date(2026, 8, 25 - n, 9).toISOString(), description: `row ${n}` });
+      transactionDto({ id: `p${n}`, date: `2026-09-${String(25 - n).padStart(2, '0')}`, description: `row ${n}` });
     mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
       if (url !== FEED) return Promise.resolve({ data: null });
       const n = params?.cursor ? Number(String(params.cursor).slice(1)) : 0;
@@ -630,12 +627,10 @@ describe('TransactionsScreen', () => {
 
   describe('a record shown from elsewhere, and the list after a change', () => {
     const september = (id: string, day: number) =>
-      transactionDto({ id, timestamp: new Date(2026, 8, day, 9).toISOString(), description: id });
+      transactionDto({ id, date: `2026-09-${String(day).padStart(2, '0')}`, description: id });
     const rows = [september('s1', 27), september('s2', 26), september('s3', 25)];
-    const reveal = (transactionId: string, timestamp: string) =>
-      act(() =>
-        navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB, { reveal: { spaceId: 1, transactionId, timestamp } }),
-      );
+    const reveal = (transactionId: string, date: string) =>
+      act(() => navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB, { reveal: { spaceId: 1, transactionId, date } }));
 
     it('scrolls to a record already listed without asking for it again', async () => {
       const { landings, restore } = spyLandings();
@@ -646,7 +641,7 @@ describe('TransactionsScreen', () => {
       await settle();
       const before = listRequests().length;
 
-      reveal('s2', rows[1].timestamp);
+      reveal('s2', rows[1].date);
       await settle();
 
       expect(listRequests()).toHaveLength(before);
@@ -664,10 +659,10 @@ describe('TransactionsScreen', () => {
               data: { statusCode: 404, code: 'TRANSACTION_NOT_FOUND', message: 'Transaction not found' },
             },
           });
-        return Promise.resolve({ data: feedDto(params?.from === new Date(2026, 7, 1).toISOString() ? [taxi] : []) });
+        return Promise.resolve({ data: feedDto(params?.from_date === '2026-08-01' ? [taxi] : []) });
       });
 
-      renderTransactions({ reveal: { spaceId: 1, transactionId: 'tx-gone', timestamp: august } });
+      renderTransactions({ reveal: { spaceId: 1, transactionId: 'tx-gone', date: august } });
       await settle();
       await settle();
 
@@ -739,7 +734,7 @@ describe('TransactionsScreen', () => {
   describe('search', () => {
     const coffee = transactionDto({
       id: 'tx-coffee',
-      timestamp: new Date(2026, 8, 20, 9).toISOString(),
+      date: '2026-09-20',
       description: 'Coffee',
     });
 
@@ -774,7 +769,7 @@ describe('TransactionsScreen', () => {
       await settle();
       expect(listRequests().at(-1)?.params).toMatchObject({
         q: 'coffee',
-        from: new Date(2026, 8, 1).toISOString(),
+        from_date: '2026-09-01',
       });
       expect(screen.queryByText('Taxi')).toBeNull();
       expect(screen.getByText('Coffee')).toBeTruthy();
@@ -793,13 +788,13 @@ describe('TransactionsScreen', () => {
 
       act(() => {
         navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB, {
-          focus: { spaceId: 1, month: new Date(2026, 8, 1).toISOString() },
+          focus: { spaceId: 1, month: '2026-09-01' },
         });
       });
       await settle();
 
       const params = listRequests().at(-1)?.params;
-      expect(params).toMatchObject({ from: new Date(2026, 8, 1).toISOString() });
+      expect(params).toMatchObject({ from_date: '2026-09-01' });
       expect(params).not.toHaveProperty('q');
       expect(params).not.toHaveProperty('transaction_type');
       expect(params).not.toHaveProperty('assignment');
@@ -862,7 +857,7 @@ describe('TransactionsScreen', () => {
       await settle();
 
       expect(listRequests().at(-1)?.params).not.toHaveProperty('q');
-      expect(listRequests().at(-1)?.params).toMatchObject({ from: new Date(2026, 8, 1).toISOString() });
+      expect(listRequests().at(-1)?.params).toMatchObject({ from_date: '2026-09-01' });
       expect(screen.getByText('Taxi')).toBeTruthy();
       expect(screen.UNSAFE_queryByType(Fab)).toBeTruthy();
     });
@@ -1096,7 +1091,7 @@ describe('TransactionsScreen', () => {
       fireEvent.press(screen.getByText('Year'));
       await settle();
 
-      expect(listRequests().at(-1)?.params).toMatchObject({ q: 'coffee', from: new Date(2026, 0, 1).toISOString() });
+      expect(listRequests().at(-1)?.params).toMatchObject({ q: 'coffee', from_date: '2026-01-01' });
       expect(screen.getByPlaceholderText('Search description or category').props.value).toBe('coffee');
     });
 
@@ -1125,8 +1120,7 @@ describe('TransactionsScreen', () => {
     });
 
     it('lands on the very row, never the one above it, on Cancel and when a record is shown', async () => {
-      const sameDay = (id: string, hour: number) =>
-        transactionDto({ id, timestamp: new Date(2026, 8, 20, hour).toISOString(), description: id });
+      const sameDay = (id: string, _order: number) => transactionDto({ id, date: '2026-09-20', description: id });
       const [latte, tea] = [sameDay('tx-latte', 8), sameDay('tx-tea', 7)];
       mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
         if (url !== FEED) return Promise.resolve({ data: null });
@@ -1153,7 +1147,7 @@ describe('TransactionsScreen', () => {
 
       act(() =>
         navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB, {
-          reveal: { spaceId: 1, transactionId: 'tx-tea', timestamp: tea.timestamp },
+          reveal: { spaceId: 1, transactionId: 'tx-tea', date: tea.date },
         }),
       );
       await settle();
@@ -1181,7 +1175,7 @@ describe('TransactionsScreen', () => {
 
       act(() =>
         navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB, {
-          reveal: { spaceId: 1, transactionId: 'tx-coffee', timestamp: coffee.timestamp },
+          reveal: { spaceId: 1, transactionId: 'tx-coffee', date: coffee.date },
         }),
       );
       await settle();
@@ -1251,7 +1245,7 @@ describe('TransactionsScreen', () => {
       await settle();
 
       expect(listRequests().at(-1)?.params).not.toHaveProperty('around_id');
-      expect(listRequests().at(-1)?.params).toMatchObject({ from: new Date(2026, 0, 1).toISOString() });
+      expect(listRequests().at(-1)?.params).toMatchObject({ from_date: '2026-01-01' });
     });
 
     it('closes search when another space is selected', async () => {
@@ -1282,7 +1276,7 @@ describe('TransactionsScreen', () => {
 
       act(() =>
         navigationRef.navigate(ScreenNames.TRANSACTIONS_TAB, {
-          reveal: { spaceId: 1, transactionId: 'tx-aug', timestamp: august },
+          reveal: { spaceId: 1, transactionId: 'tx-aug', date: august },
         }),
       );
       await settle();
@@ -1295,7 +1289,7 @@ describe('TransactionsScreen', () => {
 
   it('keeps the server totals while older pages load, never adding up the rows', async () => {
     const day = (id: string, date: number) =>
-      transactionDto({ id, amount: '1.00', timestamp: new Date(2026, 8, date, 9).toISOString(), description: id });
+      transactionDto({ id, amount: '1.00', date: `2026-09-${String(date).padStart(2, '0')}`, description: id });
     const summary = { count: 900, income: '98765432109876543.21', expense: '50000.00' };
     mockedRequest.mockImplementation(({ url, params }: RequestConfig) => {
       if (url !== FEED) return Promise.resolve({ data: null });
@@ -1319,7 +1313,7 @@ describe('TransactionsScreen', () => {
 
   it('keeps the window around the rows on screen after an edit deep in the history', async () => {
     const deep = (n: number) =>
-      transactionDto({ id: `d${n}`, timestamp: new Date(2026, 8, 28 - n, 9).toISOString(), description: `d${n}` });
+      transactionDto({ id: `d${n}`, date: `2026-09-${String(28 - n).padStart(2, '0')}`, description: `d${n}` });
     mockedRequest.mockImplementation(({ url, params, method }: RequestConfig & { method?: string }) => {
       if (method === 'PATCH') return Promise.resolve({ data: { transaction: deep(5) } });
       if (url !== FEED) return Promise.resolve({ data: null });

@@ -148,6 +148,12 @@ export const toPickerDate = (date: CalendarDate): Date => {
   return local;
 };
 
+// A picked range (the period picker's local days) as the dates it covers, both ends included.
+export const pickerRangeDates = ({ from, to }: { from: Date; to: Date }): CalendarDateRange => ({
+  fromDate: fromPickerDate(from),
+  toDate: fromPickerDate(to),
+});
+
 export type CalendarDateFormat = Pick<Intl.DateTimeFormatOptions, 'weekday' | 'day' | 'month' | 'year'>;
 
 // Formatted from its own fields at UTC midnight in UTC, so no zone of the device can move it to another day.

@@ -6,12 +6,13 @@ import { useRevealWhileFocused } from '@components/RootLayout/FieldReveal';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { DESCRIPTION_MAX_LENGTH, descriptionLength } from '@redux/state/transactionFlow/draft';
-import { formatDateTime } from '@components/TransactionFlow/format';
+import { formatTransactionDate } from '@components/TransactionFlow/format';
+import type { CalendarDate } from '@shared/utils';
 
 import createStyles from './style';
 
 interface Props {
-  timestamp: string;
+  date: CalendarDate;
   // Why the date is not in the month the screen behind shows.
   dateNote?: string;
   dateError?: string;
@@ -21,9 +22,9 @@ interface Props {
   onChangeDescription: (description: string) => void;
 }
 
-// The two fields that usually keep their defaults: when it happened, and an optional note.
+// The two fields that usually keep their defaults: the day it happened, and an optional note.
 const DetailsCard = ({
-  timestamp,
+  date,
   dateNote,
   dateError,
   description,
@@ -45,14 +46,20 @@ const DetailsCard = ({
       <Text style={styles.label}>Details</Text>
 
       <View style={[styles.card, (dateError || descriptionError) && styles.cardError]}>
-        <TouchableOpacity style={styles.dateRow} onPress={onOpenDate} activeOpacity={0.6} accessibilityRole="button">
+        <TouchableOpacity
+          style={styles.dateRow}
+          onPress={onOpenDate}
+          activeOpacity={0.6}
+          accessibilityRole="button"
+          accessibilityLabel={`Date, ${formatTransactionDate(date)}`}
+        >
           <Icon name="calendar" size={17} color={colors.muted} strokeWidth={1.8} />
           <View style={styles.dateLabel}>
             <Text style={styles.rowLabel}>Date</Text>
             {dateNote && <Text style={styles.dateNote}>{dateNote}</Text>}
           </View>
           <Text style={styles.dateValue} numberOfLines={1}>
-            {formatDateTime(timestamp)}
+            {formatTransactionDate(date)}
           </Text>
           <Icon name="chevron-right" size={14} color={colors.muted} strokeWidth={2} />
         </TouchableOpacity>

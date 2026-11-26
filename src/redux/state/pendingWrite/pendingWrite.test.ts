@@ -35,7 +35,8 @@ const lunch: CreateTransactionRequest = {
   category_id: 1,
   transaction_type: TransactionType.EXPENSE,
   amount: '10.00',
-  timestamp: '2026-01-05T10:00:00.000Z',
+  date: '2026-01-05',
+  time_zone: 'America/Chicago',
   description: 'Lunch',
 };
 const sentLunch = { ...lunch, client_operation_id: 'key-1' };
@@ -50,7 +51,7 @@ const operation = (status: 'applied' | 'deleted') =>
     operation_id: 'key-1',
     status,
     transaction_id: 'tx-1',
-    created_at: lunch.timestamp,
+    created_at: '2026-01-05T10:00:00.000Z',
     deleted_at: null,
     transaction: status === 'applied' ? transactionDto({ version: 2 }) : null,
   });
@@ -525,7 +526,16 @@ describe('a record with an unsettled edit or delete', () => {
 
 describe('writes an older build left', () => {
   const legacyKey = (userId = 1) => `pendingTransactionWrites.v1.${userId}`;
-  const legacyLunch = { ...sentLunch, assignment: undefined, wallet_id: 3 };
+  // What a build before v2 stored: a v1 body naming its wallet, dated by an instant.
+  const legacyLunch = {
+    category_id: 1,
+    transaction_type: TransactionType.EXPENSE,
+    amount: '10.00',
+    timestamp: '2026-01-05T10:00:00.000Z',
+    description: 'Lunch',
+    client_operation_id: 'key-1',
+    wallet_id: 3,
+  };
   const convertedLunch = { ...sentLunch, assignment: { kind: 'space' } };
   const leaveLegacy = (operations: object[], userId = 1) =>
     AsyncStorage.setItem(

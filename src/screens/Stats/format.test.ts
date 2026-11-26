@@ -86,17 +86,14 @@ describe('formatChange', () => {
 });
 
 describe('formatComparisonLabel', () => {
-  const zone = 'Europe/Moscow';
-
-  it('names the days of a like-for-like cut in the period zone', () => {
+  it('names the days of a like-for-like cut', () => {
     expect(
       formatComparisonLabel(
-        { type: 'month', start_date: '2026-09-01', time_zone: zone },
+        { type: 'month', start_date: '2026-09-01' },
         {
           start_date: '2026-08-01',
           end_date: '2026-08-31',
-          to: '2026-08-31T20:59:59.999Z',
-          actual_to: '2026-08-28T12:00:00.000Z',
+          actual_end_date: '2026-08-28',
         },
       ),
     ).toBe('vs 1–28 Aug');
@@ -105,20 +102,20 @@ describe('formatComparisonLabel', () => {
   it('names a whole previous month or year', () => {
     expect(
       formatComparisonLabel(
-        { type: 'month', start_date: '2026-08-01', time_zone: zone },
-        { start_date: '2026-07-01', end_date: '2026-07-31', to: 'x', actual_to: 'x' },
+        { type: 'month', start_date: '2026-08-01' },
+        { start_date: '2026-07-01', end_date: '2026-07-31', actual_end_date: '2026-07-31' },
       ),
     ).toBe('vs July');
     expect(
       formatComparisonLabel(
-        { type: 'month', start_date: '2026-01-01', time_zone: zone },
-        { start_date: '2025-12-01', end_date: '2025-12-31', to: 'x', actual_to: 'x' },
+        { type: 'month', start_date: '2026-01-01' },
+        { start_date: '2025-12-01', end_date: '2025-12-31', actual_end_date: '2025-12-31' },
       ),
     ).toBe('vs December 2025');
     expect(
       formatComparisonLabel(
-        { type: 'year', start_date: '2025-01-01', time_zone: zone },
-        { start_date: '2024-01-01', end_date: '2024-12-31', to: 'x', actual_to: 'x' },
+        { type: 'year', start_date: '2025-01-01' },
+        { start_date: '2024-01-01', end_date: '2024-12-31', actual_end_date: '2024-12-31' },
       ),
     ).toBe('vs 2024');
   });
@@ -126,18 +123,17 @@ describe('formatComparisonLabel', () => {
   it('names a whole week by its days and a cut year with its year', () => {
     expect(
       formatComparisonLabel(
-        { type: 'week', start_date: '2026-09-07', time_zone: zone },
-        { start_date: '2026-08-31', end_date: '2026-09-06', to: 'x', actual_to: 'x' },
+        { type: 'week', start_date: '2026-09-07' },
+        { start_date: '2026-08-31', end_date: '2026-09-06', actual_end_date: '2026-09-06' },
       ),
     ).toBe('vs 31 Aug – 6 Sep');
     expect(
       formatComparisonLabel(
-        { type: 'year', start_date: '2026-01-01', time_zone: zone },
+        { type: 'year', start_date: '2026-01-01' },
         {
           start_date: '2025-01-01',
           end_date: '2025-12-31',
-          to: '2025-12-31T20:59:59.999Z',
-          actual_to: '2025-09-28T12:00:00.000Z',
+          actual_end_date: '2025-09-28',
         },
       ),
     ).toBe('vs 1 Jan – 28 Sep 2025');

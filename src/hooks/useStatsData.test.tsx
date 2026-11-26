@@ -499,7 +499,8 @@ describe('switching the breakdown type', () => {
             category_id: 1,
             transaction_type: TransactionType.INCOME,
             amount: '30.00',
-            timestamp: SERVER_NOW,
+            date: SERVER_NOW.slice(0, 10),
+            time_zone: 'UTC',
           },
         }),
       );
@@ -615,7 +616,8 @@ const createTransaction = (store: ReturnType<typeof createAppStore>) =>
           category_id: 1,
           transaction_type: TransactionType.EXPENSE,
           amount: '15.00',
-          timestamp: SERVER_NOW,
+          date: SERVER_NOW.slice(0, 10),
+          time_zone: 'UTC',
         },
       }),
     );
@@ -746,7 +748,8 @@ describe('after a mutation', () => {
             category_id: 1,
             transaction_type: TransactionType.EXPENSE,
             amount: '15.00',
-            timestamp: SERVER_NOW,
+            date: SERVER_NOW.slice(0, 10),
+            time_zone: 'UTC',
           },
         }),
       );
@@ -776,7 +779,8 @@ describe('after a mutation', () => {
             category_id: 1,
             transaction_type: TransactionType.EXPENSE,
             amount: '15.00',
-            timestamp: SERVER_NOW,
+            date: SERVER_NOW.slice(0, 10),
+            time_zone: 'UTC',
           },
         }),
       );

@@ -6,7 +6,7 @@ import type { Edge } from 'react-native-safe-area-context';
 import ConfirmationSheet from '@components/ConfirmationSheet/ConfirmationSheet';
 import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
 import ScreenFrame from '@components/ScreenFrame/ScreenFrame';
-import DateTimePanel from '@screens/TransactionEditor/components/DateTimePanel/DateTimePanel';
+import DatePanel from '@screens/TransactionEditor/components/DatePanel/DatePanel';
 import useFlowClose from '@components/TransactionFlow/hooks/useFlowClose';
 import useFlowConfirmation from '@components/TransactionFlow/hooks/useFlowConfirmation';
 import useFlowSave from './hooks/useFlowSave';
@@ -14,7 +14,7 @@ import TransactionEditor from '@screens/TransactionEditor/components/Transaction
 import useTransactionDelete from '@components/TransactionFlow/useTransactionDelete';
 import { useSheetPresence } from '@hooks';
 import { useAppDispatch } from '@redux/hooks';
-import { dateTimeOpened, panelClosed } from '@redux/state/transactionFlow/slice';
+import { dateOpened, panelClosed, todayChanged } from '@redux/state/transactionFlow/slice';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
 import CategoryCreationSheet from './components/CategoryCreation/CategoryCreationSheet';
@@ -22,6 +22,7 @@ import useCategoryCreation from './components/CategoryCreation/useCategoryCreati
 import removeRoute from './hooks/removeRoute';
 import useEditorFlow from './hooks/useEditorFlow';
 import usePickerDelay from './hooks/usePickerDelay';
+import useToday from './hooks/useToday';
 
 import styles from './style';
 
@@ -47,7 +48,7 @@ const TransactionEditorScreen = ({ navigation, route }: Props) => {
   const shown = flow ?? lastFlow;
 
   // The date picker is a sheet over the form; what it showed stays in it while it closes.
-  const picking = flow?.view.name === 'dateTime' ? flow.view.pending : null;
+  const picking = flow?.view.name === 'date' ? flow.view.pending : null;
   const [lastPicking, setLastPicking] = useState(picking);
   if (picking !== null && picking !== lastPicking) setLastPicking(picking);
   const { ref: dateSheetRef, settleDismiss: settleDateDismiss } = useSheetPresence(picking !== null);
@@ -55,7 +56,7 @@ const TransactionEditorScreen = ({ navigation, route }: Props) => {
   // The form acts on a tap only while nothing covers it and no write runs.
   const getIdleFlow = useCallback(() => {
     const current = getOwnFlow();
-    const isIdle = current && !current.isSaving && current.view.name !== 'dateTime';
+    const isIdle = current && !current.isSaving && current.view.name !== 'date';
 
     return isIdle && navigation.isFocused() ? current : null;
   }, [getOwnFlow, navigation]);
@@ -70,6 +71,12 @@ const TransactionEditorScreen = ({ navigation, route }: Props) => {
     if (category.isOpen()) category.close();
     else back();
   });
+
+  // A new transaction dated today by default stays on today past midnight and after a return to the app.
+  const today = useToday();
+  useEffect(() => {
+    dispatch(todayChanged({ today }));
+  }, [dispatch, today]);
 
   // After the guard above has let go: a flow that ended or left the form takes this route with it, also when that
   // was not the user's doing (a space switch, lost access). Whatever else is on the stack stays, in focus if it was.
@@ -92,13 +99,13 @@ const TransactionEditorScreen = ({ navigation, route }: Props) => {
     if (draftId === undefined) return;
 
     delay.run(() => {
-      if (getFreeFlow()?.draftId === draftId) dispatch(dateTimeOpened());
+      if (getFreeFlow()?.draftId === draftId) dispatch(dateOpened());
     });
   };
 
   // A swipe or the backdrop is a Cancel: the draft keeps its date.
   const handleDateDismiss = () => {
-    if (settleDateDismiss() && getOwnFlow()?.view.name === 'dateTime') dispatch(panelClosed());
+    if (settleDateDismiss() && getOwnFlow()?.view.name === 'date') dispatch(panelClosed());
   };
 
   return (
@@ -120,11 +127,7 @@ const TransactionEditorScreen = ({ navigation, route }: Props) => {
 
       <BottomModal ref={dateSheetRef} fitContent onDismiss={handleDateDismiss}>
         {lastPicking !== null && (
-          <DateTimePanel
-            pending={picking ?? lastPicking}
-            original={shown?.baseline?.timestamp ?? lastPicking}
-            onCancel={() => dispatch(panelClosed())}
-          />
+          <DatePanel pending={picking ?? lastPicking} onCancel={() => dispatch(panelClosed())} />
         )}
       </BottomModal>
 

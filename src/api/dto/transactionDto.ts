@@ -1,4 +1,5 @@
 import type { AppColor, TransactionKind, TransactionType } from '@shared/enums';
+import type { CalendarDate } from '@shared/utils/calendarDate';
 import type { CategoryIconApi } from './categoryDto';
 import type { Money } from './statisticsDto';
 
@@ -50,7 +51,8 @@ export interface Transaction {
   kind: TransactionKind;
   transaction_type: TransactionType;
   amount: string;
-  timestamp: string;
+  // The day it happened, returned exactly as stored: never read through a zone.
+  date: CalendarDate;
   description: string | null;
   version: number;
   category: TransactionCategory;
@@ -72,14 +74,16 @@ export interface TransactionFeedResponse {
     previous_cursor: string | null;
   };
   summary: { count: number; income: Money; expense: Money };
-  day_totals: { date: string; net: Money }[];
+  day_totals: { date: CalendarDate; net: Money }[];
 }
 
 export interface CreateTransactionRequest {
   category_id: number;
   transaction_type: TransactionType;
   amount: string;
-  timestamp: string;
+  date: CalendarDate;
+  // The writer's IANA zone: it only tells the server which day is today for them, and is not stored.
+  time_zone: string;
   description?: string | null;
   assignment: TransactionAssignment;
   // The create's Idempotency-Key; the server never applies two creates with one id in a space, whatever version.
@@ -92,7 +96,7 @@ export interface TransactionWriteResponse {
 }
 
 // An absent field, or one equal to the stored value, keeps it; `null` only clears the description. An assignment
-// equal to the stored one is no change, even to someone who has left since.
+// equal to the stored one is no change, even to someone who has left since. `time_zone` goes with every `date`.
 export type UpdateTransactionRequest = Partial<Omit<CreateTransactionRequest, 'client_operation_id'>>;
 
 // What a create with this operation id did: `deleted` means it applied and the record was deleted since.

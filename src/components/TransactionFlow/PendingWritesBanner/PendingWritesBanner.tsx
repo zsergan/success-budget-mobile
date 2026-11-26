@@ -17,10 +17,10 @@ import { draftFromCreateRequest } from '@redux/state/transactionFlow/draft';
 import { restoredOpened } from '@redux/state/transactionFlow/slice';
 import { openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { formatAmount, getErrorMessage } from '@shared/utils';
-import { formatDateTime } from '../format';
+import { formatTransactionDate } from '../format';
 
 const describe = ({ data }: Extract<StoredOperation, { type: 'create' }>, currencyCode?: string) =>
-  `${formatAmount(data.amount, data.transaction_type, currencyCode)} · ${formatDateTime(data.timestamp)}`;
+  `${formatAmount(data.amount, data.transaction_type, currencyCode)} · ${formatTransactionDate(data.date)}`;
 
 type CreateOperation = Extract<StoredOperation, { type: 'create' }>;
 

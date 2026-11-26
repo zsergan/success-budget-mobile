@@ -50,7 +50,8 @@ const lunch: CreateTransactionRequest = {
   category_id: 1,
   transaction_type: TransactionType.EXPENSE,
   amount: '10',
-  timestamp: '2026-01-05T10:00:00.000Z',
+  date: '2026-01-05',
+  time_zone: 'America/Chicago',
   description: 'Lunch',
 };
 
@@ -225,7 +226,7 @@ describe('submitTransactionRequest', () => {
         spaceId: 1,
         transactionType: TransactionType.EXPENSE,
         assignment: { kind: 'space' },
-        now: lunch.timestamp,
+        today: lunch.date,
       }),
     );
     mockedRequest.mockImplementation(fails(403, 'FORBIDDEN_SPACE'));

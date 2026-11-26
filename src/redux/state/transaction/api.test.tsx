@@ -28,7 +28,7 @@ const dto: Transaction = {
   kind: TransactionKind.REGULAR,
   transaction_type: TransactionType.EXPENSE,
   amount: '10.00',
-  timestamp: '2026-01-01T00:00:00.000Z',
+  date: '2026-01-01',
   description: null,
   version: 1,
   category: {
@@ -61,16 +61,15 @@ beforeEach(() => {
 });
 
 describe('transactionApi', () => {
-  it("asks for the newest five records of Home's month, in the device zone", async () => {
+  it("asks for the newest records of Home's month by its dates, with no zone", async () => {
     const store = createAppStore();
 
     mockedRequest.mockResolvedValue({ data: feedDto([dto]) });
     const result = await store.dispatch(
       getRecentTransactions.initiate({
         spaceId: 3,
-        timeZone: 'Europe/Moscow',
-        from: '2026-09-30T21:00:00.000Z',
-        to: '2026-10-31T20:59:59.999Z',
+        fromDate: '2026-10-01',
+        toDate: '2026-10-31',
       }),
     );
 
@@ -79,9 +78,8 @@ describe('transactionApi', () => {
         url: '/spaces/3/transactions/feed',
         baseURL: expect.stringMatching(/\/api\/v2$/),
         params: {
-          from: '2026-09-30T21:00:00.000Z',
-          to: '2026-10-31T20:59:59.999Z',
-          time_zone: 'Europe/Moscow',
+          from_date: '2026-10-01',
+          to_date: '2026-10-31',
           limit: 3,
         },
       }),
@@ -99,9 +97,8 @@ describe('transactionApi', () => {
     const result = await store.dispatch(
       getRecentTransactions.initiate({
         spaceId: 3,
-        timeZone: 'UTC',
-        from: '2026-01-01T00:00:00.000Z',
-        to: '2026-01-31T23:59:59.999Z',
+        fromDate: '2026-01-01',
+        toDate: '2026-01-31',
       }),
     );
 
@@ -110,7 +107,7 @@ describe('transactionApi', () => {
       kind: TransactionKind.INITIAL_BALANCE,
       transactionType: TransactionType.EXPENSE,
       amount: '10.00',
-      timestamp: '2026-01-01T00:00:00.000Z',
+      date: '2026-01-01',
       description: null,
       version: 3,
       category: {
@@ -196,15 +193,15 @@ describe('transactionApi', () => {
     const store = createAppStore();
     const filters = {
       spaceId: 3,
-      from: '2026-08-31T21:00:00.000Z',
-      to: '2026-09-30T09:15:42.123Z',
+      fromDate: '2026-09-01',
+      toDate: '2026-09-28',
       transactionType: TransactionType.INCOME,
       kind: TransactionKind.REGULAR,
       assignment: 'member:31' as const,
     };
     const params = {
-      from: filters.from,
-      to: filters.to,
+      from_date: filters.fromDate,
+      to_date: filters.toDate,
       transaction_type: TransactionType.INCOME,
       kind: TransactionKind.REGULAR,
       assignment: 'member:31',
@@ -214,14 +211,14 @@ describe('transactionApi', () => {
     mockedRequest.mockResolvedValueOnce({ data: feedDto([]) }).mockResolvedValueOnce({ data: { count: 0 } });
     await store.dispatch(
       transactionApi.endpoints.getTransactionsFeed.initiate({
-        selection: feedSelection(filters, { q: 'salary', timeZone: 'UTC' }),
+        selection: feedSelection(filters, { q: 'salary' }),
         generation: 'g1',
       }),
     );
     await store.dispatch(transactionApi.endpoints.getTransactionsCount.initiate({ ...filters, q: 'salary' }));
 
     expect(mockedRequest.mock.calls.map(([config]) => [config.url, config.params])).toEqual([
-      ['/spaces/3/transactions/feed', { ...params, time_zone: 'UTC' }],
+      ['/spaces/3/transactions/feed', params],
       ['/spaces/3/transactions/count', params],
     ]);
   });
@@ -240,7 +237,7 @@ describe('transactionApi', () => {
   it('asks what a create did by its operation id', async () => {
     const store = createAppStore();
     const arg = { spaceId: 3, operationId: 'op-1' };
-    const answer = { operation_id: 'op-1', transaction_id: 'tx-1', created_at: dto.timestamp };
+    const answer = { operation_id: 'op-1', transaction_id: 'tx-1', created_at: '2026-01-01T10:00:00.000Z' };
 
     mockedRequest.mockResolvedValueOnce({
       data: { ...answer, status: 'applied', deleted_at: null, transaction: { ...dto, version: 2 } },
@@ -248,7 +245,7 @@ describe('transactionApi', () => {
     const applied = await store.dispatch(getTransactionOperation.initiate(arg, { subscribe: false }));
 
     mockedRequest.mockResolvedValueOnce({
-      data: { ...answer, status: 'deleted', deleted_at: dto.timestamp, transaction: null },
+      data: { ...answer, status: 'deleted', deleted_at: '2026-01-02T10:00:00.000Z', transaction: null },
     });
     const deleted = await store.dispatch(
       getTransactionOperation.initiate(arg, { subscribe: false, forceRefetch: true }),
@@ -267,7 +264,8 @@ describe('transactionApi', () => {
       category_id: 1,
       transaction_type: TransactionType.EXPENSE,
       amount: '10',
-      timestamp: '2026-01-05T10:00:00.000Z',
+      date: '2026-01-05',
+      time_zone: 'Europe/Moscow',
       assignment: { kind: 'space' as const },
     };
 
@@ -332,17 +330,15 @@ describe('transactionApi', () => {
     store.dispatch(
       getRecentTransactions.initiate({
         spaceId: 1,
-        timeZone: 'UTC',
-        from: '2026-01-01T00:00:00.000Z',
-        to: '2026-01-31T23:59:59.999Z',
+        fromDate: '2026-01-01',
+        toDate: '2026-01-31',
       }),
     );
     store.dispatch(
       getRecentTransactions.initiate({
         spaceId: 2,
-        timeZone: 'UTC',
-        from: '2026-01-01T00:00:00.000Z',
-        to: '2026-01-31T23:59:59.999Z',
+        fromDate: '2026-01-01',
+        toDate: '2026-01-31',
       }),
     );
     await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
@@ -369,9 +365,9 @@ describe('transactionApi', () => {
 
 describe('getTransactionsFeed', () => {
   const { getTransactionsFeed } = transactionApi.endpoints;
-  const period = { spaceId: 3, from: '2026-09-30T21:00:00.000Z', to: '2026-10-31T20:59:59.999Z' };
+  const period = { spaceId: 3, fromDate: '2026-10-01', toDate: '2026-10-31' };
   const arg: TransactionsFeedArg = {
-    selection: feedSelection(period, { timeZone: 'Europe/Moscow' }),
+    selection: feedSelection(period),
     pageSize: 2,
     generation: 'g1',
   };
@@ -394,7 +390,7 @@ describe('getTransactionsFeed', () => {
     const store = createAppStore();
     const selection = feedSelection(
       { ...period, transactionType: TransactionType.EXPENSE, kind: TransactionKind.REGULAR, categoryId: 5 },
-      { q: '  coffee ', timeZone: 'Europe/Moscow' },
+      { q: '  coffee ' },
     );
 
     mockedRequest.mockResolvedValue({ data: feedDto([row('a')]) });
@@ -405,9 +401,8 @@ describe('getTransactionsFeed', () => {
         url: '/spaces/3/transactions/feed',
         baseURL: expect.stringMatching(/\/api\/v2$/),
         params: {
-          from: period.from,
-          to: period.to,
-          time_zone: 'Europe/Moscow',
+          from_date: period.fromDate,
+          to_date: period.toDate,
           q: 'coffee',
           transaction_type: TransactionType.EXPENSE,
           kind: TransactionKind.REGULAR,
@@ -419,7 +414,7 @@ describe('getTransactionsFeed', () => {
   });
 
   it('drops a blank search, so it is the same selection as no search', () => {
-    expect(feedSelection(period, { q: '   ', timeZone: 'UTC' })).toEqual(feedSelection(period, { timeZone: 'UTC' }));
+    expect(feedSelection(period, { q: '   ' })).toEqual(feedSelection(period));
   });
 
   it('appends older pages by next_cursor and stops when there is none', async () => {

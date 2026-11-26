@@ -10,6 +10,7 @@ import { withProfile } from '@redux/state/profile/fixtures';
 import { spaceApi } from '@redux/state/space/api';
 import { activateSpace } from '@redux/state/space/thunks';
 import { SpaceType, TransactionKind, TransactionType } from '@shared/enums';
+import { calendarYear, deviceToday, shiftDays } from '@shared/utils';
 import TransactionCard from './TransactionCard';
 
 jest.mock('@api/instance', () => ({
@@ -117,23 +118,37 @@ describe('TransactionCard', () => {
     expect(screen.queryByLabelText('Delete')).toBeNull();
   });
 
-  it('shows the description, assignment and time as separate parts', () => {
-    renderCard({ description: 'Dinner with Anna', timestamp: new Date(2026, 0, 5, 9, 10).toISOString() });
+  it('shows the description and assignment as separate parts, with no time', () => {
+    renderCard({ description: 'Dinner with Anna', date: '2026-01-05' });
 
     expect(screen.getByText('Dinner with Anna')).toBeTruthy();
     expect(screen.getByText('Zakhar')).toBeTruthy();
-    expect(screen.getByText(' · 09:10')).toBeTruthy();
+    expect(screen.queryByText(/\d:\d\d/)).toBeNull();
   });
 
-  const now = new Date();
+  const today = deviceToday();
+  const lastYear = `${calendarYear(today) - 1}-03-04`;
   it.each([
-    ['today', new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 10), true, ' · Today, 09:10'],
-    ['last year', new Date(now.getFullYear() - 1, 2, 4, 18, 5), true, ` · Mar 4, ${now.getFullYear() - 1}, 18:05`],
-    ['no day asked for', new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 10), false, ' · 09:10'],
-  ])('names the day before the time only when asked to: %s', (_name, date, showsDay, text) => {
-    renderCard({ description: null, timestamp: date.toISOString() }, undefined, { showsDay });
+    ['today', today, ' · Today'],
+    ['yesterday', shiftDays(today, -1), ' · Yesterday'],
+    ['last year', lastYear, ` · Mar 4, ${calendarYear(today) - 1}`],
+  ])('names the row’s stored date where asked to: %s', (_name, date, text) => {
+    renderCard({ description: null, date }, undefined, { showsDay: true });
 
     expect(screen.getByText(text)).toBeTruthy();
+  });
+
+  it('leaves the date to the day header in a history', () => {
+    renderCard({ description: null, date: deviceToday() });
+
+    expect(screen.queryByText(/Today/)).toBeNull();
+  });
+
+  it('drops the second line when it has nothing to say', () => {
+    renderCard({ description: null, date: deviceToday() }, SpaceType.PERSONAL);
+
+    expect(screen.queryByText(' · ')).toBeNull();
+    expect(screen.queryByText('You')).toBeNull();
   });
 
   it('starts the second line with the assignment when there is no description', () => {
@@ -156,10 +171,11 @@ describe('TransactionCard', () => {
   });
 
   it('leaves the ordinary You unsaid in a personal space, and names everything else', () => {
-    renderCard({ description: 'Market', timestamp: new Date(2026, 0, 5, 18, 20).toISOString() }, SpaceType.PERSONAL);
+    renderCard({ description: 'Market', date: '2026-01-05' }, SpaceType.PERSONAL);
 
     expect(screen.queryByText('You')).toBeNull();
-    expect(screen.getByText(' · 18:20')).toBeTruthy();
+    expect(screen.getByText('Market')).toBeTruthy();
+    expect(screen.queryByText(' · ')).toBeNull();
   });
 
   it('names the whole space in a personal space, and the user as You in a shared one', () => {

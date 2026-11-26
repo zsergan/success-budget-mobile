@@ -1,9 +1,9 @@
 import { mapTransaction } from '@api/models';
 import { transactionDto } from '@redux/state/transaction/fixtures';
-import { whereSaved } from './selection';
+import { rangeSelection, whereSaved } from './selection';
 
-const january = { from: '2026-01-01T00:00:00.000Z', to: '2026-01-31T23:59:59.999Z' };
-const lunch = mapTransaction(transactionDto({ timestamp: '2026-01-05T10:00:00.000Z' }));
+const january = { fromDate: '2026-01-01', toDate: '2026-01-31' };
+const lunch = mapTransaction(transactionDto({ date: '2026-01-05' }));
 
 describe('whereSaved', () => {
   it('claims nothing without a selection', () => {
@@ -12,8 +12,16 @@ describe('whereSaved', () => {
 
   it('tells a record outside the period, bounds included, from one inside it', () => {
     expect(whereSaved(lunch, january)).toBe('shown');
-    expect(whereSaved({ ...lunch, timestamp: january.to }, january)).toBe('shown');
-    expect(whereSaved({ ...lunch, timestamp: '2026-02-01T00:00:00.000Z' }, january)).toBe('otherPeriod');
+    expect(whereSaved({ ...lunch, date: january.fromDate }, january)).toBe('shown');
+    expect(whereSaved({ ...lunch, date: january.toDate }, january)).toBe('shown');
+    expect(whereSaved({ ...lunch, date: '2026-02-01' }, january)).toBe('otherPeriod');
+    expect(whereSaved({ ...lunch, date: '2025-12-31' }, january)).toBe('otherPeriod');
+  });
+
+  it('takes a picked period as the days it shows', () => {
+    const range = { from: new Date(2026, 0, 1), to: new Date(2026, 0, 31, 23, 59, 59, 999) };
+
+    expect(rangeSelection(range)).toEqual(january);
   });
 });
 
@@ -27,6 +35,6 @@ describe('whereSaved with filters', () => {
     expect(whereSaved(lunch, { ...january, transactionType: lunch.transactionType, categoryId: 2 })).toBe(
       'otherFilter',
     );
-    expect(whereSaved({ ...lunch, timestamp: '2026-02-01T00:00:00.000Z' }, lena)).toBe('otherPeriod');
+    expect(whereSaved({ ...lunch, date: '2026-02-01' }, lena)).toBe('otherPeriod');
   });
 });

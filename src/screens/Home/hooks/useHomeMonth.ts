@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { useAppSelector } from '@redux/hooks';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
-import type { Period } from '@shared/utils';
+import type { CalendarDate, Period } from '@shared/utils';
 import { CURRENT_MONTH, monthPeriodOf, shiftPeriod, toDateRange } from '@shared/utils';
 
 // The month Home shows: this one by default, an earlier one on request, never a future one. Another space starts on
@@ -29,7 +29,7 @@ const useHomeMonth = () => {
       if (!isCurrent) set(shiftPeriod(period, 1));
     },
     showCurrent: () => set(CURRENT_MONTH),
-    showMonthOf: (timestamp: string) => set(monthPeriodOf(timestamp)),
+    showMonthOf: (date: CalendarDate) => set(monthPeriodOf(date)),
   };
 };
 

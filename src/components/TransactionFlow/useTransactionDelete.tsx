@@ -86,7 +86,7 @@ const useTransactionDelete = (confirmLock: ConfirmLock, { leavesScreen = false }
     async (
       transaction: TransactionModel,
       spaceId = currentSpaceId,
-      doneText = `Transaction deleted. ${totalsName(transaction.timestamp)} totals updated.`,
+      doneText = `Transaction deleted. ${totalsName(transaction.date)} totals updated.`,
     ) => {
       if (spaceId === null) return;
 
@@ -159,11 +159,7 @@ const useTransactionDelete = (confirmLock: ConfirmLock, { leavesScreen = false }
   // Undo of a create just made: the same delete, without asking, named for what the user did.
   const undoCreate = useCallback(
     (transaction: TransactionModel) =>
-      runDelete(
-        transaction,
-        currentSpaceId,
-        `Transaction removed. ${totalsName(transaction.timestamp)} totals updated.`,
-      ),
+      runDelete(transaction, currentSpaceId, `Transaction removed. ${totalsName(transaction.date)} totals updated.`),
     [runDelete, currentSpaceId],
   );
 

@@ -4,6 +4,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { TransactionModel, TransactionWriteResult } from '@api/models';
 import { isInitialBalance } from '@api/models';
 import type { TransactionType } from '@shared/enums';
+import type { CalendarDate } from '@shared/utils/calendarDate';
 import { logoutMe } from '../auth/thunks';
 import { spaceAccessLost, spaceSelected } from '../space/thunks';
 import type { DraftAssignment, TransactionDraft } from './draft';
@@ -17,8 +18,8 @@ export type FlowView =
   | { name: 'create'; focusAmount: boolean }
   | { name: 'details' }
   | { name: 'edit' }
-  // `pending` is the date and time picked but not applied yet.
-  | { name: 'dateTime'; form: FlowForm; pending: string }
+  // `pending` is the date picked but not applied yet.
+  | { name: 'date'; form: FlowForm; pending: CalendarDate }
   | { name: 'created' }
   // The record was deleted elsewhere.
   | { name: 'gone' };
@@ -78,8 +79,9 @@ export interface TransactionFlow {
   draft: TransactionDraft | null;
   // What the draft started from; it has changes only while it differs from this.
   baseline: TransactionDraft | null;
-  // A new transaction's date stays "now" until one is picked, so Add another takes the new now.
-  followsNow: boolean;
+  // A new transaction is dated today until a date is picked: the draft follows today past midnight, and Add another
+  // takes the new today. A picked date is never changed by the app.
+  followsToday: boolean;
   isSaving: boolean;
   // A category picked from the full list keeps its tile in the grid until the form closes.
   promotedCategoryId: number | null;
@@ -108,7 +110,7 @@ const formView = (form: FlowForm): FlowView =>
   form === 'create' ? { name: 'create', focusAmount: false } : { name: 'edit' };
 
 export const activeForm = ({ view }: TransactionFlow): FlowForm | null =>
-  view.name === 'create' || view.name === 'edit' ? view.name : view.name === 'dateTime' ? view.form : null;
+  view.name === 'create' || view.name === 'edit' ? view.name : view.name === 'date' ? view.form : null;
 
 // Only the draft a late answer belongs to may take it.
 const flowOf = (state: TransactionFlowState, draftId: number) => (state.flow?.draftId === draftId ? state.flow : null);
@@ -119,7 +121,7 @@ const idleFlow = (state: TransactionFlowState) => (state.flow && !state.flow.isS
 const startCreate = (
   state: TransactionFlowState,
   flow: Pick<TransactionFlow, 'spaceId' | 'selection'>,
-  draft: Pick<TransactionDraft, 'transactionType' | 'assignment' | 'timestamp'>,
+  draft: Pick<TransactionDraft, 'transactionType' | 'assignment' | 'date'>,
 ): TransactionFlow => {
   state.lastDraftId += 1;
   const fresh = createDraft(draft);
@@ -134,7 +136,7 @@ const startCreate = (
     refusal: null,
     draft: fresh,
     baseline: fresh,
-    followsNow: true,
+    followsToday: true,
     isSaving: false,
     promotedCategoryId: null,
     created: null,
@@ -170,7 +172,7 @@ const transactionFlowSlice = createSlice({
         spaceId: number;
         transactionType: TransactionType;
         assignment: DraftAssignment;
-        now: string;
+        today: CalendarDate;
         selection?: ViewSelection | null;
       }>,
     ) => {
@@ -179,7 +181,7 @@ const transactionFlowSlice = createSlice({
       state.flow = startCreate(
         state,
         { spaceId: payload.spaceId, selection: payload.selection ?? null },
-        { ...payload, timestamp: payload.now },
+        { ...payload, date: payload.today },
       );
     },
     detailsOpened: (
@@ -199,7 +201,7 @@ const transactionFlowSlice = createSlice({
         refusal: null,
         draft: null,
         baseline: null,
-        followsNow: false,
+        followsToday: false,
         isSaving: false,
         promotedCategoryId: null,
         created: null,
@@ -222,7 +224,7 @@ const transactionFlowSlice = createSlice({
         view: { name: 'create', focusAmount: false },
         draft: payload.draft,
         baseline: payload.draft,
-        followsNow: false,
+        followsToday: false,
         notice: 'saveRestored',
         operationId: payload.operationId,
       };
@@ -301,7 +303,7 @@ const transactionFlowSlice = createSlice({
       flow.draft = null;
       flow.baseline = null;
     },
-    draftChanged: (state, { payload }: PayloadAction<Partial<Omit<TransactionDraft, 'timestamp'>>>) => {
+    draftChanged: (state, { payload }: PayloadAction<Partial<Omit<TransactionDraft, 'date' | 'timeZone'>>>) => {
       const flow = idleFlow(state);
       if (!flow?.draft || !activeForm(flow)) return;
 
@@ -324,30 +326,45 @@ const transactionFlowSlice = createSlice({
       flow.draft.categoryId = payload.categoryId;
       flow.promotedCategoryId = payload.categoryId;
     },
-    dateTimeOpened: (state) => {
+    dateOpened: (state) => {
       const flow = idleFlow(state);
       if ((flow?.view.name !== 'create' && flow?.view.name !== 'edit') || !flow.draft) return;
 
-      flow.view = { name: 'dateTime', form: flow.view.name, pending: flow.draft.timestamp };
+      flow.view = { name: 'date', form: flow.view.name, pending: flow.draft.date };
     },
-    pendingDateChanged: (state, { payload }: PayloadAction<{ timestamp: string }>) => {
+    pendingDatePicked: (state, { payload }: PayloadAction<{ date: CalendarDate }>) => {
       const flow = idleFlow(state);
-      if (flow?.view.name !== 'dateTime') return;
+      if (flow?.view.name !== 'date') return;
 
-      flow.view.pending = payload.timestamp;
+      flow.view.pending = payload.date;
     },
-    dateTimeApplied: (state) => {
+    // A date applied stays as picked; another one also drops the zone a stored request was sent with.
+    dateApplied: (state) => {
       const flow = idleFlow(state);
-      if (flow?.view.name !== 'dateTime' || !flow.draft) return;
+      if (flow?.view.name !== 'date' || !flow.draft) return;
 
-      if (Date.parse(flow.view.pending) !== Date.parse(flow.draft.timestamp)) flow.followsNow = false;
-      flow.draft.timestamp = flow.view.pending;
+      if (flow.view.pending !== flow.draft.date) {
+        flow.followsToday = false;
+        flow.draft.date = flow.view.pending;
+        delete flow.draft.timeZone;
+      }
       flow.view = formView(flow.view.form);
+    },
+    // Midnight or a return to the app: a new transaction still dated by default moves to the new today. Not once a
+    // save of it has an outcome to show, nor while one runs: its date then stays what was sent.
+    todayChanged: (state, { payload }: PayloadAction<{ today: CalendarDate }>) => {
+      const flow = idleFlow(state);
+      if (!flow?.followsToday || flow.notice !== null || flow.saved || !flow.draft || !activeForm(flow)) return;
+      if (flow.draft.date === payload.today) return;
+
+      if (flow.baseline?.date === flow.draft.date) flow.baseline = { ...flow.baseline, date: payload.today };
+      flow.draft.date = payload.today;
+      if (flow.view.name === 'date' && flow.view.pending < payload.today) flow.view.pending = payload.today;
     },
     // Cancel, Back or a swipe from the date picker: the form as it was, the unapplied date dropped.
     panelClosed: (state) => {
       const flow = idleFlow(state);
-      if (flow?.view.name !== 'dateTime') return;
+      if (flow?.view.name !== 'date') return;
 
       flow.view = formView(flow.view.form);
     },
@@ -393,7 +410,7 @@ const transactionFlowSlice = createSlice({
       flow.notice = payload.notice ?? 'saveRecovered';
       flow.refusal = null;
       if (flow.view.name === 'create') flow.view = { name: 'edit' };
-      else if (flow.view.name === 'dateTime') flow.view.form = 'edit';
+      else if (flow.view.name === 'date') flow.view.form = 'edit';
     },
     // An earlier attempt of this create had applied: the form gives way to the record, or ends when it is deleted.
     createFound: (state, { payload }: DraftScoped<{ transaction: TransactionModel | null }>) => {
@@ -437,20 +454,20 @@ const transactionFlowSlice = createSlice({
       flow.view = { name: 'details' };
       if (whereSaved(payload.transaction, flow.selection) !== 'shown') flow.notice = 'movedOut';
     },
-    // Keeps the type, the assignment and a picked date; a date that was "now" becomes the new now.
+    // Keeps the type, the assignment and a picked date; a date that was today by default becomes the new today.
     // The caller passes the assignment to keep: the last one while it is still on offer, else the default.
-    anotherStarted: (state, { payload }: PayloadAction<{ now: string; assignment: DraftAssignment }>) => {
+    anotherStarted: (state, { payload }: PayloadAction<{ today: CalendarDate; assignment: DraftAssignment }>) => {
       const flow = idleFlow(state);
       if (flow?.view.name !== 'created' || !flow.draft) return;
 
-      const { transactionType, timestamp } = flow.draft;
+      const { transactionType, date } = flow.draft;
       const next = startCreate(state, flow, {
         transactionType,
         assignment: payload.assignment,
-        timestamp: flow.followsNow ? payload.now : timestamp,
+        date: flow.followsToday ? payload.today : date,
       });
 
-      state.flow = { ...next, followsNow: flow.followsNow };
+      state.flow = { ...next, followsToday: flow.followsToday };
     },
     // The confirmation shows once the form has left the screen; its time to close by itself counts from then.
     autoCloseRestarted: (state, { payload }: DraftScoped<{ now: number }>) => {
@@ -551,9 +568,10 @@ export const {
   editLeft,
   draftChanged,
   categoryPicked,
-  dateTimeOpened,
-  pendingDateChanged,
-  dateTimeApplied,
+  dateOpened,
+  pendingDatePicked,
+  dateApplied,
+  todayChanged,
   panelClosed,
   saveStarted,
   saveFailed,

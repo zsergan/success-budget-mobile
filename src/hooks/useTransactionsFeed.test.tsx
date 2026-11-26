@@ -30,8 +30,8 @@ interface Sent {
 
 let sent: Sent[];
 
-const period = { spaceId: 3, from: '2026-09-30T21:00:00.000Z', to: '2026-10-31T20:59:59.999Z' };
-const october = feedSelection(period, { timeZone: 'Europe/Moscow' });
+const period = { spaceId: 3, fromDate: '2026-10-01', toDate: '2026-10-31' };
+const october = feedSelection(period);
 
 const page = (ids: string[], next: string | null = null, overrides: Partial<TransactionFeedResponse> = {}) =>
   feedDto(
@@ -163,14 +163,14 @@ it("never shows another selection's rows, even when its answer comes late", asyn
   const { result, rerender } = renderFeed({ selection: october });
   await answer(0, page(['a']));
 
-  const search = feedSelection(period, { q: 'coffee', timeZone: 'Europe/Moscow' });
+  const search = feedSelection(period, { q: 'coffee' });
   rerender({ selection: search });
 
   expect(result.current.isLoading).toBe(true);
   expect(result.current.items).toEqual([]);
   expect(sent[1].params).toMatchObject({ q: 'coffee' });
 
-  rerender({ selection: feedSelection(period, { q: 'tea', timeZone: 'Europe/Moscow' }) });
+  rerender({ selection: feedSelection(period, { q: 'tea' }) });
   await answer(1, page(['coffee']));
 
   expect(result.current.items).toEqual([]);
@@ -196,6 +196,28 @@ it('starts again from the first page when the server rejects a cursor', async ()
 
   await answer(2, page(['b']));
   expect(ids(result)).toEqual(['b']);
+});
+
+it('reloads after a refused cursor only once, so a server that keeps refusing never loops', async () => {
+  const cursorRefused = {
+    statusCode: 400,
+    code: ApiErrorCode.VALIDATION_FAILED,
+    message: [{ field: 'cursor', error: 'cursor of an earlier format' }],
+  };
+  const { result } = renderFeed({ selection: october });
+  await answer(0, page(['a'], 'old'));
+
+  act(() => result.current.loadNextPage());
+  await refuse(1, cursorRefused);
+  await answer(2, page(['b'], 'new'));
+
+  act(() => result.current.loadNextPage());
+  await refuse(3, cursorRefused);
+  await flush();
+
+  expect(sent).toHaveLength(4);
+  expect(ids(result)).toEqual(['b']);
+  expect(result.current.hasNextPageError).toBe(true);
 });
 
 it('opens around a record and falls back to the first page when it is not in the selection', async () => {
@@ -270,7 +292,7 @@ it('forgets an asked-for page once the selection changes', async () => {
   act(() => result.current.loadPreviousPage());
   await flush();
   act(() => result.current.loadNextPage());
-  rerender({ selection: feedSelection(period, { q: 'tea', timeZone: 'Europe/Moscow' }) });
+  rerender({ selection: feedSelection(period, { q: 'tea' }) });
   await answer(2, page(['tea'], 'c9'));
 
   expect(sent.map(({ params }) => params.cursor)).toEqual([undefined, 'p1', undefined]);
@@ -382,7 +404,7 @@ it('cancels the page still loading for a window a reload replaces, and never sho
 });
 
 it('never applies a late answer of an earlier search, even when the same search is sent again', async () => {
-  const search = (q: string) => feedSelection(period, { q, timeZone: 'Europe/Moscow' });
+  const search = (q: string) => feedSelection(period, { q });
   const { result, rerender } = renderFeed({ selection: search('a') });
 
   rerender({ selection: search('ab') });

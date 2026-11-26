@@ -2,6 +2,9 @@ import type { CreateTransactionRequest, TransactionAssignment, UpdateTransaction
 import type { AssignmentModel, TransactionModel } from '@api/models';
 import type { TransactionType } from '@shared/enums';
 import { SpaceType } from '@shared/enums';
+import type { CalendarDate } from '@shared/utils/calendarDate';
+import { isCalendarDate, MIN_CALENDAR_DATE } from '@shared/utils/calendarDate';
+import { getDeviceTimeZone } from '@shared/utils/timeZone';
 
 // Who the form assigns the amount to. A member's null id is the record's own deleted account, kept as it is.
 export type DraftAssignment = { kind: 'member'; userId: number | null } | { kind: 'space' } | { kind: 'unassigned' };
@@ -13,7 +16,10 @@ export interface TransactionDraft {
   categoryId: number | null;
   // Null only after the server refused a member who is no longer in the space: the user picks again.
   assignment: DraftAssignment | null;
-  timestamp: string;
+  // The day it happened; no time of day.
+  date: CalendarDate;
+  // The zone a stored request was sent with, kept while its date is: a resend tells the server the same today.
+  timeZone?: string;
   description: string;
 }
 
@@ -21,16 +27,12 @@ export interface DraftErrors {
   amount?: string;
   category?: string;
   assignment?: string;
-  timestamp?: string;
+  date?: string;
   description?: string;
 }
 
 export const MAX_AMOUNT = '99999999.99';
 export const DESCRIPTION_MAX_LENGTH = 140;
-// The server refuses a timestamp more than a minute ahead of its clock.
-const FUTURE_MARGIN_MS = 60_000;
-// The first instant the server stores (MySQL TIMESTAMP).
-export const MIN_TIMESTAMP = '1970-01-01T00:00:01.000Z';
 
 export type AmountProblem = 'empty' | 'sign' | 'format' | 'scale' | 'zero' | 'range';
 
@@ -111,13 +113,13 @@ export const descriptionLength = (value: string) => [...value.trim()].length;
 export const createDraft = ({
   transactionType,
   assignment,
-  timestamp,
-}: Pick<TransactionDraft, 'transactionType' | 'assignment' | 'timestamp'>): TransactionDraft => ({
+  date,
+}: Pick<TransactionDraft, 'transactionType' | 'assignment' | 'date'>): TransactionDraft => ({
   transactionType,
   amount: '',
   categoryId: null,
   assignment,
-  timestamp,
+  date,
   description: '',
 });
 
@@ -132,7 +134,7 @@ export const draftFromTransaction = (transaction: TransactionModel): Transaction
   amount: transaction.amount,
   categoryId: transaction.category.id,
   assignment: draftAssignmentOf(transaction.assignment),
-  timestamp: transaction.timestamp,
+  date: transaction.date,
   description: transaction.description ?? '',
 });
 
@@ -142,23 +144,27 @@ export const draftFromCreateRequest = (data: CreateTransactionRequest): Transact
   amount: data.amount,
   categoryId: data.category_id,
   assignment: data.assignment.kind === 'member' ? { kind: 'member', userId: data.assignment.user_id } : data.assignment,
-  timestamp: data.timestamp,
+  date: data.date,
+  timeZone: data.time_zone,
   description: data.description ?? '',
 });
 
 const isSameAmount = (a: string, b: string) => (normalizeAmount(a) ?? a.trim()) === (normalizeAmount(b) ?? b.trim());
 
-const isSameField: { [K in keyof TransactionDraft]: (a: TransactionDraft[K], b: TransactionDraft[K]) => boolean } = {
+// The zone is not a value of the record: it only goes along with the date.
+type DraftField = Exclude<keyof TransactionDraft, 'timeZone'>;
+
+const isSameField: { [K in DraftField]: (a: TransactionDraft[K], b: TransactionDraft[K]) => boolean } = {
   transactionType: (a, b) => a === b,
   amount: isSameAmount,
   categoryId: (a, b) => a === b,
   assignment: isSameAssignment,
-  timestamp: (a, b) => Date.parse(a) === Date.parse(b),
+  date: (a, b) => a === b,
   description: (a, b) => normalizeDescription(a) === normalizeDescription(b),
 };
 
 export const changedFields = (draft: TransactionDraft, baseline: TransactionDraft) =>
-  (Object.keys(isSameField) as (keyof TransactionDraft)[]).filter(
+  (Object.keys(isSameField) as DraftField[]).filter(
     (key) => !(isSameField[key] as (a: unknown, b: unknown) => boolean)(draft[key], baseline[key]),
   );
 
@@ -166,15 +172,20 @@ export const isDraftChanged = (draft: TransactionDraft, baseline: TransactionDra
   changedFields(draft, baseline).length > 0;
 
 // An edit leaves values it does not change alone, as the server does: a legacy zero amount survives a new note, and a
-// former member stays assigned. `available` holds what may be picked now, once loaded; an edit's own archived
-// category counts while its type matches. The server still decides on a member who leaves while the save is sent.
+// former member stays assigned, and so does a date after today. `available` holds what may be picked now, once loaded;
+// an edit's own archived category counts while its type matches. The server still decides on a member who leaves
+// while the save is sent.
 export const getDraftErrors = (
   draft: TransactionDraft,
   {
     baseline,
-    now,
+    today,
     available,
-  }: { baseline?: TransactionDraft; now: number; available?: { memberIds?: number[]; categoryIds?: number[] } },
+  }: {
+    baseline?: TransactionDraft;
+    today: CalendarDate;
+    available?: { memberIds?: number[]; categoryIds?: number[] };
+  },
 ): DraftErrors => {
   const changed = new Set(baseline ? changedFields(draft, baseline) : Object.keys(isSameField));
   const errors: DraftErrors = {};
@@ -204,10 +215,9 @@ export const getDraftErrors = (
     errors.assignment = 'Choose who it’s assigned to';
   }
 
-  if (changed.has('timestamp') && Date.parse(draft.timestamp) > now + FUTURE_MARGIN_MS) {
-    errors.timestamp = 'A transaction cannot be in the future';
-  } else if (changed.has('timestamp') && Date.parse(draft.timestamp) < Date.parse(MIN_TIMESTAMP)) {
-    errors.timestamp = 'Pick a date after 1 January 1970';
+  if (changed.has('date')) {
+    if (!isCalendarDate(draft.date) || draft.date < MIN_CALENDAR_DATE) errors.date = 'Pick a date';
+    else if (draft.date > today) errors.date = 'Pick today or an earlier day';
   }
 
   if (descriptionLength(draft.description) > DESCRIPTION_MAX_LENGTH) {
@@ -253,7 +263,8 @@ export const toCreateRequest = (draft: TransactionDraft): CreateTransactionReque
   category_id: draft.categoryId!,
   transaction_type: draft.transactionType,
   amount: normalizeAmount(draft.amount) ?? draft.amount,
-  timestamp: new Date(draft.timestamp).toISOString(),
+  date: draft.date,
+  time_zone: draft.timeZone ?? getDeviceTimeZone(),
   description: normalizeDescription(draft.description),
 });
 

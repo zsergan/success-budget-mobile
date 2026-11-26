@@ -12,8 +12,8 @@ import {
   closed,
   createOpened,
   createSucceeded,
-  dateTimeApplied,
-  dateTimeOpened,
+  dateApplied,
+  dateOpened,
   detailsOpened,
   draftChanged,
   editLeft,
@@ -24,7 +24,9 @@ import {
   editStarted,
   editSucceeded,
   panelClosed,
-  pendingDateChanged,
+  restoredOpened,
+  todayChanged,
+  pendingDatePicked,
   saveFailed,
   saveStarted,
 } from './slice';
@@ -35,14 +37,14 @@ jest.mock('@api/instance', () => ({
 }));
 jest.mock('expo-secure-store');
 
-const NOW = '2026-10-06T12:00:00.000Z';
+const TODAY = '2026-10-06';
 
 const saved: TransactionModel = {
   id: 'tx-1',
   kind: TransactionKind.REGULAR,
   transactionType: TransactionType.EXPENSE,
   amount: '50.00',
-  timestamp: '2026-10-05T09:30:00.000Z',
+  date: '2026-10-05',
   description: null,
   version: 2,
   category: {
@@ -73,7 +75,9 @@ const openChecked = (store: ReturnType<typeof setUp>['store'], transaction = sav
 };
 
 const openCreate = (store: ReturnType<typeof setUp>['store']) =>
-  store.dispatch(createOpened({ spaceId: 1, transactionType: TransactionType.EXPENSE, assignment: lena, now: NOW }));
+  store.dispatch(
+    createOpened({ spaceId: 1, transactionType: TransactionType.EXPENSE, assignment: lena, today: TODAY }),
+  );
 
 describe('transaction flow', () => {
   it('opens a new transaction focused on the amount, and never a second flow over it', () => {
@@ -84,7 +88,7 @@ describe('transaction flow', () => {
 
     expect(flow()).toMatchObject({
       view: { name: 'create', focusAmount: true },
-      draft: { amount: '', assignment: lena, timestamp: NOW },
+      draft: { amount: '', assignment: lena, date: TODAY },
     });
   });
 
@@ -99,16 +103,18 @@ describe('transaction flow', () => {
     store.dispatch(categoryPicked({ draftId, categoryId: 7 }));
     expect(flow()).toMatchObject({ view: { name: 'create' }, promotedCategoryId: 7, draft: { categoryId: 7 } });
 
-    store.dispatch(dateTimeOpened());
+    store.dispatch(dateOpened());
     store.dispatch(categoryPicked({ draftId, categoryId: 9 }));
-    store.dispatch(pendingDateChanged({ timestamp: '2026-10-01T08:00:00.000Z' }));
+    store.dispatch(pendingDatePicked({ date: '2026-10-01' }));
     store.dispatch(panelClosed());
-    expect(flow()?.draft).toMatchObject({ amount: '12', categoryId: 7, timestamp: NOW });
+    expect(flow()?.draft).toMatchObject({ amount: '12', categoryId: 7, date: TODAY });
+    expect(flow()?.followsToday).toBe(true);
 
-    store.dispatch(dateTimeOpened());
-    store.dispatch(pendingDateChanged({ timestamp: '2026-10-01T08:00:00.000Z' }));
-    store.dispatch(dateTimeApplied());
-    expect(flow()).toMatchObject({ view: { name: 'create' }, draft: { timestamp: '2026-10-01T08:00:00.000Z' } });
+    store.dispatch(dateOpened());
+    expect(flow()?.view).toEqual({ name: 'date', form: 'create', pending: TODAY });
+    store.dispatch(pendingDatePicked({ date: '2026-10-01' }));
+    store.dispatch(dateApplied());
+    expect(flow()).toMatchObject({ view: { name: 'create' }, followsToday: false, draft: { date: '2026-10-01' } });
   });
 
   it('offers Edit only once the record was read again, and keeps the newest version it read', () => {
@@ -167,7 +173,7 @@ describe('transaction flow', () => {
     store.dispatch(saveStarted({ draftId }));
     store.dispatch(draftChanged({ amount: '99' }));
     store.dispatch(categoryPicked({ draftId, categoryId: 7 }));
-    store.dispatch(dateTimeOpened());
+    store.dispatch(dateOpened());
     store.dispatch(closed());
     store.dispatch(saveFailed({ draftId: draftId + 1 }));
     expect(flow()).toMatchObject({ isSaving: true, view: { name: 'create' }, draft: { amount: '' } });
@@ -243,7 +249,7 @@ describe('transaction flow', () => {
     store.dispatch(createSucceeded({ draftId, result, now: 0 }));
     expect(flow()).toMatchObject({ view: { name: 'created' }, created: result });
 
-    store.dispatch(anotherStarted({ now: '2026-10-06T12:05:00.000Z', assignment: lena }));
+    store.dispatch(anotherStarted({ today: '2026-10-07', assignment: lena }));
     expect(flow()).toMatchObject({
       draftId: draftId + 1,
       view: { name: 'create', focusAmount: true },
@@ -253,21 +259,21 @@ describe('transaction flow', () => {
         assignment: lena,
         amount: '',
         categoryId: null,
-        timestamp: '2026-10-06T12:05:00.000Z',
+        date: '2026-10-07',
       },
     });
   });
 
   it('keeps a picked date for Add another, and the selection the form opened with', () => {
     const { store, flow } = setUp();
-    const selection = { from: '2026-10-01T00:00:00.000Z', to: '2026-10-31T23:59:59.999Z' };
+    const selection = { fromDate: '2026-10-01', toDate: '2026-10-31' };
 
     store.dispatch(
-      createOpened({ spaceId: 1, transactionType: TransactionType.EXPENSE, assignment: lena, now: NOW, selection }),
+      createOpened({ spaceId: 1, transactionType: TransactionType.EXPENSE, assignment: lena, today: TODAY, selection }),
     );
-    store.dispatch(dateTimeOpened());
-    store.dispatch(pendingDateChanged({ timestamp: '2026-10-01T08:00:00.000Z' }));
-    store.dispatch(dateTimeApplied());
+    store.dispatch(dateOpened());
+    store.dispatch(pendingDatePicked({ date: '2026-10-01' }));
+    store.dispatch(dateApplied());
     store.dispatch(draftChanged({ amount: '5', categoryId: 4, description: 'Lunch' }));
     const { draftId } = flow()!;
 
@@ -275,13 +281,13 @@ describe('transaction flow', () => {
     store.dispatch(createSucceeded({ draftId, result: { transaction: saved }, now: 0 }));
     expect(flow()).toMatchObject({ autoCloseAt: 5000 });
 
-    store.dispatch(anotherStarted({ now: '2026-10-06T12:05:00.000Z', assignment: { kind: 'space' } }));
+    store.dispatch(anotherStarted({ today: '2026-10-07', assignment: { kind: 'space' } }));
     expect(flow()).toMatchObject({
       draftId: draftId + 1,
       selection,
       autoCloseAt: null,
       draft: {
-        timestamp: '2026-10-01T08:00:00.000Z',
+        date: '2026-10-01',
         amount: '',
         categoryId: null,
         description: '',
@@ -346,14 +352,76 @@ describe('transaction flow', () => {
     expect(flow()?.promotedCategoryId).toBe(4);
   });
 
-  it('keeps a date that follows now when Apply changes nothing', () => {
+  it('keeps a date that follows today when Apply changes nothing', () => {
     const { store, flow } = setUp();
 
     openCreate(store);
-    store.dispatch(dateTimeOpened());
-    store.dispatch(dateTimeApplied());
+    store.dispatch(dateOpened());
+    store.dispatch(dateApplied());
 
-    expect(flow()?.followsNow).toBe(true);
+    expect(flow()?.followsToday).toBe(true);
+  });
+
+  it('moves a draft dated today by default onto the new today, as not a change of it', () => {
+    const { store, flow } = setUp();
+
+    openCreate(store);
+    store.dispatch(draftChanged({ amount: '5' }));
+    store.dispatch(todayChanged({ today: '2026-10-07' }));
+
+    expect(flow()).toMatchObject({ draft: { date: '2026-10-07', amount: '5' }, baseline: { date: '2026-10-07' } });
+  });
+
+  it('never moves a picked date, an edit, a draft being saved or one whose save has an outcome to show', () => {
+    const { store, flow } = setUp();
+
+    openCreate(store);
+    store.dispatch(dateOpened());
+    store.dispatch(pendingDatePicked({ date: '2026-10-01' }));
+    store.dispatch(dateApplied());
+    store.dispatch(todayChanged({ today: '2026-10-07' }));
+    expect(flow()?.draft?.date).toBe('2026-10-01');
+    store.dispatch(closed());
+
+    openChecked(store);
+    store.dispatch(editStarted());
+    store.dispatch(todayChanged({ today: '2026-10-07' }));
+    expect(flow()?.draft?.date).toBe(saved.date);
+    store.dispatch(closed());
+
+    openCreate(store);
+    const { draftId } = flow()!;
+    store.dispatch(saveStarted({ draftId }));
+    store.dispatch(todayChanged({ today: '2026-10-07' }));
+    expect(flow()?.draft?.date).toBe(TODAY);
+
+    store.dispatch(saveFailed({ draftId, notice: 'saveUnknown' }));
+    store.dispatch(todayChanged({ today: '2026-10-07' }));
+    expect(flow()?.draft?.date).toBe(TODAY);
+  });
+
+  it('keeps a restored draft’s zone until another date is applied', () => {
+    const { store, flow } = setUp();
+    const draft = {
+      transactionType: TransactionType.EXPENSE,
+      amount: '5.00',
+      categoryId: 4,
+      assignment: { kind: 'space' as const },
+      date: '2026-09-30',
+      timeZone: 'America/Chicago',
+      description: '',
+    };
+
+    store.dispatch(restoredOpened({ spaceId: 1, operationId: 'op-1', draft }));
+    store.dispatch(todayChanged({ today: '2026-10-07' }));
+    store.dispatch(dateOpened());
+    store.dispatch(dateApplied());
+    expect(flow()?.draft).toEqual(draft);
+
+    store.dispatch(dateOpened());
+    store.dispatch(pendingDatePicked({ date: '2026-09-29' }));
+    store.dispatch(dateApplied());
+    expect(flow()?.draft).toEqual({ ...draft, date: '2026-09-29', timeZone: undefined });
   });
 
   it('ends on a space switch or a logout, even mid-write', async () => {
@@ -364,7 +432,9 @@ describe('transaction flow', () => {
     store.dispatch(activateSpace(2));
     expect(flow()).toBeNull();
 
-    store.dispatch(createOpened({ spaceId: 2, transactionType: TransactionType.EXPENSE, assignment: lena, now: NOW }));
+    store.dispatch(
+      createOpened({ spaceId: 2, transactionType: TransactionType.EXPENSE, assignment: lena, today: TODAY }),
+    );
     store.dispatch(saveStarted({ draftId: flow()!.draftId }));
     await store.dispatch(logoutMe());
     expect(flow()).toBeNull();

@@ -33,7 +33,7 @@ interface RequestConfig {
   url: string;
   method?: string;
   data?: Record<string, unknown>;
-  params?: { from: string; to: string; limit?: number };
+  params?: { from_date: string; to_date: string; limit?: number };
 }
 
 interface SpaceDb {
@@ -150,7 +150,7 @@ const createBackend = () => {
       };
     }
     if (resource === 'transactions' && method === 'POST') {
-      const { assignment: _assignment, ...fields } = data!;
+      const { assignment: _assignment, time_zone: _timeZone, ...fields } = data!;
       const row = {
         id: `tx-${spaceDb.transactions.length + 1}`,
         kind: TransactionKind.REGULAR,
@@ -191,7 +191,7 @@ const getRequests = () =>
   mockedRequest.mock.calls
     .map(([config]: [RequestConfig]) => config)
     .filter(({ method = 'GET' }) => method === 'GET')
-    .map(({ url, params }) => (params ? `${url}?${params.from}` : url));
+    .map(({ url, params }) => (params ? `${url}?${params.from_date}` : url));
 
 // What a signed-in user has mounted: the navigator gate, Home, History and the Limits/Categories data.
 const useMountedScreens = () => {
@@ -294,7 +294,8 @@ describe('server data scenarios', () => {
             category_id: 5,
             transaction_type: TransactionType.EXPENSE,
             amount: '12',
-            timestamp: '2026-01-15T10:00:00.000Z',
+            date: '2026-01-15',
+            time_zone: 'America/Chicago',
           },
         }),
       );
@@ -322,7 +323,7 @@ describe('server data scenarios', () => {
       category_id: 5,
       transaction_type: TransactionType.EXPENSE,
       amount: '12.00',
-      timestamp: '2026-01-10T10:00:00.000Z',
+      date: '2026-01-10',
       description: null,
     });
 
@@ -414,13 +415,13 @@ describe('server data scenarios', () => {
         category_id: 5,
         transaction_type: TransactionType.EXPENSE,
         amount: '12.00',
-        timestamp: '2026-01-10T10:00:00.000Z',
+        date: '2026-01-10',
         description: null,
       },
       description: 'Old session',
     });
     intercept = (config) =>
-      config.url === '/spaces/1/transactions/feed' && !config.params?.from.startsWith('1970')
+      config.url === '/spaces/1/transactions/feed'
         ? new Promise((resolve) => (releaseOld = () => respond(config).then(resolve)))
         : undefined;
     act(() => {
@@ -457,7 +458,7 @@ describe('server data scenarios', () => {
       category_id: 5,
       transaction_type: TransactionType.EXPENSE,
       amount: '12.00',
-      timestamp: '2026-01-10T10:00:00.000Z',
+      date: '2026-01-10',
       description: null,
     });
     const { store, result, unmount } = await renderApp();
@@ -491,7 +492,8 @@ describe('server data scenarios', () => {
             category_id: 5,
             transaction_type: TransactionType.EXPENSE,
             amount: '12',
-            timestamp: '2026-01-15T10:00:00.000Z',
+            date: '2026-01-15',
+            time_zone: 'America/Chicago',
           },
         }),
       );

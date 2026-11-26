@@ -52,44 +52,6 @@ const createStyles = ({ colors }: ColorTheme) =>
       lineHeight: theme.lineHeights.caption,
       color: colors.muted,
     },
-    timeRow: {
-      flexDirection: 'row',
-      alignItems: 'baseline',
-      justifyContent: 'space-between',
-    },
-    label: {
-      fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
-      letterSpacing: 0.3,
-      color: colors.muted,
-    },
-    summary: {
-      fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
-      lineHeight: theme.lineHeights.bodySm,
-      color: colors.text,
-    },
-    wheel: {
-      alignSelf: 'stretch',
-    },
-    timeButton: {
-      alignSelf: 'flex-start',
-      height: 44,
-      borderRadius: theme.radius.md,
-      paddingHorizontal: theme.spacing.lg,
-      justifyContent: 'center',
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.hairline,
-    },
-    // SemiBold under-measures its width in a content-sized box (see cde3346).
-    timeText: {
-      paddingRight: 2,
-      fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
-      color: colors.text,
-    },
     footer: {
       paddingTop: theme.spacing.md,
       paddingHorizontal: theme.spacing.xl,

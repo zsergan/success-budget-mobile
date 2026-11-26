@@ -1,6 +1,7 @@
 import type { AppColor } from '@shared/enums';
 import type { IconType } from '@shared/types';
 import type { GetLimitsResponse, LimitsPeriod, LimitView, OverAllocation } from '@api/dto';
+import type { CalendarDate } from '@shared/utils/calendarDate';
 import { toMobileIcon } from './category';
 
 export interface LimitCategoryModel {
@@ -26,10 +27,8 @@ export interface OverAllocationModel {
 
 export interface LimitsPeriodModel {
   timeZone: string;
-  startDate: string;
-  endDate: string;
-  from: string;
-  to: string;
+  startDate: CalendarDate;
+  endDate: CalendarDate;
 }
 
 export interface LimitsModel {
@@ -62,8 +61,6 @@ const mapPeriod = (dto: LimitsPeriod): LimitsPeriodModel => ({
   timeZone: dto.time_zone,
   startDate: dto.start_date,
   endDate: dto.end_date,
-  from: dto.from,
-  to: dto.to,
 });
 
 export const mapLimitsResponse = (dto: GetLimitsResponse): LimitsModel => ({

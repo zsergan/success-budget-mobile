@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { EmptyState } from '@components';
 import type { TransactionModel } from '@api/models';
 import type { DateRange } from '@shared/utils';
-import { formatDateDDMMYYYY, formatRangeLabel } from '@shared/utils';
+import { formatLongDate, formatRangeLabel } from '@shared/utils';
 
 import styles from './style';
 
@@ -27,7 +27,7 @@ type Props =
 const QUOTE_LENGTH = 40;
 const quote = (text: string) => (text.length > QUOTE_LENGTH ? `${text.slice(0, QUOTE_LENGTH - 1)}…` : text);
 
-const jumpLabel = (latest: TransactionModel) => `Jump to ${formatDateDDMMYYYY(latest.timestamp)}`;
+const jumpLabel = (latest: TransactionModel) => `Jump to ${formatLongDate(latest.date)}`;
 
 const TransactionsEmptyState = (props: Props) => (
   <View style={styles.emptyContainer}>
@@ -47,7 +47,7 @@ const TransactionsEmptyState = (props: Props) => (
         variant="solid"
         icon="calendar"
         title="Nothing in this period"
-        description={`No transactions between ${formatRangeLabel(props.activeRange)}. Your last one was on ${formatDateDDMMYYYY(props.latest.timestamp)}.`}
+        description={`No transactions between ${formatRangeLabel(props.activeRange)}. Your last one was on ${formatLongDate(props.latest.date)}.`}
         {...(props.onResetRange
           ? {
               actionLabel: 'Reset to this month',

@@ -1,5 +1,6 @@
 import type { AppColor, TransactionType } from '@shared/enums';
 import type { CategoryIconApi } from './categoryDto';
+import type { CalendarDate } from '@shared/utils/calendarDate';
 import type { PersonStatus } from './transactionDto';
 
 export type StatisticsPeriodType = 'week' | 'month' | 'year' | 'custom';
@@ -12,9 +13,10 @@ export type Money = string;
 export interface StatisticsQuery {
   period: StatisticsPeriodType;
   time_zone: string;
-  anchor_date?: string;
-  from_date?: string;
-  to_date?: string;
+  anchor_date?: CalendarDate;
+  from_date?: CalendarDate;
+  to_date?: CalendarDate;
+  // The load cycle's reference clock, an instant with `Z`: it tells the server which day is today in `time_zone`.
   as_of?: string;
 }
 
@@ -26,12 +28,11 @@ export interface StatisticsBreakdownQuery extends StatisticsQuery {
 export interface StatisticsPeriod {
   type: StatisticsPeriodType;
   time_zone: string;
-  start_date: string;
-  end_date: string;
-  from: string;
-  to: string;
+  start_date: CalendarDate;
+  end_date: CalendarDate;
   as_of: string;
-  actual_to: string | null;
+  // The last day counted, today for a current period; null for a future one.
+  actual_end_date: CalendarDate | null;
   state: StatisticsTimeState;
 }
 
@@ -51,11 +52,10 @@ export interface StatisticsChange {
 }
 
 export interface StatisticsPreviousPeriod {
-  start_date: string;
-  end_date: string;
-  from: string;
-  to: string;
-  actual_to: string;
+  start_date: CalendarDate;
+  end_date: CalendarDate;
+  // The like-for-like cut of a current period, otherwise `end_date`.
+  actual_end_date: CalendarDate;
   income: MoneyCount;
   expense: MoneyCount;
   net: Money;
@@ -70,15 +70,13 @@ export interface StatisticsSummary extends StatisticsBlock {
   previous: StatisticsPreviousPeriod | null;
   change: { income: StatisticsChange; expense: StatisticsChange; net: StatisticsChange } | null;
   has_any_transactions: boolean;
-  last_transaction_date: string | null;
+  last_transaction_date: CalendarDate | null;
 }
 
 export interface StatisticsTrendBucket {
   key: string;
-  start_date: string;
-  end_date: string;
-  from: string;
-  to: string;
+  start_date: CalendarDate;
+  end_date: CalendarDate;
   state: StatisticsTimeState;
   income: Money | null;
   expense: Money | null;

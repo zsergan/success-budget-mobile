@@ -12,15 +12,7 @@ import { selectProfileId } from '@redux/state/profile/selectors';
 import { selectIsPersonalSpace } from '@redux/state/space/selectors';
 import { selectIsDeleting } from '@redux/state/transactionFlow/selectors';
 import Icon from '../Icon/Icon';
-import {
-  assignmentLabel,
-  formatAmount,
-  formatDateHHMM,
-  formatMoneyAmount,
-  formatRowDay,
-  isOwnAssignment,
-  toZonedDay,
-} from '@shared/utils';
+import { assignmentLabel, formatAmount, formatMoneyAmount, formatRelativeDate, isOwnAssignment } from '@shared/utils';
 import { TransactionType } from '@shared/enums';
 
 import createStyles from './style';
@@ -34,11 +26,9 @@ interface Props {
   transaction: TransactionModel;
   currencyCode?: string;
   isHighlighted?: boolean;
-  // The zone the time is told in; the device's when left out.
-  timeZone?: string;
   // Home's hidden amounts: the row says what it is, not how much.
   isAmountHidden?: boolean;
-  // Names the row's day before its time, where no day header above it does.
+  // Names the row's own date, where no day header above it does.
   showsDay?: boolean;
   onPress?: (transaction: TransactionModel) => void;
   // Swiping left offers Delete; `onSettled` slides the row back once the confirmation closes.
@@ -49,7 +39,6 @@ const TransactionCard = ({
   transaction,
   currencyCode,
   isHighlighted = false,
-  timeZone,
   isAmountHidden = false,
   showsDay = false,
   onPress,
@@ -71,10 +60,8 @@ const TransactionCard = ({
   const shownAssignment =
     isSystem || (isPersonal && isOwnAssignment(assignment, selfId)) ? null : assignmentLabel(assignment, selfId);
   const tag = isSystem ? 'Archived' : author.source === 'imported' ? 'Imported' : null;
-  const time = formatDateHHMM(transaction.timestamp, timeZone);
-  const when = showsDay
-    ? `${formatRowDay(toZonedDay(new Date(transaction.timestamp), timeZone), toZonedDay(new Date(), timeZone))}, ${time}`
-    : time;
+  const day = showsDay ? formatRelativeDate(transaction.date) : null;
+  const hasMeta = !!(description || shownAssignment || day);
 
   // A row being deleted stays put, dimmed, until the server answers.
   const card = (
@@ -126,31 +113,35 @@ const TransactionCard = ({
           )}
         </View>
 
-        {/* The time never shrinks; the description gives way first, then only an assignment past its share. */}
-        <View style={[styles.metaLine, isLargeText && styles.metaLineWrapped]}>
-          {description && (
-            <Text style={[styles.meta, styles.description]} numberOfLines={1}>
-              {description}
-            </Text>
-          )}
+        {/* The day never shrinks; the description gives way first, then only an assignment past its share. */}
+        {hasMeta && (
+          <View style={[styles.metaLine, isLargeText && styles.metaLineWrapped]}>
+            {description && (
+              <Text style={[styles.meta, styles.description]} numberOfLines={1}>
+                {description}
+              </Text>
+            )}
 
-          {description && shownAssignment && <Text style={[styles.meta, styles.fixed]}>{' · '}</Text>}
+            {description && shownAssignment && <Text style={[styles.meta, styles.fixed]}>{' · '}</Text>}
 
-          {shownAssignment && (
-            <Text
-              style={[
-                styles.meta,
-                description ? styles.assignmentBeside : styles.assignmentAlone,
-                isPersonGone && styles.metaFaint,
-              ]}
-              numberOfLines={1}
-            >
-              {shownAssignment}
-            </Text>
-          )}
+            {shownAssignment && (
+              <Text
+                style={[
+                  styles.meta,
+                  description ? styles.assignmentBeside : styles.assignmentAlone,
+                  isPersonGone && styles.metaFaint,
+                ]}
+                numberOfLines={1}
+              >
+                {shownAssignment}
+              </Text>
+            )}
 
-          <Text style={[styles.meta, styles.fixed]}>{`${description || shownAssignment ? ' · ' : ''}${when}`}</Text>
-        </View>
+            {day && (
+              <Text style={[styles.meta, styles.fixed]}>{`${description || shownAssignment ? ' · ' : ''}${day}`}</Text>
+            )}
+          </View>
+        )}
       </View>
     </Pressable>
   );

@@ -4,6 +4,7 @@ import type { TransactionDraft } from './draft';
 import {
   createDraft,
   defaultAssignment,
+  draftFromCreateRequest,
   draftFromTransaction,
   getDraftErrors,
   isDraftChanged,
@@ -13,14 +14,15 @@ import {
   toUpdateRequest,
 } from './draft';
 
-const NOW = Date.parse('2026-10-06T12:00:00.000Z');
+const TODAY = '2026-10-06';
+const DEVICE_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 const saved: TransactionModel = {
   id: 'tx-1',
   kind: TransactionKind.REGULAR,
   transactionType: TransactionType.EXPENSE,
   amount: '50.00',
-  timestamp: '2026-10-05T09:30:12.345Z',
+  date: '2026-10-05',
   description: 'Lunch',
   version: 2,
   category: {
@@ -67,10 +69,10 @@ describe('normalizeAmount', () => {
 
 describe('amount errors', () => {
   const draft = {
-    ...createDraft({ transactionType: TransactionType.EXPENSE, assignment: you, timestamp: '' }),
+    ...createDraft({ transactionType: TransactionType.EXPENSE, assignment: you, date: TODAY }),
     categoryId: 4,
   };
-  const amountError = (amount: string) => getDraftErrors({ ...draft, amount }, { now: NOW }).amount;
+  const amountError = (amount: string) => getDraftErrors({ ...draft, amount }, { today: TODAY }).amount;
 
   it('explains why a typed or pasted value is no amount, and never cuts or rounds it', () => {
     expect(amountError('')).toBe('Enter an amount');
@@ -89,7 +91,11 @@ describe('amount errors', () => {
 describe('isDraftChanged', () => {
   it('sees no change in the same values written differently', () => {
     expect(isDraftChanged(edit({ amount: '50', description: '  Lunch ' }), baseline)).toBe(false);
-    expect(isDraftChanged(edit({ timestamp: '2026-10-05T12:30:12.345+03:00' }), baseline)).toBe(false);
+    expect(isDraftChanged(edit({ timeZone: 'Asia/Tokyo' }), baseline)).toBe(false);
+  });
+
+  it('sees another date as a change', () => {
+    expect(isDraftChanged(edit({ date: '2026-10-04' }), baseline)).toBe(true);
   });
 
   it('sees a change, and none once every field is back where it was', () => {
@@ -104,70 +110,76 @@ describe('isDraftChanged', () => {
 });
 
 describe('getDraftErrors', () => {
-  const fresh = createDraft({ transactionType: TransactionType.EXPENSE, assignment: you, timestamp: saved.timestamp });
+  const fresh = createDraft({ transactionType: TransactionType.EXPENSE, assignment: you, date: saved.date });
 
   it('asks a new draft for an amount above zero and a category', () => {
-    expect(getDraftErrors(fresh, { now: NOW })).toEqual({ amount: 'Enter an amount', category: 'Choose a category' });
-    expect(getDraftErrors({ ...fresh, amount: '0', categoryId: 4 }, { now: NOW })).toHaveProperty('amount');
-    expect(getDraftErrors({ ...fresh, amount: '100000000', categoryId: 4 }, { now: NOW })).toHaveProperty('amount');
-    expect(getDraftErrors({ ...fresh, amount: '99999999.99', categoryId: 4 }, { now: NOW })).toEqual({});
+    expect(getDraftErrors(fresh, { today: TODAY })).toEqual({
+      amount: 'Enter an amount',
+      category: 'Choose a category',
+    });
+    expect(getDraftErrors({ ...fresh, amount: '0', categoryId: 4 }, { today: TODAY })).toHaveProperty('amount');
+    expect(getDraftErrors({ ...fresh, amount: '100000000', categoryId: 4 }, { today: TODAY })).toHaveProperty('amount');
+    expect(getDraftErrors({ ...fresh, amount: '99999999.99', categoryId: 4 }, { today: TODAY })).toEqual({});
   });
 
-  it('refuses a future time and a note over 140 characters', () => {
-    const draft = { ...fresh, amount: '5', categoryId: 4, timestamp: new Date(NOW + 120_000).toISOString() };
+  it('refuses a date after today and a note over 140 characters, and takes today itself', () => {
+    const draft = { ...fresh, amount: '5', categoryId: 4, date: '2026-10-07' };
 
-    expect(getDraftErrors({ ...draft, description: '😀'.repeat(141) }, { now: NOW })).toEqual({
-      timestamp: 'A transaction cannot be in the future',
+    expect(getDraftErrors({ ...draft, description: '😀'.repeat(141) }, { today: TODAY })).toEqual({
+      date: 'Pick today or an earlier day',
       description: 'Keep the note under 140 characters',
     });
-    expect(
-      getDraftErrors({ ...draft, timestamp: saved.timestamp, description: '😀'.repeat(140) }, { now: NOW }),
-    ).toEqual({});
+    expect(getDraftErrors({ ...draft, date: TODAY, description: '😀'.repeat(140) }, { today: TODAY })).toEqual({});
   });
 
-  it('refuses a date before the first one the server stores', () => {
-    const draft = { ...fresh, amount: '5', categoryId: 4, timestamp: '1970-01-01T00:00:00.000Z' };
+  it('takes any earlier day, the first one the server stores included, and nothing that is not a date', () => {
+    const draft = { ...fresh, amount: '5', categoryId: 4 };
 
-    expect(getDraftErrors(draft, { now: NOW })).toEqual({ timestamp: 'Pick a date after 1 January 1970' });
+    expect(getDraftErrors({ ...draft, date: '1000-01-01' }, { today: TODAY })).toEqual({});
+    expect(getDraftErrors({ ...draft, date: '1969-12-31' }, { today: TODAY })).toEqual({});
+    expect(getDraftErrors({ ...draft, date: '2026-02-30' }, { today: TODAY })).toEqual({ date: 'Pick a date' });
+    expect(getDraftErrors({ ...draft, date: '0999-12-31' }, { today: TODAY })).toEqual({ date: 'Pick a date' });
   });
 
   it("takes only a member and a category still on offer, but keeps an edit's own", () => {
     const available = { memberIds: [2], categoryIds: [5] };
     const draft = { ...fresh, amount: '5', categoryId: 4 };
 
-    expect(getDraftErrors(draft, { now: NOW, available })).toEqual({
+    expect(getDraftErrors(draft, { today: TODAY, available })).toEqual({
       assignment: 'Choose who it’s assigned to',
       category: 'Choose a category',
     });
-    expect(getDraftErrors(edit({ amount: '70' }), { baseline, now: NOW, available })).toEqual({});
-    expect(getDraftErrors(edit({ assignment: you }), { baseline, now: NOW, available })).toEqual({
+    expect(getDraftErrors(edit({ amount: '70' }), { baseline, today: TODAY, available })).toEqual({});
+    expect(getDraftErrors(edit({ assignment: you }), { baseline, today: TODAY, available })).toEqual({
       assignment: 'Choose who it’s assigned to',
     });
-    expect(getDraftErrors(edit({ assignment: { kind: 'unassigned' } }), { baseline, now: NOW, available })).toEqual({});
+    expect(getDraftErrors(edit({ assignment: { kind: 'unassigned' } }), { baseline, today: TODAY, available })).toEqual(
+      {},
+    );
   });
 
   it('waits for a pick after the server refused a member who had left', () => {
-    expect(getDraftErrors(edit({ assignment: null }), { baseline, now: NOW })).toEqual({
+    expect(getDraftErrors(edit({ assignment: null }), { baseline, today: TODAY })).toEqual({
       assignment: 'Choose who it’s assigned to',
     });
   });
 
   it('leaves values an edit does not change alone', () => {
-    const legacy = { ...baseline, amount: '0.00', timestamp: new Date(NOW + 3_600_000).toISOString() };
+    const legacy = { ...baseline, amount: '0.00', date: '2026-10-09' };
 
-    expect(getDraftErrors({ ...legacy, description: 'Dinner' }, { baseline: legacy, now: NOW })).toEqual({});
-    expect(getDraftErrors({ ...legacy, amount: '0' }, { baseline: legacy, now: NOW })).toEqual({});
+    expect(getDraftErrors({ ...legacy, description: 'Dinner' }, { baseline: legacy, today: TODAY })).toEqual({});
+    expect(getDraftErrors({ ...legacy, amount: '0' }, { baseline: legacy, today: TODAY })).toEqual({});
   });
 
   it("keeps a former member's or a deleted account's assignment only while it is unchanged", () => {
     const deleted = { ...baseline, assignment: { kind: 'member', userId: null } } as const;
 
     expect(
-      getDraftErrors({ ...baseline, amount: '70' }, { baseline, now: NOW, available: { memberIds: [7] } }),
+      getDraftErrors({ ...baseline, amount: '70' }, { baseline, today: TODAY, available: { memberIds: [7] } }),
     ).toEqual({});
-    expect(getDraftErrors({ ...deleted, amount: '70' }, { baseline: deleted, now: NOW })).toEqual({});
+    expect(getDraftErrors({ ...deleted, amount: '70' }, { baseline: deleted, today: TODAY })).toEqual({});
     expect(
-      getDraftErrors({ ...baseline, assignment: { kind: 'member', userId: null } }, { baseline, now: NOW }),
+      getDraftErrors({ ...baseline, assignment: { kind: 'member', userId: null } }, { baseline, today: TODAY }),
     ).toEqual({ assignment: 'Choose who it’s assigned to' });
   });
 });
@@ -210,9 +222,24 @@ describe('requests', () => {
       category_id: 4,
       transaction_type: TransactionType.EXPENSE,
       amount: '12.50',
-      timestamp: '2026-10-05T09:30:12.345Z',
+      date: '2026-10-05',
+      time_zone: DEVICE_ZONE,
       description: null,
     });
+  });
+
+  it('sends the zone a stored request was made with, and the device’s otherwise', () => {
+    expect(toCreateRequest(edit({ timeZone: 'America/Chicago' }))).toMatchObject({
+      date: '2026-10-05',
+      time_zone: 'America/Chicago',
+    });
+    expect(toUpdateRequest(edit({}))).toMatchObject({ date: '2026-10-05', time_zone: DEVICE_ZONE });
+  });
+
+  it('reads a stored create back as its draft, date and zone included', () => {
+    const request = toCreateRequest(edit({ timeZone: 'America/Chicago' }));
+
+    expect(draftFromCreateRequest(request)).toEqual({ ...edit({}), description: 'Lunch', timeZone: 'America/Chicago' });
   });
 
   it("sends the whole edit, leaving a deleted account's assignment out to keep it", () => {

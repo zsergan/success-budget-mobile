@@ -24,7 +24,7 @@ import { assignmentLabel, authorLabel, formatAmount, formatMoneyAmount, hexToRgb
 import DeleteButton from '../DeleteButton/DeleteButton';
 import { deleteFailureAction, deleteFailureText } from '../deleteMessage';
 import Banner from '@components/Banner/Banner';
-import { formatDateTime } from '../format';
+import { formatTransactionDate } from '../format';
 
 import createStyles from './style';
 
@@ -44,7 +44,7 @@ const movedOutText = (
   selfId: number | undefined,
 ): string => {
   if (whereSaved(transaction, selection) === 'otherPeriod') {
-    return `Now dated ${formatDateTime(transaction.timestamp)}, outside the period this list shows, so it left the list.`;
+    return `Now dated ${formatTransactionDate(transaction.date)}, outside the period this list shows, so it left the list.`;
   }
   if (selection?.assignment !== undefined && assignmentKeyOf(transaction.assignment) !== selection.assignment) {
     return `Now assigned to ${assignmentLabel(transaction.assignment, selfId)}, so it left this filtered list.`;
@@ -177,7 +177,7 @@ const TransactionDetails = ({
 
           <View style={styles.property}>
             <Text style={styles.propertyLabel}>Date</Text>
-            <Text style={styles.propertyValue}>{formatDateTime(transaction.timestamp)}</Text>
+            <Text style={styles.propertyValue}>{formatTransactionDate(transaction.date)}</Text>
           </View>
         </View>
         {isImported && !isSystem && (

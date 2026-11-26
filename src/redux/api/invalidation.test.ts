@@ -23,7 +23,7 @@ jest.useFakeTimers();
 interface RequestConfig {
   url: string;
   method: string;
-  params?: { from: string };
+  params?: { from_date: string };
 }
 
 let mutationResponse: unknown;
@@ -45,7 +45,7 @@ const respond = ({ url, method }: RequestConfig) => {
 
 const resourceOf = ({ url, params }: RequestConfig) => {
   const [, spaceId, resource, extra] = url.match(/^\/spaces\/(\d+)\/(\w+)(?:\/(\w+))?$/) ?? [];
-  const name = extra === 'feed' ? `feed:${params!.from.slice(0, 7)}` : (extra ?? resource);
+  const name = extra === 'feed' ? `feed:${params!.from_date.slice(0, 7)}` : (extra ?? resource);
 
   return `${spaceId}:${name}`;
 };
@@ -60,17 +60,13 @@ const subscribeToSpace = (store: ReturnType<typeof createAppStore>, spaceId: num
   store.dispatch(
     transactionApi.endpoints.getRecentTransactions.initiate({
       spaceId,
-      timeZone: 'UTC',
-      from: '2026-01-01T00:00:00.000Z',
-      to: '2026-01-31T23:59:59.999Z',
+      fromDate: '2026-01-01',
+      toDate: '2026-01-31',
     }),
   );
   store.dispatch(
     transactionApi.endpoints.getTransactionsFeed.initiate({
-      selection: feedSelection(
-        { spaceId, from: '2026-01-01T00:00:00.000Z', to: '2026-01-31T23:59:59.999Z' },
-        { timeZone: 'UTC' },
-      ),
+      selection: feedSelection({ spaceId, fromDate: '2026-01-01', toDate: '2026-01-31' }),
       generation: 'g1',
     }),
   );
@@ -108,7 +104,8 @@ const transactionData: CreateTransactionRequest = {
   category_id: 1,
   transaction_type: TransactionType.EXPENSE,
   amount: '10',
-  timestamp: '2026-01-05T00:00:00.000Z',
+  date: '2026-01-05',
+  time_zone: 'America/Chicago',
 };
 
 const rules = [

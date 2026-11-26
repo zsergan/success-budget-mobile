@@ -1,11 +1,11 @@
 import type { AssignmentKey, TransactionModel } from '@api/models';
 import { assignmentKeyOf } from '@api/models';
 import type { TransactionType } from '@shared/enums';
+import type { CalendarDateRange } from '@shared/utils/calendarDate';
+import { isWithinDates, pickerRangeDates } from '@shared/utils/calendarDate';
 
-// What the screen a transaction was opened or created from lists: its period, and the filters it narrows that by.
-export interface ViewSelection {
-  from: string;
-  to: string;
+// What the screen a transaction was opened or created from lists: its dates, and the filters it narrows them by.
+export interface ViewSelection extends CalendarDateRange {
   transactionType?: TransactionType;
   categoryId?: number;
   assignment?: AssignmentKey;
@@ -17,13 +17,11 @@ export interface ViewSelection {
 export type SavedPlace = 'shown' | 'otherPeriod' | 'otherFilter';
 
 export const whereSaved = (
-  transaction: Pick<TransactionModel, 'timestamp' | 'transactionType' | 'category' | 'assignment'>,
+  transaction: Pick<TransactionModel, 'date' | 'transactionType' | 'category' | 'assignment'>,
   selection: ViewSelection | null,
 ): SavedPlace => {
   if (!selection) return 'shown';
-
-  const time = Date.parse(transaction.timestamp);
-  if (time < Date.parse(selection.from) || time > Date.parse(selection.to)) return 'otherPeriod';
+  if (!isWithinDates(transaction.date, selection)) return 'otherPeriod';
 
   const { transactionType, categoryId, assignment } = selection;
   const isFiltered =
@@ -34,7 +32,4 @@ export const whereSaved = (
   return isFiltered ? 'otherFilter' : 'shown';
 };
 
-export const rangeSelection = ({ from, to }: { from: Date; to: Date }): ViewSelection => ({
-  from: from.toISOString(),
-  to: to.toISOString(),
-});
+export const rangeSelection = (range: { from: Date; to: Date }): ViewSelection => pickerRangeDates(range);

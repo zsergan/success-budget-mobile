@@ -64,13 +64,9 @@ const HomeScreen = ({ navigation, route }: Props) => {
   const recentQuery = useGetRecentTransactionsQuery(useRecentArg(range));
   const activity = getLoadState(recentQuery);
 
-  // A new record is dated now whatever month is shown; one saved outside it brings Home to its month on View.
-  const from = range.from.getTime();
-  const to = range.to.getTime();
-  const selection = useMemo<ViewSelection>(
-    () => ({ ...rangeSelection({ from: new Date(from), to: new Date(to) }), origin: 'home' }),
-    [from, to],
-  );
+  // A new record is dated today whatever month is shown; one saved outside it brings Home to its month on View.
+  const { fromDate, toDate } = rangeSelection(range);
+  const selection = useMemo<ViewSelection>(() => ({ fromDate, toDate, origin: 'home' }), [fromDate, toDate]);
   const { openCreate, openDetails } = useTransactionFlow(selection);
 
   const spaceId = space?.id ?? null;
@@ -89,7 +85,7 @@ const HomeScreen = ({ navigation, route }: Props) => {
   // What is shown stays, flagged, when a refresh of any block could not bring it up to date.
   const refreshFailed = stats.updateFailed || activity.hasRefreshError;
   const showsFailure = refreshFailed || stats.isUnreconciled;
-  const anchor = range.from.toISOString();
+  const anchor = fromDate;
   const currentName = monthName(new Date());
   const previewMonth = monthName(range.from, range.from.getFullYear() !== new Date().getFullYear());
 

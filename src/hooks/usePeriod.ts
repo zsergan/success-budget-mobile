@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import type { Period, PeriodUnit } from '@shared/utils';
+import type { CalendarDate, Period, PeriodUnit } from '@shared/utils';
 import { CURRENT_MONTH, currentPeriod, isCurrentMonth, monthPeriodOf, toDateRange } from '@shared/utils';
 
 const usePeriod = () => {
@@ -14,7 +14,7 @@ const usePeriod = () => {
     applyPeriod: setPeriod,
     selectCurrent: (unit: PeriodUnit) => setPeriod(currentPeriod(unit)),
     resetPeriod: () => setPeriod(CURRENT_MONTH),
-    openMonthOf: (timestamp: string) => setPeriod(monthPeriodOf(timestamp)),
+    openMonthOf: (date: CalendarDate) => setPeriod(monthPeriodOf(date)),
   };
 };
 

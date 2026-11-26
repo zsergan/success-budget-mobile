@@ -7,10 +7,7 @@ import type {
   StatisticsTrend,
 } from '@api/dto';
 import type { DateRange } from '@shared/utils';
-import { toLocalDateKey } from '@shared/utils';
-
-// The device's IANA zone; the API rejects fixed offsets, so there is no offset fallback.
-export const getDeviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+import { fromPickerDate } from '@shared/utils';
 
 // A standard period is sent as its anchor day, so the server applies its own calendar to it.
 export const toStatisticsQuery = (range: DateRange, timeZone: string): StatisticsQuery =>
@@ -18,10 +15,10 @@ export const toStatisticsQuery = (range: DateRange, timeZone: string): Statistic
     ? {
         period: 'custom',
         time_zone: timeZone,
-        from_date: toLocalDateKey(range.from),
-        to_date: toLocalDateKey(range.to),
+        from_date: fromPickerDate(range.from),
+        to_date: fromPickerDate(range.to),
       }
-    : { period: range.preset, time_zone: timeZone, anchor_date: toLocalDateKey(range.from) };
+    : { period: range.preset, time_zone: timeZone, anchor_date: fromPickerDate(range.from) };
 
 const sameMoneyCount = (a: MoneyCount, b: MoneyCount) => a.amount === b.amount && a.count === b.count;
 

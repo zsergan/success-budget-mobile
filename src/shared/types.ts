@@ -3,15 +3,14 @@ import type { CompositeNavigationProp, CompositeScreenProps, NavigatorScreenPara
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AssignmentKey } from '@api/models';
 import type { ScreenNames, AppColor, TransactionKind, TransactionType } from '@shared/enums';
+import type { CalendarDate } from '@shared/utils/calendarDate';
 
-// The transactions behind a Stats row, as a route's params: the period's own instants and zone, as the statistics
-// API returned them.
+// The transactions behind a Stats row, as a route's params: the period's own dates, as the statistics API returned
+// them, so the list holds exactly the records the row summed.
 export type HistoryFilter = {
   spaceId: number;
-  from: string;
-  to: string;
-  // The zone the row was summed in, so the list's days and totals are cut the same way.
-  timeZone: string;
+  fromDate: CalendarDate;
+  toDate: CalendarDate;
   transactionType: TransactionType;
   // Starting balances are left out of the list itself, so it adds up to the row.
   kind: TransactionKind;
@@ -24,12 +23,12 @@ export type HistoryFilter = {
 );
 
 // A one-time request to bring a saved transaction into view: its month, no filter, the row scrolled to.
-export type RevealTransaction = { spaceId: number; transactionId: string; timestamp: string };
+export type RevealTransaction = { spaceId: number; transactionId: string; date: CalendarDate };
 
-// A one-time request from Home to open Stats on its month (`month`: any instant in it), type and grouping.
+// A one-time request from Home to open Stats on its month (`month`: any day in it), type and grouping.
 export type StatsFocus = {
   spaceId: number;
-  month: string;
+  month: CalendarDate;
   transactionType: TransactionType;
   mode: 'category' | 'assignment';
 };
@@ -37,7 +36,7 @@ export type StatsFocus = {
 // A one-time request from Home to open History on its month, narrowed to a type and an assignment.
 export type HistoryFocus = {
   spaceId: number;
-  month: string;
+  month: CalendarDate;
   transactionType?: TransactionType;
   assignment?: AssignmentKey;
   // How the row it came from named the assignment.
@@ -55,7 +54,7 @@ export type StatsStackParamList = {
 
 export type MainTabParamList = {
   // `showMonth`: the month a record saved from Home went to, which Home opens on.
-  [ScreenNames.HOME_TAB]: { showMonth?: { spaceId: number; month: string } } | undefined;
+  [ScreenNames.HOME_TAB]: { showMonth?: { spaceId: number; month: CalendarDate } } | undefined;
   [ScreenNames.TRANSACTIONS_TAB]: { reveal?: RevealTransaction; focus?: HistoryFocus } | undefined;
   [ScreenNames.STATS_TAB]: NavigatorScreenParams<StatsStackParamList> | undefined;
   [ScreenNames.LIMITS_TAB]: undefined;

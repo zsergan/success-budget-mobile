@@ -1,5 +1,5 @@
-import type { CreateTransactionRequest, UpdateTransactionRequest } from '@api/dto';
 import type { StoredOperation } from '../transaction/operations';
+import { convertCreateBody, convertUpdateBody } from './convert';
 import type { WalletEraWrite } from './historical';
 import type { PendingWrite } from './slice';
 
@@ -27,16 +27,18 @@ const withoutWallet = <T extends { wallet_id?: number }>({ wallet_id: _walletId,
 // A create is kept with the body the converted v2 create would send: the same operation id, assigned to the whole
 // space, as the old body could not say whom it was for. It is looked up before anything is sent (`checking`).
 // An edit or a delete goes out again through v2 at its version, with its own key; the wallet part of an edit is dropped.
-export const fromLegacyWrite = ({ operation }: WalletEraWrite): PendingWrite | RetiredEdit => {
+// Its instant becomes the day it had in Chicago. A write whose instant cannot be read is dropped (null).
+export const fromLegacyWrite = ({ operation }: WalletEraWrite): PendingWrite | RetiredEdit | null => {
   const { idempotencyKey, firstSentAt, spaceId } = operation;
 
   switch (operation.type) {
     case 'create': {
-      const data: CreateTransactionRequest = {
+      const data = convertCreateBody({
         ...withoutWallet(operation.data),
         assignment: { kind: 'space' },
         client_operation_id: idempotencyKey,
-      };
+      });
+      if (!data) return null;
 
       return {
         operation: { type: 'create', spaceId, data, idempotencyKey, firstSentAt, recovered: true },
@@ -44,8 +46,9 @@ export const fromLegacyWrite = ({ operation }: WalletEraWrite): PendingWrite | R
       };
     }
     case 'update': {
-      const data: UpdateTransactionRequest = withoutWallet(operation.data);
+      const data = convertUpdateBody(withoutWallet(operation.data));
       const { transactionId, version } = operation;
+      if (!data) return null;
       if (Object.keys(data).length === 0) return { spaceId, transactionId };
 
       const stored: StoredOperation = {
@@ -76,7 +79,7 @@ export const isRetiredEdit = (value: PendingWrite | RetiredEdit): value is Retir
 // Whatever the old build left, read defensively: anything that is not a write it could have stored is dropped.
 export const migrateLegacyWrites = (stored: unknown) => {
   const legacy = Array.isArray(stored) ? stored.filter(isLegacyWrite) : [];
-  const converted = legacy.map(fromLegacyWrite);
+  const converted = legacy.map(fromLegacyWrite).filter((item) => item !== null);
 
   return {
     writes: converted.filter((item): item is PendingWrite => !isRetiredEdit(item)),

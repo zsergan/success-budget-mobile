@@ -9,7 +9,7 @@ import { activateSpace } from '@redux/state/space/thunks';
 import { transactionDto } from '@redux/state/transaction/fixtures';
 import { selectTransactionFlow } from '@redux/state/transactionFlow/selectors';
 import {
-  dateTimeOpened,
+  dateOpened,
   closed,
   createOpened,
   detailsOpened,
@@ -45,7 +45,7 @@ const openDraft = (store: ReturnType<typeof createAppStore>, spaceId = 1) =>
         spaceId,
         transactionType: TransactionType.EXPENSE,
         assignment: { kind: 'space' },
-        now: new Date().toISOString(),
+        today: '2026-01-05',
       }),
     );
     store.dispatch(draftChanged({ description: 'Unsaved' }));
@@ -103,7 +103,7 @@ it.each([
   [
     'across renders',
     (store: ReturnType<typeof createAppStore>) => {
-      act(() => void store.dispatch(dateTimeOpened()));
+      act(() => void store.dispatch(dateOpened()));
       act(() => void store.dispatch(panelClosed()));
     },
   ],
@@ -111,7 +111,7 @@ it.each([
     'within one update',
     (store: ReturnType<typeof createAppStore>) =>
       act(() => {
-        store.dispatch(dateTimeOpened());
+        store.dispatch(dateOpened());
         store.dispatch(panelClosed());
       }),
   ],

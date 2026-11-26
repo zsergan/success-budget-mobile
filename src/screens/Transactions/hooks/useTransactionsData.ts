@@ -15,7 +15,7 @@ import type { TransactionType } from '@shared/enums';
 import { TransactionKind } from '@shared/enums';
 import type { HistoryFilter } from '@shared/types';
 import type { DateRange, DayGroup } from '@shared/utils';
-import { groupRowsByDay } from '@shared/utils';
+import { groupRowsByDay, pickerRangeDates } from '@shared/utils';
 
 // trueEmpty: no transactions at all; filteredEmpty: none in this period; noMatches: none behind a Stats row;
 // noSearchMatches: none for the search in this period; noFilterMatches: none of the type or assignment picked.
@@ -69,7 +69,7 @@ interface HistoryRange extends ListedRows {
 }
 
 interface StatsSelection extends ListedRows {
-  // The transactions behind a Stats row: bounds and zone go to the API exactly as Stats got them.
+  // The transactions behind a Stats row: its dates go to the API exactly as Stats got them.
   filter: HistoryFilter;
 }
 
@@ -77,16 +77,16 @@ type UseTransactionsDataProps = HistoryRange | StatsSelection;
 
 const toFilterArg = ({
   spaceId,
-  from,
-  to,
+  fromDate,
+  toDate,
   transactionType,
   kind,
   categoryId,
   assignment,
 }: HistoryFilter): TransactionsArg => ({
   spaceId,
-  from,
-  to,
+  fromDate,
+  toDate,
   transactionType,
   kind,
   ...(categoryId !== undefined ? { categoryId } : { assignment }),
@@ -102,7 +102,7 @@ const useTransactionsData = (props: UseTransactionsDataProps) => {
   let selection: FeedSelection | SkipToken = skipToken;
   // A selection from another space is never listed under this one's currency and actions.
   if (filter && filter.spaceId === spaceId) {
-    selection = feedSelection(toFilterArg(filter), { timeZone: filter.timeZone });
+    selection = feedSelection(toFilterArg(filter));
   } else if (history && spaceId !== null) {
     selection = feedSelection(
       { ...periodArg(spaceId, history.range), ...historyFilterArg(history.filters ?? {}) },
@@ -120,13 +120,8 @@ const useTransactionsData = (props: UseTransactionsDataProps) => {
   const latestQuery = useGetLatestTransactionQuery(needsLatest ? spaceArg : skipToken);
 
   const sections = useMemo<HistorySection[]>(
-    // A Stats selection's days are those of its zone, the one the server cut its day totals in.
-    () =>
-      groupRowsByDay(items, { timeZone: filter?.timeZone }).map((group) => ({
-        ...group,
-        total: dayNets[group.key] ?? null,
-      })),
-    [items, dayNets, filter?.timeZone],
+    () => groupRowsByDay(items).map((group) => ({ ...group, total: dayNets[group.key] ?? null })),
+    [items, dayNets],
   );
 
   let viewState: TransactionsViewState;
@@ -144,7 +139,7 @@ const useTransactionsData = (props: UseTransactionsDataProps) => {
   } else if (isFiltered) {
     viewState = 'noFilterMatches';
   } else {
-    viewState = getEmptyPeriodState(latestQuery, history.range);
+    viewState = getEmptyPeriodState(latestQuery, pickerRangeDates(history.range));
   }
 
   return {

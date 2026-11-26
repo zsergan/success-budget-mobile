@@ -1,6 +1,7 @@
 import type { AppColor, TransactionType } from '@shared/enums';
 import { TransactionKind } from '@shared/enums';
 import type { IconType } from '@shared/types';
+import type { CalendarDate } from '@shared/utils/calendarDate';
 import type {
   AssigneeOption,
   AuthorSource,
@@ -44,7 +45,7 @@ export interface TransactionModel {
   kind: TransactionKind;
   transactionType: TransactionType;
   amount: string;
-  timestamp: string;
+  date: CalendarDate;
   description: string | null;
   version: number;
   category: TransactionCategoryModel;
@@ -68,7 +69,7 @@ export interface TransactionFeedPageModel {
   nextCursor: string | null;
   previousCursor: string | null;
   summary: TransactionFeedSummary;
-  dayTotals: { date: string; net: Money }[];
+  dayTotals: { date: CalendarDate; net: Money }[];
 }
 
 // The feed's and the breakdown's `assignment` value; the server's keys are passed through unchanged.
@@ -110,7 +111,7 @@ export const mapTransaction = (dto: Transaction): TransactionModel => ({
   kind: dto.kind,
   transactionType: dto.transaction_type,
   amount: dto.amount,
-  timestamp: dto.timestamp,
+  date: dto.date,
   description: dto.description,
   version: dto.version,
   category: mapTransactionCategory(dto.category),
