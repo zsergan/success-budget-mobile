@@ -15,21 +15,26 @@ import type { RetiredEdit } from './legacy';
 import { selectPendingWrite } from './selectors';
 import type { PendingWrite } from './slice';
 import { WAITING_FOR_USER, writeSettled, writesRestored } from './slice';
-import { persistPendingWrites, readPendingWrites } from './storage';
+import { carryOver, persistPendingWrites, readPendingWrites } from './storage';
 
 export const inSession = (operation: StoredOperation, sessionKey: number): TransactionOperation =>
   Object.freeze({ ...operation, sessionKey });
 
-// Writes left unsettled by a closed form, a lost connection or a restart; the user's own, never another's. Edits an
-// older build left that only changed a wallet come back so the user can be told they were not kept.
+// Writes left unsettled by a closed form, a lost connection or a restart; the user's own, never another's. Those of an
+// earlier format are stored in the current one at once, and their old keys go once that save succeeds. Edits an older
+// build left that only changed a wallet come back so the user can be told they were not kept.
 export const restorePendingWrites =
   (userId: number): AppThunk<Promise<RetiredEdit[]>> =>
   (dispatch, getState, { restoringWrites }) => {
     const run = (async () => {
-      const { writes, retiredEdits } = await readPendingWrites(userId);
+      const { writes, retiredEdits, sources } = await readPendingWrites(userId);
       if (selectProfileId(getState()) !== userId) return [];
 
       dispatch(writesRestored({ userId, writes }));
+      if (sources.length > 0) {
+        carryOver(userId, sources);
+        await dispatch(persistPendingWrites());
+      }
       retiredEdits.forEach(({ spaceId }) =>
         dispatch(transactionApi.util.invalidateTags(spaceTags(spaceId, ...TRANSACTION_WRITE_TAGS))),
       );

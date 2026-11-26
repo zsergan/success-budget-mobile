@@ -1,7 +1,12 @@
+import type { TransactionModel } from '@api/models';
+import { readCategoryColor } from '@shared/categoryColors';
 import type { StoredOperation } from '../transaction/operations';
-import { convertCreateBody, convertUpdateBody } from './convert';
-import type { WalletEraWrite } from './historical';
-import type { PendingWrite } from './slice';
+import { convertCreateBody, convertUpdateBody, historicalDate } from './convert';
+import type { TimestampTransactionSnapshot, TimestampWrite, WalletEraWrite } from './historical';
+import type { PendingWrite, PendingWriteStatus } from './slice';
+
+// The formats earlier builds stored pending writes in, read once and converted into the current one: builds before
+// v2 (wallet era, `migrateLegacyWrites`) and builds before calendar dates (`migrateTimestampWrites`).
 
 // An edit that only moved the record to another wallet: wallets are gone, so nothing is left to send.
 export interface RetiredEdit {
@@ -85,4 +90,80 @@ export const migrateLegacyWrites = (stored: unknown) => {
     writes: converted.filter((item): item is PendingWrite => !isRetiredEdit(item)),
     retiredEdits: converted.filter(isRetiredEdit),
   };
+};
+
+const STATUSES: PendingWriteStatus[] = ['sending', 'unknown', 'expired', 'checking', 'found', 'retry', 'accessLost'];
+
+const isTimestampWrite = (value: unknown): value is TimestampWrite => {
+  if (!isLegacyWrite(value) || !STATUSES.includes(value.status as PendingWriteStatus)) return false;
+  const operation = value.operation as unknown as Record<string, unknown>;
+
+  return typeof operation.firstSentAt === 'number' && (operation.type === 'delete' || isObject(operation.data));
+};
+
+// The record a create was found to have made, dated as the server now dates it; null when its instant is unreadable.
+const fromSnapshot = ({ timestamp, category, ...snapshot }: TimestampTransactionSnapshot): TransactionModel | null => {
+  const date = historicalDate(timestamp);
+
+  return date === null
+    ? null
+    : ({ ...snapshot, date, category: { ...category, color: readCategoryColor(category.color) } } as TransactionModel);
+};
+
+// A write of a build before calendar dates, with every instant (body and found record) replaced by its Chicago day,
+// and everything else kept: operation id, key, space, record, version and when it was first sent. A create is looked
+// up by its operation id before it is sent again (`recovered`), so one that applied is never made twice; a found
+// record that cannot be read is looked up again. Null when its body cannot be converted.
+export const fromTimestampWrite = ({ operation, status, found }: TimestampWrite): PendingWrite | null => {
+  const { idempotencyKey, firstSentAt, spaceId } = operation;
+  const known = status as PendingWriteStatus;
+
+  switch (operation.type) {
+    case 'create': {
+      const data = convertCreateBody(operation.data);
+      if (!data) return null;
+
+      const record = known === 'found' && found ? fromSnapshot(found) : null;
+      const write: PendingWrite = {
+        operation: { type: 'create', spaceId, data, idempotencyKey, firstSentAt, recovered: true },
+        status: known === 'sending' || known === 'unknown' || (known === 'found' && !record) ? 'checking' : known,
+      };
+
+      return record ? { ...write, found: record } : write;
+    }
+    case 'update': {
+      const data = convertUpdateBody(operation.data);
+      if (!data) return null;
+
+      const { transactionId, version } = operation;
+
+      return {
+        operation: { type: 'update', spaceId, transactionId, version, data, idempotencyKey, firstSentAt },
+        status: known,
+      };
+    }
+    case 'delete': {
+      const { transactionId, version } = operation;
+
+      return {
+        operation: { type: 'delete', spaceId, transactionId, version, idempotencyKey, firstSentAt },
+        status: known,
+      };
+    }
+  }
+};
+
+// `{ version: 2, writes }` as builds before calendar dates stored it, read defensively; `isReadable` is false when the
+// value is not that envelope at all, so the stored value is kept rather than taken for an empty list.
+export const migrateTimestampWrites = (stored: unknown): { writes: PendingWrite[]; isReadable: boolean } => {
+  if (!isObject(stored) || stored.version !== 2 || !Array.isArray(stored.writes)) {
+    return { writes: [], isReadable: false };
+  }
+
+  const writes = stored.writes
+    .filter(isTimestampWrite)
+    .map(fromTimestampWrite)
+    .filter((write) => write !== null);
+
+  return { writes, isReadable: true };
 };

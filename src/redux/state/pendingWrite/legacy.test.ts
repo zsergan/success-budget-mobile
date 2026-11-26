@@ -1,5 +1,5 @@
 import { TransactionType } from '@shared/enums';
-import { migrateLegacyWrites } from './legacy';
+import { migrateLegacyWrites, migrateTimestampWrites } from './legacy';
 
 const body = {
   wallet_id: 3,
@@ -102,5 +102,81 @@ describe('migrateLegacyWrites', () => {
       writes: [],
       retiredEdits: [],
     });
+  });
+});
+
+describe('migrateTimestampWrites', () => {
+  const timestampBody = {
+    category_id: 1,
+    transaction_type: TransactionType.EXPENSE,
+    amount: '12.00',
+    timestamp: '2026-10-08T21:30:00+03:00',
+    description: 'Lunch',
+    assignment: { kind: 'space' },
+    client_operation_id: 'key-1',
+  };
+  const create = (status: string, timestamp = timestampBody.timestamp) => ({
+    status,
+    operation: { type: 'create', idempotencyKey: 'key-1', data: { ...timestampBody, timestamp }, ...at },
+  });
+
+  it.each([
+    // 18:30 UTC: 13:30 in Chicago, whatever the offset the instant was written with.
+    ['2026-10-08T21:30:00+03:00', '2026-10-08'],
+    // Late evening in Chicago is the next day in UTC.
+    ['2026-01-15T05:59:59.999Z', '2026-01-14'],
+    ['2026-01-15T06:00:00.000Z', '2026-01-15'],
+    ['2026-07-15T04:59:59.999Z', '2026-07-14'],
+    ['2026-11-01T06:30:00.000Z', '2026-11-01'],
+    ['2027-01-01T05:59:59.999Z', '2026-12-31'],
+  ])('dates %s by its Chicago day, sent with that zone', (timestamp, date) => {
+    const { writes } = migrateTimestampWrites({ version: 2, writes: [create('unknown', timestamp)] });
+    const { timestamp: _timestamp, ...rest } = timestampBody;
+
+    expect(writes).toEqual([
+      {
+        status: 'checking',
+        operation: {
+          type: 'create',
+          idempotencyKey: 'key-1',
+          ...at,
+          data: { ...rest, date, time_zone: 'America/Chicago' },
+          recovered: true,
+        },
+      },
+    ]);
+  });
+
+  it('gives the same body every time it is converted', () => {
+    const stored = { version: 2, writes: [create('sending')] };
+
+    expect(migrateTimestampWrites(stored)).toEqual(migrateTimestampWrites(JSON.parse(JSON.stringify(stored))));
+  });
+
+  it('keeps what the user decides on, and looks a found record up again when it cannot be read', () => {
+    const found = { id: 'tx-1', timestamp: 'yesterday', category: { color: 'clay' } };
+    const { writes } = migrateTimestampWrites({
+      version: 2,
+      writes: [create('expired'), create('retry'), create('accessLost'), { ...create('found'), found }],
+    });
+
+    expect(writes.map(({ status, found: record }) => [status, record])).toEqual([
+      ['expired', undefined],
+      ['retry', undefined],
+      ['accessLost', undefined],
+      ['checking', undefined],
+    ]);
+  });
+
+  it('drops a write it cannot convert, and reads nothing from what is not its envelope', () => {
+    expect(
+      migrateTimestampWrites({ version: 2, writes: [create('unknown', 'not a date'), null, { status: 'x' }] }),
+    ).toEqual({
+      writes: [],
+      isReadable: true,
+    });
+    expect(migrateTimestampWrites([create('unknown')])).toEqual({ writes: [], isReadable: false });
+    expect(migrateTimestampWrites({ version: 3, writes: [] })).toEqual({ writes: [], isReadable: false });
+    expect(migrateTimestampWrites(undefined)).toEqual({ writes: [], isReadable: false });
   });
 });

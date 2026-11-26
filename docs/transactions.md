@@ -92,7 +92,8 @@ Every create, edit and delete goes through
 
 Every write is stored per user in AsyncStorage before it is sent, and
 nothing is sent when it cannot be stored. It stays until its outcome is
-known (`pendingWrite` slice, `storage.ts`):
+known (`pendingWrite` slice, `storage.ts`), and a resend sends exactly the
+stored body, its date and `time_zone` included:
 
 - Writes with no known outcome are sent again with their own key on the
   next launch and on every return to the app (`usePendingWritesSync`);
@@ -114,24 +115,44 @@ known (`pendingWrite` slice, `storage.ts`):
 - Writes outlive a logout and wait for the same user's next session;
   another user's are never read or sent.
 
-## Upgrading from builds before v2
+## Upgrading from earlier builds
 
-Builds before v2 stored v1 bodies, with a create naming its wallet, under
-`pendingTransactionWrites.v1.<userId>`. When the user's writes are first
-read after the upgrade, `pendingWrite/legacy.ts` converts them once into the current
-format; the old key is removed only after the converted writes are
-stored, so a failed save converts them again next time, never twice.
+Earlier builds stored pending writes in their own formats:
+`pendingTransactionWrites.v1.<userId>` (before v2: v1 bodies, a create
+naming its wallet) and `pendingTransactionWrites.v2.<userId>` (before
+calendar dates: v2 bodies dated by a `timestamp` instant). Their types are
+spelled out in `pendingWrite/historical.ts`, apart from the current request
+types. When the user's writes are first read after the upgrade,
+`pendingWrite/legacy.ts` converts them into the current format
+(`pendingTransactionWrites.v3.<userId>`); a write already in the current
+format wins over a converted copy of the same key. The old keys are removed
+only after a save of the state holding the converted writes has succeeded,
+so a failed save converts them again next time, never twice. A stored value
+that cannot be read at all is left where it is.
 
-- A create is assigned to the whole space, as the old body cannot say
-  whom it was for, keeps its operation id and is looked up first
-  (`checking`): if it had applied, the banner offers the record (`found`);
-  if it applied and was deleted since, it is dropped; if nothing applied,
-  its draft waits for the user to review and send it (`retry`).
-- An edit or a delete is sent again through v2 at its version with its own
-  key; the wallet part of an edit is dropped. An edit that only moved the
-  record to another wallet is dropped, the user is told once, and the
-  space's data is read again.
+- **Dates.** Every instant, in a body or in a record a create was found to
+  have made, becomes the day it had in `America/Chicago`, where the
+  existing history was entered and by which the server dated it, whatever
+  zone the device is in now. A converted date is sent with
+  `time_zone: America/Chicago`, so it is never after today for the
+  server, and the body stays the same on every later retry; a restored
+  draft keeps that zone until the user picks another date.
+- Operation ids, keys, spaces, record ids, versions and the time a write
+  was first sent are kept as they were.
+- **Creates** keep their operation id and are looked up by it before
+  anything is sent (`checking`): if one had applied, the banner offers the
+  current record (`found`); if it applied and was deleted since, it is
+  dropped; if the server has no trace of it, its draft waits for the user
+  to review and send it under the same id (`retry`). No answer keeps it
+  `checking`; it is never taken as missing. A create an older build left
+  is assigned to the whole space, as its body cannot say whom it was for.
+- **Edits and deletes** go out again through v2 at their version with their
+  own key. A record changed since is refused with a version conflict, so
+  nothing is overwritten, and the space's history is read again. The wallet
+  part of a wallet-era edit is dropped; one that only moved the record to
+  another wallet is dropped, the user is told once, and the space's data is
+  read again.
 
-`legacy.ts` is the only place that knows the old format; it reads the
-stored value defensively and drops anything that is not a write an older
-build could have stored.
+`legacy.ts` is the only place that knows the old formats; it reads stored
+values defensively and drops anything that is not a write an older build
+could have stored, or whose instant cannot be read.

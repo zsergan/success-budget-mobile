@@ -41,8 +41,8 @@ use it, and nothing converts between currencies. Redux Toolkit + RTK Query, Reac
   the saved confirmation in one sheet; the route and the sheet follow
   this state, see `docs/sheets.md`; ends on logout or space switch),
   `pendingWrite` (transaction writes persisted per user before sending,
-  until their outcome is known, including those of builds before v2;
-  see `docs/transactions.md`),
+  until their outcome is known, including those of earlier builds'
+  formats; see `docs/transactions.md`),
   `spaceCreation` (the unanswered space creation's `Idempotency-Key`
   and exact body, persisted per user until its outcome is known; see
   `spaceCreation/thunks.ts`),
