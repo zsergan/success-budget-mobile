@@ -4,7 +4,7 @@ import type { LimitModel } from '@api/models';
 import type { Confirmation } from '@components';
 import { CategoryIconBox, ConfirmationObject, ConfirmationSheet, Icon } from '@components';
 import { nameOr } from '@components/Toast/message';
-import { useTheme, useThemedStyles } from '@hooks';
+import { useCategoryAppearance, useTheme, useThemedStyles } from '@hooks';
 import type { ConfirmAction } from '@hooks';
 import { useDeleteLimitMutation } from '@redux/state/limit/api';
 import { formatCurrencyAmount } from '@shared/utils';
@@ -28,6 +28,7 @@ interface Props {
 const DeleteLimitDialog = ({ deletion, currencyCode }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
+  const appearanceOf = useCategoryAppearance();
   const { target: limit, isPending, error, cancel, confirm } = deletion;
   const [deleteLimit] = useDeleteLimitMutation();
 
@@ -44,7 +45,9 @@ const DeleteLimitDialog = ({ deletion, currencyCode }: Props) => {
         ) : (
           categories
             .slice(0, 4)
-            .map((category) => <Icon key={category.id} name={category.icon} size={14} color={colors.text} />)
+            .map((category) => (
+              <Icon key={category.id} name={category.icon} size={14} color={appearanceOf(category.color).stroke} />
+            ))
         )}
       </View>
     );

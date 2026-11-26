@@ -2,7 +2,8 @@ import type { BottomTabNavigationProp, BottomTabScreenProps } from '@react-navig
 import type { CompositeNavigationProp, CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AssignmentKey } from '@api/models';
-import type { ScreenNames, AppColor, TransactionKind, TransactionType } from '@shared/enums';
+import type { ScreenNames, TransactionKind, TransactionType } from '@shared/enums';
+import type { CategoryColor } from '@shared/categoryColors';
 import type { CalendarDate } from '@shared/utils/calendarDate';
 
 // The transactions behind a Stats row, as a route's params: the period's own dates, as the statistics API returned
@@ -17,7 +18,7 @@ export type HistoryFilter = {
   // The row's name, shown with the list.
   name: string;
 } & (
-  | { categoryId: number; icon: IconType; color: AppColor; assignment?: never }
+  | { categoryId: number; icon: IconType; color: CategoryColor; assignment?: never }
   // The feed's `assignment` value, as the breakdown named it; the list draws the group's look itself.
   | { assignment: AssignmentKey; categoryId?: never }
 );

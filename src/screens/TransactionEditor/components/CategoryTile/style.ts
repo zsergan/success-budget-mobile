@@ -21,8 +21,25 @@ const createStyles = ({ colors }: ColorTheme) =>
       borderWidth: 1,
       borderColor: colors.hairline,
     },
+    boxCategory: {
+      borderWidth: 0,
+    },
     boxSelected: {
       borderWidth: 2,
+      borderColor: colors.text,
+    },
+    check: {
+      position: 'absolute',
+      top: -6,
+      right: -6,
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.text,
+      borderWidth: 2,
+      borderColor: colors.bg,
     },
     boxAction: {
       backgroundColor: 'transparent',

@@ -343,6 +343,34 @@ describe('server data scenarios', () => {
     unmount();
   });
 
+  it('gives a category its new custom colour in the history, Home and the categories already on screen', async () => {
+    backend.db(1).transactions.push({
+      id: 'tx-1',
+      kind: TransactionKind.REGULAR,
+      version: 1,
+      category_id: 5,
+      transaction_type: TransactionType.EXPENSE,
+      amount: '12.00',
+      date: '2026-01-10',
+      description: null,
+    });
+
+    const { store, result, unmount } = await renderApp();
+
+    await act(async () => {
+      await store.dispatch(
+        categoryApi.endpoints.updateCategory.initiate({ spaceId: 1, categoryId: 5, data: { color: '#3A7BD5' } }),
+      );
+    });
+    await settle(store);
+
+    expect(result.current.history.transactions[0].category.color).toBe('#3A7BD5');
+    expect(result.current.home.currentData?.items[0].category.color).toBe('#3A7BD5');
+    expect(result.current.categories.currentData?.expenses.find(({ id }) => id === 5)?.color).toBe('#3A7BD5');
+
+    unmount();
+  });
+
   it('never shows a late response from another space after switching A → B → A', async () => {
     const { store, result, unmount } = await renderApp();
     const held: (() => void)[] = [];

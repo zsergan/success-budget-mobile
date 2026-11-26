@@ -10,6 +10,7 @@ import { whereSaved } from '@redux/state/transactionFlow/selection';
 import type { AvatarSubject } from '@components/AssignmentAvatar/AssignmentAvatar';
 import AssignmentAvatar from '@components/AssignmentAvatar/AssignmentAvatar';
 import Icon from '@components/Icon/Icon';
+import useCategoryAppearance from '@hooks/useCategoryAppearance';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { useAppDispatch, useAppSelector } from '@redux/hooks';
@@ -107,6 +108,7 @@ const TransactionDetails = ({
   );
   const isIncome = transaction.transactionType === TransactionType.INCOME;
   const typeColor = isSystem ? colors.text : isIncome ? colors.ok : colors.danger;
+  const categoryLook = useCategoryAppearance()(transaction.category.color);
 
   return (
     <View style={[styles.root, { paddingBottom: theme.spacing.xl + insets.bottom }]}>
@@ -125,8 +127,13 @@ const TransactionDetails = ({
 
       <BottomSheetScrollView style={styles.scroll} contentContainerStyle={styles.body}>
         <View style={styles.hero}>
-          <View style={[styles.heroIcon, { backgroundColor: isSystem ? colors.track : hexToRgba(typeColor, 0.12) }]}>
-            <Icon name={isSystem ? 'archive' : transaction.category.icon} size={26} color={typeColor} />
+          <View style={[styles.heroIcon, { backgroundColor: isSystem ? colors.track : categoryLook.tint }]}>
+            <Icon
+              name={isSystem ? 'archive' : transaction.category.icon}
+              size={26}
+              color={isSystem ? colors.text : categoryLook.stroke}
+              strokeWidth={1.9}
+            />
           </View>
 
           <Text style={styles.category} numberOfLines={2}>

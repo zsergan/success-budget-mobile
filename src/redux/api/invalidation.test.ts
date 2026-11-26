@@ -173,6 +173,15 @@ const rules = [
     expected: [...ALL_HISTORY, '1:categories', '1:limits'],
   },
   {
+    name: 'change a category to a custom colour',
+    mutate: (store: ReturnType<typeof createAppStore>) =>
+      store.dispatch(
+        categoryApi.endpoints.updateCategory.initiate({ spaceId: 1, categoryId: 1, data: { color: '#3A7BD5' } }),
+      ),
+    response: { id: 1, name: 'Food', transaction_type: TransactionType.EXPENSE, icon: 'Grocery', color: '#3A7BD5' },
+    expected: [...ALL_HISTORY, '1:categories', '1:limits'],
+  },
+  {
     name: 'delete category that gets archived',
     mutate: (store: ReturnType<typeof createAppStore>) =>
       store.dispatch(categoryApi.endpoints.deleteCategory.initiate({ spaceId: 1, categoryId: 1 })),

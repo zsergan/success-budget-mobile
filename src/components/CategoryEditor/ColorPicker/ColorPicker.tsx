@@ -3,6 +3,7 @@ import { TouchableOpacity, View } from 'react-native';
 import Icon from '@components/Icon/Icon';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
+import type { CategoryColor } from '@shared/categoryColors';
 import { CATEGORY_COLOR_ORDER } from '@shared/categoryColors';
 import type { AppColor } from '@shared/enums';
 
@@ -11,7 +12,7 @@ import createStyles from './style';
 // Swatches are flat (not tinted) here — this is the picker's own solid fill, distinct from the tinted icon boxes elsewhere.
 
 interface Props {
-  value: AppColor;
+  value: CategoryColor;
   onChange: (color: AppColor) => void;
 }
 

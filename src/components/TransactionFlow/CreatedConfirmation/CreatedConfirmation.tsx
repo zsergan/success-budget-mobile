@@ -14,6 +14,7 @@ import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AssignmentAvatar from '@components/AssignmentAvatar/AssignmentAvatar';
+import CategoryIconBox from '@components/CategoryIconBox/CategoryIconBox';
 import Icon from '@components/Icon/Icon';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
@@ -144,9 +145,12 @@ const CreatedConfirmation = ({ flow, onUndo, onView, onAddAnother, onDone }: Pro
         <View style={styles.facts}>
           <View style={styles.fact}>
             <Text style={styles.factLabel}>Category</Text>
-            <Text style={styles.factValue} numberOfLines={1}>
-              {transaction.category.name}
-            </Text>
+            <View style={styles.factPerson}>
+              <CategoryIconBox icon={transaction.category.icon} color={transaction.category.color} size={22} />
+              <Text style={styles.factValue} numberOfLines={1}>
+                {transaction.category.name}
+              </Text>
+            </View>
           </View>
 
           <View style={[styles.fact, styles.factSeparated]}>

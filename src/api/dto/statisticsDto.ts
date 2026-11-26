@@ -1,4 +1,5 @@
-import type { AppColor, TransactionType } from '@shared/enums';
+import type { CategoryColor } from '@shared/categoryColors';
+import type { TransactionType } from '@shared/enums';
 import type { CategoryIconApi } from './categoryDto';
 import type { CalendarDate } from '@shared/utils/calendarDate';
 import type { PersonStatus } from './transactionDto';
@@ -100,7 +101,7 @@ export interface CategoryBreakdownItem extends BreakdownShare {
   name: string;
   // Like category reads, an old row may still carry a legacy icon name.
   icon: CategoryIconApi | string;
-  color: AppColor;
+  color: CategoryColor;
   is_archived: boolean;
   opens_history: true;
 }

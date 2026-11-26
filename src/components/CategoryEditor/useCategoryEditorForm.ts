@@ -11,6 +11,8 @@ import { requireSpaceId } from '@redux/api/baseApi';
 import { useAppSelector } from '@redux/hooks';
 import { useCreateCategoryMutation, useUpdateCategoryMutation } from '@redux/state/category/api';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
+import type { CategoryColor } from '@shared/categoryColors';
+import { normalizeCategoryColor } from '@shared/categoryColors';
 import { AppColor, TransactionType } from '@shared/enums';
 import type { IconType } from '@shared/types';
 import { CATEGORY_ICON_LIST } from '@shared/icons';
@@ -23,14 +25,19 @@ interface CategoryEditorFormData {
   name: string;
   transactionType: TransactionType;
   icon: IconType;
-  color: AppColor;
+  color: CategoryColor;
 }
 
 const schema = yup.object().shape({
   name: yup.string().trim().required('Enter a category name').max(NAME_MAX_LENGTH),
   transactionType: yup.mixed<TransactionType>().oneOf(Object.values(TransactionType)).required(),
   icon: yup.mixed<IconType>().oneOf(CATEGORY_ICON_LIST).required(),
-  color: yup.mixed<AppColor>().oneOf(Object.values(AppColor)).required(),
+  // A preset or an opaque #RRGGBB, sent as the server stores it.
+  color: yup
+    .mixed<CategoryColor>()
+    .test('category-color', 'Pick a colour', (value) => normalizeCategoryColor(value) !== null)
+    .transform((value) => normalizeCategoryColor(value) ?? value)
+    .required(),
 });
 
 interface UseCategoryEditorFormProps {

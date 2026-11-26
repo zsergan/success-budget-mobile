@@ -1,6 +1,7 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import type { LimitModel } from '@api/models';
+import useCategoryAppearance from '@hooks/useCategoryAppearance';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { formatCurrencyAmount, getDailyPace, getDaysLeftInMonth, getLimitStatus, hexToRgba } from '@shared/utils';
@@ -27,13 +28,17 @@ const LimitItem = ({ limit, currencyCode, onPress }: Props) => {
 
   const statusColor = status.level === 'over' ? colors.danger : status.level === 'near' ? colors.warn : colors.text;
   const barColor = status.level === 'over' ? colors.danger : status.level === 'near' ? colors.warn : colors.ok;
+  const appearanceOf = useCategoryAppearance();
+  // A limit near or over its cap says so in place of its categories' colours; otherwise each glyph keeps its own.
+  const warning = status.level === 'over' ? colors.danger : status.level === 'near' ? colors.warn : null;
+  const single = categories.length === 1 ? appearanceOf(categories[0].color) : null;
   const iconBg =
     status.level === 'over'
       ? hexToRgba(colors.danger, 0.1)
       : status.level === 'near'
         ? hexToRgba(colors.warn, 0.13)
-        : colors.track;
-  const iconFg = status.level === 'over' ? colors.danger : status.level === 'near' ? colors.warn : colors.text;
+        : (single?.tint ?? colors.track);
+  const glyphColor = (index: number) => warning ?? appearanceOf(categories[index].color).stroke;
 
   const displayName = name ?? categories[0]?.name ?? 'Limit';
   const subtitle = isGroup ? categories.map((category) => category.name).join(' · ') : 'Single category';
@@ -59,14 +64,19 @@ const LimitItem = ({ limit, currencyCode, onPress }: Props) => {
         <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
           {isGroup ? (
             <View style={styles.miniIconGrid}>
-              {categories.slice(0, 4).map((category) => (
+              {categories.slice(0, 4).map((category, index) => (
                 <View key={category.id} style={styles.miniIconCell}>
-                  <Icon name={category.icon} size={14} color={iconFg} strokeWidth={2.2} />
+                  <Icon name={category.icon} size={14} color={glyphColor(index)} strokeWidth={2.2} />
                 </View>
               ))}
             </View>
           ) : (
-            <Icon name={categories[0]?.icon ?? 'limit'} size={20} color={iconFg} strokeWidth={1.7} />
+            <Icon
+              name={categories[0]?.icon ?? 'limit'}
+              size={20}
+              color={categories[0] ? glyphColor(0) : (warning ?? colors.text)}
+              strokeWidth={1.7}
+            />
           )}
         </View>
 

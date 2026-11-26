@@ -1,23 +1,24 @@
 import { TouchableOpacity, View } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
+import useCategoryAppearance from '@hooks/useCategoryAppearance';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
+import type { CategoryColor } from '@shared/categoryColors';
 import { CATEGORY_ICON_LIST } from '@shared/icons';
-import type { AppColor } from '@shared/enums';
 import type { IconType } from '@shared/types';
 
 import createStyles from './style';
 
 interface Props {
   value: IconType;
-  color: AppColor;
+  color: CategoryColor;
   onChange: (icon: IconType) => void;
 }
 
 const IconPicker = ({ value, color, onChange }: Props) => {
-  const { colors, categories } = useTheme().colorTheme;
-  const { stroke, tint } = categories[color];
+  const { colors } = useTheme().colorTheme;
+  const { stroke, tint } = useCategoryAppearance()(color);
   const styles = useThemedStyles(createStyles);
 
   return (

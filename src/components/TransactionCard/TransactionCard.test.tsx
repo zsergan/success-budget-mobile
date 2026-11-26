@@ -9,7 +9,9 @@ import { deleteStarted } from '@redux/state/transactionFlow/slice';
 import { withProfile } from '@redux/state/profile/fixtures';
 import { spaceApi } from '@redux/state/space/api';
 import { activateSpace } from '@redux/state/space/thunks';
-import { SpaceType, TransactionKind, TransactionType } from '@shared/enums';
+import Icon from '@components/Icon/Icon';
+import { AppColor, SpaceType, TransactionKind, TransactionType } from '@shared/enums';
+import { colorThemes } from '@shared/theme';
 import { calendarYear, deviceToday, shiftDays } from '@shared/utils';
 import TransactionCard from './TransactionCard';
 
@@ -195,5 +197,31 @@ describe('TransactionCard', () => {
     renderCard({ kind: TransactionKind.INITIAL_BALANCE, transaction_type: TransactionType.INCOME, description: null });
     expect(screen.getByText('Archived')).toBeTruthy();
     expect(screen.queryByText('Zakhar')).toBeNull();
+  });
+});
+
+describe('TransactionCard category colour', () => {
+  const glyphColor = () => screen.UNSAFE_getAllByType(Icon)[0].props.color;
+
+  it('draws the glyph in its category’s preset colour', () => {
+    renderCard({ category: { ...transactionDto().category, color: AppColor.CLAY } });
+
+    expect(glyphColor()).toBe(colorThemes.light.categories[AppColor.CLAY].stroke);
+  });
+
+  it('draws the glyph in its category’s custom colour', () => {
+    renderCard({ category: { ...transactionDto().category, color: '#0F8F8A' } });
+
+    expect(glyphColor()).toBe('rgb(15,143,138)');
+  });
+
+  it('keeps a starting balance neutral', () => {
+    renderCard({
+      kind: TransactionKind.INITIAL_BALANCE,
+      transaction_type: TransactionType.INCOME,
+      category: { ...transactionDto().category, color: AppColor.CLAY },
+    });
+
+    expect(glyphColor()).toBe(colorThemes.light.colors.text);
   });
 });

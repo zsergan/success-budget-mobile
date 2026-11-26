@@ -5,6 +5,7 @@ import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeabl
 
 import type { TransactionModel } from '@api/models';
 import { isInitialBalance } from '@api/models';
+import useCategoryAppearance from '@hooks/useCategoryAppearance';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { useAppSelector } from '@redux/hooks';
@@ -51,6 +52,7 @@ const TransactionCard = ({
   const isLargeText = useWindowDimensions().fontScale >= LARGE_FONT_SCALE;
   const isSystem = isInitialBalance(transaction);
   const isIncome = transaction.transactionType === TransactionType.INCOME && !isSystem;
+  const categoryLook = useCategoryAppearance()(transaction.category.color);
   const selfId = useAppSelector(selectProfileId);
   const isPersonal = useAppSelector(selectIsPersonalSpace);
   const { description, assignment, author } = transaction;
@@ -77,16 +79,13 @@ const TransactionCard = ({
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityState={{ busy: isDeleting }}
     >
-      <View
-        style={[
-          styles.iconBox,
-          isSystem ? styles.iconBoxSystem : isIncome ? styles.iconBoxIncome : styles.iconBoxExpense,
-        ]}
-      >
+      {/* A starting balance is the space's history, not a category's: it keeps a neutral mark. */}
+      <View style={[styles.iconBox, isSystem ? styles.iconBoxSystem : { backgroundColor: categoryLook.tint }]}>
         <Icon
           name={isSystem ? 'archive' : transaction.category.icon}
           size={20}
-          color={isIncome ? colors.ok : colors.text}
+          color={isSystem ? colors.text : categoryLook.stroke}
+          strokeWidth={1.9}
         />
       </View>
 

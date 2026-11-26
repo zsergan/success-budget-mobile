@@ -1,4 +1,5 @@
-import type { AppColor, LimitType } from '@shared/enums';
+import type { CategoryColor } from '@shared/categoryColors';
+import type { LimitType } from '@shared/enums';
 import type { CalendarDate } from '@shared/utils/calendarDate';
 import type { Category, CategoryIconApi } from './categoryDto';
 
@@ -7,7 +8,7 @@ export interface LimitCategory {
   name: string;
   // Wire value, same as Category.icon — reads don't validate, so old rows may still carry a legacy name.
   icon: CategoryIconApi | string;
-  color: AppColor;
+  color: CategoryColor;
 }
 
 export interface LimitView {

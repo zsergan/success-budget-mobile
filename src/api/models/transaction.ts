@@ -1,4 +1,6 @@
-import type { AppColor, TransactionType } from '@shared/enums';
+import type { CategoryColor } from '@shared/categoryColors';
+import { readCategoryColor } from '@shared/categoryColors';
+import type { TransactionType } from '@shared/enums';
 import { TransactionKind } from '@shared/enums';
 import type { IconType } from '@shared/types';
 import type { CalendarDate } from '@shared/utils/calendarDate';
@@ -22,7 +24,7 @@ export interface TransactionCategoryModel {
   name: string;
   transactionType: TransactionType;
   icon: IconType;
-  color: AppColor;
+  color: CategoryColor;
   isArchived: boolean;
 }
 
@@ -95,7 +97,7 @@ export const mapTransactionCategory = (dto: TransactionCategory): TransactionCat
   name: dto.name,
   transactionType: dto.transaction_type,
   icon: toMobileIcon(dto.icon),
-  color: dto.color,
+  color: readCategoryColor(dto.color),
   isArchived: dto.is_archived,
 });
 

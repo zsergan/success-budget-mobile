@@ -1,4 +1,5 @@
-import type { AppColor } from '@shared/enums';
+import type { CategoryColor } from '@shared/categoryColors';
+import { readCategoryColor } from '@shared/categoryColors';
 import type { IconType } from '@shared/types';
 import type { GetLimitsResponse, LimitsPeriod, LimitView, OverAllocation } from '@api/dto';
 import type { CalendarDate } from '@shared/utils/calendarDate';
@@ -8,7 +9,7 @@ export interface LimitCategoryModel {
   id: number;
   name: string;
   icon: IconType;
-  color: AppColor;
+  color: CategoryColor;
 }
 
 export interface LimitModel {
@@ -48,7 +49,7 @@ export const mapLimitView = (dto: LimitView): LimitModel => ({
     id: category.id,
     name: category.name,
     icon: toMobileIcon(category.icon),
-    color: category.color,
+    color: readCategoryColor(category.color),
   })),
 });
 

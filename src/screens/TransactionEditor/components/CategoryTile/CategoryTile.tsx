@@ -1,10 +1,11 @@
 import { Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 
 import Icon from '@components/Icon/Icon';
+import useCategoryAppearance from '@hooks/useCategoryAppearance';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
+import type { CategoryColor } from '@shared/categoryColors';
 import type { IconType } from '@shared/types';
-import { hexToRgba } from '@shared/utils';
 
 import createStyles from './style';
 
@@ -13,21 +14,22 @@ const LARGE_TEXT_SCALE = 1.15;
 // Four tiles in a row; three once the system text is large enough to cut the names short.
 export const useCategoryColumns = () => (useWindowDimensions().fontScale > LARGE_TEXT_SCALE ? 3 : 4);
 
-interface Props {
+type Props = {
   name: string;
   icon: IconType;
   columns: number;
-  typeColor: string;
   isSelected?: boolean;
   isArchived?: boolean;
-  // More and New: an action in the grid, not a category.
-  isAction?: boolean;
   onPress: () => void;
-}
+  // A category takes its own colour; More and New are actions in the grid, not categories.
+} & ({ color: CategoryColor; isAction?: never } | { color?: never; isAction: true });
 
-const CategoryTile = ({ name, icon, columns, typeColor, isSelected = false, isArchived, isAction, onPress }: Props) => {
+// The selection is a neutral ring and a check, so it shows on a tile of any colour.
+const CategoryTile = ({ name, icon, columns, color, isSelected = false, isArchived, isAction, onPress }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
+  const appearance = useCategoryAppearance();
+  const look = color === undefined ? null : appearance(color);
 
   return (
     <TouchableOpacity
@@ -40,12 +42,17 @@ const CategoryTile = ({ name, icon, columns, typeColor, isSelected = false, isAr
       <View
         style={[
           styles.box,
-          isAction && styles.boxAction,
+          isAction ? styles.boxAction : look && [styles.boxCategory, { backgroundColor: look.tint }],
           isSelected && styles.boxSelected,
-          isSelected && { backgroundColor: hexToRgba(typeColor, 0.12), borderColor: typeColor },
         ]}
       >
-        <Icon name={icon} size={22} color={isSelected ? typeColor : isAction ? colors.muted : colors.text} />
+        <Icon name={icon} size={22} color={look?.stroke ?? colors.muted} strokeWidth={1.8} />
+
+        {isSelected && (
+          <View style={styles.check}>
+            <Icon name="check" size={11} color={colors.bg} strokeWidth={3} />
+          </View>
+        )}
 
         {isArchived && (
           <View style={styles.badge}>

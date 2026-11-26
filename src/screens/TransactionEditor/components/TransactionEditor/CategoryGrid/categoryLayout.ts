@@ -1,6 +1,6 @@
 import type { TransactionCategoryModel } from '@api/models';
 
-export type GridCategory = Pick<TransactionCategoryModel, 'id' | 'name' | 'icon' | 'transactionType'>;
+export type GridCategory = Pick<TransactionCategoryModel, 'id' | 'name' | 'icon' | 'color' | 'transactionType'>;
 
 export const GRID_SLOTS = 8;
 

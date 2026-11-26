@@ -1,4 +1,5 @@
-import type { AppColor, TransactionKind, TransactionType } from '@shared/enums';
+import type { CategoryColor } from '@shared/categoryColors';
+import type { TransactionKind, TransactionType } from '@shared/enums';
 import type { CalendarDate } from '@shared/utils/calendarDate';
 import type { CategoryIconApi } from './categoryDto';
 import type { Money } from './statisticsDto';
@@ -38,7 +39,7 @@ export interface TransactionCategory {
   name: string;
   transaction_type: TransactionType;
   icon: CategoryIconApi | string;
-  color: AppColor;
+  color: CategoryColor;
   is_active: number;
   is_archived: boolean;
   created_at: string;

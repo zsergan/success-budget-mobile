@@ -9,7 +9,7 @@ import { toBackendIcon } from '@api/models';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { TransactionType } from '@shared/enums';
-import { CATEGORY_COLOR_NAMES } from '@shared/categoryColors';
+import { categoryColorName } from '@shared/categoryColors';
 import theme from '@shared/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useBoundedHeight from '@components/Modals/BottomSheetModal/useBoundedHeight';
@@ -57,7 +57,7 @@ const CategoryEditorSheet = ({ category, defaultTransactionType, onRequestDelete
       : `${transactionCount} transaction${transactionCount === 1 ? '' : 's'}`;
 
   const previewSub = isNewCategory
-    ? `${TYPE_LABEL[transactionType]} · ${CATEGORY_COLOR_NAMES[color]} · ${toBackendIcon(icon)} icon`
+    ? `${TYPE_LABEL[transactionType]} · ${categoryColorName(color)} · ${toBackendIcon(icon)} icon`
     : `${TYPE_LABEL[transactionType]} · ${countText}${category?.limit ? ` · in «${category.limit.name ?? 'group'}» limit` : ''}`;
 
   return (
