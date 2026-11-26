@@ -1,20 +1,7 @@
 import type { CreateTransactionRequest, UpdateTransactionRequest } from '@api/dto';
 import type { StoredOperation } from '../transaction/operations';
+import type { WalletEraWrite } from './historical';
 import type { PendingWrite } from './slice';
-
-// What builds before v2 stored: v1 bodies, a create's naming its wallet.
-type LegacyBody = Omit<CreateTransactionRequest, 'assignment'> & { wallet_id?: number };
-
-export type LegacyOperation = { idempotencyKey: string; firstSentAt: number; spaceId: number } & (
-  | { type: 'create'; data: LegacyBody }
-  | { type: 'update'; transactionId: string; version: number; data: Partial<LegacyBody> }
-  | { type: 'delete'; transactionId: string; version: number }
-);
-
-export interface LegacyWrite {
-  operation: LegacyOperation;
-  status: string;
-}
 
 // An edit that only moved the record to another wallet: wallets are gone, so nothing is left to send.
 export interface RetiredEdit {
@@ -24,7 +11,7 @@ export interface RetiredEdit {
 
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 
-const isLegacyWrite = (value: unknown): value is LegacyWrite => {
+const isLegacyWrite = (value: unknown): value is WalletEraWrite => {
   if (!isObject(value) || !isObject(value.operation)) return false;
   const { type, spaceId, idempotencyKey } = value.operation;
 
@@ -40,7 +27,7 @@ const withoutWallet = <T extends { wallet_id?: number }>({ wallet_id: _walletId,
 // A create is kept with the body the converted v2 create would send: the same operation id, assigned to the whole
 // space, as the old body could not say whom it was for. It is looked up before anything is sent (`checking`).
 // An edit or a delete goes out again through v2 at its version, with its own key; the wallet part of an edit is dropped.
-export const fromLegacyWrite = ({ operation }: LegacyWrite): PendingWrite | RetiredEdit => {
+export const fromLegacyWrite = ({ operation }: WalletEraWrite): PendingWrite | RetiredEdit => {
   const { idempotencyKey, firstSentAt, spaceId } = operation;
 
   switch (operation.type) {
