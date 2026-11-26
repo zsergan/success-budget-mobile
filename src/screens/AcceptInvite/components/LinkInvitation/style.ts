@@ -1,9 +1,11 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors, elevation }: ColorTheme) =>
+const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
       rowGap: theme.spacing.lg,
@@ -18,8 +20,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
     spaceName: {
       width: '100%',
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.titleMd,
-      lineHeight: theme.lineHeights.titleMd,
+      ...textRole('titleMd', layout),
       letterSpacing: theme.letterSpacing.titleMd,
       color: colors.text,
     },

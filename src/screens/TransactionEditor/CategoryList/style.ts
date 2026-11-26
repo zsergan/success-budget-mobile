@@ -1,9 +1,11 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     header: {
       paddingHorizontal: theme.spacing.xl,
@@ -25,8 +27,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       flex: 1,
       minWidth: 0,
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.titleSm,
-      lineHeight: theme.lineHeights.titleSm,
+      ...textRole('titleSm', layout),
       letterSpacing: theme.letterSpacing.titleSm,
       color: colors.text,
     },

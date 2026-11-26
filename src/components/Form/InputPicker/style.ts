@@ -1,11 +1,12 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
 import { FITTED_SHEET_HANDLE_HEIGHT } from '@components/Modals/BottomSheetModal/BottomSheetModal';
-import { fitHeight } from '@shared/layout';
+import { fitHeight, textRole } from '@shared/layout';
 import theme, { horizontalScreenPadding } from '@shared/theme';
 
-const createStyles = ({ colors, elevation }: ColorTheme) =>
+const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
       rowGap: theme.spacing.xs,
@@ -45,8 +46,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
     },
     sheetTitle: {
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.titleMd,
-      lineHeight: theme.lineHeights.titleMd,
+      ...textRole('titleMd', layout),
       letterSpacing: -0.5,
       color: colors.text,
     },

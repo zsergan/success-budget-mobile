@@ -1,9 +1,11 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     bar: {
       paddingHorizontal: theme.spacing.xl,
@@ -28,8 +30,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     title: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.titleLg,
-      lineHeight: theme.lineHeights.titleLg,
+      ...textRole('titleLg', layout),
       letterSpacing: theme.letterSpacing.titleLg,
       color: colors.text,
       paddingBottom: 14,

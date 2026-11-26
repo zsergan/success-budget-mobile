@@ -1,9 +1,11 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { capRole } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ elevation }: ColorTheme) =>
+const createStyles = ({ elevation }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
       borderRadius: theme.radius.lg + 2,
@@ -32,7 +34,7 @@ const createStyles = ({ elevation }: ColorTheme) =>
     },
     spent: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: 34,
+      fontSize: capRole('display', 34, layout),
       letterSpacing: -1.4,
     },
     cap: {

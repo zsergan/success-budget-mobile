@@ -1,7 +1,9 @@
 import { StyleSheet } from 'react-native';
 
 import { FITTED_SHEET_HANDLE_HEIGHT } from '@components/Modals/BottomSheetModal/BottomSheetModal';
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { textRole } from '@shared/layout';
 import theme, { horizontalScreenPadding } from '@shared/theme';
 
 // The title sits 20 below the 5 pt grabber, which the design draws 8 from the top of the sheet.
@@ -9,7 +11,7 @@ const TITLE_TOP = 8 + 5 + 20;
 const SLOT_GAP = theme.spacing.lg;
 const BULLET_SIZE = 5;
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     sheet: {
       flexShrink: 1,
@@ -36,8 +38,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     title: {
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.titleMd,
-      lineHeight: theme.lineHeights.titleMd,
+      ...textRole('titleMd', layout),
       letterSpacing: -0.5,
       color: colors.text,
     },

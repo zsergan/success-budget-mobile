@@ -1,9 +1,11 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { capRole } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     card: {
       marginTop: theme.spacing.md,
@@ -50,8 +52,8 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     net: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.display,
-      lineHeight: theme.lineHeights.display + 4,
+      fontSize: capRole('display', theme.fontSizes.display, layout),
+      lineHeight: capRole('display', theme.lineHeights.display + 4, layout),
       letterSpacing: theme.letterSpacing.display,
     },
     split: {

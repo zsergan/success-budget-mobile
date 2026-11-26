@@ -1,10 +1,12 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { capRole } from '@shared/layout';
 import theme from '@shared/theme';
 import { hexToRgba } from '@shared/utils';
 
-const createStyles = ({ colors }: ColorTheme) => {
+const createStyles = ({ colors }: ColorTheme, layout: Layout) => {
   const card = {
     borderRadius: theme.radius.md,
     borderWidth: 1,
@@ -66,8 +68,8 @@ const createStyles = ({ colors }: ColorTheme) => {
     },
     netValue: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: 24,
-      lineHeight: 28,
+      fontSize: capRole('titleLg', 24, layout),
+      lineHeight: capRole('titleLg', 28, layout),
       letterSpacing: -0.7,
       color: colors.text,
     },
