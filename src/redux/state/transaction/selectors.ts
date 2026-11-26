@@ -1,6 +1,8 @@
 import type { Money } from '@api/dto';
 import type { TransactionFeedSummary, TransactionModel } from '@api/models';
 import { getLoadState } from '@redux/api/loadState';
+import type { CalendarDateRange } from '@shared/utils/calendarDate';
+import { isWithinDates } from '@shared/utils/calendarDate';
 import type { TransactionFeedPage } from './api';
 
 // What an empty period says about the whole history: none at all, none in it, or not yet known.
@@ -13,10 +15,7 @@ interface LatestQuery {
   isError: boolean;
 }
 
-export const getEmptyPeriodState = (
-  latestQuery: LatestQuery,
-  { from, to }: { from: Date; to: Date },
-): EmptyPeriodState => {
+export const getEmptyPeriodState = (latestQuery: LatestQuery, dates: CalendarDateRange): EmptyPeriodState => {
   const { isLoading, hasError } = getLoadState(latestQuery);
   const latest = latestQuery.currentData;
 
@@ -25,8 +24,7 @@ export const getEmptyPeriodState = (
   if (latest === null) return 'trueEmpty';
 
   // A latest record inside the empty period is one just deleted; the next one decides.
-  const time = latest ? new Date(latest.timestamp).getTime() : NaN;
-  if (time >= from.getTime() && time <= to.getTime()) return latestQuery.isFetching ? 'loading' : 'latestError';
+  if (latest && isWithinDates(latest.date, dates)) return latestQuery.isFetching ? 'loading' : 'latestError';
 
   return 'filteredEmpty';
 };
@@ -35,7 +33,7 @@ export interface FeedView {
   items: TransactionModel[];
   // Null until a page arrives.
   summary: TransactionFeedSummary | null;
-  // Income minus expense of each whole day, by local date key.
+  // Income minus expense of each whole day, by its date.
   dayNets: Record<string, Money>;
 }
 

@@ -58,6 +58,9 @@ export interface ThemeColors {
   focusRingError: string;
   // The check drawn on a solid category swatch.
   onSwatch: string;
+  // A custom colour picker's thumbs, white in both themes as they sit on any colour, with a thin ring around them.
+  pickerThumb: string;
+  pickerThumbRing: string;
   chartOther: string;
   chartDeleted: string;
   shadow: string;
@@ -140,6 +143,8 @@ const lightColors: ThemeColors = {
   focusRing: 'rgba(255,176,32,0.28)',
   focusRingError: 'rgba(224,79,61,0.16)',
   onSwatch: '#FFFFFF',
+  pickerThumb: '#FFFFFF',
+  pickerThumbRing: 'rgba(0,0,0,0.35)',
   chartOther: '#8B95A3',
   chartDeleted: '#C3C9D2',
   shadow: '#1D2430',
@@ -187,6 +192,8 @@ const darkColors: ThemeColors = {
   focusRing: 'rgba(255,176,32,0.28)',
   focusRingError: 'rgba(224,79,61,0.16)',
   onSwatch: '#0E1218',
+  pickerThumb: '#FFFFFF',
+  pickerThumbRing: 'rgba(0,0,0,0.35)',
   chartOther: '#6B7688',
   chartDeleted: '#3B4452',
   shadow: '#000000',
@@ -263,7 +270,7 @@ const darkGradientCard: GradientCardAppearance = {
   inner: 'rgba(255,176,32,.12)',
 };
 
-type Rgb = [number, number, number];
+export type Rgb = [number, number, number];
 
 // The app colours as flat tones; see Categories.dc.html's COLORS array.
 const CATEGORY_RGB: Record<ColorSchemeName, Record<AppColor, Rgb>> = {
@@ -287,13 +294,15 @@ const CATEGORY_RGB: Record<ColorSchemeName, Record<AppColor, Rgb>> = {
 
 const CATEGORY_TINT_ALPHA: Record<ColorSchemeName, number> = { light: 0.1, dark: 0.16 };
 
+// A category's glyph in the tone itself, its tile in the same tone at the theme's tint.
+export const categoryAppearanceOf = ([r, g, b]: Rgb, scheme: ColorSchemeName): CategoryAppearance => ({
+  stroke: `rgb(${r},${g},${b})`,
+  tint: `rgba(${r},${g},${b},${CATEGORY_TINT_ALPHA[scheme]})`,
+});
+
 const buildCategories = (scheme: ColorSchemeName) =>
   Object.fromEntries(
-    Object.values(AppColor).map((color) => {
-      const [r, g, b] = CATEGORY_RGB[scheme][color];
-
-      return [color, { stroke: `rgb(${r},${g},${b})`, tint: `rgba(${r},${g},${b},${CATEGORY_TINT_ALPHA[scheme]})` }];
-    }),
+    Object.values(AppColor).map((color) => [color, categoryAppearanceOf(CATEGORY_RGB[scheme][color], scheme)]),
   ) as Record<AppColor, CategoryAppearance>;
 
 export const colorThemes: Record<ColorSchemeName, ColorTheme> = {

@@ -3,7 +3,7 @@ import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import type { StatisticsBreakdown } from '@api/dto';
 import { toMobileIcon } from '@api/models';
 import { CategoryIconBox, SectionTitle, TinyButton } from '@components';
-import { useTheme, useThemedStyles } from '@hooks';
+import { useCategoryAppearance, useTheme, useThemedStyles } from '@hooks';
 import { HOME_TOP_CATEGORIES, homeMoney } from '@screens/Home/homeFigures';
 
 import createStyles from './style';
@@ -21,7 +21,8 @@ interface Props {
 
 // The month's largest expense categories; the whole breakdown is in Stats.
 const TopSpending = ({ breakdown, isLoading, hasError, currencyCode, isHidden, onSeeBreakdown, onRetry }: Props) => {
-  const { colors, categories } = useTheme().colorTheme;
+  const { colors } = useTheme().colorTheme;
+  const appearanceOf = useCategoryAppearance();
   const styles = useThemedStyles(createStyles);
   const rows = breakdown?.by_category.primary_items.slice(0, HOME_TOP_CATEGORIES) ?? [];
   const max = Math.max(...rows.map(({ amount }) => Number(amount)), 0);
@@ -57,7 +58,7 @@ const TopSpending = ({ breakdown, isLoading, hasError, currencyCode, isHidden, o
                         styles.fill,
                         {
                           width: `${max > 0 ? (Number(row.amount) / max) * 100 : 0}%`,
-                          backgroundColor: categories[row.color].stroke,
+                          backgroundColor: appearanceOf(row.color).stroke,
                         },
                       ]}
                     />

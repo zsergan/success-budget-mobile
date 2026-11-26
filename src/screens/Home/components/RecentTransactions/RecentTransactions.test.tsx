@@ -6,7 +6,7 @@ import { mapTransactionFeed } from '@api/models';
 import { createAppStore } from '@redux/Store';
 import { feedDto, transactionDto } from '@redux/state/transaction/fixtures';
 import { TransactionKind, TransactionType } from '@shared/enums';
-import { toLocalDateKey } from '@shared/utils';
+import { deviceToday, shiftDays } from '@shared/utils';
 import RecentTransactions from './RecentTransactions';
 
 jest.mock('@api/instance', () => ({
@@ -17,12 +17,7 @@ jest.mock('expo-secure-store');
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => jest.requireActual('react-native-reanimated/mock'));
 
-const daysAgo = (days: number, hour = 9) => {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  date.setHours(hour, 0, 0, 0);
-  return date.toISOString();
-};
+const daysAgo = (days: number) => shiftDays(deviceToday(), -days);
 
 const rows = (count: number) =>
   Array.from({ length: count }, (_, index) =>
@@ -30,7 +25,7 @@ const rows = (count: number) =>
       id: `tx-${index}`,
       amount: `${index + 1}0.00`,
       description: `Row ${index}`,
-      timestamp: daysAgo(index, 20 - index),
+      date: daysAgo(index),
     }),
   );
 
@@ -77,13 +72,14 @@ describe('RecentTransactions', () => {
   });
 
   it('dates every row on its own, with no day headers or day totals', () => {
-    const today = toLocalDateKey(new Date());
+    const today = deviceToday();
     renderPreview({
       recent: mapTransactionFeed(feedDto(rows(3), { day_totals: [{ date: today, net: '-70.00' }] })),
     });
 
-    expect(screen.getByText('· Today, 20:00')).toBeTruthy();
-    expect(screen.getByText('· Yesterday, 19:00')).toBeTruthy();
+    expect(screen.getByText('· Today')).toBeTruthy();
+    expect(screen.getByText('· Yesterday')).toBeTruthy();
+    expect(screen.queryByText(/\d:\d\d/)).toBeNull();
     expect(screen.queryByText('Today')).toBeNull();
     expect(screen.queryByText('-70.00 USD')).toBeNull();
   });
@@ -109,7 +105,7 @@ describe('RecentTransactions', () => {
           transactionDto({
             kind: TransactionKind.INITIAL_BALANCE,
             transaction_type: TransactionType.INCOME,
-            timestamp: daysAgo(2),
+            date: daysAgo(2),
           }),
         ]),
       ),

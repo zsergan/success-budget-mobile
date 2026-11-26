@@ -26,11 +26,20 @@ beforeEach(async () => {
   await AsyncStorage.clear();
 });
 
+// A create as a build before v2 stored it, dated by an instant, and as this build stores it.
 const createData = {
   category_id: 1,
   transaction_type: TransactionType.EXPENSE,
   amount: '12.00',
   timestamp: '2026-01-05T10:00:00.000Z',
+  client_operation_id: 'key-1',
+};
+const currentData = {
+  category_id: 1,
+  transaction_type: TransactionType.EXPENSE,
+  amount: '12.00',
+  date: '2026-01-05',
+  time_zone: 'America/Chicago',
   client_operation_id: 'key-1',
 };
 
@@ -50,7 +59,7 @@ const settle = async () => {
   for (let step = 0; step < 5; step += 1) await act(() => jest.advanceTimersByTimeAsync(0));
 };
 
-const storedWrites = async () => JSON.parse((await AsyncStorage.getItem('pendingTransactionWrites.v2.1')) ?? 'null');
+const storedWrites = async () => JSON.parse((await AsyncStorage.getItem('pendingTransactionWrites.v3.1')) ?? 'null');
 
 it.each([
   [4, true],
@@ -63,11 +72,11 @@ it.each([
       spaceId: 4,
       idempotencyKey: 'key-1',
       firstSentAt: Date.now(),
-      data: { ...createData, assignment: { kind: 'member', user_id: 1 } },
+      data: { ...currentData, assignment: { kind: 'member', user_id: 1 } },
     };
     await AsyncStorage.setItem(
-      'pendingTransactionWrites.v2.1',
-      JSON.stringify({ version: 2, writes: [{ status: 'sending', operation }] }),
+      'pendingTransactionWrites.v3.1',
+      JSON.stringify({ version: 3, writes: [{ status: 'sending', operation }] }),
     );
     mockedRequest.mockResolvedValue({ data: createTransactionResponseDto() });
 
@@ -89,7 +98,7 @@ it.each([
     // Only writes of the open space are reported.
     expect(screen.queryByText('An earlier save went through') !== null).toBe(isReported);
     expect(toastCount()).toBe(isReported ? 1 : 0);
-    expect(await storedWrites()).toEqual({ version: 2, writes: [] });
+    expect(await storedWrites()).toEqual({ version: 3, writes: [] });
   },
 );
 
@@ -129,7 +138,15 @@ describe('writes an older build left', () => {
           spaceId: 4,
           idempotencyKey: 'key-1',
           firstSentAt: legacyCreate.firstSentAt,
-          data: { ...createData, assignment: { kind: 'space' } },
+          data: {
+            category_id: 1,
+            transaction_type: TransactionType.EXPENSE,
+            amount: '12.00',
+            date: '2026-01-05',
+            time_zone: 'America/Chicago',
+            client_operation_id: 'key-1',
+            assignment: { kind: 'space' },
+          },
           recovered: true,
         },
       },

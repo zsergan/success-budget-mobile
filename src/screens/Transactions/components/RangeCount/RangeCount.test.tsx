@@ -43,8 +43,8 @@ beforeEach(() => mockedRequest.mockReset());
 describe('RangeCount', () => {
   it("counts the drafted range and never shows the previous range's number while the next one loads", async () => {
     let resolveSeptember: (value: unknown) => void = () => {};
-    mockedRequest.mockImplementation(({ params }: { params: { from: string } }) =>
-      params.from === august.from.toISOString()
+    mockedRequest.mockImplementation(({ params }: { params: { from_date: string } }) =>
+      params.from_date === '2026-08-01'
         ? Promise.resolve({ data: { count: 42 } })
         : new Promise((resolve) => {
             resolveSeptember = resolve;
@@ -57,7 +57,7 @@ describe('RangeCount', () => {
     expect(screen.getByText('42 transactions')).toBeTruthy();
     expect(mockedRequest.mock.calls[0][0]).toMatchObject({
       url: '/spaces/1/transactions/count',
-      params: { from: august.from.toISOString(), to: august.to.toISOString() },
+      params: { from_date: '2026-08-01', to_date: '2026-08-31' },
     });
 
     rerender(
@@ -104,8 +104,8 @@ describe('RangeCount', () => {
     await settle();
 
     expect(mockedRequest.mock.calls.map(([config]) => config.params)).toEqual([
-      { from: august.from.toISOString(), to: august.to.toISOString(), q: 'coffee' },
-      { from: september.from.toISOString(), to: september.to.toISOString() },
+      { from_date: '2026-08-01', to_date: '2026-08-31', q: 'coffee' },
+      { from_date: '2026-09-01', to_date: '2026-09-30' },
     ]);
   });
 

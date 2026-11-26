@@ -30,7 +30,8 @@ const request: TransactionRequest & { type: 'create' } = {
     category_id: 1,
     transaction_type: TransactionType.EXPENSE,
     amount: '10',
-    timestamp: '2026-01-05T10:00:00.000Z',
+    date: '2026-01-05',
+    time_zone: 'America/Chicago',
   },
 };
 

@@ -21,12 +21,12 @@ import { mapTransaction, mapTransactionAssignees, mapTransactionFeed } from '@ap
 import type { HttpRequest } from '@redux/api/baseQuery';
 import type { SpaceArg } from '@redux/api/baseApi';
 import { baseApi, spaceTags } from '@redux/api/baseApi';
-import { getDeviceTimeZone } from '@redux/state/statistics/selectors';
 import type { TransactionKind, TransactionType } from '@shared/enums';
+import type { CalendarDateRange } from '@shared/utils/calendarDate';
+import { pickerRangeDates } from '@shared/utils/calendarDate';
 
-export interface TransactionsArg extends SpaceArg {
-  from: string;
-  to: string;
+// Both dates included; records are selected by their own date, so a period is the same days for every member.
+export interface TransactionsArg extends SpaceArg, CalendarDateRange {
   transactionType?: TransactionType;
   // Absent lists both regular transactions and starting balances.
   kind?: TransactionKind;
@@ -37,7 +37,6 @@ export interface TransactionsArg extends SpaceArg {
 
 // What the feed lists: one cursor belongs to exactly one selection.
 export interface FeedSelection extends TransactionsArg {
-  timeZone: string;
   q?: string;
 }
 
@@ -64,11 +63,7 @@ export interface TransactionsCountArg extends TransactionsArg {
 }
 
 // Home's activity: the newest records of the month it shows.
-export interface RecentTransactionsArg extends SpaceArg {
-  timeZone: string;
-  from: string;
-  to: string;
-}
+export type RecentTransactionsArg = SpaceArg & CalendarDateRange;
 
 export interface TransactionArg extends SpaceArg {
   transactionId: string;
@@ -98,16 +93,16 @@ export type CreateTransactionArg = SpaceArg & IdempotentArg & { data: CreateTran
 export type UpdateTransactionArg = VersionedArg & { data: UpdateTransactionRequest };
 export type DeleteTransactionArg = VersionedArg;
 
-// Every caller builds the period the same way, so an equal period is one cache entry and one request.
-export const periodArg = (spaceId: number, { from, to }: { from: Date; to: Date }): TransactionsArg => ({
+// Every caller builds the period the same way, from the days the picker shows, so an equal period is one cache entry
+// and one request.
+export const periodArg = (spaceId: number, range: { from: Date; to: Date }): TransactionsArg => ({
   spaceId,
-  from: from.toISOString(),
-  to: to.toISOString(),
+  ...pickerRangeDates(range),
 });
 
-const listParams = ({ from, to, transactionType, kind, categoryId, assignment }: TransactionsArg) => ({
-  from,
-  to,
+const listParams = ({ fromDate, toDate, transactionType, kind, categoryId, assignment }: TransactionsArg) => ({
+  from_date: fromDate,
+  to_date: toDate,
   ...(transactionType && { transaction_type: transactionType }),
   ...(kind && { kind }),
   ...(categoryId !== undefined && { category_id: categoryId }),
@@ -118,13 +113,10 @@ const listParams = ({ from, to, transactionType, kind, categoryId, assignment }:
 const v2 = (request: HttpRequest): HttpRequest => ({ ...request, apiVersion: 2 });
 
 // Search text is trimmed and a blank one dropped, so equal searches are one selection.
-export const feedSelection = (
-  arg: TransactionsArg,
-  { q, timeZone = getDeviceTimeZone() }: { q?: string; timeZone?: string } = {},
-): FeedSelection => {
+export const feedSelection = (arg: TransactionsArg, { q }: { q?: string } = {}): FeedSelection => {
   const text = q?.trim();
 
-  return { ...arg, timeZone, ...(text && { q: text }) };
+  return { ...arg, ...(text && { q: text }) };
 };
 
 export const feedSelectionKey = (selection: FeedSelection) =>
@@ -136,7 +128,6 @@ export const feedSelectionKey = (selection: FeedSelection) =>
 
 const feedParams = ({ selection, pageSize }: TransactionsFeedArg, { cursor, aroundId }: FeedPageParam) => ({
   ...listParams(selection),
-  time_zone: selection.timeZone,
   ...(selection.q && { q: selection.q }),
   ...(pageSize !== undefined && { limit: pageSize }),
   ...(cursor && { cursor }),
@@ -149,9 +140,7 @@ export const RECENT_TRANSACTIONS_LIMIT = 3;
 // Built like `periodArg`, so Home and the early fetch for it share one entry for the same month.
 export const recentArg = (spaceId: number, range: { from: Date; to: Date }): RecentTransactionsArg => ({
   spaceId,
-  timeZone: getDeviceTimeZone(),
-  from: range.from.toISOString(),
-  to: range.to.toISOString(),
+  ...pickerRangeDates(range),
 });
 
 // Pages kept per feed entry; scrolling further drops the farthest page and reads it again by cursor on the way back.
@@ -191,10 +180,10 @@ const invalidatesTransactionWrite = (_result: unknown, error: unknown, { spaceId
 export const transactionApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getRecentTransactions: build.query<TransactionFeedPageModel, RecentTransactionsArg>({
-      query: ({ spaceId, timeZone, from, to }) =>
+      query: ({ spaceId, fromDate, toDate }) =>
         v2({
           url: `/spaces/${spaceId}/transactions/feed`,
-          params: { from, to, time_zone: timeZone, limit: RECENT_TRANSACTIONS_LIMIT },
+          params: { from_date: fromDate, to_date: toDate, limit: RECENT_TRANSACTIONS_LIMIT },
         }),
       transformResponse: (response: TransactionFeedResponse) => mapTransactionFeed(response),
       providesTags: (_result, _error, { spaceId }) => spaceTags(spaceId, 'Transactions'),

@@ -8,7 +8,7 @@ export const transactionDto = (overrides: Partial<Transaction> = {}): Transactio
   kind: TransactionKind.REGULAR,
   transaction_type: TransactionType.EXPENSE,
   amount: '10.00',
-  timestamp: '2026-01-05T10:00:00.000Z',
+  date: '2026-01-05',
   description: null,
   version: 1,
   category: {

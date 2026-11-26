@@ -74,7 +74,7 @@ const respond = ({ url, params }: RequestConfig) => {
     return Promise.resolve({ data: fixture.breakdown[params?.transaction_type as TransactionType] });
   }
   if (url.endsWith('/transactions/feed')) {
-    return Promise.resolve({ data: feedDto([transactionDto({ timestamp: new Date(2026, 8, 27, 9).toISOString() })]) });
+    return Promise.resolve({ data: feedDto([transactionDto({ date: '2026-09-27' })]) });
   }
 
   return Promise.resolve({ data: [] });
@@ -146,7 +146,7 @@ describe('HomeScreen', () => {
     const [feed] = requests('/transactions/feed');
     expect(summary.params).toMatchObject({ period: 'month', anchor_date: '2026-09-01' });
     expect(breakdown.params).toMatchObject({ transaction_type: 'expense', as_of: summary.params?.as_of });
-    expect(feed.params).toMatchObject({ from: new Date(2026, 8, 1).toISOString(), limit: 3 });
+    expect(feed.params).toMatchObject({ from_date: '2026-09-01', limit: 3 });
     expect(requests('/statistics/trend')).toEqual([]);
   });
 
@@ -208,7 +208,7 @@ describe('HomeScreen', () => {
 
     expect(screen.getByText('August 2026')).toBeTruthy();
     expect(requests('/statistics/summary').at(-1)?.params).toMatchObject({ anchor_date: '2026-08-01' });
-    expect(requests('/transactions/feed').at(-1)?.params).toMatchObject({ from: new Date(2026, 7, 1).toISOString() });
+    expect(requests('/transactions/feed').at(-1)?.params).toMatchObject({ from_date: '2026-08-01' });
 
     fireEvent.press(screen.getByText('Back to September'));
     await settle();
@@ -224,7 +224,7 @@ describe('HomeScreen', () => {
     expect(navigationRef.getRootState()?.routes.find(({ name }) => name === ScreenNames.STATS_TAB)?.params).toEqual({
       screen: ScreenNames.STATS_OVERVIEW_SCREEN,
       params: {
-        focus: { spaceId: 1, month: new Date(2026, 8, 1).toISOString(), transactionType: 'expense', mode: 'category' },
+        focus: { spaceId: 1, month: '2026-09-01', transactionType: 'expense', mode: 'category' },
       },
     });
 
@@ -235,7 +235,7 @@ describe('HomeScreen', () => {
       params: {
         focus: {
           spaceId: 1,
-          month: new Date(2026, 8, 1).toISOString(),
+          month: '2026-09-01',
           transactionType: 'expense',
           assignment: 'space',
           assignmentName: 'Whole space',
@@ -266,7 +266,7 @@ describe('HomeScreen', () => {
 
     expect(navigationRef.getCurrentRoute()).toMatchObject({
       name: ScreenNames.TRANSACTIONS_TAB,
-      params: { focus: { spaceId: 1, month: new Date(2026, 8, 1).toISOString() } },
+      params: { focus: { spaceId: 1, month: '2026-09-01' } },
     });
     const { focus } = navigationRef.getCurrentRoute()?.params as MainTabParamList[ScreenNames.TRANSACTIONS_TAB] & {
       focus: object;
@@ -285,7 +285,7 @@ describe('HomeScreen', () => {
     expect(screen.getByText('Latest transactions in December 2025')).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'All transactions for December 2025' }));
     expect(navigationRef.getCurrentRoute()?.params).toMatchObject({
-      focus: { spaceId: 1, month: new Date(2025, 11, 1).toISOString() },
+      focus: { spaceId: 1, month: '2025-12-01' },
     });
   });
 
@@ -295,7 +295,7 @@ describe('HomeScreen', () => {
 
     act(() =>
       navigationRef.navigate(ScreenNames.HOME_TAB, {
-        showMonth: { spaceId: 2, month: new Date(2026, 6, 4, 9).toISOString() },
+        showMonth: { spaceId: 2, month: '2026-07-04' },
       }),
     );
     await settle();
@@ -303,14 +303,14 @@ describe('HomeScreen', () => {
 
     act(() =>
       navigationRef.navigate(ScreenNames.HOME_TAB, {
-        showMonth: { spaceId: 1, month: new Date(2026, 6, 4, 9).toISOString() },
+        showMonth: { spaceId: 1, month: '2026-07-04' },
       }),
     );
     await settle();
 
     expect(screen.getByText('July 2026')).toBeTruthy();
     expect(screen.getByText('Latest transactions in July')).toBeTruthy();
-    expect(requests('/transactions/feed').at(-1)?.params).toMatchObject({ from: new Date(2026, 6, 1).toISOString() });
+    expect(requests('/transactions/feed').at(-1)?.params).toMatchObject({ from_date: '2026-07-01' });
     expect(navigationRef.getCurrentRoute()?.params).toEqual({ showMonth: undefined });
   });
 

@@ -3,9 +3,9 @@ import { AppColor, TransactionType } from '@shared/enums';
 import type { LimitEntry } from './limitForecast';
 import { forecastLimit } from './limitForecast';
 
-const NOW = Date.parse('2026-10-06T12:00:00.000Z');
-const THIS_MONTH = '2026-10-05T10:00:00.000Z';
-const LAST_MONTH = '2026-09-28T10:00:00.000Z';
+const TODAY = '2026-10-06';
+const THIS_MONTH = '2026-10-05';
+const LAST_MONTH = '2026-09-30';
 
 const limit = (id: number, amount: string, spent: number, categoryIds: number[], name: string | null = null) =>
   ({
@@ -28,8 +28,6 @@ const limits: LimitsModel = {
     timeZone: 'Europe/Moscow',
     startDate: '2026-10-01',
     endDate: '2026-10-31',
-    from: '2026-09-30T21:00:00.000Z',
-    to: '2026-10-31T20:59:59.999Z',
   },
   total: limit(9, '1000.00', 700.1, []),
   categoryLimits: [
@@ -40,15 +38,15 @@ const limits: LimitsModel = {
   overAllocation: null,
 };
 
-const expense = (categoryId: number, amount: string, timestamp = THIS_MONTH): LimitEntry => ({
+const expense = (categoryId: number, amount: string, date = THIS_MONTH): LimitEntry => ({
   transactionType: TransactionType.EXPENSE,
   categoryId,
   amount,
-  timestamp,
+  date,
 });
 
 const forecast = (draft: LimitEntry, original: LimitEntry | null = null, from = limits) =>
-  forecastLimit({ limits: from, original, draft, now: NOW });
+  forecastLimit({ limits: from, original, draft, today: TODAY });
 
 describe('forecastLimit', () => {
   it('adds a new expense to the spent of its limit', () => {
@@ -127,11 +125,9 @@ describe('forecastLimit', () => {
   });
 
   it('forecasts nothing without loaded limits, their month, or a valid amount', () => {
-    expect(forecastLimit({ limits: undefined, original: null, draft: expense(1, '70'), now: NOW })).toBeNull();
+    expect(forecastLimit({ limits: undefined, original: null, draft: expense(1, '70'), today: TODAY })).toBeNull();
     expect(forecast(expense(1, '70'), null, { ...limits, period: null })).toBeNull();
-    expect(
-      forecastLimit({ limits, original: null, draft: expense(1, '70'), now: Date.parse('2026-11-02') }),
-    ).toBeNull();
+    expect(forecastLimit({ limits, original: null, draft: expense(1, '70'), today: '2026-11-01' })).toBeNull();
     expect(forecast(expense(1, '12.345'))).toBeNull();
   });
 });

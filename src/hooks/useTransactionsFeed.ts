@@ -38,6 +38,9 @@ interface Load {
   isRequestedStart: boolean;
   // The record the caller asked for could not be opened, so the history opened at its newest record.
   missedAroundId?: string;
+  // A cursor of this selection was refused (one issued before calendar dates, say) and the history reloaded from its
+  // newest record; a second refusal stays a page error, so a server that keeps refusing never loops.
+  hasReloadedCursor?: boolean;
 }
 
 type FeedData = InfiniteData<TransactionFeedPage, FeedPageParam>;
@@ -119,10 +122,19 @@ const useTransactionsFeed = (
     const [nextAnchor, ...fallbacks] = current.fallbacks;
     current = { ...current, ...next, start: { aroundId: nextAnchor }, fallbacks, isRequestedStart: false };
     setLoad(current);
-  } else if (isCursorRejected(error) || isStartRefused) {
+  } else if ((isCursorRejected(error) && !current.hasReloadedCursor) || isStartRefused) {
     // Each answer is final for this start, so the next generation starts from the newest record.
     const missedAroundId = isStartRefused && current.isRequestedStart ? current.start.aroundId : current.missedAroundId;
-    current = { ...current, ...next, start: {}, fallbacks: [], isRequestedStart: false, missedAroundId };
+    const hasReloadedCursor = current.hasReloadedCursor || isCursorRejected(error);
+    current = {
+      ...current,
+      ...next,
+      start: {},
+      fallbacks: [],
+      isRequestedStart: false,
+      missedAroundId,
+      hasReloadedCursor,
+    };
     setLoad(current);
   } else if (revision !== undefined && current.revision === undefined) {
     current = { ...current, revision };

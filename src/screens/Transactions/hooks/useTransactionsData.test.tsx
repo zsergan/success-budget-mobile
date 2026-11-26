@@ -25,8 +25,8 @@ jest.useFakeTimers();
 interface RequestConfig {
   url: string;
   params?: {
-    from?: string;
-    to?: string;
+    from_date?: string;
+    to_date?: string;
     transaction_type?: string;
     category_id?: number;
     assignment?: string;
@@ -50,7 +50,7 @@ const dto: Transaction = {
   kind: TransactionKind.REGULAR,
   transaction_type: TransactionType.EXPENSE,
   amount: '10.00',
-  timestamp: '2026-01-05T00:00:00.000Z',
+  date: '2026-01-05',
   description: null,
   version: 1,
   category: {
@@ -67,8 +67,8 @@ const dto: Transaction = {
   assignment: { kind: 'space', user_id: null, name: null, status: null },
 };
 
-const january: DateRange = { from: new Date('2026-01-01'), to: new Date('2026-01-31'), preset: 'month' };
-const february: DateRange = { from: new Date('2026-02-01'), to: new Date('2026-02-28'), preset: 'month' };
+const january: DateRange = { from: new Date(2026, 0, 1), to: new Date(2026, 0, 31), preset: 'month' };
+const february: DateRange = { from: new Date(2026, 1, 1), to: new Date(2026, 1, 28), preset: 'month' };
 
 const renderForSpace = (spaceId: number, range = january, filter?: HistoryFilter) => {
   const store = createAppStore();
@@ -152,9 +152,8 @@ describe('useTransactionsData viewState', () => {
 describe('a Stats selection', () => {
   const selection = {
     spaceId: 1,
-    from: '2026-08-31T21:00:00.000Z',
-    to: '2026-09-30T09:15:42.123Z',
-    timeZone: 'Pacific/Auckland',
+    fromDate: '2026-09-01',
+    toDate: '2026-09-28',
     transactionType: TransactionType.EXPENSE,
     kind: TransactionKind.REGULAR,
   };
@@ -171,7 +170,7 @@ describe('a Stats selection', () => {
       .filter(({ url }) => url.endsWith('/feed'))
       .map(({ params }) => params);
 
-  it("asks for exactly a category's regular transactions up to the cutoff, in the zone Stats summed them in", async () => {
+  it("asks for exactly a category's regular transactions of the days Stats counted", async () => {
     respondRange = () => rows('tx-1');
 
     const { result, unmount } = renderForSpace(1, january, category);
@@ -179,12 +178,11 @@ describe('a Stats selection', () => {
 
     expect(feedParams()).toEqual([
       {
-        from: '2026-08-31T21:00:00.000Z',
-        to: '2026-09-30T09:15:42.123Z',
+        from_date: '2026-09-01',
+        to_date: '2026-09-28',
         transaction_type: TransactionType.EXPENSE,
         kind: TransactionKind.REGULAR,
         category_id: 1,
-        time_zone: 'Pacific/Auckland',
       },
     ]);
     expect(latestCalls()).toBe(0);
@@ -200,12 +198,11 @@ describe('a Stats selection', () => {
 
     expect(feedParams()).toEqual([
       {
-        from: '2026-08-31T21:00:00.000Z',
-        to: '2026-09-30T09:15:42.123Z',
+        from_date: '2026-09-01',
+        to_date: '2026-09-28',
         transaction_type: TransactionType.INCOME,
         kind: TransactionKind.REGULAR,
         assignment: 'member:31',
-        time_zone: 'Pacific/Auckland',
       },
     ]);
 
@@ -254,7 +251,8 @@ describe('a Stats selection', () => {
 
     const [first, second] = feedParams();
     expect(second).toEqual(first);
-    expect(second).toMatchObject({ to: category.to, time_zone: 'Pacific/Auckland', category_id: 1 });
+    expect(second).toMatchObject({ from_date: '2026-09-01', to_date: '2026-09-28', category_id: 1 });
+    expect(second).not.toHaveProperty('time_zone');
 
     unmount();
   });
@@ -270,7 +268,7 @@ describe('a Stats selection', () => {
     await waitFor(() => expect(result.current.viewState).toBe('ready'));
 
     expect(feedParams()).toHaveLength(1);
-    expect(feedParams()[0]).toMatchObject({ from: category.from, to: category.to });
+    expect(feedParams()[0]).toMatchObject({ from_date: category.fromDate, to_date: category.toDate });
 
     unmount();
   });
@@ -299,7 +297,7 @@ describe('a Stats selection', () => {
 
 describe('switching arguments', () => {
   it("never shows the previous period's rows while the new one loads", async () => {
-    respondRange = (config) => (config.params?.from?.startsWith('2026-01') ? rows('jan') : new Promise(() => {}));
+    respondRange = (config) => (config.params?.from_date?.startsWith('2026-01') ? rows('jan') : new Promise(() => {}));
 
     const { result, rerender, unmount } = renderForSpace(1);
 
@@ -380,8 +378,8 @@ describe('deleting the last record of a period', () => {
 });
 
 describe('a period larger than one page', () => {
-  const at = (id: string, day: number, hour: number) =>
-    ({ ...dto, id, timestamp: new Date(2026, 0, day, hour).toISOString() }) as Transaction;
+  const at = (id: string, day: number, _order?: number) =>
+    ({ ...dto, id, date: `2026-01-${String(day).padStart(2, '0')}` }) as Transaction;
   const key = (day: number) => `2026-01-${String(day).padStart(2, '0')}`;
   const summary = { count: 4, income: '98765432109876543.21', expense: '1184.45' };
 

@@ -68,9 +68,8 @@ const FEED = '/spaces/1/transactions/feed';
 // Stats was summed in New York; the device (jest.config.js) is in Chicago, an hour behind.
 const september = {
   spaceId: 1,
-  from: '2026-09-01T04:00:00.000Z',
-  to: '2026-09-30T13:15:42.123Z',
-  timeZone: 'America/New_York',
+  fromDate: '2026-09-01',
+  toDate: '2026-09-30',
   transactionType: TransactionType.INCOME,
   kind: TransactionKind.REGULAR,
   color: AppColor.INDIGO,
@@ -82,7 +81,7 @@ const invoice = (id: string, amount: string, day: number) =>
     id,
     amount,
     transaction_type: TransactionType.INCOME,
-    timestamp: new Date(2026, 8, day, 11).toISOString(),
+    date: `2026-09-${String(day).padStart(2, '0')}`,
     category: { ...transactionDto().category, id: 7, name: 'Freelance', transaction_type: TransactionType.INCOME },
   });
 
@@ -158,12 +157,11 @@ describe('StatsTransactionsScreen', () => {
 
     expect(feedRequests().map(({ params }) => params)).toEqual([
       {
-        from: freelance.from,
-        to: freelance.to,
+        from_date: freelance.fromDate,
+        to_date: freelance.toDate,
         transaction_type: TransactionType.INCOME,
         kind: TransactionKind.REGULAR,
         category_id: 7,
-        time_zone: 'America/New_York',
       },
     ]);
     expect(screen.getByText('Income')).toBeTruthy();
@@ -173,11 +171,10 @@ describe('StatsTransactionsScreen', () => {
     expectNoFilterOrCreateActions();
   });
 
-  it('tells the period, the days, their totals and the times in the zone Stats was summed in', async () => {
-    const at = (id: string, timestamp: string) => ({ ...invoice(id, '425.00', 1), timestamp });
+  it('tells the period, the days and their totals by the stored dates, with no times', async () => {
     mockedRequest.mockImplementation(() =>
       Promise.resolve({
-        data: feedDto([at('tx-2', '2026-09-01T18:00:00Z'), at('tx-1', '2026-09-01T04:30:00Z')], {
+        data: feedDto([invoice('tx-2', '425.00', 1), invoice('tx-1', '425.00', 1)], {
           summary: { count: 2, income: '850.00', expense: '0.00' },
           day_totals: [{ date: '2026-09-01', net: '850.00' }],
         }),
@@ -190,8 +187,7 @@ describe('StatsTransactionsScreen', () => {
     expect(screen.getByText('Tue, Sep 1')).toBeTruthy();
     expect(screen.queryByText('Mon, Aug 31')).toBeNull();
     expect(screen.getByText('+850.00')).toBeTruthy();
-    expect(screen.getByText(' · 00:30')).toBeTruthy();
-    expect(screen.getByText(' · 14:00')).toBeTruthy();
+    expect(screen.queryByText(/\d:\d\d/)).toBeNull();
   });
 
   it('names an expense assignment selection', async () => {
@@ -324,7 +320,12 @@ describe('StatsTransactionsScreen', () => {
       const [first, ...refreshes] = feedRequests().map(({ params }) => params);
       expect(refreshes.length).toBeGreaterThan(0);
       refreshes.forEach((params) =>
-        expect(params).toMatchObject({ from: first?.from, to: first?.to, category_id: 7, kind: 'regular' }),
+        expect(params).toMatchObject({
+          from_date: first?.from_date,
+          to_date: first?.to_date,
+          category_id: 7,
+          kind: 'regular',
+        }),
       );
       expectNoFilterOrCreateActions();
     });

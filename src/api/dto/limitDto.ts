@@ -1,4 +1,6 @@
-import type { AppColor, LimitType } from '@shared/enums';
+import type { CategoryColor } from '@shared/categoryColors';
+import type { LimitType } from '@shared/enums';
+import type { CalendarDate } from '@shared/utils/calendarDate';
 import type { Category, CategoryIconApi } from './categoryDto';
 
 export interface LimitCategory {
@@ -6,7 +8,7 @@ export interface LimitCategory {
   name: string;
   // Wire value, same as Category.icon — reads don't validate, so old rows may still carry a legacy name.
   icon: CategoryIconApi | string;
-  color: AppColor;
+  color: CategoryColor;
 }
 
 export interface LimitView {
@@ -26,11 +28,8 @@ export interface OverAllocation {
 // The month `spent` was counted over, in the zone the request named.
 export interface LimitsPeriod {
   time_zone: string;
-  start_date: string;
-  end_date: string;
-  from: string;
-  // Inclusive, to the millisecond.
-  to: string;
+  start_date: CalendarDate;
+  end_date: CalendarDate;
 }
 
 export interface GetLimitsResponse {

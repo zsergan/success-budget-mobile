@@ -463,7 +463,8 @@ describe('StatsScreen', () => {
               category_id: 1,
               transaction_type: TransactionType.EXPENSE,
               amount: '1.00',
-              timestamp: '2026-09-28T09:00:00.000Z',
+              date: '2026-09-28',
+              time_zone: 'UTC',
             },
           }),
         );
@@ -655,21 +656,19 @@ describe('StatsScreen', () => {
       name: 'Gifts',
       icon: 'gifts',
       color: 'clay',
-      from: period.from,
-      to: period.actual_to,
-      timeZone: period.time_zone,
+      fromDate: period.start_date,
+      toDate: period.actual_end_date,
       transactionType: 'expense',
       kind: 'regular',
       categoryId: 10,
     });
     expect(feedParams()).toEqual([
       {
-        from: period.from,
-        to: period.actual_to,
+        from_date: period.start_date,
+        to_date: period.actual_end_date,
         transaction_type: 'expense',
         kind: 'regular',
         category_id: 10,
-        time_zone: period.time_zone,
       },
     ]);
     expect(within(screen.getByTestId('applied-filter')).getByText('Gifts')).toBeTruthy();
@@ -722,18 +721,14 @@ describe('StatsScreen', () => {
 
     expect(navigationRef.getCurrentRoute()?.params).toBeUndefined();
     const [history] = feedParams();
-    expect(history).toEqual({
-      from: new Date(2026, 8, 1).toISOString(),
-      to: new Date(2026, 8, 30, 23, 59, 59, 999).toISOString(),
-      time_zone: expect.any(String),
-    });
+    expect(history).toEqual({ from_date: '2026-09-01', to_date: '2026-09-30' });
     expect(screen.getByRole('button', { name: 'Search transactions' })).toBeTruthy();
 
     fireEvent.press(screen.getByText('Year'));
     await settle();
     const requests = feedParams();
     expect(requests.every((params) => !('category_id' in params!) && !('kind' in params!))).toBe(true);
-    expect(requests.at(-1)).toMatchObject({ from: new Date(2026, 0, 1).toISOString() });
+    expect(requests.at(-1)).toMatchObject({ from_date: '2026-01-01' });
 
     act(() => navigationRef.navigate(ScreenNames.STATS_TAB));
     await settle();
@@ -748,7 +743,7 @@ describe('StatsScreen', () => {
     await settle();
 
     expect(feedParams()).toHaveLength(requests.length);
-    expect(feedParams().at(-1)).toMatchObject({ from: new Date(2026, 0, 1).toISOString() });
+    expect(feedParams().at(-1)).toMatchObject({ from_date: '2026-01-01' });
   });
 
   it("opens an assignment row's regular income, comes back to the same view and opens another row", async () => {
@@ -764,9 +759,8 @@ describe('StatsScreen', () => {
     const filterOf = (name: string, assignment: string) => ({
       spaceId: 1,
       name,
-      from: period.from,
-      to: period.actual_to,
-      timeZone: period.time_zone,
+      fromDate: period.start_date,
+      toDate: period.actual_end_date,
       transactionType: 'income',
       kind: 'regular',
       assignment,
@@ -943,7 +937,8 @@ describe('StatsScreen', () => {
               category_id: 1,
               transaction_type: TransactionType.EXPENSE,
               amount: '242.35',
-              timestamp: serverNow!,
+              date: serverNow!.slice(0, 10),
+              time_zone: 'UTC',
             },
           }),
         );

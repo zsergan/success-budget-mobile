@@ -2,8 +2,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import type { CategoryModel } from '@api/models';
 import { Icon } from '@components';
-import { useTheme, useThemedStyles } from '@hooks';
-import { hexToRgba } from '@shared/utils';
+import { useCategoryAppearance, useTheme, useThemedStyles } from '@hooks';
 
 import createStyles from './style';
 
@@ -19,6 +18,7 @@ interface Props {
 const CategoryPicker = ({ categories, categoryIds, claimedElsewhere, isGroup, error, onToggleCategory }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
+  const appearanceOf = useCategoryAppearance();
 
   return (
     <View style={styles.section}>
@@ -32,6 +32,8 @@ const CategoryPicker = ({ categories, categoryIds, claimedElsewhere, isGroup, er
         {categories.map((category) => {
           const selected = categoryIds.includes(category.id);
           const taken = claimedElsewhere.has(category.id);
+          // A category another limit holds is greyed out; any other keeps its own colour, picked or not.
+          const look = taken ? null : appearanceOf(category.color);
 
           return (
             <TouchableOpacity
@@ -44,14 +46,11 @@ const CategoryPicker = ({ categories, categoryIds, claimedElsewhere, isGroup, er
               <View
                 style={[
                   styles.categoryIconBox,
-                  selected && { backgroundColor: hexToRgba(colors.accent, 0.12), borderColor: colors.accent },
+                  look && { backgroundColor: look.tint, borderColor: 'transparent' },
+                  selected && { borderColor: colors.accent },
                 ]}
               >
-                <Icon
-                  name={category.icon}
-                  size={22}
-                  color={selected ? colors.accent : taken ? colors.muted : colors.text}
-                />
+                <Icon name={category.icon} size={22} color={look?.stroke ?? colors.muted} strokeWidth={1.8} />
 
                 {selected && (
                   <View style={styles.selectedBadge}>

@@ -46,12 +46,6 @@ const createStyles = ({ colors }: ColorTheme) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    iconBoxIncome: {
-      backgroundColor: `${colors.ok}26`,
-    },
-    iconBoxExpense: {
-      backgroundColor: colors.track,
-    },
     iconBoxSystem: {
       borderRadius: 21,
       backgroundColor: colors.track,

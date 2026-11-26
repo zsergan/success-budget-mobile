@@ -5,9 +5,10 @@ import { Icon } from '@components';
 import { useTheme, useThemedStyles } from '@hooks';
 import { useAppSelector } from '@redux/hooks';
 import { selectProfileId } from '@redux/state/profile/selectors';
+import { resolveCategoryAppearance } from '@shared/categoryAppearance';
 import { TransactionType } from '@shared/enums';
 import type { HistoryFilter, IconType } from '@shared/types';
-import { assignmentKeyColor, assignmentKeyIcon, formatMoneyAmount, formatRangeLabel } from '@shared/utils';
+import { assignmentKeyColor, assignmentKeyIcon, formatMoneyAmount, formatDatesLabel } from '@shared/utils';
 
 import createStyles from './style';
 
@@ -21,11 +22,11 @@ interface Props {
 // The fixed context of a Stats row's transactions: nothing here can be pressed or taken off.
 const AppliedFilter = ({ filter, total, currencyCode }: Props) => {
   const colorTheme = useTheme().colorTheme;
-  const { colors, categories } = colorTheme;
+  const { colors } = colorTheme;
   const selfId = useAppSelector(selectProfileId);
   const styles = useThemedStyles(createStyles);
   const isExpense = filter.transactionType === TransactionType.EXPENSE;
-  const range = formatRangeLabel({ from: new Date(filter.from), to: new Date(filter.to) }, filter.timeZone);
+  const range = formatDatesLabel(filter);
 
   const tag = (icon: IconType, color: string, label: string, strokeWidth: number) => (
     <View style={styles.tag}>
@@ -39,7 +40,7 @@ const AppliedFilter = ({ filter, total, currencyCode }: Props) => {
       <View style={styles.tags}>
         {isExpense ? tag('expense', colors.danger, 'Expenses', 2.4) : tag('income', colors.ok, 'Income', 2.4)}
         {filter.categoryId !== undefined
-          ? tag(filter.icon, categories[filter.color].stroke, filter.name, 2)
+          ? tag(filter.icon, resolveCategoryAppearance(colorTheme, filter.color).stroke, filter.name, 2)
           : tag(
               assignmentKeyIcon(filter.assignment),
               assignmentKeyColor(filter.assignment, selfId, colorTheme),

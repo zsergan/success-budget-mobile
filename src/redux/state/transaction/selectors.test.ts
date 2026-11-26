@@ -13,7 +13,7 @@ const row = (
   kind,
   transactionType,
   amount,
-  timestamp: '2026-01-05T10:00:00.000Z',
+  date: '2026-01-05',
   description: null,
   version: 1,
   author: { userId: 7, name: 'Zakhar', status: 'member', source: 'recorded' },

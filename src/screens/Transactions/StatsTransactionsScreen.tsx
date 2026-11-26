@@ -42,8 +42,8 @@ const StatsTransactions = ({ filter, onBack }: Props) => {
   // The row's own selection, so an edit that takes a record out of it says why it left the list.
   const selection = useMemo(
     () => ({
-      from: filter.from,
-      to: filter.to,
+      fromDate: filter.fromDate,
+      toDate: filter.toDate,
       transactionType: filter.transactionType,
       ...(filter.categoryId !== undefined ? { categoryId: filter.categoryId } : { assignment: filter.assignment }),
     }),
@@ -64,7 +64,6 @@ const StatsTransactions = ({ filter, onBack }: Props) => {
 
         <TransactionsList
           {...feedListProps(data)}
-          timeZone={filter.timeZone}
           onPressTransaction={openDetails}
           onDeleteTransaction={requestDelete}
           onVisibleRowsChange={(ids) => {

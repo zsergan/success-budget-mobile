@@ -98,17 +98,15 @@ const CategoryGrid = ({
               key={category.id}
               name={category.name}
               icon={category.icon}
+              color={category.color}
               columns={columns}
-              typeColor={typeColor}
               isSelected={category.id === selectedId}
               isArchived={category.id === archived?.id}
               onPress={() => onSelect(category.id)}
             />
           ))}
 
-          {hasMore && (
-            <CategoryTile name="More" icon="more" columns={columns} typeColor={typeColor} isAction onPress={onMore} />
-          )}
+          {hasMore && <CategoryTile name="More" icon="more" columns={columns} isAction onPress={onMore} />}
         </View>
       )}
 

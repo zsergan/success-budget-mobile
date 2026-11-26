@@ -1,4 +1,4 @@
-import { TransactionType } from '@shared/enums';
+import { AppColor, TransactionType } from '@shared/enums';
 import type { GridCategory } from './categoryLayout';
 import { buildCategoryGrid } from './categoryLayout';
 
@@ -6,6 +6,7 @@ const category = (id: number): GridCategory => ({
   id,
   name: `Category ${id}`,
   icon: 'other',
+  color: AppColor.SLATE,
   transactionType: TransactionType.EXPENSE,
 });
 

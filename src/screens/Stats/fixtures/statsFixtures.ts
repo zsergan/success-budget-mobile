@@ -90,8 +90,7 @@ export interface StatsFixture {
 }
 
 const money = (cents: number) => (cents / 100).toFixed(2);
-const startOf = (date: string) => `${date}T00:00:00.000Z`;
-const endOf = (date: string) => `${date}T23:59:59.999Z`;
+const TODAY = AS_OF.slice(0, 10);
 const share = (cents: number, total: number) => (total ? Math.round((cents / total) * 10000) / 100 : 0);
 const count = (cents: number) => (cents > 0 ? Math.max(1, Math.round(cents / 9000)) : 0);
 const change = (current: number, previous: number) => ({
@@ -107,10 +106,8 @@ const buildPeriod = (spec: FixtureSpec): StatisticsPeriod => {
     time_zone: ZONE,
     start_date: spec.start,
     end_date: spec.end,
-    from: startOf(spec.start),
-    to: endOf(spec.end),
     as_of: AS_OF,
-    actual_to: state === 'future' ? null : state === 'past' ? endOf(spec.end) : AS_OF,
+    actual_end_date: state === 'future' ? null : state === 'past' ? spec.end : TODAY,
     state,
   };
 };
@@ -253,9 +250,7 @@ export const buildStatsFixture = (spec: FixtureSpec): StatsFixture => {
         ? {
             start_date: previous.start,
             end_date: previous.end,
-            from: startOf(previous.start),
-            to: endOf(previous.end),
-            actual_to: previous.actualEnd ? endOf(previous.actualEnd) : endOf(previous.end),
+            actual_end_date: previous.actualEnd ?? previous.end,
             income: { amount: money(previous.income), count: count(previous.income) },
             expense: { amount: money(previous.expense), count: count(previous.expense) },
             net: money(previous.income - previous.expense),
@@ -285,8 +280,6 @@ export const buildStatsFixture = (spec: FixtureSpec): StatsFixture => {
           key: bucket.start,
           start_date: bucket.start,
           end_date: bucket.end,
-          from: startOf(bucket.start),
-          to: endOf(bucket.end),
           state,
           income: isFuture ? null : money(bucket.income),
           expense: isFuture ? null : money(bucket.expense),

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { CreateTransactionRequest } from '@api/dto';
+import { mapTransaction } from '@api/models';
 import { createAppStore } from '@redux/Store';
 import { withProfile } from '@redux/state/profile/fixtures';
 import { logoutMe } from '@redux/state/auth/thunks';
@@ -35,7 +36,8 @@ const lunch: CreateTransactionRequest = {
   category_id: 1,
   transaction_type: TransactionType.EXPENSE,
   amount: '10.00',
-  timestamp: '2026-01-05T10:00:00.000Z',
+  date: '2026-01-05',
+  time_zone: 'America/Chicago',
   description: 'Lunch',
 };
 const sentLunch = { ...lunch, client_operation_id: 'key-1' };
@@ -50,7 +52,7 @@ const operation = (status: 'applied' | 'deleted') =>
     operation_id: 'key-1',
     status,
     transaction_id: 'tx-1',
-    created_at: lunch.timestamp,
+    created_at: '2026-01-05T10:00:00.000Z',
     deleted_at: null,
     transaction: status === 'applied' ? transactionDto({ version: 2 }) : null,
   });
@@ -68,7 +70,7 @@ const sent = () =>
 const posts = () => sent().filter(({ method }) => method === 'POST');
 
 const stored = async (userId = 1) =>
-  JSON.parse((await AsyncStorage.getItem(`pendingTransactionWrites.v2.${userId}`)) ?? '{"writes":[]}').writes;
+  JSON.parse((await AsyncStorage.getItem(`pendingTransactionWrites.v3.${userId}`)) ?? '{"writes":[]}').writes;
 
 const signIn = (userId = 1) => {
   const store = createAppStore();
@@ -525,7 +527,16 @@ describe('a record with an unsettled edit or delete', () => {
 
 describe('writes an older build left', () => {
   const legacyKey = (userId = 1) => `pendingTransactionWrites.v1.${userId}`;
-  const legacyLunch = { ...sentLunch, assignment: undefined, wallet_id: 3 };
+  // What a build before v2 stored: a v1 body naming its wallet, dated by an instant.
+  const legacyLunch = {
+    category_id: 1,
+    transaction_type: TransactionType.EXPENSE,
+    amount: '10.00',
+    timestamp: '2026-01-05T10:00:00.000Z',
+    description: 'Lunch',
+    client_operation_id: 'key-1',
+    wallet_id: 3,
+  };
   const convertedLunch = { ...sentLunch, assignment: { kind: 'space' } };
   const leaveLegacy = (operations: object[], userId = 1) =>
     AsyncStorage.setItem(
@@ -957,7 +968,7 @@ describe('writes an older build left', () => {
       });
     };
 
-    failOnce('setItem', 'pendingTransactionWrites.v2.1');
+    failOnce('setItem', 'pendingTransactionWrites.v3.1');
     expect(statuses(await restart())).toEqual(checking);
     expect(await stored()).toEqual([]);
     expect(await AsyncStorage.getItem(legacyKey())).not.toBeNull();
@@ -983,5 +994,227 @@ describe('writes an older build left', () => {
       { status: 'checking', operation: { data: convertedLunch } },
     ]);
     expect(await AsyncStorage.getItem(legacyKey(1))).toBeNull();
+  });
+});
+
+describe('writes stored before calendar dates', () => {
+  const timestampKey = (userId = 1) => `pendingTransactionWrites.v2.${userId}`;
+  // 03:30 on Jan 5 in UTC is still Jan 4 in Chicago, where the history was entered.
+  const lateLunch = {
+    category_id: 1,
+    transaction_type: TransactionType.EXPENSE,
+    amount: '10.00',
+    timestamp: '2026-01-05T03:30:00.000Z',
+    description: 'Lunch',
+    assignment: { kind: 'member', user_id: 7 },
+    client_operation_id: 'key-1',
+  };
+  const convertedLateLunch = {
+    category_id: 1,
+    transaction_type: TransactionType.EXPENSE,
+    amount: '10.00',
+    date: '2026-01-04',
+    time_zone: 'America/Chicago',
+    description: 'Lunch',
+    assignment: { kind: 'member', user_id: 7 },
+    client_operation_id: 'key-1',
+  };
+  const timestampCreate = { type: 'create', spaceId: 1, idempotencyKey: 'key-1', firstSentAt: 1234, data: lateLunch };
+  const timestampEdit = {
+    type: 'update',
+    spaceId: 1,
+    transactionId: 'tx-1',
+    version: 3,
+    idempotencyKey: 'key-2',
+    firstSentAt: 5678,
+    data: { amount: '20.00', timestamp: '2026-01-05T03:30:00.000Z' },
+  };
+  const leaveTimestamped = (writes: object[], userId = 1) =>
+    AsyncStorage.setItem(timestampKey(userId), JSON.stringify({ version: 2, writes }));
+  const statuses = (store: ReturnType<typeof signIn>) =>
+    store.getState().pendingWrite.writes.map(({ status, found }) => ({ status, found: found?.id }));
+
+  it('dates a create by its Chicago day, keeps its operation, and looks it up before anything is sent', async () => {
+    await leaveTimestamped([{ status: 'unknown', operation: timestampCreate }]);
+    const store = await restart();
+
+    expect(store.getState().pendingWrite.writes).toEqual([
+      {
+        status: 'checking',
+        operation: {
+          type: 'create',
+          spaceId: 1,
+          idempotencyKey: 'key-1',
+          firstSentAt: 1234,
+          data: convertedLateLunch,
+          recovered: true,
+        },
+      },
+    ]);
+    expect(await stored()).toEqual(store.getState().pendingWrite.writes);
+    expect(await AsyncStorage.getItem(timestampKey())).toBeNull();
+    expect(sent()).toEqual([]);
+  });
+
+  it.each([
+    ['applied', operation('applied'), [{ status: 'found', found: 'tx-1' }]],
+    ['deleted since', operation('deleted'), []],
+    ['never applied', refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND'), [{ status: 'retry', found: undefined }]],
+    ['not known yet', noAnswer, [{ status: 'checking', found: undefined }]],
+  ])('settles a create by its operation id, never by sending it: %s', async (_name, answer, expected) => {
+    await leaveTimestamped([{ status: 'sending', operation: timestampCreate }]);
+    const store = await restart();
+    mockedRequest.mockImplementationOnce(answer);
+
+    await store.dispatch(resumePendingWrites());
+
+    expect(sent()).toEqual([
+      expect.objectContaining({ method: 'GET', url: '/spaces/1/transactions/operations/key-1' }),
+    ]);
+    expect(statuses(store)).toEqual(expected);
+  });
+
+  it('sends a create the server has no trace of again under the same operation, with the same body each time', async () => {
+    await leaveTimestamped([{ status: 'unknown', operation: timestampCreate }]);
+    let store = await restart();
+    mockedRequest.mockImplementationOnce(refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND'));
+    await store.dispatch(resumePendingWrites());
+
+    store = await restart();
+    const [write] = store.getState().pendingWrite.writes;
+    expect(write).toMatchObject({ status: 'retry', operation: { data: convertedLateLunch } });
+
+    // No answer, so the next send looks it up first; the server still has no trace of it.
+    const request = { type: 'create' as const, spaceId: 1, data: convertedLateLunch as CreateTransactionRequest };
+    mockedRequest.mockImplementation(({ method }: SentRequest) =>
+      method === 'GET' ? refusal(404, 'TRANSACTION_OPERATION_NOT_FOUND')() : noAnswer(),
+    );
+    const first = await submit(store, { ...request, operationId: 'key-1' });
+    await submit(store, { ...request, operationId: 'key-1' }, first.memory);
+
+    expect(sent().map(({ method }) => method)).toEqual(['POST', 'GET', 'POST']);
+    const bodies = posts().map(({ data, headers }) => ({ data, headers }));
+    expect(bodies).toEqual([
+      { data: convertedLateLunch, headers: { 'Idempotency-Key': 'key-1' } },
+      { data: convertedLateLunch, headers: { 'Idempotency-Key': 'key-1' } },
+    ]);
+  });
+
+  it('sends an edit again at its version and key, its instant replaced by its Chicago day', async () => {
+    await leaveTimestamped([{ status: 'unknown', operation: timestampEdit }]);
+    const store = await restart();
+    mockedRequest.mockImplementation(answers({ transaction: transactionDto({ version: 4 }) }));
+
+    await store.dispatch(resumePendingWrites());
+
+    expect(sent()).toEqual([
+      {
+        method: 'PATCH',
+        url: '/spaces/1/transactions/tx-1',
+        data: { amount: '20.00', date: '2026-01-04', time_zone: 'America/Chicago' },
+        headers: { 'Idempotency-Key': 'key-2', 'If-Match': '"3"' },
+      },
+    ]);
+    expect(store.getState().pendingWrite.writes).toEqual([]);
+  });
+
+  it('never overwrites a record changed since the edit: a newer version is refused and the edit dropped', async () => {
+    await leaveTimestamped([{ status: 'unknown', operation: timestampEdit }]);
+    const store = await restart();
+    mockedRequest.mockImplementation(refusal(409, 'TRANSACTION_VERSION_CONFLICT'));
+
+    const [result] = await results(store);
+
+    expect(result).toMatchObject({ kind: 'refused' });
+    expect(sent()).toHaveLength(1);
+    expect(store.getState().pendingWrite.writes).toEqual([]);
+  });
+
+  it('keeps an edit without an instant and a delete as they were stored', async () => {
+    const edit = { ...timestampEdit, data: { description: null } };
+    const remove = {
+      type: 'delete',
+      spaceId: 1,
+      transactionId: 'tx-2',
+      version: 1,
+      idempotencyKey: 'key-3',
+      firstSentAt: 9,
+    };
+    await leaveTimestamped([
+      { status: 'unknown', operation: edit },
+      { status: 'sending', operation: remove },
+    ]);
+
+    const store = await restart();
+
+    expect(store.getState().pendingWrite.writes).toEqual([
+      { status: 'unknown', operation: edit },
+      { status: 'unknown', operation: remove },
+    ]);
+  });
+
+  it('keeps the record a create was found to have made, dated by its day', async () => {
+    const found = {
+      ...mapTransaction(transactionDto()),
+      date: undefined,
+      timestamp: '2026-01-05T03:30:00.000Z',
+    };
+    await leaveTimestamped([{ status: 'found', operation: { ...timestampCreate, recovered: true }, found }]);
+
+    const store = await restart();
+
+    expect(store.getState().pendingWrite.writes).toMatchObject([
+      { status: 'found', found: { id: 'tx-1', date: '2026-01-04' } },
+    ]);
+    expect(store.getState().pendingWrite.writes[0].found).not.toHaveProperty('timestamp');
+  });
+
+  it('keeps both earlier formats until the current one is stored, and doubles nothing across them', async () => {
+    await leaveTimestamped([{ status: 'unknown', operation: timestampCreate }]);
+    await AsyncStorage.setItem(
+      `pendingTransactionWrites.v1.1`,
+      JSON.stringify([
+        {
+          status: 'unknown',
+          operation: { ...timestampCreate, data: { ...lateLunch, assignment: undefined, wallet_id: 3 } },
+        },
+        { status: 'unknown', operation: { ...timestampEdit, idempotencyKey: 'key-9', data: { amount: '5.00' } } },
+      ]),
+    );
+    const setItem = AsyncStorage.setItem as unknown as jest.Mock<Promise<void>, string[]>;
+    const original = setItem.getMockImplementation()!;
+    setItem.mockImplementation((...args) =>
+      args[0] === 'pendingTransactionWrites.v3.1' ? Promise.reject(new Error('disk full')) : original(...args),
+    );
+
+    let store = await restart();
+    expect(store.getState().pendingWrite.writes.map(({ operation }) => operation.idempotencyKey)).toEqual([
+      'key-1',
+      'key-9',
+    ]);
+    expect(await AsyncStorage.getItem(timestampKey())).not.toBeNull();
+    expect(await AsyncStorage.getItem('pendingTransactionWrites.v1.1')).not.toBeNull();
+
+    setItem.mockImplementation(original);
+    store = await restart();
+    expect(await stored()).toHaveLength(2);
+    expect(await AsyncStorage.getItem(timestampKey())).toBeNull();
+    expect(await AsyncStorage.getItem('pendingTransactionWrites.v1.1')).toBeNull();
+    expect(store.getState().pendingWrite.writes[0]).toMatchObject({ operation: { data: convertedLateLunch } });
+  });
+
+  it('keeps a stored value it cannot read, and reads only its own account’s', async () => {
+    await AsyncStorage.setItem(timestampKey(1), '{not json');
+    await leaveTimestamped([{ status: 'unknown', operation: timestampCreate }], 2);
+
+    const first = await restart(1);
+    expect(first.getState().pendingWrite.writes).toEqual([]);
+    expect(await AsyncStorage.getItem(timestampKey(1))).toBe('{not json');
+    expect(await AsyncStorage.getItem(timestampKey(2))).not.toBeNull();
+
+    const second = await restart(2);
+    expect(second.getState().pendingWrite.writes).toMatchObject([
+      { operation: { spaceId: 1, data: convertedLateLunch } },
+    ]);
   });
 });

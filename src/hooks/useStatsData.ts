@@ -13,13 +13,13 @@ import {
 } from '@redux/state/statistics/api';
 import {
   areStatisticsConsistent,
-  getDeviceTimeZone,
   isBreakdownConsistent,
   isAsOfRejected,
   toStatisticsQuery,
 } from '@redux/state/statistics/selectors';
 import type { TransactionType } from '@shared/enums';
 import type { DateRange } from '@shared/utils';
+import { getDeviceTimeZone } from '@shared/utils/timeZone';
 
 // A return to the screen or the app refreshes only data older than this.
 export const STATS_STALE_AFTER_MS = 30_000;

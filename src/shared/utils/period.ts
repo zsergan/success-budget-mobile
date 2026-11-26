@@ -1,3 +1,5 @@
+import type { CalendarDate } from './calendarDate';
+import { toPickerDate } from './calendarDate';
 import type { DateRange } from './dateRange';
 import {
   addMonths,
@@ -37,17 +39,17 @@ const unitRange = (unit: PeriodUnit, reference: Date): DateRange => {
   return getCurrentMonthRange(reference);
 };
 
-// The week, month or year `reference` falls in. The current one, or a later date, stays
-// relative so it rolls over with today; there is no future period to pick.
-export const unitPeriodOf = (unit: PeriodUnit, reference: Date | string, now: Date = new Date()): Period => {
-  const { from } = unitRange(unit, new Date(reference));
+// The week, month or year `reference` (a picked day, or a stored date) falls in. The current one, or a later date,
+// stays relative so it rolls over with today; there is no future period to pick.
+export const unitPeriodOf = (unit: PeriodUnit, reference: Date | CalendarDate, now: Date = new Date()): Period => {
+  const { from } = unitRange(unit, typeof reference === 'string' ? toPickerDate(reference) : reference);
 
   if (from.getTime() >= unitRange(unit, now).from.getTime()) return currentPeriod(unit);
 
   return { kind: 'past', unit, anchor: from };
 };
 
-export const monthPeriodOf = (reference: Date | string, now: Date = new Date()): Period =>
+export const monthPeriodOf = (reference: Date | CalendarDate, now: Date = new Date()): Period =>
   unitPeriodOf('month', reference, now);
 
 const shiftAnchor = (unit: PeriodUnit, anchor: Date, delta: number) => {

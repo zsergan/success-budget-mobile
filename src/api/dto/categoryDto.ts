@@ -1,4 +1,5 @@
-import type { AppColor, TransactionType } from '@shared/enums';
+import type { CategoryColor } from '@shared/categoryColors';
+import type { TransactionType } from '@shared/enums';
 
 // Exact wire values of the backend's closed CategoryIcon enum — Capitalized, space-separated for multi-word names.
 export type CategoryIconApi =
@@ -49,7 +50,8 @@ export interface Category {
   transaction_type: TransactionType;
   // Reads don't validate `icon` — old rows may still carry a pre-redesign legacy name.
   icon: CategoryIconApi | string;
-  color: AppColor;
+  // A preset, or a custom `#RRGGBB` as the server stores it (upper-case).
+  color: CategoryColor;
   is_active: number;
   transaction_count: number;
   limit: CategoryLimitRef | null;
@@ -65,7 +67,7 @@ export interface GetCategoriesResponse {
 export interface UpdateCategoryRequest {
   name?: string;
   icon?: CategoryIconApi;
-  color?: AppColor;
+  color?: CategoryColor;
   is_active?: number;
 }
 
@@ -73,7 +75,7 @@ export interface CreateCategoryRequest {
   name: string;
   transaction_type: TransactionType;
   icon: CategoryIconApi;
-  color: AppColor;
+  color: CategoryColor;
 }
 
 export interface ReorderCategoriesRequest {

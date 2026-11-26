@@ -1,5 +1,6 @@
 import type { AssignmentKey } from '@api/models';
 import { toMobileIcon } from '@api/models';
+import { resolveCategoryAppearance } from '@shared/categoryAppearance';
 import type { ColorTheme } from '@shared/theme';
 import type { IconType } from '@shared/types';
 import { assignmentItemLabel, assignmentKeyColor, assignmentKeyIcon } from '@shared/utils';
@@ -23,7 +24,7 @@ export const getBreakdownAppearance = (
   colorTheme: ColorTheme,
   selfId: number | undefined,
 ): BreakdownAppearance => {
-  const { colors, categories } = colorTheme;
+  const { colors } = colorTheme;
 
   switch (group.kind) {
     case 'other':
@@ -36,7 +37,7 @@ export const getBreakdownAppearance = (
         isMuted: false,
       };
     case 'category': {
-      const { stroke, tint } = categories[group.color];
+      const { stroke, tint } = resolveCategoryAppearance(colorTheme, group.color);
 
       return {
         name: group.name,

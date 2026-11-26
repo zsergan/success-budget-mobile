@@ -46,7 +46,6 @@ const TransactionCategoriesScreen = ({ navigation, route }: Props) => {
   const draft = flow?.draft ?? lastDraft;
 
   const isIncome = draft?.transactionType === TransactionType.INCOME;
-  const typeColor = isIncome ? colors.ok : colors.danger;
   const typeWord = isIncome ? 'income' : 'expense';
   const categories = isIncome ? incomes : expenses;
   const needle = query.trim().toLowerCase();
@@ -134,22 +133,15 @@ const TransactionCategoriesScreen = ({ navigation, route }: Props) => {
                 key={category.id}
                 name={category.name}
                 icon={category.icon}
+                color={category.color}
                 columns={columns}
-                typeColor={typeColor}
                 isSelected={category.id === draft?.categoryId}
                 onPress={() => pick(category.id)}
               />
             ))}
 
             {needle === '' && (
-              <CategoryTile
-                name="New"
-                icon="plus"
-                columns={columns}
-                typeColor={typeColor}
-                isAction
-                onPress={category.open}
-              />
+              <CategoryTile name="New" icon="plus" columns={columns} isAction onPress={category.open} />
             )}
           </View>
         )}

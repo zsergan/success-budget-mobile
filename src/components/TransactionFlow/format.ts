@@ -1,19 +1,6 @@
-import { formatDateHHMM, formatDayMonth, formatDateLong } from '@shared/utils';
-import { compareDays } from '@shared/utils/compare';
+import type { CalendarDate } from '@shared/utils';
+import { formatRelativeDate } from '@shared/utils';
 
-// "Today, 17:59", "Yesterday, 09:10", "29 Aug, 18:20", and the year only when it is not this one.
-export const formatDateTime = (value: string | Date, now = new Date()) => {
-  const date = new Date(value);
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-
-  const day = compareDays(date, now)
-    ? 'Today'
-    : compareDays(date, yesterday)
-      ? 'Yesterday'
-      : date.getFullYear() === now.getFullYear()
-        ? formatDayMonth(date)
-        : formatDateLong(date);
-
-  return `${day}, ${formatDateHHMM(date)}`;
-};
+// A record's date as the user picked it: "Today", "Yesterday", "Aug 29", and the year only when it is not this one.
+export const formatTransactionDate = (date: CalendarDate, today?: CalendarDate) =>
+  formatRelativeDate(date, { now: today });

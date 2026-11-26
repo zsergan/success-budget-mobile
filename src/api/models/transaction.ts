@@ -1,6 +1,9 @@
-import type { AppColor, TransactionType } from '@shared/enums';
+import type { CategoryColor } from '@shared/categoryColors';
+import { readCategoryColor } from '@shared/categoryColors';
+import type { TransactionType } from '@shared/enums';
 import { TransactionKind } from '@shared/enums';
 import type { IconType } from '@shared/types';
+import type { CalendarDate } from '@shared/utils/calendarDate';
 import type {
   AssigneeOption,
   AuthorSource,
@@ -21,7 +24,7 @@ export interface TransactionCategoryModel {
   name: string;
   transactionType: TransactionType;
   icon: IconType;
-  color: AppColor;
+  color: CategoryColor;
   isArchived: boolean;
 }
 
@@ -44,7 +47,7 @@ export interface TransactionModel {
   kind: TransactionKind;
   transactionType: TransactionType;
   amount: string;
-  timestamp: string;
+  date: CalendarDate;
   description: string | null;
   version: number;
   category: TransactionCategoryModel;
@@ -68,7 +71,7 @@ export interface TransactionFeedPageModel {
   nextCursor: string | null;
   previousCursor: string | null;
   summary: TransactionFeedSummary;
-  dayTotals: { date: string; net: Money }[];
+  dayTotals: { date: CalendarDate; net: Money }[];
 }
 
 // The feed's and the breakdown's `assignment` value; the server's keys are passed through unchanged.
@@ -94,7 +97,7 @@ export const mapTransactionCategory = (dto: TransactionCategory): TransactionCat
   name: dto.name,
   transactionType: dto.transaction_type,
   icon: toMobileIcon(dto.icon),
-  color: dto.color,
+  color: readCategoryColor(dto.color),
   isArchived: dto.is_archived,
 });
 
@@ -110,7 +113,7 @@ export const mapTransaction = (dto: Transaction): TransactionModel => ({
   kind: dto.kind,
   transactionType: dto.transaction_type,
   amount: dto.amount,
-  timestamp: dto.timestamp,
+  date: dto.date,
   description: dto.description,
   version: dto.version,
   category: mapTransactionCategory(dto.category),

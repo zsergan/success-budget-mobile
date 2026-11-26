@@ -1,5 +1,4 @@
 import { TransactionType } from '@shared/enums';
-import { toZonedParts } from './dateRange';
 
 export const formatNumber = (num: number | string) => Number(num).toLocaleString('en-US').replace(/,/g, ' ');
 
@@ -54,28 +53,12 @@ export const hexToRgba = (hex: string, alpha: number) => {
 export const formatAmount = (amount: number | string, transactionType: TransactionType, currency?: string) =>
   `${transactionType === TransactionType.EXPENSE ? '-' : '+'}${formatMoneyAmount(amount, currency)}`;
 
-export const formatDateDDMMYYYY = (d: Date | string) => {
-  const date = new Date(d);
-
-  const day = date.getDate();
-  const month = date.getMonth() + 1;
-  const year = date.getFullYear();
-
-  return `${day < 10 ? `0${day}` : day}.${month < 10 ? `0${month}` : month}.${year}`;
-};
-
 export const formatDateMM = (d: Date | string) => {
   const date = new Date(d);
 
   const month = date.toLocaleString('default', { month: 'long' });
 
   return `${month}`;
-};
-
-export const formatDateHHMM = (d: Date | string, timeZone?: string) => {
-  const { hour: hours, minute: minutes } = toZonedParts(new Date(d), timeZone);
-
-  return `${hours < 10 ? `0${hours}` : hours}:${minutes < 10 ? `0${minutes}` : minutes}`;
 };
 
 export const formatMonthYear = (d: Date | string) =>

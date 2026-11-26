@@ -1,7 +1,8 @@
 import { View } from 'react-native';
 
 import { EmptyState } from '@components';
-import { formatDateLong } from '@shared/utils';
+import type { CalendarDate } from '@shared/utils';
+import { formatLongDate } from '@shared/utils';
 
 import styles from './style';
 
@@ -12,7 +13,7 @@ type Props =
   | {
       variant: 'emptyMonth';
       monthName: string;
-      lastDate: string | null;
+      lastDate: CalendarDate | null;
       // Absent on the current month, which has nowhere to go back to.
       currentName?: string;
       onBackToCurrent?: () => void;
@@ -34,7 +35,7 @@ const HomeEmpty = (props: Props) => (
         variant="solid"
         icon="calendar"
         title={`Nothing in ${props.monthName}`}
-        description={`No transactions were recorded this month.${props.lastDate ? ` Your last one was on ${formatDateLong(props.lastDate)}.` : ''}`}
+        description={`No transactions were recorded this month.${props.lastDate ? ` Your last one was on ${formatLongDate(props.lastDate)}.` : ''}`}
         {...(props.onBackToCurrent && props.currentName
           ? {
               actionLabel: `Back to ${props.currentName}`,

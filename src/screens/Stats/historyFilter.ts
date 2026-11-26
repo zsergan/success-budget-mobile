@@ -15,13 +15,12 @@ export const toHistoryFilter = (
   spaceId: number,
   selfId: number | undefined,
 ): HistoryFilter | null => {
-  if (!group.opens_history || period.actual_to === null) return null;
+  if (!group.opens_history || period.actual_end_date === null) return null;
 
   const base = {
     spaceId,
-    from: period.from,
-    to: period.actual_to,
-    timeZone: period.time_zone,
+    fromDate: period.start_date,
+    toDate: period.actual_end_date,
     transactionType,
     kind: TransactionKind.REGULAR,
   };

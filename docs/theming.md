@@ -12,6 +12,14 @@ and is stored under `THEME_PREFERENCE_KEY`. Startup and native surfaces:
   fab, accentGlow, toast), the `categories` appearance of each `AppColor`, and
   the `gradientCard` the Total limit is drawn on. Add a token there when a role needs its own value in either
   scheme; never a literal in a screen.
+- A category's colour is a preset (`AppColor`) or a custom `#RRGGBB`. Draw
+  it only through `resolveCategoryAppearance` (`src/shared/categoryAppearance.ts`)
+  or `useCategoryAppearance()`, never by indexing `categories`: a preset
+  takes the theme's tones, a custom colour its saved RGB, darkened (light)
+  or lightened (dark) in 12% steps until it has 3:1 contrast with
+  `surface`, with the same tint. Glyphs, tiles, chart segments and bars all
+  use that one look; a selection is a neutral ring and check on top of it.
+  Member avatars keep their own preset tones.
 - The toast is the `elevated` surface with a `line` outline and the light
   `toast` shadow, so it stays apart from a sheet in both schemes; its type
   marks use `toastOk`, `toastWarn`, `destructive` and `text`, with the sign

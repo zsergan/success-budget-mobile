@@ -25,9 +25,10 @@ const createStyles = ({ colors }: ColorTheme) =>
       columnGap: 7,
     },
     quickChip: {
-      flex: 1,
-      height: 36,
-      borderRadius: 12,
+      minHeight: 34,
+      paddingHorizontal: 14,
+      paddingVertical: theme.spacing.xs,
+      borderRadius: 11,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 1,
@@ -38,8 +39,10 @@ const createStyles = ({ colors }: ColorTheme) =>
       backgroundColor: colors.text,
       borderColor: colors.text,
     },
+    // Plus Jakarta Sans under-measures its own width and clips the last glyph (see cde3346).
     quickText: {
-      fontFamily: theme.fonts.semiBold,
+      paddingRight: 2,
+      fontFamily: theme.fonts.bold,
       fontSize: theme.fontSizes.caption,
       color: colors.muted,
     },
@@ -51,44 +54,6 @@ const createStyles = ({ colors }: ColorTheme) =>
       fontSize: theme.fontSizes.caption,
       lineHeight: theme.lineHeights.caption,
       color: colors.muted,
-    },
-    timeRow: {
-      flexDirection: 'row',
-      alignItems: 'baseline',
-      justifyContent: 'space-between',
-    },
-    label: {
-      fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
-      letterSpacing: 0.3,
-      color: colors.muted,
-    },
-    summary: {
-      fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
-      lineHeight: theme.lineHeights.bodySm,
-      color: colors.text,
-    },
-    wheel: {
-      alignSelf: 'stretch',
-    },
-    timeButton: {
-      alignSelf: 'flex-start',
-      height: 44,
-      borderRadius: theme.radius.md,
-      paddingHorizontal: theme.spacing.lg,
-      justifyContent: 'center',
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.hairline,
-    },
-    // SemiBold under-measures its width in a content-sized box (see cde3346).
-    timeText: {
-      paddingRight: 2,
-      fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
-      color: colors.text,
     },
     footer: {
       paddingTop: theme.spacing.md,

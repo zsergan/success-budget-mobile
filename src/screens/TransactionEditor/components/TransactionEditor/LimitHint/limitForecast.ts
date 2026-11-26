@@ -1,14 +1,15 @@
 import type { LimitModel, LimitsModel } from '@api/models';
 import { normalizeAmount } from '@redux/state/transactionFlow/draft';
 import { TransactionType } from '@shared/enums';
-import { toCents } from '@shared/utils';
+import type { CalendarDate, CalendarDateRange } from '@shared/utils';
+import { isWithinDates, toCents } from '@shared/utils';
 
-// What a record adds to limits: an expense, in a category, at an instant.
+// What a record adds to limits: an expense, in a category, on a date.
 export interface LimitEntry {
   transactionType: TransactionType;
   categoryId: number | null;
   amount: string;
-  timestamp: string;
+  date: CalendarDate;
 }
 
 export type ForecastLevel = 'near' | 'over';
@@ -37,12 +38,9 @@ const shareOf = (
   cents: number,
   limit: LimitModel,
   isTotal: boolean,
-  month: [number, number],
+  month: CalendarDateRange,
 ) => {
-  if (!entry || entry.transactionType !== TransactionType.EXPENSE) return 0;
-
-  const at = Date.parse(entry.timestamp);
-  if (at < month[0] || at > month[1]) return 0;
+  if (!entry || entry.transactionType !== TransactionType.EXPENSE || !isWithinDates(entry.date, month)) return 0;
 
   return isTotal || limit.categories.some(({ id }) => id === entry.categoryId) ? cents : 0;
 };
@@ -57,18 +55,19 @@ export const forecastLimit = ({
   limits,
   original,
   draft,
-  now,
+  today,
 }: {
   limits: LimitsModel | undefined;
   original: LimitEntry | null;
   draft: LimitEntry;
-  now: number;
+  // Today's date: limits count the current month, so one loaded before a month began says nothing about now.
+  today: CalendarDate;
 }): LimitForecast | null => {
   const period = limits?.period;
   if (!limits || !period) return null;
 
-  const month: [number, number] = [Date.parse(period.from), Date.parse(period.to)];
-  if (now < month[0] || now > month[1]) return null;
+  const month = { fromDate: period.startDate, toDate: period.endDate };
+  if (!isWithinDates(today, month)) return null;
 
   const draftAmount = normalizeAmount(draft.amount);
   if (draftAmount === null) return null;

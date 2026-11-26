@@ -9,10 +9,10 @@ import { AppColor, TransactionKind, TransactionType } from '@shared/enums';
 
 import { toHistoryFilter } from './historyFilter';
 
-const breakdown = (transactionType: TransactionType, actualTo: string | null = '2026-09-30T09:15:42.123Z') =>
+const breakdown = (transactionType: TransactionType, actualEndDate: string | null = '2026-09-28') =>
   ({
     transaction_type: transactionType,
-    period: { from: '2026-08-31T21:00:00.000Z', actual_to: actualTo, time_zone: 'Europe/Kyiv' },
+    period: { start_date: '2026-09-01', end_date: '2026-09-30', actual_end_date: actualEndDate },
   }) as Pick<StatisticsBreakdown, 'period' | 'transaction_type'>;
 
 const expense = breakdown(TransactionType.EXPENSE);
@@ -42,15 +42,14 @@ const assignee = (overrides: Partial<AssignmentBreakdownItem>) =>
 const lena = assignee({});
 
 describe('toHistoryFilter', () => {
-  it('passes the space, the period bounds and its zone through as they came, with regular transactions only', () => {
+  it('passes the space and the period’s counted dates through as they came, with regular transactions only', () => {
     expect(toHistoryFilter(category(12, 'Restaurants'), expense, 7, 1)).toEqual({
       spaceId: 7,
       name: 'Restaurants',
       icon: 'home-goods',
       color: AppColor.EVERGREEN,
-      from: '2026-08-31T21:00:00.000Z',
-      to: '2026-09-30T09:15:42.123Z',
-      timeZone: 'Europe/Kyiv',
+      fromDate: '2026-09-01',
+      toDate: '2026-09-28',
       transactionType: TransactionType.EXPENSE,
       kind: TransactionKind.REGULAR,
       categoryId: 12,
@@ -61,9 +60,8 @@ describe('toHistoryFilter', () => {
     expect(toHistoryFilter(lena, income, 7, 1)).toEqual({
       spaceId: 7,
       name: 'Lena',
-      from: '2026-08-31T21:00:00.000Z',
-      to: '2026-09-30T09:15:42.123Z',
-      timeZone: 'Europe/Kyiv',
+      fromDate: '2026-09-01',
+      toDate: '2026-09-28',
       transactionType: TransactionType.INCOME,
       kind: TransactionKind.REGULAR,
       assignment: 'member:31',

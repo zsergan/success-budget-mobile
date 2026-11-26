@@ -22,7 +22,8 @@ import { selectProfileId } from '@redux/state/profile/selectors';
 import { useGetTransactionAssigneesQuery } from '@redux/state/transaction/api';
 import { selectCurrentSpaceId } from '@redux/state/space/selectors';
 import { rangeSelection } from '@redux/state/transactionFlow/selection';
-import { monthPeriodOf, toDateRange } from '@shared/utils';
+import type { CalendarDate, CalendarDateRange } from '@shared/utils';
+import { monthPeriodOf, pickerRangeDates, toDateRange } from '@shared/utils';
 import { TransactionType } from '@shared/enums';
 import type { ScreenNames } from '@shared/enums';
 import type { MainTabNavigationProp, MainTabScreenProps, RevealTransaction } from '@shared/types';
@@ -50,18 +51,14 @@ const HIGHLIGHT_MS = 2500;
 interface Anchor {
   spaceId: number;
   transactionId: string;
-  // The period it holds for, as the range's bounds in ms.
-  from: number;
-  to: number;
+  // The period it holds for.
+  fromDate: CalendarDate;
+  toDate: CalendarDate;
   // Shown from elsewhere, as opposed to a place the list returns to.
   isReveal: boolean;
 }
 
-const monthBounds = (timestamp: string) => {
-  const month = toDateRange(monthPeriodOf(timestamp));
-
-  return { from: month.from.getTime(), to: month.to.getTime() };
-};
+const monthBounds = (date: CalendarDate): CalendarDateRange => pickerRangeDates(toDateRange(monthPeriodOf(date)));
 
 const TransactionsScreen = () => {
   useSpaceRefresh();
@@ -94,9 +91,10 @@ const TransactionsScreen = () => {
   // Where the history opens instead of its newest record, for as long as the period it was set for is shown: a
   // record shown from elsewhere (in its month), or the row the plain history was at when a search opened.
   const [anchor, setAnchor] = useState<Anchor | null>(null);
-  const isShownRange = (bounds: { from: number; to: number }) =>
-    bounds.from === range.from.getTime() && bounds.to === range.to.getTime();
-  const isShownMonth = (timestamp: string) => isShownRange(monthBounds(timestamp));
+  const shownDates = pickerRangeDates(range);
+  const isShownRange = (bounds: CalendarDateRange) =>
+    bounds.fromDate === shownDates.fromDate && bounds.toDate === shownDates.toDate;
+  const isShownMonth = (date: CalendarDate) => isShownRange(monthBounds(date));
   if (anchor && !isShownRange(anchor)) setAnchor(null);
 
   // Where the plain history was when a search opened; Cancel brings it back while the period is the same.
@@ -222,12 +220,12 @@ const TransactionsScreen = () => {
     if (reveal.spaceId === spaceId) {
       const isNarrowed = !!q || filters.transactionType !== undefined || filters.assignment !== undefined;
       const isListed =
-        !isNarrowed && isShownMonth(reveal.timestamp) && transactions.some(({ id }) => id === reveal.transactionId);
+        !isNarrowed && isShownMonth(reveal.date) && transactions.some(({ id }) => id === reveal.transactionId);
 
       setFilters({});
       if (!isListed) {
-        openMonthOf(reveal.timestamp);
-        setAnchor({ ...monthBounds(reveal.timestamp), spaceId, transactionId: reveal.transactionId, isReveal: true });
+        openMonthOf(reveal.date);
+        setAnchor({ ...monthBounds(reveal.date), spaceId, transactionId: reveal.transactionId, isReveal: true });
         if (search.isSearching) search.cancel();
         setReturnPoint(null);
       }
@@ -252,9 +250,7 @@ const TransactionsScreen = () => {
     const isAtTop = !hasPreviousPage && topId === transactions[0]?.id;
 
     setReturnPoint(
-      topId && !isAtTop && spaceId !== null
-        ? { from: range.from.getTime(), to: range.to.getTime(), spaceId, transactionId: topId, isReveal: false }
-        : null,
+      topId && !isAtTop && spaceId !== null ? { ...shownDates, spaceId, transactionId: topId, isReveal: false } : null,
     );
     setHasLeftHistory(false);
     setRestoreId(null);
@@ -395,7 +391,7 @@ const TransactionsScreen = () => {
                   latest={latest}
                   activeRange={range}
                   onResetRange={canReset ? resetPeriod : undefined}
-                  onJumpToLatest={() => openMonthOf(latest.timestamp)}
+                  onJumpToLatest={() => openMonthOf(latest.date)}
                 />
               )}
 

@@ -16,13 +16,14 @@ import {
   recordGone,
   saveFailed,
   saveStarted,
+  todayChanged,
   writeConflicted,
 } from '@redux/state/transactionFlow/slice';
 import type { ErrorResponse } from '@api/dto';
 import { ApiErrorCode } from '@api/dto';
 import { memberApi } from '@redux/state/member/api';
 import type { TransactionFailureKind } from '@redux/state/transaction/operations';
-import { getErrorMessage } from '@shared/utils';
+import { deviceToday, getErrorMessage } from '@shared/utils';
 
 const SAVE_NOTICES: Partial<Record<TransactionFailureKind, SaveNotice>> = {
   uncertain: 'saveUnknown',
@@ -54,6 +55,8 @@ const useFlowSave = () => {
   useEffect(() => reset(), [draftId, reset]);
 
   return useCallback(async () => {
+    // A draft still dated today by default is saved for the day it is now.
+    dispatch(todayChanged({ today: deviceToday() }));
     const flow = selectTransactionFlow(store.getState());
     // After a conflict the same version would be refused again; the user loads the latest one first.
     if (!flow?.draft || flow.isSaving || flow.notice === 'conflict') return;
@@ -61,7 +64,7 @@ const useFlowSave = () => {
     const { saved, draft, spaceId } = flow;
     const errors = getDraftErrors(draft, {
       baseline: saved ? (flow.baseline ?? undefined) : undefined,
-      now: Date.now(),
+      today: deviceToday(),
     });
     if (hasDraftErrors(errors) || (saved && !hasUnsavedChanges(flow))) return;
 

@@ -408,6 +408,8 @@ const isSameRequest = (operation: TransactionOperation, request: TransactionRequ
   const asked: Record<string, unknown> = 'data' in request ? request.data : {};
   const keys = new Set([...Object.keys(sent), ...Object.keys(asked)]);
   keys.delete('client_operation_id');
+  // The zone only tells the server which day is today; a resend keeps the one it was first sent with.
+  keys.delete('time_zone');
 
   // Values are plain JSON; the assignment is an object, equal when its fields are.
   return [...keys].every((key) => JSON.stringify(sent[key]) === JSON.stringify(asked[key]));

@@ -83,6 +83,14 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       flexDirection: 'row',
       alignItems: 'baseline',
       justifyContent: 'space-between',
+      columnGap: theme.spacing.md,
+    },
+    colorName: {
+      flexShrink: 1,
+      fontFamily: theme.fonts.semiBold,
+      fontSize: theme.fontSizes.caption,
+      lineHeight: theme.lineHeights.caption,
+      color: colors.text,
     },
     nameField: {
       height: 52,

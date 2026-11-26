@@ -9,8 +9,9 @@ conversation is in.
 `success-budget-mobile`: a React Native personal-finance app (Expo SDK 58,
 React 19, RN 0.88, TypeScript strict) with transactions, categories,
 spending limits and shared spaces with members. A transaction belongs to
-its space, records its author and is assigned to a member, the whole space
-or nobody; there are no wallets. Each space has one currency (picked at
+its space, records its author, is assigned to a member, the whole space
+or nobody, and happens on a calendar date with no time of day; there are
+no wallets. Each space has one currency (picked at
 sign-up for the personal space, or when a space is created); transactions
 use it, and nothing converts between currencies. Redux Toolkit + RTK Query, React Navigation, react-hook-form + yup.
 
@@ -41,8 +42,8 @@ use it, and nothing converts between currencies. Redux Toolkit + RTK Query, Reac
   the saved confirmation in one sheet; the route and the sheet follow
   this state, see `docs/sheets.md`; ends on logout or space switch),
   `pendingWrite` (transaction writes persisted per user before sending,
-  until their outcome is known, including those of builds before v2;
-  see `docs/transactions.md`),
+  until their outcome is known, including those of earlier builds'
+  formats; see `docs/transactions.md`),
   `spaceCreation` (the unanswered space creation's `Idempotency-Key`
   and exact body, persisted per user until its outcome is known; see
   `spaceCreation/thunks.ts`),
@@ -63,8 +64,10 @@ use it, and nothing converts between currencies. Redux Toolkit + RTK Query, Reac
   shows another space's or period's data. Loading/error states come from
   `getLoadState` (`src/redux/api/loadState.ts`), so a background refetch,
   failed or not, keeps the last result on screen.
-- Periods are ISO strings; build a transactions period with `periodArg`
-  so equal periods share one cache entry.
+- Transaction dates and periods are calendar dates (`YYYY-MM-DD`,
+  `src/shared/utils/calendarDate.ts`), never read through an instant or a
+  zone; `Date` objects stay at the calendar picker. Build a transactions
+  period with `periodArg` so equal periods share one cache entry.
 - Mutations invalidate only on success (exceptions are documented in
   `docs/server-data.md`).
 
@@ -116,7 +119,9 @@ relying on or changing them.
   `useThemedStyles(createStyles)`; colours outside a stylesheet (icons,
   spinners, gradients) come from `useTheme().colorTheme`. Fonts, sizes and
   spacing stay on the static default `theme` export. No light/dark branches:
-  a new role is a token in `src/shared/theme.ts`. Details: `docs/theming.md`.
+  a new role is a token in `src/shared/theme.ts`. A category colour (a
+  preset or a custom `#RRGGBB`) is drawn only through
+  `useCategoryAppearance`. Details: `docs/theming.md`.
 - Known layout pitfalls (Plus Jakarta Sans clipping, nested safe areas):
   `docs/ui-pitfalls.md`.
 - Transactions (assignment, author, writes, pending writes, the upgrade

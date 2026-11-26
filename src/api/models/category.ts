@@ -1,4 +1,6 @@
-import type { AppColor, TransactionType } from '@shared/enums';
+import type { CategoryColor } from '@shared/categoryColors';
+import { readCategoryColor } from '@shared/categoryColors';
+import type { TransactionType } from '@shared/enums';
 import type { IconType } from '@shared/types';
 import { ICON_PATHS } from '@shared/icons';
 import type { Category, CategoryIconApi, GetCategoriesResponse } from '@api/dto';
@@ -13,7 +15,7 @@ export interface CategoryModel {
   name: string;
   transactionType: TransactionType;
   icon: IconType;
-  color: AppColor;
+  color: CategoryColor;
   isActive: boolean;
   transactionCount: number;
   limit: CategoryLimitRefModel | null;
@@ -42,7 +44,7 @@ export const mapCategory = (dto: Category): CategoryModel => ({
   name: dto.name,
   transactionType: dto.transaction_type,
   icon: toMobileIcon(dto.icon),
-  color: dto.color,
+  color: readCategoryColor(dto.color),
   isActive: dto.is_active === 1,
   transactionCount: dto.transaction_count,
   limit: dto.limit,

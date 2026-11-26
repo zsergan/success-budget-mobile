@@ -14,7 +14,7 @@ import { whereSaved } from '@redux/state/transactionFlow/selection';
 import { checkFlowRecord, openTransactionDetails } from '@redux/state/transactionFlow/thunks';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackParamList } from '@shared/types';
-import { afterKeyboardHides } from '@shared/utils';
+import { afterKeyboardHides, deviceToday } from '@shared/utils';
 import CreatedConfirmation from './CreatedConfirmation/CreatedConfirmation';
 import useAssignmentDefaults from './hooks/useAssignmentDefaults';
 import useEditorRoute from './hooks/useEditorRoute';
@@ -122,15 +122,15 @@ const TransactionFlowSheet = () => {
     if (!current?.created || current.isSaving) return;
 
     const { spaceId, created, selection } = current;
-    const { id, timestamp } = created.transaction;
+    const { id, date } = created.transaction;
     dispatch(closed());
 
     if (whereSaved(created.transaction, selection) === 'otherPeriod') {
       navigation.navigate(
         ScreenNames.HOME_SCREEN,
         selection?.origin === 'home'
-          ? { screen: ScreenNames.HOME_TAB, params: { showMonth: { spaceId, month: timestamp } } }
-          : { screen: ScreenNames.TRANSACTIONS_TAB, params: { reveal: { spaceId, transactionId: id, timestamp } } },
+          ? { screen: ScreenNames.HOME_TAB, params: { showMonth: { spaceId, month: date } } }
+          : { screen: ScreenNames.TRANSACTIONS_TAB, params: { reveal: { spaceId, transactionId: id, date } } },
       );
     }
     dispatch(openTransactionDetails({ spaceId, transaction: created.transaction }));
@@ -160,7 +160,7 @@ const TransactionFlowSheet = () => {
             onAddAnother={() =>
               dispatch(
                 anotherStarted({
-                  now: new Date().toISOString(),
+                  today: deviceToday(),
                   assignment: forAnother(shown.spaceId, shown.draft?.assignment ?? null),
                 }),
               )

@@ -29,6 +29,7 @@ import { ScreenNames, AppColor, SpaceType, TransactionKind, TransactionType } fr
 import { renderWithTheme } from '@components/ThemeProvider/themeTestUtils';
 import { createToastRecorder } from '@components/Toast/testing';
 import { colorThemes } from '@shared/theme';
+import { deviceToday, shiftDays } from '@shared/utils';
 import BottomModal from '@components/Modals/BottomSheetModal/BottomSheetModal';
 import { useBackPress, useSheetPresence } from '@hooks';
 import { TransactionCategoriesScreen, TransactionEditorScreen } from '@screens/TransactionEditor';
@@ -146,8 +147,6 @@ jest.mock('@gorhom/bottom-sheet', () => {
   };
 });
 
-jest.mock('@react-native-community/datetimepicker', () => () => null);
-
 const mockToasts = createToastRecorder();
 jest.mock('@hooks/useToast', () => () => mockToasts.toast);
 jest.mock('expo-crypto', () => ({ randomUUID: () => 'key-1' }));
@@ -244,7 +243,7 @@ let answerOperation: () => Promise<unknown> = () =>
       operation_id: 'key-1',
       status: 'applied',
       transaction_id: 'tx-1',
-      created_at: stored.timestamp,
+      created_at: '2026-01-05T10:00:00.000Z',
       deleted_at: null,
       transaction: stored,
     },
@@ -327,9 +326,7 @@ const renderFlow = (spaceType?: SpaceType) => {
     selection: ViewSelection | null = null,
   ) =>
     act(() => {
-      store.dispatch(
-        createOpened({ spaceId: 1, transactionType, assignment, now: new Date().toISOString(), selection }),
-      );
+      store.dispatch(createOpened({ spaceId: 1, transactionType, assignment, today: deviceToday(), selection }));
     });
 
   const openDetails = () =>
@@ -431,7 +428,7 @@ describe('TransactionFlowSheet', () => {
           spaceId: 1,
           transactionType: TransactionType.EXPENSE,
           assignment: { kind: 'member', userId: 1 },
-          now: new Date().toISOString(),
+          today: deviceToday(),
           selection: null,
         }),
       );
@@ -536,7 +533,7 @@ describe('TransactionFlowSheet', () => {
     await settle();
     fillExpense();
     fireEvent.changeText(screen.getByLabelText('Description'), 'Lunch with Sam');
-    fireEvent.press(screen.getByText(/, \d{2}:\d{2}$/));
+    fireEvent.press(screen.getByLabelText(/^Date, /));
     fireEvent.press(screen.getByText('Yesterday'));
     fireEvent.press(screen.getByText('Apply'));
     const before = flow();
@@ -581,9 +578,9 @@ describe('TransactionFlowSheet', () => {
     expect(asked()).toEqual([]);
     expect(flow()?.draft).toEqual(before);
 
-    fireEvent.press(screen.getByText(/, \d{2}:\d{2}$/));
+    fireEvent.press(screen.getByLabelText(/^Date, /));
     fireEvent.press(screen.getByText('Yesterday'));
-    expect(flow()?.view).toMatchObject({ name: 'dateTime' });
+    expect(flow()?.view).toMatchObject({ name: 'date' });
     leave();
     await settle();
     expect(routeNames()).toEqual(WITH_EDITOR);
@@ -686,7 +683,7 @@ describe('TransactionFlowSheet', () => {
           spaceId: 1,
           transactionType: TransactionType.EXPENSE,
           assignment: { kind: 'member', userId: 1 },
-          now: new Date().toISOString(),
+          today: deviceToday(),
         }),
       );
     });
@@ -868,8 +865,8 @@ describe('TransactionFlowSheet', () => {
           operation_id: 'key-1',
           status: 'applied',
           transaction_id: 'tx-1',
-          created_at: stored.timestamp,
-          deleted_at: stored.timestamp,
+          created_at: '2026-01-05T10:00:00.000Z',
+          deleted_at: '2026-01-06T10:00:00.000Z',
           transaction: null,
         },
       });
@@ -935,7 +932,8 @@ describe('TransactionFlowSheet', () => {
 
     expect(screen.getByText('Food')).toBeTruthy();
     expect(screen.getByText('Zakhar')).toBeTruthy();
-    expect(screen.getByText(/^Jan 5(, 2026)?, \d\d:00$/)).toBeTruthy();
+    expect(screen.getByText(/^Jan 5(, 2026)?$/)).toBeTruthy();
+    expect(screen.queryByText(/\d:\d\d/)).toBeNull();
     // Its time counts from when it showed, with the form gone.
     expect(routeNames()).toEqual(HOME_ONLY);
     expect(flow()?.autoCloseAt).toBe(Date.now() + CREATED_AUTO_CLOSE_MS);
@@ -1104,7 +1102,7 @@ describe('TransactionFlowSheet', () => {
 
   it('says a record was saved outside the viewed period, and shows it in its own period on request', async () => {
     const { open, flow } = renderFlow();
-    const september = { from: '2026-09-01T00:00:00.000Z', to: '2026-09-30T23:59:59.999Z' };
+    const september = { fromDate: '2026-09-01', toDate: '2026-09-30' };
 
     open(TransactionType.EXPENSE, undefined, september);
     await settle();
@@ -1121,7 +1119,7 @@ describe('TransactionFlowSheet', () => {
         name: ScreenNames.HOME_SCREEN,
         params: {
           screen: ScreenNames.TRANSACTIONS_TAB,
-          params: { reveal: { spaceId: 1, transactionId: 'tx-9', timestamp: '2026-01-05T10:00:00.000Z' } },
+          params: { reveal: { spaceId: 1, transactionId: 'tx-9', date: '2026-01-05' } },
         },
       },
     ]);
@@ -1189,7 +1187,12 @@ describe('TransactionFlowSheet', () => {
 
     act(() => {
       store.dispatch(
-        createOpened({ spaceId: 2, transactionType: TransactionType.EXPENSE, assignment: { kind: 'space' }, now: '' }),
+        createOpened({
+          spaceId: 2,
+          transactionType: TransactionType.EXPENSE,
+          assignment: { kind: 'space' },
+          today: deviceToday(),
+        }),
       );
     });
     await settle();
@@ -1210,7 +1213,7 @@ describe('TransactionFlowSheet', () => {
             amount: '42.10',
             categoryId: 1,
             assignment: { kind: 'space' },
-            timestamp: '2026-01-05T10:00:00.000Z',
+            date: '2026-01-05',
             description: '',
           },
         }),
@@ -1237,7 +1240,8 @@ describe('TransactionFlowSheet', () => {
       amount: '42.10',
       categoryId: 1,
       assignment: { kind: 'space' } as const,
-      timestamp: '2026-01-05T10:00:00.000Z',
+      date: '2026-01-05',
+      timeZone: 'America/Chicago',
       description: '',
     };
     const body = {
@@ -1245,7 +1249,8 @@ describe('TransactionFlowSheet', () => {
       category_id: 1,
       transaction_type: TransactionType.EXPENSE,
       amount: '42.10',
-      timestamp: '2026-01-05T10:00:00.000Z',
+      date: '2026-01-05',
+      time_zone: 'America/Chicago',
       description: null,
       client_operation_id: 'legacy-key',
     };
@@ -1340,12 +1345,12 @@ describe('TransactionFlowSheet', () => {
     open(TransactionType.EXPENSE, { kind: 'unassigned' });
     await settle();
     fillExpense();
-    fireEvent.press(screen.getByText(/^Today, /));
+    fireEvent.press(screen.getByLabelText('Date, Today'));
     fireEvent.press(screen.getByText('Yesterday'));
     fireEvent.press(screen.getByText('Apply'));
     await settle();
     const { draftId } = flow()!;
-    const { timestamp } = flow()!.draft!;
+    const { date } = flow()!.draft!;
 
     fireEvent.press(screen.getByText('Save expense'));
     await act(async () => answerWrite({ data: createTransactionResponseDto() }));
@@ -1360,7 +1365,7 @@ describe('TransactionFlowSheet', () => {
       draft: {
         transactionType: TransactionType.EXPENSE,
         assignment: { kind: 'unassigned' },
-        timestamp,
+        date,
         amount: '',
         categoryId: null,
       },
@@ -1375,7 +1380,7 @@ describe('TransactionFlowSheet', () => {
     open();
     await settle();
     fireEvent.changeText(screen.getByLabelText('Amount'), '12');
-    const { timestamp } = flow()!.draft!;
+    const { date } = flow()!.draft!;
 
     fireEvent.press(screen.getByText('More'));
     expect(screen.getByText('Expense categories')).toBeTruthy();
@@ -1386,18 +1391,18 @@ describe('TransactionFlowSheet', () => {
     expect(screen.getAllByText('Spend 10')).toHaveLength(2);
     expect(flow()?.draft).toMatchObject({ amount: '12', categoryId: 10 });
 
-    fireEvent.press(screen.getByText(/^Today, /));
+    fireEvent.press(screen.getByLabelText('Date, Today'));
     fireEvent.press(screen.getByText('Yesterday'));
     fireEvent.press(screen.getByText('Cancel'));
-    expect(flow()?.draft?.timestamp).toBe(timestamp);
+    expect(flow()?.draft?.date).toBe(date);
 
-    fireEvent.press(screen.getByText(/^Today, /));
+    fireEvent.press(screen.getByLabelText('Date, Today'));
     fireEvent.press(screen.getByText('Yesterday'));
     fireEvent.press(screen.getByText('Apply'));
 
-    expect(screen.getByText(/^Yesterday, /)).toBeTruthy();
+    expect(screen.getByLabelText('Date, Yesterday')).toBeTruthy();
     expect(flow()?.draft).toMatchObject({ amount: '12', categoryId: 10 });
-    expect(flow()?.draft?.timestamp).not.toBe(timestamp);
+    expect(flow()?.draft?.date).not.toBe(date);
   });
 
   it('edits from the details: Save changes only for a real change, Back asks before dropping it', async () => {
@@ -2273,7 +2278,7 @@ describe('TransactionFlowSheet', () => {
     await settle();
     fireEvent.changeText(screen.getByLabelText('Amount'), '12');
 
-    fireEvent.press(screen.getByText(/, \d{2}:\d{2}$/));
+    fireEvent.press(screen.getByLabelText(/^Date, /));
     fireEvent.press(screen.getByText('More'));
     await act(async () => jest.advanceTimersByTime(1000));
 
@@ -2283,7 +2288,7 @@ describe('TransactionFlowSheet', () => {
 
     swipeBack();
     await settle();
-    fireEvent.press(screen.getByText(/, \d{2}:\d{2}$/));
+    fireEvent.press(screen.getByLabelText(/^Date, /));
     act(() => {
       store.dispatch(closed());
       store.dispatch(
@@ -2291,7 +2296,7 @@ describe('TransactionFlowSheet', () => {
           spaceId: 1,
           transactionType: TransactionType.EXPENSE,
           assignment: { kind: 'member', userId: 1 },
-          now: new Date().toISOString(),
+          today: deviceToday(),
         }),
       );
     });
@@ -2301,9 +2306,9 @@ describe('TransactionFlowSheet', () => {
     expect(screen.queryByText('Apply')).toBeNull();
 
     // Asked for and left alone, it opens.
-    fireEvent.press(screen.getByText(/, \d{2}:\d{2}$/));
+    fireEvent.press(screen.getByLabelText(/^Date, /));
     await act(async () => jest.advanceTimersByTime(1000));
-    expect(flow()?.view.name).toBe('dateTime');
+    expect(flow()?.view.name).toBe('date');
   });
 
   it('keeps a screen opened over the editor in front when a save completes, and shows the result after it', async () => {
@@ -2494,17 +2499,17 @@ describe('TransactionFlowSheet', () => {
 
     fireEvent.press(screen.getByText('More'));
     fireEvent.press(screen.getByLabelText('Back to the form'));
-    fireEvent.press(screen.getByText(/, \d{2}:\d{2}$/));
+    fireEvent.press(screen.getByLabelText(/^Date, /));
     fireEvent.press(screen.getByText('Yesterday'));
     fireEvent.press(screen.getByText('Apply'));
-    const { timestamp } = flow()!.draft!;
+    const { date } = flow()!.draft!;
     await settle();
 
     expect(screen.getByText('Edit transaction')).toBeTruthy();
     expect(flow()).toMatchObject({
       view: { name: 'edit' },
       draftId,
-      draft: { amount: '70', description: 'Yearly pass', categoryId: 40, timestamp },
+      draft: { amount: '70', description: 'Yearly pass', categoryId: 40, date },
     });
 
     fireEvent.press(screen.getByText('Save changes'));
@@ -2519,16 +2524,10 @@ describe('TransactionFlowSheet', () => {
   });
 
   it('forecasts an edit of an expense by replacing its share, without blocking Save', async () => {
-    const day = 86_400_000;
-    stored = transactionDto({ amount: '50.00', timestamp: new Date(Date.now() - day).toISOString() });
+    const today = deviceToday();
+    stored = transactionDto({ amount: '50.00', date: today });
     limitsResponse = {
-      period: {
-        time_zone: 'UTC',
-        start_date: '',
-        end_date: '',
-        from: new Date(Date.now() - 10 * day).toISOString(),
-        to: new Date(Date.now() + 10 * day).toISOString(),
-      },
+      period: { time_zone: 'UTC', start_date: shiftDays(today, -10), end_date: shiftDays(today, 10) },
       total: null,
       categories: [
         {
@@ -2745,7 +2744,7 @@ describe('TransactionFlowSheet', () => {
               amount: '42.10',
               categoryId: 1,
               assignment: { kind: 'member', userId: 31 },
-              timestamp: '2026-01-05T10:00:00.000Z',
+              date: '2026-01-05',
               description: '',
             },
           }),
@@ -2968,8 +2967,8 @@ describe('TransactionFlowSheet', () => {
       stored = transactionDto({ assignment: { kind: 'member', user_id: 31, name: 'Lena', status: 'member' } });
       const { store, flow } = renderFlow();
       const selection = {
-        from: '2026-01-01T00:00:00.000Z',
-        to: '2026-01-31T23:59:59.999Z',
+        fromDate: '2026-01-01',
+        toDate: '2026-01-31',
         assignment: 'member:31' as const,
       };
 

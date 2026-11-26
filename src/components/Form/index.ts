@@ -1,4 +1,3 @@
-export { default as DateTimePicker } from './DateTimePicker/DateTimePicker';
 export { default as Input } from './Input/Input';
 export { default as InputPicker } from './InputPicker/InputPicker';
 export { default as PasswordInput } from './PasswordInput/PasswordInput';

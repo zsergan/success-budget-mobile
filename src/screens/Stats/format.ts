@@ -102,32 +102,14 @@ export const formatPeriodWord = (
   return formatDayRange(start, end, !isThisYear);
 };
 
-// The local day an instant falls on in the period's zone.
-const toZoneDate = (instant: string, timeZone: string) => {
-  try {
-    const key = new Intl.DateTimeFormat('en-CA', {
-      timeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(new Date(instant));
-
-    return parseDateKey(key);
-  } catch {
-    const date = new Date(instant);
-
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  }
-};
-
 // "vs July" against a whole month, "vs 2025" against a whole year, otherwise the compared days.
 export const formatComparisonLabel = (
-  period: Pick<StatisticsPeriod, 'type' | 'start_date' | 'time_zone'>,
-  previous: Pick<StatisticsPreviousPeriod, 'start_date' | 'end_date' | 'to' | 'actual_to'>,
+  period: Pick<StatisticsPeriod, 'type' | 'start_date'>,
+  previous: Pick<StatisticsPreviousPeriod, 'start_date' | 'end_date' | 'actual_end_date'>,
 ) => {
   const start = parseDateKey(previous.start_date);
-  const isWhole = previous.actual_to === previous.to;
-  const end = isWhole ? parseDateKey(previous.end_date) : toZoneDate(previous.actual_to, period.time_zone);
+  const isWhole = previous.actual_end_date === previous.end_date;
+  const end = parseDateKey(previous.actual_end_date);
   const periodYear = parseDateKey(period.start_date).getFullYear();
   const isOtherYear = start.getFullYear() !== periodYear || end.getFullYear() !== periodYear;
 
