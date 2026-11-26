@@ -147,8 +147,6 @@ jest.mock('@gorhom/bottom-sheet', () => {
   };
 });
 
-jest.mock('@react-native-community/datetimepicker', () => () => null);
-
 const mockToasts = createToastRecorder();
 jest.mock('@hooks/useToast', () => () => mockToasts.toast);
 jest.mock('expo-crypto', () => ({ randomUUID: () => 'key-1' }));
