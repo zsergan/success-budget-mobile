@@ -4,7 +4,7 @@ Every modal surface is a `@gorhom/bottom-sheet` modal wrapped by
 `src/components/Modals/BottomSheetModal/BottomSheetModal.tsx`. App
 confirmations and messages use `ConfirmationSheet`
 (`src/components/ConfirmationSheet/`), never `Alert.alert`; native
-interactions (share sheet, date/time pickers) stay native. These are the
+interactions (the share sheet) stay native. These are the
 constraints that are easy to break when adding a caller.
 
 ## Showing and hiding
@@ -30,7 +30,7 @@ Pick the sizing by the shape of the content:
   and caps it below the top inset; a longer scroll view scrolls.
   `showHandle` adds the drag handle.
 - `fitContent`: a header and actions around an inner scroll view (the
-  transaction flow, confirmations, Date & time). The library's sizing
+  transaction flow, confirmations, Date). The library's sizing
   would see only that inner scroll view, so the wrapper measures the whole
   content itself. That content is laid out apart from the sheet's height
   (absolutely, capped by the screen): inside the library's container its
@@ -71,7 +71,7 @@ do: it dismisses the keyboard and shows the sheet once it has gone.
   record's confirmation, and only while the app's own screen is in front:
   a screen pushed over it (an invitation) holds the sheet back.
 - The form (New and Edit) is the `TransactionEditorScreen` route, with the
-  full category list as a route over it. Date & time is a sheet the editor
+  full category list as a route over it. Date is a sheet the editor
   owns; a new category is a sheet of whichever of the two screens it was
   opened from (`useCategoryCreation`).
 - `useEditorRoute` pushes the editor once the flow has a form and the sheet

@@ -61,11 +61,11 @@ entry and tags.
 | `Profile`        | `GET /users/profile`                                          | — (no mutation endpoint)                                                                                                                                                                                 |
 | `Currencies`     | `GET /currencies`                                             | — (reference data)                                                                                                                                                                                       |
 | `Categories`     | `GET /spaces/:id/categories`                                  | `transaction_count` (all transactions of the space), `limit: {id, name}` membership, `is_active`/`archived_at`, `sort`                                                                                   |
-| `Limits`         | `GET /spaces/:id/limits?time_zone=`                           | `spent`/`in_percent` per limit over the device zone's month returned as `period` (every expense of the space, whatever its assignment), embedded category `name`/`icon`/`color`, `over_allocation`       |
-| `History.Recent` | `GET /spaces/:id/transactions/feed?from&to&time_zone&limit=5` | Home's latest five records of the month it shows and their days' `net`; the current month's entry is shared with the session data                                                                        |
+| `Limits`         | `GET /spaces/:id/limits?time_zone=`                           | `spent`/`in_percent` per limit over the current month's dates returned as `period` (every expense of the space, whatever its assignment), embedded category `name`/`icon`/`color`, `over_allocation`     |
+| `History.Recent` | `GET /spaces/:id/transactions/feed?from_date&to_date&limit=3` | Home's latest three records of the month it shows; the current month's entry is shared with the session data                                                                                             |
 | `History.Latest` | `GET /spaces/:id/transactions/latest`                         | Single most recent row (or `null`); tells "no transactions at all" apart from "none in this period"                                                                                                      |
-| `History.Count`  | `GET /spaces/:id/transactions/count?from&to[&q]`              | `summary.count` of the same `History.Feed` selection, initial balances included; the period picker's counter                                                                                             |
-| `History.Feed`   | `GET /spaces/:id/transactions/feed?from&to&time_zone[&q]`     | Cursor pages of rows (same row shape) with the selection's `summary` and each listed day's `net`; one entry per selection and load generation; the Transactions tab, its search and the Stats drill-down |
+| `History.Count`  | `GET /spaces/:id/transactions/count?from_date&to_date[&q]`    | `summary.count` of the same `History.Feed` selection, initial balances included; the period picker's counter                                                                                             |
+| `History.Feed`   | `GET /spaces/:id/transactions/feed?from_date&to_date[&q]`     | Cursor pages of rows (same row shape) with the selection's `summary` and each listed day's `net`; one entry per selection and load generation; the Transactions tab, its search and the Stats drill-down |
 | `Transaction`    | `GET /spaces/:id/transactions/:transactionId`                 | One record as its details show it, with its `version`, `author` and `assignment`                                                                                                                         |
 | `Operation`      | `GET /spaces/:id/transactions/operations/:operationId`        | Whether a create applied (and its record, or `null` if deleted since); provides no tags, always read afresh and dropped at once (`docs/transactions.md`)                                                 |
 | `Assignees`      | `GET /spaces/:id/transactions/assignees`                      | History's "Assigned to" filter: current members, former members with records, whether a deleted account has records; provides `Transactions` and `Members`                                               |
@@ -92,7 +92,10 @@ default), so a page already loading finishes first and is replaced with
 the rest of the window.
 
 A pull-to-refresh, a rejected cursor, a new selection or an `around_id`
-outside the selection also starts a new generation. The replaced entry
+outside the selection also starts a new generation. A cursor the server
+refuses (one issued before calendar dates, say) reloads the first page
+once for the selection; a second refusal stays a page error with Retry,
+so a server that keeps refusing never loops. The replaced entry
 is removed at once (`keepUnusedDataFor: 0`), which aborts a page it still
 loads, so nothing from it can land on screen.
 
@@ -162,6 +165,16 @@ described in "Lifecycle".
 
 ## Transaction reads and writes
 
+- A transaction happens on a calendar `date` (`YYYY-MM-DD`), with no time
+  of day: it is shown as stored and never read through a zone
+  (`src/shared/utils/calendarDate.ts`). History, Home's activity and the
+  count select by `from_date`/`to_date`, both included, the days the
+  period picker shows; Stats passes its `start_date` and
+  `actual_end_date` through unchanged, so a row and the list behind it
+  hold the same records in every zone. A write sends `date` with the
+  device's `time_zone`, which only tells the server which day is today;
+  a resend keeps the zone it was first sent with. Within a day the
+  server's order is kept as it came.
 - Every transaction read and write result is the backend's v2
   transaction view: `kind`, `version`, `author` (with `source`),
   `assignment` (people resolved to `member`, `former_member` or
@@ -179,7 +192,7 @@ described in "Lifecycle".
   filter and statistics cycle of the space reads again.
 - A transaction created outside the currently cached period does not
   change `History.Recent`/`History.Feed` rows, but invalidating them
-  anyway is correct and cheap; no need to match on timestamps.
+  anyway is correct and cheap; no need to match on dates.
 - An income transaction does not change Limits; a per-type rule is
   possible but not required.
 

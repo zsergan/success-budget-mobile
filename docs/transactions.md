@@ -52,6 +52,29 @@ are in `docs/server-data.md`, the sheet and editor route in
   period, type, category or assignment filter, `whereSaved`) is reported
   as such; History reveals it around its position (`around_id`).
 
+## Dates
+
+- A transaction has a calendar `date`, no time of day. Every view shows it
+  as stored (`formatTransactionDate`: Today, Yesterday, Aug 29, the year
+  only when it is not this one); History groups rows under day headers by
+  that date, and Home's preview names each row's own date.
+- A new transaction is dated today, also when the form opens over an
+  earlier month on Home (the form says which month is behind it). While no
+  date is picked (`followsToday`), the draft moves onto the new today past
+  midnight and on a return to the app (`todayChanged`), and Add another
+  takes the new today; a picked date is kept for Add another and is never
+  changed by the app. Nor is the date of a draft whose save is running or
+  has an outcome to show.
+- The Date sheet picks one day: Today, Yesterday or the calendar, with no
+  day after today on offer. Apply moves it into the draft; Cancel, Back and
+  a swipe keep the draft's date.
+- An edit sends the date with the device's zone; an unchanged date is no
+  change to the server, even one after today. A resend of a write sends
+  exactly the stored body, its `time_zone` included, and the same draft
+  saved again reuses that write whatever zone the device is in now.
+- Period checks (saved outside the viewed period, reveals, limit
+  forecasts, empty periods) compare dates directly.
+
 ## Writes
 
 Every create, edit and delete goes through
