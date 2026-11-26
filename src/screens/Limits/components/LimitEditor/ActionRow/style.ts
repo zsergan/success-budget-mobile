@@ -32,7 +32,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     deleteButton: {
       width: 54,
-      height: 54,
+      minHeight: 54,
       flexShrink: 0,
       borderRadius: 15,
       alignItems: 'center',
@@ -41,7 +41,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     saveButton: {
       flex: 1,
-      height: 54,
+      minHeight: 54,
       borderRadius: 15,
       flexDirection: 'row',
       alignItems: 'center',

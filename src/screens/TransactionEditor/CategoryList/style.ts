@@ -45,7 +45,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       rowGap: theme.spacing.lg,
     },
     search: {
-      height: 42,
+      minHeight: 42,
       borderRadius: 13,
       paddingHorizontal: theme.spacing.md,
       flexDirection: 'row',

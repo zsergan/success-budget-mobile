@@ -33,7 +33,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       columnGap: theme.spacing.sm - 2,
     },
     raiseButton: {
-      height: 30,
+      minHeight: 30,
       paddingHorizontal: theme.spacing.md - 2,
       borderRadius: 10,
       alignItems: 'center',
@@ -48,7 +48,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       color: colors.text,
     },
     keepButton: {
-      height: 30,
+      minHeight: 30,
       paddingHorizontal: theme.spacing.md - 2,
       alignItems: 'center',
       justifyContent: 'center',

@@ -65,7 +65,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       color: colors.muted,
     },
     archived: {
-      height: 18,
+      minHeight: 18,
       paddingHorizontal: 6,
       borderRadius: 6,
       overflow: 'hidden',

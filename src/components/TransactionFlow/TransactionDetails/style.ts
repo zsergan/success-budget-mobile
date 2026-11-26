@@ -56,7 +56,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       letterSpacing: theme.letterSpacing.titleLg,
     },
     typeChip: {
-      height: 26,
+      minHeight: 26,
       borderRadius: 9,
       paddingHorizontal: theme.spacing.md,
       justifyContent: 'center',
@@ -140,7 +140,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       backgroundColor: colors.hairline,
     },
     editButton: {
-      height: 52,
+      minHeight: 52,
       borderRadius: theme.radius.md,
       flexDirection: 'row',
       alignItems: 'center',

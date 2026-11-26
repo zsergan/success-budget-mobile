@@ -6,7 +6,7 @@ import theme from '@shared/theme';
 const createStyles = ({ colors, elevation }: ColorTheme) =>
   StyleSheet.create({
     typeSwitch: {
-      height: 44,
+      minHeight: 44,
       borderRadius: 15,
       padding: 4,
       flexDirection: 'row',

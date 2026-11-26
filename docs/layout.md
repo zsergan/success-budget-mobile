@@ -40,8 +40,9 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   not capped. A one-off size uses `cappedSize(size, cap, layout)`.
 - **A box around text never has a fixed `height`.** `fitHeight(height,
 lineHeight, border)` gives the same box at the default size and lets it grow
-  with its text. Fixed sizes stay on things without text: icons, avatars,
-  swatches, progress tracks.
+  with its text. A box that centres its content, or a segmented switch with
+  its own padding, takes `minHeight` instead. Fixed sizes stay on things
+  without text: icons, avatars, swatches, progress tracks, skeletons.
 - **Rows give way under large text.** When `layout.isLargeText` (above 1.15×)
   a row of label and value wraps or stacks, and a grid drops a column
   (`useCategoryColumns`). `isAccessibilityText` (above 1.6×) is for layouts

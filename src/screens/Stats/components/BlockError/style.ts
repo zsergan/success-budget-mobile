@@ -30,7 +30,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       textAlign: 'center',
     },
     retryButton: {
-      height: 36,
+      minHeight: 36,
       paddingHorizontal: 14,
       borderRadius: 12,
       flexDirection: 'row',

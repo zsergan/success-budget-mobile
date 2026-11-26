@@ -22,12 +22,24 @@ describe('a large button', () => {
 
       const { height, minHeight, paddingVertical, borderWidth, lineHeight } = boxOf('Create account');
 
-      expect(height).toBe('auto');
+      expect(height).toBeUndefined();
       expect(minHeight).toBe(56);
       expect(2 * (paddingVertical as number) + 2 * borderWidth + (lineHeight as number)).toBeLessThanOrEqual(56);
       expect(screen.getByText('Create account').props.numberOfLines).toBeUndefined();
     },
   );
+});
+
+describe('a default-size button', () => {
+  it.each(['primary', 'outline'] as const)('is 52 tall with a %s label and grows with large text', (variant) => {
+    render(<Button title="Save" variant={variant} onPress={() => {}} />);
+
+    const { height, minHeight, paddingVertical, borderWidth, lineHeight } = boxOf('Save');
+
+    expect(height).toBeUndefined();
+    expect(minHeight).toBe(52);
+    expect(2 * (paddingVertical as number) + 2 * borderWidth + (lineHeight as number)).toBeLessThanOrEqual(52);
+  });
 });
 
 describe('a loading button', () => {

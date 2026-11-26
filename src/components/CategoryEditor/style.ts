@@ -93,7 +93,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       color: colors.text,
     },
     nameField: {
-      height: 52,
+      minHeight: 52,
       borderRadius: theme.radius.md,
       paddingHorizontal: theme.spacing.lg,
       flexDirection: 'row',
@@ -129,7 +129,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       color: colors.muted,
     },
     typeSwitch: {
-      height: 46,
+      minHeight: 46,
       borderRadius: theme.radius.md,
       padding: 4,
       flexDirection: 'row',
@@ -172,7 +172,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       columnGap: 7,
     },
     lockedBadge: {
-      height: 17,
+      minHeight: 17,
       paddingHorizontal: 6,
       borderRadius: 5,
       alignItems: 'center',
@@ -186,7 +186,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       color: colors.muted,
     },
     lockedBox: {
-      height: 52,
+      minHeight: 52,
       borderRadius: theme.radius.md,
       flexDirection: 'row',
       alignItems: 'center',
@@ -209,7 +209,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       color: colors.muted,
     },
     deleteButton: {
-      height: 50,
+      minHeight: 50,
       borderRadius: theme.radius.md,
       flexDirection: 'row',
       alignItems: 'center',
@@ -229,7 +229,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       rowGap: theme.spacing.sm,
     },
     saveButton: {
-      height: 52,
+      minHeight: 52,
       borderRadius: theme.radius.md,
       alignItems: 'center',
       justifyContent: 'center',

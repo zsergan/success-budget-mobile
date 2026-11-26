@@ -9,7 +9,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       alignSelf: 'flex-start',
       flexDirection: 'row',
       alignItems: 'center',
-      height: 42,
+      minHeight: 42,
       borderRadius: 15,
       paddingLeft: 7,
       paddingRight: theme.spacing.md,
@@ -33,7 +33,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       maxWidth: 160,
     },
     currencyBadge: {
-      height: 21,
+      minHeight: 21,
       paddingHorizontal: 7,
       borderRadius: 7,
       alignItems: 'center',
@@ -114,7 +114,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       color: colors.muted,
     },
     createRow: {
-      height: 52,
+      minHeight: 52,
       borderRadius: 16,
       flexDirection: 'row',
       alignItems: 'center',

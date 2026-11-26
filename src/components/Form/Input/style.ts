@@ -1,7 +1,11 @@
 import { StyleSheet } from 'react-native';
 
 import type { ColorTheme } from '@shared/theme';
+import { fitHeight } from '@shared/layout';
 import theme from '@shared/theme';
+
+// The focused and error borders are the widest; the field stays 52 tall with either.
+const WIDEST_BORDER = 1.5;
 
 const createStyles = ({ colors, elevation }: ColorTheme) =>
   StyleSheet.create({
@@ -9,7 +13,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       rowGap: theme.spacing.xs,
     },
     input: {
-      height: 52,
+      ...fitHeight(52, theme.lineHeights.bodyLg, WIDEST_BORDER),
       paddingHorizontal: theme.spacing.lg,
       fontFamily: theme.fonts.medium,
       fontSize: theme.fontSizes.bodyLg,
@@ -23,11 +27,11 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       borderColor: 'transparent',
     },
     focused: {
-      borderWidth: 1.5,
+      borderWidth: WIDEST_BORDER,
       borderColor: colors.accent,
     },
     withError: {
-      borderWidth: 1.5,
+      borderWidth: WIDEST_BORDER,
       borderColor: colors.danger,
     },
     disabledInput: {

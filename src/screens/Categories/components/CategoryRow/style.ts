@@ -44,7 +44,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       color: colors.muted,
     },
     limitPill: {
-      height: 19,
+      minHeight: 19,
       paddingHorizontal: 7,
       borderRadius: 6,
       alignItems: 'center',
@@ -67,7 +67,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       justifyContent: 'center',
     },
     restorePill: {
-      height: 30,
+      minHeight: 30,
       paddingHorizontal: theme.spacing.sm + 2,
       borderRadius: theme.radius.md - 3,
       flexDirection: 'row',

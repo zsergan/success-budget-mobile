@@ -7,7 +7,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
   StyleSheet.create({
     scopeSwitch: {
       marginHorizontal: theme.spacing.xl,
-      height: 46,
+      minHeight: 46,
       borderRadius: 15,
       padding: 4,
       flexDirection: 'row',

@@ -41,7 +41,7 @@ const createStyles = ({ elevation }: ColorTheme) =>
     },
     editButton: {
       width: 32,
-      height: 32,
+      minHeight: 32,
       borderRadius: 11,
       alignItems: 'center',
       justifyContent: 'center',

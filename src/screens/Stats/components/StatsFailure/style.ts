@@ -39,7 +39,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       textAlign: 'center',
     },
     action: {
-      height: 52,
+      minHeight: 52,
       paddingHorizontal: 22,
       borderRadius: 16,
       flexDirection: 'row',

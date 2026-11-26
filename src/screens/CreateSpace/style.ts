@@ -21,7 +21,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       color: colors.muted,
     },
     typeSwitch: {
-      height: 46,
+      minHeight: 46,
       borderRadius: 15,
       padding: 4,
       flexDirection: 'row',
@@ -71,7 +71,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       rowGap: theme.spacing.sm,
     },
     inviteRow: {
-      height: 48,
+      minHeight: 48,
       borderRadius: 14,
       flexDirection: 'row',
       alignItems: 'center',
@@ -96,7 +96,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       backgroundColor: colors.track,
     },
     inviteInputRow: {
-      height: 52,
+      minHeight: 52,
       borderRadius: 14,
       flexDirection: 'row',
       alignItems: 'center',

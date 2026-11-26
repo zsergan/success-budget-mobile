@@ -22,7 +22,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       columnGap: 7,
     },
     chip: {
-      height: 32,
+      minHeight: 32,
       paddingHorizontal: 14,
       borderRadius: 11,
       alignItems: 'center',

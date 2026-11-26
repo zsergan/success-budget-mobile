@@ -46,7 +46,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     quickChip: {
       flex: 1,
-      height: 36,
+      minHeight: 36,
       borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
@@ -208,7 +208,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     applyButton: {
       marginTop: theme.spacing.md,
       marginBottom: theme.spacing.xl,
-      height: 52,
+      minHeight: 52,
       borderRadius: 15,
       alignItems: 'center',
       justifyContent: 'center',

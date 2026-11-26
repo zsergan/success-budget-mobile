@@ -31,7 +31,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       borderColor: colors.danger,
     },
     inviteRow: {
-      height: 54,
+      minHeight: 54,
       borderRadius: 16,
       flexDirection: 'row',
       alignItems: 'center',
@@ -50,7 +50,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       padding: 0,
     },
     inviteButton: {
-      height: 40,
+      minHeight: 40,
       paddingHorizontal: theme.spacing.md + 3,
       borderRadius: 13,
       alignItems: 'center',

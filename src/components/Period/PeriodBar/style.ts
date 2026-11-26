@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 import type { ColorTheme } from '@shared/theme';
+import { fitHeight } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme) =>
@@ -15,7 +16,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     rangeButton: {
       flex: 1,
-      height: 40,
+      ...fitHeight(40, theme.lineHeights.label, 1),
       borderRadius: 13,
       paddingHorizontal: theme.spacing.md,
       flexDirection: 'row',
@@ -29,11 +30,12 @@ const createStyles = ({ colors }: ColorTheme) =>
       flex: 1,
       fontFamily: theme.fonts.semiBold,
       fontSize: theme.fontSizes.label,
+      lineHeight: theme.lineHeights.label,
       letterSpacing: -0.1,
       color: colors.text,
     },
     resetChip: {
-      height: 40,
+      ...fitHeight(40, theme.lineHeights.caption),
       paddingHorizontal: theme.spacing.md,
       borderRadius: 13,
       flexDirection: 'row',
@@ -44,14 +46,18 @@ const createStyles = ({ colors }: ColorTheme) =>
     resetText: {
       fontFamily: theme.fonts.semiBold,
       fontSize: theme.fontSizes.caption,
+      lineHeight: theme.lineHeights.caption,
       color: colors.text,
     },
+    // Wraps instead of running off the screen under large text.
     presetsRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       columnGap: 7,
+      rowGap: 7,
     },
     presetChip: {
-      height: 32,
+      ...fitHeight(32, theme.lineHeights.caption, 1),
       paddingHorizontal: theme.spacing.md + 2,
       borderRadius: 11,
       alignItems: 'center',
@@ -66,6 +72,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     presetText: {
       fontFamily: theme.fonts.semiBold,
       fontSize: theme.fontSizes.caption,
+      lineHeight: theme.lineHeights.caption,
       letterSpacing: 0.1,
       color: colors.muted,
     },

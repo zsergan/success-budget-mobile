@@ -9,7 +9,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       rowGap: theme.spacing.sm,
     },
     leaveButton: {
-      height: 52,
+      minHeight: 52,
       borderRadius: 16,
       flexDirection: 'row',
       alignItems: 'center',

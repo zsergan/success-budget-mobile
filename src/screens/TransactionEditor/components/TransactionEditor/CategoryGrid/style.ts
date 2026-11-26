@@ -19,7 +19,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     label: sectionLabel(colors),
     pill: {
       maxWidth: '72%',
-      height: 24,
+      minHeight: 24,
       borderRadius: 8,
       paddingHorizontal: 9,
       justifyContent: 'center',
@@ -85,7 +85,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     createButton: {
       marginTop: theme.spacing.xs,
-      height: 40,
+      minHeight: 40,
       borderRadius: 13,
       paddingHorizontal: theme.spacing.lg,
       flexDirection: 'row',
