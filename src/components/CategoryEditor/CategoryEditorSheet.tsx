@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 import { BottomSheetScrollView, BottomSheetTextInput, useBottomSheet } from '@gorhom/bottom-sheet';
@@ -9,6 +10,7 @@ import { toBackendIcon } from '@api/models';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { TransactionType } from '@shared/enums';
+import type { CustomColor } from '@shared/categoryColors';
 import { categoryColorName } from '@shared/categoryColors';
 import theme from '@shared/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -49,6 +51,9 @@ const CategoryEditorSheet = ({ category, defaultTransactionType, onRequestDelete
   const transactionType = watch('transactionType');
   const icon = watch('icon');
   const color = watch('color');
+  // While a custom colour is being picked, the previews show it; the draft keeps its own until Apply.
+  const [pickedColor, setPickedColor] = useState<CustomColor | null>(null);
+  const shownColor = pickedColor ?? color;
 
   const transactionCount = category?.transactionCount ?? 0;
   const countText =
@@ -76,7 +81,7 @@ const CategoryEditorSheet = ({ category, defaultTransactionType, onRequestDelete
         </View>
 
         <View style={styles.preview}>
-          <CategoryIconBox icon={icon} color={color} size={56} />
+          <CategoryIconBox icon={icon} color={shownColor} size={56} />
 
           <View style={styles.previewText}>
             <Text style={styles.previewName} numberOfLines={1}>
@@ -204,12 +209,25 @@ const CategoryEditorSheet = ({ category, defaultTransactionType, onRequestDelete
         )}
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Colour</Text>
+          <View style={styles.sectionLabelRow}>
+            <Text style={styles.sectionLabel}>Colour</Text>
+            <Text style={styles.colorName} numberOfLines={1}>
+              {categoryColorName(color)}
+            </Text>
+          </View>
 
           <Controller
             name="color"
             control={control}
-            render={({ field: { onChange, value } }) => <ColorPicker value={value} onChange={onChange} />}
+            render={({ field: { onChange, value } }) => (
+              <ColorPicker
+                value={value}
+                saved={category?.color}
+                icon={icon}
+                onChange={onChange}
+                onPreview={setPickedColor}
+              />
+            )}
           />
         </View>
 
@@ -222,7 +240,9 @@ const CategoryEditorSheet = ({ category, defaultTransactionType, onRequestDelete
           <Controller
             name="icon"
             control={control}
-            render={({ field: { onChange, value } }) => <IconPicker value={value} color={color} onChange={onChange} />}
+            render={({ field: { onChange, value } }) => (
+              <IconPicker value={value} color={shownColor} onChange={onChange} />
+            )}
           />
         </View>
 

@@ -58,6 +58,9 @@ export interface ThemeColors {
   focusRingError: string;
   // The check drawn on a solid category swatch.
   onSwatch: string;
+  // A custom colour picker's thumbs, white in both themes as they sit on any colour, with a thin ring around them.
+  pickerThumb: string;
+  pickerThumbRing: string;
   chartOther: string;
   chartDeleted: string;
   shadow: string;
@@ -140,6 +143,8 @@ const lightColors: ThemeColors = {
   focusRing: 'rgba(255,176,32,0.28)',
   focusRingError: 'rgba(224,79,61,0.16)',
   onSwatch: '#FFFFFF',
+  pickerThumb: '#FFFFFF',
+  pickerThumbRing: 'rgba(0,0,0,0.35)',
   chartOther: '#8B95A3',
   chartDeleted: '#C3C9D2',
   shadow: '#1D2430',
@@ -187,6 +192,8 @@ const darkColors: ThemeColors = {
   focusRing: 'rgba(255,176,32,0.28)',
   focusRingError: 'rgba(224,79,61,0.16)',
   onSwatch: '#0E1218',
+  pickerThumb: '#FFFFFF',
+  pickerThumbRing: 'rgba(0,0,0,0.35)',
   chartOther: '#6B7688',
   chartDeleted: '#3B4452',
   shadow: '#000000',
