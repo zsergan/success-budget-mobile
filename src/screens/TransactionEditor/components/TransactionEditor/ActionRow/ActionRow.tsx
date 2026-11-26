@@ -14,22 +14,22 @@ interface Props {
   helperText?: string;
   ready: boolean;
   isSaving: boolean;
-  // The home indicator is under the keyboard then, so its inset is not kept.
+  // The keyboard is up: the panel steps aside so the fields get the room, and comes back pinned when it closes.
   isAboveKeyboard?: boolean;
   // Shown over Save in place of the helper text.
   banner?: ReactNode;
   onPress: () => void;
 }
 
-// The form's fixed action panel: it stays under the scrolling fields and rides up with the keyboard.
+// The form's fixed action panel, pinned under the scrolling fields while the keyboard is down.
 const ActionRow = ({ label, helperText, ready, isSaving, isAboveKeyboard = false, banner, onPress }: Props) => {
   const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
 
+  if (isAboveKeyboard && !isSaving) return null;
+
   return (
-    <View
-      style={[styles.footer, { paddingBottom: isAboveKeyboard ? theme.spacing.md : theme.spacing.lg + insets.bottom }]}
-    >
+    <View style={[styles.footer, { paddingBottom: theme.spacing.lg + insets.bottom }]}>
       {banner}
 
       {!banner && helperText && !isSaving && <Text style={styles.helperText}>{helperText}</Text>}

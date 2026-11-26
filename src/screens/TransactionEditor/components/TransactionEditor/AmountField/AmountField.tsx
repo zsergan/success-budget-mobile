@@ -1,9 +1,12 @@
+import KeyboardDoneBar from '@components/Form/KeyboardDoneBar/KeyboardDoneBar';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { useEffect, useRef, useState } from 'react';
 import { Text, TextInput, useWindowDimensions, View } from 'react-native';
 
 import createStyles, { amountFontSize, amountInputHeight, signSlotWidth } from './style';
+
+const AMOUNT_DONE_BAR = 'transaction-amount-done';
 
 interface Props {
   value: string;
@@ -63,6 +66,7 @@ const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currency
           style={[styles.input, { color: typeColor, fontSize, height: amountInputHeight(fontScale) }]}
           selectionColor={typeColor}
           returnKeyType="done"
+          inputAccessoryViewID={AMOUNT_DONE_BAR}
           accessibilityLabel="Amount"
         />
 
@@ -70,6 +74,8 @@ const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currency
       </View>
 
       {error && <Text style={styles.error}>{error}</Text>}
+
+      <KeyboardDoneBar nativeID={AMOUNT_DONE_BAR} />
     </View>
   );
 };
