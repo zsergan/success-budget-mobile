@@ -1,9 +1,11 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { capRole } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     nameSection: {
       rowGap: theme.spacing.sm - 2,
@@ -69,14 +71,14 @@ const createStyles = ({ colors }: ColorTheme) =>
     heroAmount: {
       minWidth: 24,
       fontFamily: theme.fonts.semiBold,
-      fontSize: 46,
+      fontSize: capRole('display', 46, layout),
       letterSpacing: -2,
       color: colors.text,
       padding: 0,
     },
     heroCurrency: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.titleMd,
+      fontSize: capRole('titleMd', theme.fontSizes.titleMd, layout),
       color: colors.muted,
     },
     heroSub: {

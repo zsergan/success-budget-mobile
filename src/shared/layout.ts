@@ -65,14 +65,14 @@ const FONT_SCALE_CAPS: Partial<Record<FontRole, number>> = {
 export const cappedSize = (size: number, cap: number, { fontScale }: Pick<Layout, 'fontScale'>) =>
   fontScale > cap ? (size * cap) / fontScale : size;
 
-export const textRole = (role: FontRole, layout: Pick<Layout, 'fontScale'>) => {
-  const cap = FONT_SCALE_CAPS[role] ?? Infinity;
+// A size drawn in a role's place (an amount, a line height of its own) takes that role's cap.
+export const capRole = (role: FontRole, size: number, layout: Pick<Layout, 'fontScale'>) =>
+  cappedSize(size, FONT_SCALE_CAPS[role] ?? Infinity, layout);
 
-  return {
-    fontSize: cappedSize(theme.fontSizes[role], cap, layout),
-    lineHeight: cappedSize(theme.lineHeights[role], cap, layout),
-  };
-};
+export const textRole = (role: FontRole, layout: Pick<Layout, 'fontScale'>) => ({
+  fontSize: capRole(role, theme.fontSizes[role], layout),
+  lineHeight: capRole(role, theme.lineHeights[role], layout),
+});
 
 // A one-line control `height` tall at the default text size that grows with its label instead of clipping it.
 // The border is part of the height, as it is with a fixed one.

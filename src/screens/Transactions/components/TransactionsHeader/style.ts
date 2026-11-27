@@ -1,6 +1,8 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 // The search button is as tall as the field it grows into, so the header keeps one height in both modes.
@@ -12,7 +14,7 @@ export const CANCEL_GAP = 12;
 export const FIELD_BORDER = 1.5;
 const CLEAR_SIZE = 22;
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     header: {
       paddingVertical: theme.spacing.md,
@@ -24,8 +26,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     title: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.titleLg,
-      lineHeight: theme.lineHeights.titleLg,
+      ...textRole('titleLg', layout),
       letterSpacing: theme.letterSpacing.titleLg,
       color: colors.text,
     },

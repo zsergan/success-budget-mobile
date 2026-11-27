@@ -1,9 +1,11 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
       flexShrink: 1,
@@ -41,14 +43,12 @@ const createStyles = ({ colors }: ColorTheme) =>
     title: {
       marginTop: theme.spacing.sm,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.titleSm,
-      lineHeight: theme.lineHeights.titleSm,
+      ...textRole('titleSm', layout),
       color: colors.text,
     },
     amount: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.titleLg,
-      lineHeight: theme.lineHeights.titleLg,
+      ...textRole('titleLg', layout),
       letterSpacing: theme.letterSpacing.titleLg,
     },
     facts: {

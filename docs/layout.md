@@ -34,10 +34,14 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   design value on a `regular` phone, takes 20% off on a `compact` one and adds
   10% on a `large` one; `screenPadding(layout)` is the screen's side padding.
   Text, icons, radii and hit targets keep their design size on every phone.
-- **Text follows the system size.** Never set `allowFontScaling={false}`.
+- **Text follows the system size.** `allowFontScaling={false}` is only for a
+  glyph inside a fixed-size graphic, such as an avatar's initial.
   Headings are capped through `textRole` (display and `titleLg` at 1.3×,
   `titleMd`/`titleSm` at 1.6×) so they leave room for the content; body text is
-  not capped. A one-off size uses `cappedSize(size, cap, layout)`.
+  not capped. A size drawn in a role's place (an amount, a line height of its
+  own) uses `capRole(role, size, layout)`. Text that already sets
+  `maxFontSizeMultiplier` (the Welcome headline, the logo, chart labels) is
+  capped there; capping its style as well would shrink it below the cap.
 - **A box around text never has a fixed `height`.** `fitHeight(height,
 lineHeight, border)` gives the same box at the default size and lets it grow
   with its text. A box that centres its content, or a segmented switch with

@@ -1,4 +1,4 @@
-import { cappedSize, fitHeight, getLayout, inset, screenPadding, textRole } from './layout';
+import { capRole, cappedSize, fitHeight, getLayout, inset, screenPadding, textRole } from './layout';
 import theme from './theme';
 
 const phone = (width: number, height: number, fontScale = 1) => getLayout({ width, height, fontScale });
@@ -50,6 +50,8 @@ describe('text scaling', () => {
       fontSize: theme.fontSizes.bodyLg,
       lineHeight: theme.lineHeights.bodyLg,
     });
+    expect(capRole('display', 40, huge) * huge.fontScale).toBeCloseTo(52);
+    expect(capRole('bodyLg', 40, huge)).toBe(40);
     expect(textRole('titleLg', { fontScale: 1 })).toEqual({
       fontSize: theme.fontSizes.titleLg,
       lineHeight: theme.lineHeights.titleLg,

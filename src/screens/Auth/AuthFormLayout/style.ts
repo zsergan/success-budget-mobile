@@ -1,12 +1,14 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { capRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 // Above the screen's bottom edge, as in the design's frame; it clears the home indicator's area on its own.
 export const BOTTOM_GAP = 38;
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     scroll: {
       paddingHorizontal: 26,
@@ -32,8 +34,8 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     title: {
       fontFamily: theme.fonts.bold,
-      fontSize: 30,
-      lineHeight: 36,
+      fontSize: capRole('titleLg', 30, layout),
+      lineHeight: capRole('titleLg', 36, layout),
       letterSpacing: -1.1,
       color: colors.text,
     },
