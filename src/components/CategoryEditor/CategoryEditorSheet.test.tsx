@@ -29,6 +29,7 @@ const gifts: CategoryModel = {
   color: '#C2416B',
   isActive: true,
   transactionCount: 4,
+  ownRecentCount: 0,
   limit: null,
   archivedAt: null,
 };

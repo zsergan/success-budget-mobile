@@ -54,6 +54,8 @@ export interface Category {
   color: CategoryColor;
   is_active: number;
   transaction_count: number;
+  // The reader's own transactions in it, dated in the last 90 days; absent from servers before it was added.
+  own_recent_count?: number;
   limit: CategoryLimitRef | null;
   archived_at: string | null;
 }

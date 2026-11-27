@@ -1,6 +1,8 @@
 import type { TransactionCategoryModel } from '@api/models';
 
-export type GridCategory = Pick<TransactionCategoryModel, 'id' | 'name' | 'icon' | 'color' | 'transactionType'>;
+export type GridCategory = Pick<TransactionCategoryModel, 'id' | 'name' | 'icon' | 'color' | 'transactionType'> & {
+  ownRecentCount?: number;
+};
 
 export const GRID_SLOTS = 8;
 
@@ -12,9 +14,14 @@ interface GridInput {
   promotedId: number | null;
 }
 
-// Up to eight tiles in the user's order; past that, seven and More.
+// What the user records most often of late comes first, ties in their own order; the full list keeps that order.
+const byOwnUse = (categories: GridCategory[]) =>
+  [...categories].sort((a, b) => (b.ownRecentCount ?? 0) - (a.ownRecentCount ?? 0));
+
+// Up to eight tiles; past that, seven and More.
 export const buildCategoryGrid = ({ active, archived, promotedId }: GridInput) => {
-  const all = archived ? [archived, ...active] : active;
+  const byUse = byOwnUse(active);
+  const all = archived ? [archived, ...byUse] : byUse;
 
   if (all.length <= GRID_SLOTS) return { tiles: all, hasMore: false };
 

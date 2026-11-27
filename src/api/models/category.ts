@@ -18,6 +18,7 @@ export interface CategoryModel {
   color: CategoryColor;
   isActive: boolean;
   transactionCount: number;
+  ownRecentCount: number;
   limit: CategoryLimitRefModel | null;
   archivedAt: string | null;
 }
@@ -47,6 +48,7 @@ export const mapCategory = (dto: Category): CategoryModel => ({
   color: readCategoryColor(dto.color),
   isActive: dto.is_active === 1,
   transactionCount: dto.transaction_count,
+  ownRecentCount: dto.own_recent_count ?? 0,
   limit: dto.limit,
   archivedAt: dto.archived_at,
 });

@@ -36,4 +36,14 @@ describe('buildCategoryGrid', () => {
       99, 1, 2, 3, 4, 5, 6,
     ]);
   });
+
+  it('puts what the user recorded most of late first, ties and unused in their own order', () => {
+    const used = active(10).map((item) => ({ ...item, ownRecentCount: { 4: 2, 9: 7, 6: 2 }[item.id] }));
+
+    expect(ids(buildCategoryGrid({ active: used, archived: null, promotedId: null }))).toEqual([9, 4, 6, 1, 2, 3, 5]);
+    expect(ids(buildCategoryGrid({ active: used, archived: category(99), promotedId: 10 }))).toEqual([
+      99, 9, 4, 6, 1, 2, 10,
+    ]);
+    expect(used.map(({ id }) => id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  });
 });
