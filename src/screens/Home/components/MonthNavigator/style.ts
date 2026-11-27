@@ -23,18 +23,21 @@ const createStyles = ({ colors }: ColorTheme) =>
     arrowDisabled: {
       opacity: 0.35,
     },
+    // Large text wraps the month onto two lines; each line stays centred between the arrows.
     center: {
       flex: 1,
       alignItems: 'center',
       rowGap: 1,
     },
     label: {
+      textAlign: 'center',
       fontFamily: theme.fonts.bold,
       fontSize: theme.fontSizes.bodyLg,
       lineHeight: theme.lineHeights.bodyLg,
       color: colors.text,
     },
     sub: {
+      textAlign: 'center',
       fontFamily: theme.fonts.medium,
       fontSize: theme.fontSizes.caption,
       lineHeight: theme.lineHeights.caption,
@@ -43,6 +46,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     // Plus Jakarta Sans under-measures its own width and clips the last glyph (see cde3346).
     back: {
       paddingRight: 2,
+      textAlign: 'center',
       fontFamily: theme.fonts.semiBold,
       fontSize: theme.fontSizes.caption,
       lineHeight: theme.lineHeights.caption,
