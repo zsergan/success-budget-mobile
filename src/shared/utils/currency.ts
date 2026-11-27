@@ -1,3 +1,5 @@
+import { getLocales } from 'expo-localization';
+
 export interface CurrencyAffixes {
   prefix: string;
   suffix: string;
@@ -41,4 +43,41 @@ export const withCurrencySymbol = (text: string, currency?: string) => {
   const sign = /^[-+−]/.test(text) ? text[0] : '';
 
   return `${sign}${prefix}${text.slice(sign.length)}${suffix}`;
+};
+
+// The currency of the phone's region ("RUB" in Russia), or null when the device does not say.
+export const deviceCurrencyCode = (): string | null => {
+  try {
+    return getLocales().find((locale) => locale.currencyCode)?.currencyCode ?? null;
+  } catch {
+    return null;
+  }
+};
+
+const FALLBACK_CURRENCY = 'USD';
+
+// What a new space starts with: the region's currency when it is offered, else US dollars, else the first one.
+export const pickDefaultCurrency = <T extends { code: string }>(currencies: T[], regionCode = deviceCurrencyCode()) =>
+  currencies.find((currency) => currency.code === regionCode) ??
+  currencies.find((currency) => currency.code === FALLBACK_CURRENCY) ??
+  currencies[0];
+
+// The currencies a picker lists: the suggested ones first, in that order, then the rest by name.
+export const orderCurrencies = <T extends { code: string; name: string }>(currencies: T[], suggested: string[]) => {
+  const rank = (code: string) => {
+    const index = suggested.indexOf(code);
+    return index === -1 ? suggested.length : index;
+  };
+
+  return [...currencies].sort((a, b) => rank(a.code) - rank(b.code) || a.name.localeCompare(b.name));
+};
+
+// Matches a search on the code, the name or the symbol, ignoring case.
+export const matchesCurrency = (currency: { code: string; name: string }, query: string) => {
+  const text = query.trim().toLowerCase();
+  if (!text) return true;
+
+  return [currency.code, currency.name, currencySymbol(currency.code)].some((part) =>
+    part.toLowerCase().includes(text),
+  );
 };

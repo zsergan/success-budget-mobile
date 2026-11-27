@@ -1,7 +1,8 @@
 import { View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import { Banner, Button, Input, InputPicker, PasswordInput, PendingInvitationNotice, TextLink } from '@components';
+import { Banner, Button, Input, PasswordInput, PendingInvitationNotice, TextLink } from '@components';
+import CurrencyField from '@components/Form/CurrencyField/CurrencyField';
 import { useCurrencyOptions } from '@hooks';
 import type { RootStackScreenProps } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
@@ -170,18 +171,16 @@ const SignUpScreen = ({ navigation, route }: Props) => {
             name="currency"
             control={control}
             render={({ field: { onChange, onBlur, value }, formState: { errors } }) => (
-              <InputPicker
-                variant="outlined"
+              <CurrencyField
                 label="Currency of your space"
-                iconLeft="currency"
-                items={currencies.options}
-                selectedValue={value}
-                onValueChange={(v) => onChange(v as number)}
+                currencies={currencies.currencies}
+                value={value}
+                defaultId={currencies.defaultId}
+                onChange={onChange}
                 onBlur={onBlur}
-                placeholder={currencies.isLoading ? 'Loading currencies…' : 'Pick a currency'}
                 isLoading={currencies.isLoading}
                 disabled={currencies.hasError}
-                hint="Set once. Every amount in this space is kept in it."
+                hint="Every amount in this space is shown in it. You can change it later in Settings."
                 error={currencies.hasError ? 'Couldn’t load the currencies.' : errors.currency?.message}
               />
             )}

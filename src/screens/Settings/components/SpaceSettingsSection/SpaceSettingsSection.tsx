@@ -3,6 +3,7 @@ import type { MainTabNavigationProp } from '@shared/types';
 import { ScreenNames } from '@shared/enums';
 import SettingsRow from '../SettingsRow/SettingsRow';
 import SettingsSection from '../SettingsSection/SettingsSection';
+import SpaceCurrencyRow from '../SpaceCurrencyRow/SpaceCurrencyRow';
 
 interface Props {
   navigation: MainTabNavigationProp<ScreenNames.SETTINGS_TAB>;
@@ -24,13 +25,7 @@ const SpaceSettingsSection = ({ navigation, currentSpace }: Props) => {
         onPress={() => navigation.navigate(ScreenNames.MEMBERS_SCREEN)}
       />
 
-      <SettingsRow
-        icon="chart"
-        label="Space currency"
-        sub={currentSpace ? `Set when "${currentSpace.name}" was created` : undefined}
-        value={currentSpace?.currency.code}
-        chevron={false}
-      />
+      {currentSpace && <SpaceCurrencyRow space={currentSpace} />}
 
       <SettingsRow
         icon="plus"

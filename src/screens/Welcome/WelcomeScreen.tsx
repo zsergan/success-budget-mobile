@@ -44,8 +44,8 @@ const WelcomeScreen = ({ navigation }: Props) => {
           </Text>
 
           <Text style={styles.description}>
-            Record income and expenses in seconds and see where each month went. One currency per space, picked once,
-            and no setup before your first entry.
+            Record income and expenses in seconds and see where each month went. One currency per space, and no setup
+            before your first entry.
           </Text>
 
           <View style={styles.points}>

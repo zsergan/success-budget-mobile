@@ -42,6 +42,8 @@ interface Props {
   showHandle?: boolean;
   /** Fixed snap point when neither sizing is set. Defaults to '85%'. */
   snapPoint?: string;
+  /** The highest the sheet may rise, e.g. with the keyboard up: a fixed snap point plus the keyboard can pass the status bar. */
+  topInset?: number;
   /** Replaces the backdrop's own close, for a sheet that decides itself whether it may close. */
   onBackdropPress?: () => void;
   /** On a sheet already open: 'push' keeps that one in place beneath it. Defaults to the library's 'switch'. */
@@ -63,6 +65,7 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
     fitContent = false,
     showHandle = fitContent,
     snapPoint = '85%',
+    topInset,
     onBackdropPress,
     stackBehavior,
     isDismissible = true,
@@ -153,6 +156,7 @@ const CustomBottomSheetModal = forwardRef<Ref, Props>(function CustomBottomSheet
       enablePanDownToClose={isDismissible}
       onDismiss={handleDismiss}
       onAnimate={handleAnimate}
+      topInset={topInset}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
