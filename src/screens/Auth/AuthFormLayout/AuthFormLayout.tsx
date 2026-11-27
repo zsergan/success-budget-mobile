@@ -3,11 +3,11 @@ import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, RootLayout, TextLink, TinyButton } from '@components';
-import { useKeyboardHeight, useTheme, useThemedStyles } from '@hooks';
+import { useKeyboardHeight, useLayout, useTheme, useThemedStyles } from '@hooks';
 import type { ThemeColors } from '@shared/theme';
 import type { IconType } from '@shared/types';
 
-import createStyles, { BOTTOM_GAP } from './style';
+import createStyles, { bottomGap } from './style';
 
 type IllustrationTone = 'neutral' | 'ok';
 
@@ -43,6 +43,7 @@ const AuthFormLayout = ({
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const { bottom } = useSafeAreaInsets();
+  const layout = useLayout();
   const isKeyboardUp = useKeyboardHeight() > 0;
   const illustrationTone = illustration && illustrationTones(colors)[illustration.tone];
 
@@ -65,7 +66,10 @@ const AuthFormLayout = ({
       scrollable
       edges={['top', 'left', 'right']}
       style={styles.scroll}
-      contentContainerStyle={[styles.content, { paddingBottom: isKeyboardUp ? 0 : Math.max(BOTTOM_GAP, bottom) }]}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: isKeyboardUp ? 0 : Math.max(bottomGap(layout), bottom) },
+      ]}
       // With the keyboard up the action is pinned above it; otherwise it follows the content, even at large text sizes.
       footer={isKeyboardUp ? footer : undefined}
     >

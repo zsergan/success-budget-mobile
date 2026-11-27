@@ -2,11 +2,11 @@ import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BrandLockup, Button, Icon, PendingInvitationNotice } from '@components';
-import { useTheme, useThemedStyles } from '@hooks';
+import { useLayout, useTheme, useThemedStyles } from '@hooks';
 import { ScreenNames } from '@shared/enums';
 import type { IconType, RootStackScreenProps } from '@shared/types';
 
-import createStyles, { BOTTOM_GAP, TOP_GAP } from './style';
+import createStyles, { screenGaps } from './style';
 
 interface Props extends RootStackScreenProps<ScreenNames.WELCOME_SCREEN> {}
 
@@ -23,6 +23,7 @@ const WelcomeScreen = ({ navigation }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
+  const gaps = screenGaps(useLayout());
 
   return (
     <View style={styles.root}>
@@ -30,7 +31,7 @@ const WelcomeScreen = ({ navigation }: Props) => {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + TOP_GAP, paddingBottom: Math.max(BOTTOM_GAP, insets.bottom) },
+          { paddingTop: insets.top + gaps.top, paddingBottom: Math.max(gaps.bottom, insets.bottom) },
         ]}
         bounces={false}
         showsVerticalScrollIndicator={false}
