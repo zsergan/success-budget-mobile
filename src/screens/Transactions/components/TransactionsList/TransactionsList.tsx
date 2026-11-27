@@ -5,7 +5,7 @@ import { ActivityIndicator, ScrollView, SectionList, Text, TouchableOpacity, Vie
 
 import type { Money } from '@api/dto';
 import { TransactionCard } from '@components';
-import { useTheme, useThemedStyles } from '@hooks';
+import { useScreenRefresh, useTheme, useThemedStyles } from '@hooks';
 import type { TransactionModel } from '@api/models';
 import type { DayGroup } from '@shared/utils';
 import { formatSignedAmount, toCents } from '@shared/utils';
@@ -52,6 +52,9 @@ interface Props {
   older?: PageEdge;
   newer?: PageEdge;
   onRetryPage?: () => void;
+  // A pull asks for the list again; a tap on its tab scrolls it up or, at the top, does the same.
+  refresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 interface PageEdge {
@@ -118,9 +121,12 @@ const TransactionsList = ({
   older,
   newer,
   onRetryPage,
+  refresh,
+  isRefreshing,
 }: Props) => {
   const styles = useThemedStyles(createStyles);
   const listRef = useRef<SectionList<TransactionModel, Section>>(null);
+  const screenRefresh = useScreenRefresh({ scrollRef: listRef, refresh, isBusy: isRefreshing });
   const scrolledToRef = useRef<string | null>(null);
   // A scroll that had to land near the row, not on it, is repeated once the row is rendered and measured.
   const awaitsExactRef = useRef(false);
@@ -198,6 +204,7 @@ const TransactionsList = ({
     <SectionList
       ref={listRef}
       testID="transactions-list"
+      {...screenRefresh}
       style={styles.body}
       contentContainerStyle={styles.container}
       sections={sections}

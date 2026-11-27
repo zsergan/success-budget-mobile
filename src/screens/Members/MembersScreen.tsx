@@ -92,7 +92,13 @@ const MembersScreen = ({ navigation }: Props) => {
   const isLastInviteShown = !!lastInvite && (!!lastInviteRow || (rosterReceivedAt ?? 0) < lastInvite.invitedAt);
 
   return (
-    <RootLayout contentContainerStyle={styles.scrollContent} scrollable blurredStatusBar>
+    <RootLayout
+      contentContainerStyle={styles.scrollContent}
+      scrollable
+      blurredStatusBar
+      refresh={retry}
+      isRefreshing={isRefreshing}
+    >
       <SectionTitle
         title="Members"
         subtitle={`${currentSpace.name} · ${currencySymbol(currentSpace.currency.code)}`}

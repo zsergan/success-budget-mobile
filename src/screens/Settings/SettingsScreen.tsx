@@ -6,6 +6,8 @@ import { useAppDispatch, useAppSelector, useSpaceArg } from '@redux/hooks';
 import { logoutMe } from '@redux/state/auth/thunks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
 import { EMPTY_CATEGORIES } from '@redux/state/category/selectors';
+import { useGetProfileQuery } from '@redux/state/profile/api';
+import { useGetSpacesQuery } from '@redux/state/space/api';
 import { selectCurrentSpace } from '@redux/state/space/selectors';
 import { useThemePreference, useToast } from '@hooks';
 import type { MainTabScreenProps } from '@shared/types';
@@ -32,7 +34,12 @@ const SettingsScreen = ({ navigation }: Props) => {
 
   const currentSpace = useAppSelector(selectCurrentSpace);
   const spaceArg = useSpaceArg();
-  const { incomes, expenses, archived } = useGetCategoriesQuery(spaceArg).currentData ?? EMPTY_CATEGORIES;
+  const categoriesQuery = useGetCategoriesQuery(spaceArg);
+  const { incomes, expenses, archived } = categoriesQuery.currentData ?? EMPTY_CATEGORIES;
+  const profileQuery = useGetProfileQuery();
+  const spacesQuery = useGetSpacesQuery();
+  const queries = [categoriesQuery, profileQuery, spacesQuery];
+  const refresh = () => queries.forEach((query) => !query.isUninitialized && query.refetch());
 
   const [isLogoutConfirmVisible, setIsLogoutConfirmVisible] = useState(false);
   const [isDeleteAccountVisible, setIsDeleteAccountVisible] = useState(false);
@@ -47,7 +54,14 @@ const SettingsScreen = ({ navigation }: Props) => {
   const categoriesLabel = `${incomes.length + expenses.length} active · ${archived.length} archived`;
 
   return (
-    <RootLayout style={styles.root} edges={['top', 'left', 'right']} scrollable blurredStatusBar>
+    <RootLayout
+      style={styles.root}
+      edges={['top', 'left', 'right']}
+      scrollable
+      blurredStatusBar
+      refresh={refresh}
+      isRefreshing={queries.some((query) => query.isFetching)}
+    >
       <SectionTitle title="Settings" />
 
       <View style={styles.scrollContent}>

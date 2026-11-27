@@ -13,7 +13,14 @@ import {
   useTransactionDelete,
   useTransactionFlow,
 } from '@components';
-import { useBalanceVisibility, useConfirmation, useRefreshOnReturn, useSpaceRefresh, useThemedStyles } from '@hooks';
+import {
+  useBalanceVisibility,
+  useConfirmation,
+  useRefreshOnReturn,
+  useScreenRefresh,
+  useSpaceRefresh,
+  useThemedStyles,
+} from '@hooks';
 import useStatsData from '@hooks/useStatsData';
 import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useRecentArg } from '@redux/hooks';
@@ -104,6 +111,15 @@ const HomeScreen = ({ navigation, route }: Props) => {
     recentQuery.refetch();
   };
 
+  const screenRefresh = useScreenRefresh({
+    scrollRef,
+    refresh: () => {
+      stats.refresh();
+      if (!recentQuery.isUninitialized) recentQuery.refetch();
+    },
+    isBusy: stats.isUpdating || recentQuery.isFetching,
+  });
+
   const openStats = (mode: 'category' | 'assignment') => {
     if (spaceId === null) return;
 
@@ -144,6 +160,7 @@ const HomeScreen = ({ navigation, route }: Props) => {
         <ScrollView
           ref={scrollRef}
           testID="home-dashboard"
+          {...screenRefresh}
           style={styles.body}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}

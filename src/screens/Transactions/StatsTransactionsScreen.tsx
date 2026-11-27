@@ -63,6 +63,8 @@ const StatsTransactions = ({ filter, onBack }: Props) => {
         <StatsTransactionsHeader onBack={onBack} />
 
         <TransactionsList
+          refresh={data.refresh}
+          isRefreshing={data.isReloading}
           {...feedListProps(data)}
           onPressTransaction={openDetails}
           onDeleteTransaction={requestDelete}

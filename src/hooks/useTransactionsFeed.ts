@@ -230,6 +230,8 @@ const useTransactionsFeed = (
     isRefreshing: current.isReload && currentData === undefined && isFetching,
     hasNextPage: currentData !== undefined && hasNextPage,
     hasPreviousPage: currentData !== undefined && hasPreviousPage,
+    // Asking for the first page again: a reload, a refresh or a new selection, not a page at either end.
+    isReloading: isFetching && !query.isFetchingNextPage && !query.isFetchingPreviousPage,
     isLoadingNextPage: query.isFetchingNextPage,
     isLoadingPreviousPage: query.isFetchingPreviousPage,
     hasNextPageError: isFetchNextPageError,

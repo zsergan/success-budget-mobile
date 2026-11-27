@@ -1,9 +1,10 @@
 import type { ReactElement } from 'react';
+import { useRef } from 'react';
 import type { ListRenderItem } from 'react-native';
 import { FlatList, Text, View } from 'react-native';
 
 import { Icon } from '@components';
-import { useTheme, useThemedStyles } from '@hooks';
+import { useScreenRefresh, useTheme, useThemedStyles } from '@hooks';
 import { useAppSelector } from '@redux/hooks';
 import { selectProfileId } from '@redux/state/profile/selectors';
 import { TransactionType } from '@shared/enums';
@@ -60,6 +61,9 @@ interface Props {
   onModeChange: (mode: BreakdownMode) => void;
   onToggleOther: () => void;
   onOpenHistory: (group: BreakdownGroup) => void;
+  // A pull asks for the figures again; a tap on the tab scrolls up or, at the top, does the same.
+  refresh: () => void;
+  isRefreshing: boolean;
 }
 
 const StatsList = ({
@@ -82,10 +86,14 @@ const StatsList = ({
   onModeChange,
   onToggleOther,
   onOpenHistory,
+  refresh,
+  isRefreshing,
 }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const selfId = useAppSelector(selectProfileId);
+  const listRef = useRef<FlatList<StatsItem>>(null);
+  const screenRefresh = useScreenRefresh({ scrollRef: listRef, refresh, isBusy: isRefreshing });
   const rowPress = (group: BreakdownGroup) => {
     if (group.kind === 'other') return onToggleOther;
     return () => onOpenHistory(group);
@@ -174,6 +182,8 @@ const StatsList = ({
 
   return (
     <FlatList
+      ref={listRef}
+      {...screenRefresh}
       style={styles.list}
       contentContainerStyle={styles.content}
       data={items}
