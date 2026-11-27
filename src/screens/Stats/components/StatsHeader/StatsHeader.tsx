@@ -7,6 +7,7 @@ import { selectCurrentSpace } from '@redux/state/space/selectors';
 import type { Period, PeriodUnit } from '@shared/utils';
 
 import createStyles from './style';
+import { currencySymbol } from '@shared/utils/currency';
 
 interface Props {
   period: Period;
@@ -26,7 +27,7 @@ const StatsHeader = ({ period, onPresetPress, onOpenPicker, onReset }: Props) =>
 
         {space && (
           <Text style={styles.space} numberOfLines={1}>
-            {`${space.name} · ${space.currency.code}`}
+            {`${space.name} · ${currencySymbol(space.currency.code)}`}
           </Text>
         )}
       </View>

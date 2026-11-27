@@ -7,6 +7,7 @@ import { useTheme, useThemedStyles } from '@hooks';
 import type { LimitFormValues } from '../limitSchema';
 
 import createStyles from './style';
+import { currencySymbol } from '@shared/utils/currency';
 
 const AMOUNT_DONE_BAR = 'limit-amount-done';
 
@@ -75,7 +76,7 @@ const NameAmountFields = ({ control, isGroup, isTotal, currencyCode, onNameChang
 
               <KeyboardDoneBar nativeID={AMOUNT_DONE_BAR} />
 
-              {currencyCode && <Text style={styles.heroCurrency}>{currencyCode}</Text>}
+              {currencyCode && <Text style={styles.heroCurrency}>{currencySymbol(currencyCode)}</Text>}
             </View>
 
             <Text style={[styles.heroSub, !!error && styles.heroSubError]}>

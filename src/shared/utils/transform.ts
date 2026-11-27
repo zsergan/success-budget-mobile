@@ -1,9 +1,11 @@
 import { TransactionType } from '@shared/enums';
 
+import { withCurrencySymbol } from './currency';
+
 export const formatNumber = (num: number | string) => Number(num).toLocaleString('en-US').replace(/,/g, ' ');
 
 export const formatCurrencyAmount = (amount: number | string, currencyCode?: string) =>
-  currencyCode ? `${formatNumber(amount)} ${currencyCode}` : formatNumber(amount);
+  withCurrencySymbol(formatNumber(amount), currencyCode);
 
 const MONEY_TEXT = /^(-?)(\d+)(?:\.(\d{1,2}))?$/;
 
@@ -20,7 +22,7 @@ const splitMoney = (amount: number | string) => {
   return { sign, digits: `${units}.${cents}` };
 };
 
-const withCurrency = (text: string, currencyCode?: string) => (currencyCode ? `${text} ${currencyCode}` : text);
+const withCurrency = withCurrencySymbol;
 
 // History money: always two decimal places.
 export const formatMoneyAmount = (amount: number | string, currencyCode?: string) => {

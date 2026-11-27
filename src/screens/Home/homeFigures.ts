@@ -1,5 +1,5 @@
 import type { AssignmentBreakdownItem, StatisticsBreakdown } from '@api/dto';
-import { formatMoneyAmount, formatSignedAmount } from '@shared/utils';
+import { formatMoneyAmount, formatSignedAmount, withCurrencySymbol } from '@shared/utils';
 
 export const HOME_ASSIGNMENT_ROWS = 5;
 export const HOME_TOP_CATEGORIES = 3;
@@ -8,7 +8,7 @@ const HIDDEN = '••••';
 
 // Hidden amounts keep their currency and, for a net, its sign: the bars and labels around them stay.
 export const homeMoney = (amount: string, currencyCode: string | undefined, isHidden: boolean) =>
-  isHidden ? `${HIDDEN}${currencyCode ? ` ${currencyCode}` : ''}` : formatMoneyAmount(amount, currencyCode);
+  isHidden ? withCurrencySymbol(HIDDEN, currencyCode) : formatMoneyAmount(amount, currencyCode);
 
 export const homeNet = (amount: string, currencyCode: string | undefined, isHidden: boolean) => {
   if (!isHidden) return formatSignedAmount(amount, currencyCode);

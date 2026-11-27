@@ -131,7 +131,7 @@ describe('HomeScreen', () => {
     expect(screen.getByText('September 2026')).toBeTruthy();
     expect(screen.getByText('This month')).toBeTruthy();
     expect(screen.getByText('September net')).toBeTruthy();
-    expect(screen.getByText('+1 185.60 USD')).toBeTruthy();
+    expect(screen.getByText('+$1 185.60')).toBeTruthy();
     expect(screen.getByText('Surplus')).toBeTruthy();
     expect(screen.getByText('Top spending')).toBeTruthy();
     expect(screen.getByText('Housing')).toBeTruthy();
@@ -320,8 +320,8 @@ describe('HomeScreen', () => {
 
     fireEvent.press(screen.getByLabelText('Hide amounts'));
 
-    expect(screen.queryByText('+1 185.60 USD')).toBeNull();
-    expect(screen.getByText('+•••• USD')).toBeTruthy();
+    expect(screen.queryByText('+$1 185.60')).toBeNull();
+    expect(screen.getByText('+$••••')).toBeTruthy();
     expect(screen.getByText('-••••')).toBeTruthy();
   });
 

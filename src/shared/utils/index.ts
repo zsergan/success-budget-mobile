@@ -10,3 +10,4 @@ export * from './money';
 export * from './assignment';
 export * from './calendarDate';
 export * from './timeZone';
+export * from './currency';

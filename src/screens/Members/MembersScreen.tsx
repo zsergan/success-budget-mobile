@@ -22,6 +22,7 @@ import useMemberActions from './hooks/useMemberActions';
 import useMembersData from './hooks/useMembersData';
 
 import createStyles from './style';
+import { currencySymbol } from '@shared/utils/currency';
 
 interface Props extends RootStackScreenProps<ScreenNames.MEMBERS_SCREEN> {}
 
@@ -94,7 +95,7 @@ const MembersScreen = ({ navigation }: Props) => {
     <RootLayout contentContainerStyle={styles.scrollContent} scrollable blurredStatusBar>
       <SectionTitle
         title="Members"
-        subtitle={`${currentSpace.name} · ${currentSpace.currency.code}`}
+        subtitle={`${currentSpace.name} · ${currencySymbol(currentSpace.currency.code)}`}
         onBackButtonPress={() => navigation.goBack()}
       />
 

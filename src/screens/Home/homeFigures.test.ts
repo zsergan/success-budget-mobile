@@ -55,10 +55,10 @@ describe('homeAssignmentRows', () => {
 
 describe('hidden amounts', () => {
   it('hide the figure but keep the currency and the sign of a net', () => {
-    expect(homeMoney('1250.00', 'USD', false)).toBe('1 250.00 USD');
-    expect(homeMoney('1250.00', 'USD', true)).toBe('•••• USD');
-    expect(homeNet('-120.50', 'USD', false)).toBe('-120.50 USD');
-    expect(homeNet('-120.50', 'USD', true)).toBe('-•••• USD');
-    expect(homeNet('0.00', 'USD', true)).toBe('•••• USD');
+    expect(homeMoney('1250.00', 'USD', false)).toBe('$1 250.00');
+    expect(homeMoney('1250.00', 'USD', true)).toBe('$••••');
+    expect(homeNet('-120.50', 'USD', false)).toBe('-$120.50');
+    expect(homeNet('-120.50', 'USD', true)).toBe('-$••••');
+    expect(homeNet('0.00', 'USD', true)).toBe('$••••');
   });
 });
