@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Text, TextInput, useWindowDimensions, View } from 'react-native';
 
 import createStyles, { amountFontSize, amountInputHeight, signSlotWidth } from './style';
+import { currencySymbol } from '@shared/utils/currency';
 
 const AMOUNT_DONE_BAR = 'transaction-amount-done';
 
@@ -70,7 +71,7 @@ const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currency
           accessibilityLabel="Amount"
         />
 
-        <Text style={styles.currency}>{currencyCode}</Text>
+        {currencyCode && <Text style={styles.currency}>{currencySymbol(currencyCode)}</Text>}
       </View>
 
       {error && <Text style={styles.error}>{error}</Text>}

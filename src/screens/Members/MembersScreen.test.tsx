@@ -187,7 +187,7 @@ describe('layout', () => {
     await openMembers();
 
     expect(screen.getByRole('header', { name: 'Members' })).toBeTruthy();
-    expect(screen.getByText('Family · EUR')).toBeTruthy();
+    expect(screen.getByText('Family · €')).toBeTruthy();
   });
 
   it('keeps the leave section in the scrolling content, after the list', async () => {

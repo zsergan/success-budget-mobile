@@ -1,4 +1,5 @@
 import type { Money, StatisticsChange, StatisticsPeriod, StatisticsPreviousPeriod } from '@api/dto';
+import { getCurrencyAffixes } from '@shared/utils/currency';
 
 export type MoneySign = -1 | 0 | 1;
 
@@ -21,29 +22,6 @@ const parseMoney = (amount: Money) => {
 
 // Read from the string itself: "0.00" is zero and "-0.00" is not negative.
 export const getMoneySign = (amount: Money): MoneySign => parseMoney(amount)?.sign ?? 0;
-
-const symbolCache = new Map<string, { prefix: string; suffix: string }>();
-
-// The currency's own symbol and side, e.g. "$" before or " kr" after; the code if the device can't tell.
-const getCurrencyAffixes = (currency: string) => {
-  let affixes = symbolCache.get(currency);
-  if (affixes) return affixes;
-
-  try {
-    const sample = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      currencyDisplay: 'narrowSymbol',
-    }).format(0);
-    const [prefix, suffix = ''] = sample.split(/0[.,]?0*/);
-    affixes = { prefix, suffix };
-  } catch {
-    affixes = { prefix: `${currency} `, suffix: '' };
-  }
-
-  symbolCache.set(currency, affixes);
-  return affixes;
-};
 
 // Groups the digits of a money string without going through Number, so no amount loses cents.
 export const formatMoney = (amount: Money, currency: string, { signed = false, whole = false } = {}) => {
