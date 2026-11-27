@@ -1,4 +1,3 @@
-import { NO_KEYBOARD_TOOLBAR } from '@components/Form/KeyboardDoneButton/KeyboardDoneButton';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { useEffect, useRef, useState } from 'react';
@@ -84,8 +83,6 @@ const AmountField = ({
           inputMode="decimal"
           style={[styles.input, { color: typeColor, fontSize, height: amountInputHeight(fontScale) }]}
           selectionColor={typeColor}
-          returnKeyType="done"
-          inputAccessoryViewID={NO_KEYBOARD_TOOLBAR}
           accessibilityLabel="Amount"
         />
 

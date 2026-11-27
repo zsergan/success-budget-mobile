@@ -2,7 +2,6 @@ import { Text, TextInput, View } from 'react-native';
 import { Controller, type Control } from 'react-hook-form';
 
 import { Icon } from '@components';
-import { NO_KEYBOARD_TOOLBAR } from '@components/Form/KeyboardDoneButton/KeyboardDoneButton';
 import { groupAmountInput, sanitizeAmountInput } from '@shared/utils/amountInput';
 import { useTheme, useThemedStyles } from '@hooks';
 import type { LimitFormValues } from '../limitSchema';
@@ -79,8 +78,6 @@ const NameAmountFields = ({
                 placeholderTextColor={colors.muted}
                 inputMode="decimal"
                 style={styles.heroAmount}
-                returnKeyType="done"
-                inputAccessoryViewID={NO_KEYBOARD_TOOLBAR}
                 onFocus={() => onAmountFocusChange?.(true)}
                 onBlur={() => onAmountFocusChange?.(false)}
               />

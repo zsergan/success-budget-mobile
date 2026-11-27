@@ -4,10 +4,8 @@ import useThemedStyles from '@hooks/useThemedStyles';
 
 import createStyles from './style';
 
-// A number pad has no return key. React Native's own answer is a toolbar the keyboard draws on its grey glass,
-// flush with its top edge; a field that passes NO_KEYBOARD_TOOLBAR gets none, and its screen shows this instead:
-// a plain Done, 4pt above the keyboard. The screen places it at its bottom edge, which sits on the keyboard.
-export const NO_KEYBOARD_TOOLBAR = 'no-keyboard-toolbar';
+// Stands in for RN's grey number-pad toolbar, which a field gets from `returnKeyType`; the amount fields pass none.
+// Not `inputAccessoryViewID` either: RN drops it on a reused field (docs/ui-pitfalls.md).
 
 const KeyboardDoneButton = () => {
   const styles = useThemedStyles(createStyles);
