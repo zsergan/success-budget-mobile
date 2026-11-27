@@ -8,7 +8,9 @@ import FrameScrollView from '@components/ScreenFrame/FrameScrollView';
 import ScreenFrame from '@components/ScreenFrame/ScreenFrame';
 import { FieldRevealProvider, useFieldRevealScroll } from './FieldReveal';
 
-import styles from './style';
+import useThemedStyles from '@hooks/useThemedStyles';
+
+import createStyles from './style';
 
 interface Props {
   children: ReactNode;
@@ -25,6 +27,7 @@ interface Props {
 type ContainerProps = Pick<Props, 'children' | 'style' | 'contentContainerStyle'>;
 
 const ScrollViewContainer = ({ children, style, contentContainerStyle }: ContainerProps) => {
+  const styles = useThemedStyles(createStyles);
   const scrollRef = useRef<ScrollView>(null);
   const fieldReveal = useFieldRevealScroll(scrollRef);
 
@@ -45,13 +48,18 @@ const ScrollViewContainer = ({ children, style, contentContainerStyle }: Contain
   );
 };
 
-const ViewContainer = ({ children, style }: ContainerProps) => (
-  <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-    <View style={[styles.container, style]}>{children}</View>
-  </TouchableWithoutFeedback>
-);
+const ViewContainer = ({ children, style }: ContainerProps) => {
+  const styles = useThemedStyles(createStyles);
+
+  return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={[styles.container, style]}>{children}</View>
+    </TouchableWithoutFeedback>
+  );
+};
 
 const RootLayout = ({ children, scrollable, style, contentContainerStyle, edges, blurredStatusBar, footer }: Props) => {
+  const styles = useThemedStyles(createStyles);
   const Container = scrollable ? ScrollViewContainer : ViewContainer;
 
   return (

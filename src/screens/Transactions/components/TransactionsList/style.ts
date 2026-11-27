@@ -1,18 +1,20 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { screenPadding } from '@shared/layout';
 import theme from '@shared/theme';
 import { FAB_SCROLL_CLEARANCE } from '@shared/constants';
 
 // SectionList has no group wrapper for gaps: days use groupHeaderSpaced.marginTop,
 // header to row groupHeader.marginBottom, rows itemSeparator.
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     body: {
       flex: 1,
     },
     container: {
-      paddingHorizontal: theme.spacing.xl,
+      paddingHorizontal: screenPadding(layout),
       paddingBottom: FAB_SCROLL_CLEARANCE,
     },
     groupHeader: {

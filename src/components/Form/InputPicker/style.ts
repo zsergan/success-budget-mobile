@@ -3,8 +3,8 @@ import { StyleSheet } from 'react-native';
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
 import { FITTED_SHEET_HANDLE_HEIGHT } from '@components/Modals/BottomSheetModal/BottomSheetModal';
-import { fitHeight, textRole } from '@shared/layout';
-import theme, { horizontalScreenPadding } from '@shared/theme';
+import { fitHeight, screenPadding, textRole } from '@shared/layout';
+import theme from '@shared/theme';
 
 const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
@@ -42,7 +42,7 @@ const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
     sheet: {
       rowGap: theme.spacing.lg,
       paddingTop: 8 + 5 + 20 - FITTED_SHEET_HANDLE_HEIGHT,
-      paddingHorizontal: horizontalScreenPadding,
+      paddingHorizontal: screenPadding(layout),
     },
     sheetTitle: {
       fontFamily: theme.fonts.bold,

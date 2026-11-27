@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { textRole } from '@shared/layout';
+import { screenPadding, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
@@ -10,7 +10,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     // No flex: 1 — a dynamically-sized sheet measures this ScrollView's
     // natural content height, which flex: 1 would override.
     root: {
-      paddingHorizontal: theme.spacing.xl,
+      paddingHorizontal: screenPadding(layout),
       paddingTop: theme.spacing.lg,
     },
     handle: {

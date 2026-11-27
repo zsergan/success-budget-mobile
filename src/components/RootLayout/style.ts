@@ -1,21 +1,25 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
+import type { ColorTheme } from '@shared/theme';
+import { screenPadding } from '@shared/layout';
 import theme from '@shared/theme';
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  container: {
-    paddingTop: theme.spacing.md,
-    paddingHorizontal: theme.spacing.xl,
-  },
-  scroll: {
-    paddingHorizontal: theme.spacing.xl,
-  },
-  scrollContent: {
-    paddingTop: theme.spacing.md,
-  },
-});
+const createStyles = (_: ColorTheme, layout: Layout) =>
+  StyleSheet.create({
+    root: {
+      flex: 1,
+    },
+    container: {
+      paddingTop: theme.spacing.md,
+      paddingHorizontal: screenPadding(layout),
+    },
+    scroll: {
+      paddingHorizontal: screenPadding(layout),
+    },
+    scrollContent: {
+      paddingTop: theme.spacing.md,
+    },
+  });
 
-export default styles;
+export default createStyles;

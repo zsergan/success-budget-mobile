@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { textRole } from '@shared/layout';
+import { screenPadding, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
@@ -12,7 +12,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       justifyContent: 'center',
       alignItems: 'center',
       rowGap: theme.spacing.md,
-      paddingHorizontal: theme.spacing.xl,
+      paddingHorizontal: screenPadding(layout),
       backgroundColor: colors.bg,
     },
     message: {

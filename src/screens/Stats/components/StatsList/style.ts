@@ -1,6 +1,8 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { screenPadding } from '@shared/layout';
 import theme from '@shared/theme';
 
 const CARD_RADIUS = 18;
@@ -8,14 +10,14 @@ export const BREAKDOWN_PLACEHOLDER_HEIGHT = 260;
 
 // The donut and the rows are separate list items drawn as one card: the donut
 // item opens it, every row carries its side borders and the last row closes it.
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     list: {
       flex: 1,
     },
     content: {
       paddingTop: theme.spacing.sm,
-      paddingHorizontal: theme.spacing.xl,
+      paddingHorizontal: screenPadding(layout),
       paddingBottom: theme.spacing.xxl,
     },
     cardTop: {
@@ -47,7 +49,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     emptyCard: {
       paddingVertical: theme.spacing.xxl,
-      paddingHorizontal: theme.spacing.xl,
+      paddingHorizontal: screenPadding(layout),
       alignItems: 'center',
       rowGap: 10,
       borderRadius: CARD_RADIUS,

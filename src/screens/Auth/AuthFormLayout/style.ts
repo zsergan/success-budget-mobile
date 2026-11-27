@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { capRole } from '@shared/layout';
+import { capRole, inset } from '@shared/layout';
 import theme from '@shared/theme';
 
 // Above the screen's bottom edge, as in the design's frame; it clears the home indicator's area on its own.
@@ -11,7 +11,7 @@ export const BOTTOM_GAP = 38;
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     scroll: {
-      paddingHorizontal: 26,
+      paddingHorizontal: inset(26, layout),
     },
     content: {
       flexGrow: 1,
@@ -58,7 +58,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     footerPinned: {
       paddingTop: 12,
       paddingBottom: 12,
-      paddingHorizontal: 26,
+      paddingHorizontal: inset(26, layout),
       backgroundColor: colors.bg,
     },
     prompt: {

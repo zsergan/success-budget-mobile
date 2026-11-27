@@ -1,14 +1,17 @@
 import { StyleSheet } from 'react-native';
 
-import theme from '@shared/theme';
+import type { Layout } from '@shared/layout';
+import type { ColorTheme } from '@shared/theme';
+import { screenPadding } from '@shared/layout';
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  banner: {
-    paddingHorizontal: theme.spacing.xl,
-  },
-});
+const createStyles = (_: ColorTheme, layout: Layout) =>
+  StyleSheet.create({
+    root: {
+      flex: 1,
+    },
+    banner: {
+      paddingHorizontal: screenPadding(layout),
+    },
+  });
 
-export default styles;
+export default createStyles;

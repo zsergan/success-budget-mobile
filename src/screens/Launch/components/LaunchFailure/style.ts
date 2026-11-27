@@ -1,9 +1,11 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { screenPadding } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
       alignItems: 'center',
@@ -33,7 +35,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       minHeight: 44,
       marginTop: theme.spacing.md,
       paddingVertical: theme.spacing.sm + 2,
-      paddingHorizontal: theme.spacing.xl,
+      paddingHorizontal: screenPadding(layout),
       borderRadius: theme.radius.md,
       borderWidth: 1,
       borderColor: colors.hairline,

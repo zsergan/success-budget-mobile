@@ -1,6 +1,8 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { inset } from '@shared/layout';
 import theme from '@shared/theme';
 
 // Below the status bar and above the screen's bottom edge, as in the design's frame; the bottom one clears the
@@ -8,7 +10,7 @@ import theme from '@shared/theme';
 export const TOP_GAP = 44;
 export const BOTTOM_GAP = 40;
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
       flex: 1,
@@ -16,7 +18,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     content: {
       flexGrow: 1,
-      paddingHorizontal: 26,
+      paddingHorizontal: inset(26, layout),
     },
     body: {
       flex: 1,

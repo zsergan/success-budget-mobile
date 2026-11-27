@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { textRole } from '@shared/layout';
+import { screenPadding, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
@@ -12,7 +12,7 @@ const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
     },
     header: {
       paddingTop: theme.spacing.md,
-      paddingHorizontal: theme.spacing.xl,
+      paddingHorizontal: screenPadding(layout),
       paddingBottom: theme.spacing.sm,
       flexDirection: 'row',
       alignItems: 'center',
@@ -96,7 +96,7 @@ const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
       flex: 1,
     },
     listContent: {
-      paddingHorizontal: theme.spacing.xl,
+      paddingHorizontal: screenPadding(layout),
       paddingBottom: 120,
       rowGap: theme.spacing.sm + 2,
     },
