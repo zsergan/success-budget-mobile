@@ -14,7 +14,6 @@ import type { MainTabNavigationProp } from '@shared/types';
 
 import SpacesSheet from './SpacesSheet';
 import createStyles from './style';
-import { currencySymbol } from '@shared/utils/currency';
 
 interface Props {
   navigation: MainTabNavigationProp<ScreenNames.HOME_TAB>;
@@ -53,7 +52,7 @@ const SpaceSwitcher = ({ navigation }: Props) => {
         </Text>
 
         <View style={styles.currencyBadge}>
-          <Text style={styles.currencyBadgeText}>{currencySymbol(currentSpace.currency.code)}</Text>
+          <Text style={styles.currencyBadgeText}>{currentSpace.currency.code}</Text>
         </View>
 
         <Icon name="chevron-down" size={14} color={colors.muted} strokeWidth={2.1} />

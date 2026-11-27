@@ -96,3 +96,17 @@ The fix: size the input from the line box at the system text size, not a
 fixed height, and let its row grow (`minHeight`); see `amountInputHeight`
 in `AmountField/style.ts`. A field whose font size changes as it fills
 takes the height of its largest size, so the row never moves.
+
+## The grey Done toolbar over a number pad
+
+iOS gives a number pad no return key, so React Native adds its own grey
+toolbar with Done on the keyboard whenever such a field has a
+`returnKeyType`. The amount fields pass none and their screen draws
+`KeyboardDoneButton` instead.
+
+Do not switch the toolbar off with an `inputAccessoryViewID` that names
+no view. On iOS, RN 0.88 reuses the text field of a closed screen, clears
+the id on the native field but not in its saved props, so the same id on
+the next mount reads as unchanged and the grey toolbar comes back. Seen
+after swiping back out of the transaction editor and opening it again:
+both the app's Done and the grey toolbar showed.

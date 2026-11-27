@@ -14,15 +14,17 @@ interface Props {
   onSubmit: () => void;
   // Why the last save failed, shown above the buttons that try it again.
   error?: string | null;
+  // The keyboard is up: the row ends the scrolling form instead of being pinned on top of the keyboard.
+  isInline?: boolean;
 }
 
-const ActionRow = ({ onDeletePress, canSubmit, saveLabel, onSubmit, error }: Props) => {
+const ActionRow = ({ onDeletePress, canSubmit, saveLabel, onSubmit, error, isInline = false }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.footer, { marginBottom: theme.spacing.xl + insets.bottom }]}>
+    <View style={[styles.footer, isInline ? styles.inline : { marginBottom: theme.spacing.xl + insets.bottom }]}>
       <View style={styles.resetNote}>
         <Icon name="refresh" size={15} color={colors.muted} strokeWidth={1.9} />
 

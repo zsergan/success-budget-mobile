@@ -1,7 +1,6 @@
 import type { CreateTransactionRequest, TransactionAssignment, UpdateTransactionRequest } from '@api/dto';
 import type { AssignmentModel, TransactionModel } from '@api/models';
-import type { TransactionType } from '@shared/enums';
-import { SpaceType } from '@shared/enums';
+import type { TransactionType, SpaceType } from '@shared/enums';
 import type { CalendarDate } from '@shared/utils/calendarDate';
 import { isCalendarDate, MIN_CALENDAR_DATE } from '@shared/utils/calendarDate';
 import { getDeviceTimeZone } from '@shared/utils/timeZone';
@@ -233,9 +232,10 @@ export interface AssignmentContext {
   userId: number | undefined;
 }
 
-// A shared space's transaction is the whole space's, a personal one the user's own; unknown, the whole space.
-export const defaultAssignment = ({ spaceType, userId }: AssignmentContext): DraftAssignment =>
-  spaceType === SpaceType.PERSONAL && userId !== undefined ? { kind: 'member', userId } : { kind: 'space' };
+// A new transaction is assigned to whoever records it, in a personal or a shared space; with no known user, the
+// whole space.
+export const defaultAssignment = ({ userId }: AssignmentContext): DraftAssignment =>
+  userId !== undefined ? { kind: 'member', userId } : { kind: 'space' };
 
 // Add another repeats the last assignment while its member is known to be in the space.
 export const keptAssignment = (

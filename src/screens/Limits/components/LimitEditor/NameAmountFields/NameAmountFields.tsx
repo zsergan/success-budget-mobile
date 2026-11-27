@@ -2,14 +2,12 @@ import { Text, TextInput, View } from 'react-native';
 import { Controller, type Control } from 'react-hook-form';
 
 import { Icon } from '@components';
-import KeyboardDoneBar from '@components/Form/KeyboardDoneBar/KeyboardDoneBar';
+import { groupAmountInput, sanitizeAmountInput } from '@shared/utils/amountInput';
 import { useTheme, useThemedStyles } from '@hooks';
 import type { LimitFormValues } from '../limitSchema';
 
 import createStyles from './style';
 import { currencySymbol } from '@shared/utils/currency';
-
-const AMOUNT_DONE_BAR = 'limit-amount-done';
 
 interface Props {
   control: Control<LimitFormValues>;
@@ -18,9 +16,19 @@ interface Props {
   currencyCode?: string;
   onNameChange: (value: string) => void;
   spentHint?: string;
+  // The sheet shows its Done above the number pad while the amount has focus.
+  onAmountFocusChange?: (isFocused: boolean) => void;
 }
 
-const NameAmountFields = ({ control, isGroup, isTotal, currencyCode, onNameChange, spentHint }: Props) => {
+const NameAmountFields = ({
+  control,
+  isGroup,
+  isTotal,
+  currencyCode,
+  onNameChange,
+  spentHint,
+  onAmountFocusChange,
+}: Props) => {
   const { scheme, colorTheme } = useTheme();
   const { colors } = colorTheme;
   const styles = useThemedStyles(createStyles);
@@ -64,17 +72,15 @@ const NameAmountFields = ({ control, isGroup, isTotal, currencyCode, onNameChang
             <View style={styles.heroRow}>
               <TextInput
                 keyboardAppearance={scheme}
-                value={value}
-                onChangeText={onChange}
+                value={groupAmountInput(value ?? '')}
+                onChangeText={(text) => onChange(sanitizeAmountInput(text))}
                 placeholder="0"
                 placeholderTextColor={colors.muted}
                 inputMode="decimal"
                 style={styles.heroAmount}
-                returnKeyType="done"
-                inputAccessoryViewID={AMOUNT_DONE_BAR}
+                onFocus={() => onAmountFocusChange?.(true)}
+                onBlur={() => onAmountFocusChange?.(false)}
               />
-
-              <KeyboardDoneBar nativeID={AMOUNT_DONE_BAR} />
 
               {currencyCode && <Text style={styles.heroCurrency}>{currencySymbol(currencyCode)}</Text>}
             </View>

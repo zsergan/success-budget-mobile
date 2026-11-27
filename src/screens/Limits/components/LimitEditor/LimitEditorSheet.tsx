@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
 import type { LimitModel } from '@api/models';
 import { Icon } from '@components';
+import KeyboardDoneButton from '@components/Form/KeyboardDoneButton/KeyboardDoneButton';
+import useKeyboardHeight from '@hooks/useKeyboardHeight';
 import { useTheme, useThemedStyles } from '@hooks';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetCategoriesQuery } from '@redux/state/category/api';
@@ -35,6 +38,8 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
   const { colors } = useTheme().colorTheme;
   const styles = useThemedStyles(createStyles);
   const { height: windowHeight } = useWindowDimensions();
+  const isKeyboardUp = useKeyboardHeight() > 0;
+  const [isAmountFocused, setAmountFocused] = useState(false);
   const spaceArg = useSpaceArg();
   const { currentData: categories } = useGetCategoriesQuery(spaceArg);
   const { expenses } = getActiveCategories(categories);
@@ -93,6 +98,25 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
       ? `${formatCurrencyAmount(limit.spent, currencyCode)} already spent this month — editing moves the threshold only, history stays.`
       : undefined;
 
+  // Pinned at the sheet's bottom while the keyboard is down; with it up, it ends the form instead of riding on it.
+  const actionRow = (
+    <ActionRow
+      isInline={isKeyboardUp}
+      onDeletePress={
+        isEdit && limit && onRequestDelete
+          ? () => {
+              closeBottomSheet();
+              onRequestDelete(limit);
+            }
+          : undefined
+      }
+      canSubmit={canSubmit}
+      saveLabel={isEdit ? 'Save changes' : isTotal ? 'Set monthly total' : 'Create limit'}
+      onSubmit={onSubmit}
+      error={submitError}
+    />
+  );
+
   return (
     <View style={[styles.root, { height: windowHeight * SNAP_FRACTION }]}>
       <View style={styles.topBlock}>
@@ -129,6 +153,7 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
             currencyCode={currencyCode}
             onNameChange={onNameChange}
             spentHint={spentHint}
+            onAmountFocusChange={setAmountFocused}
           />
 
           {!isTotal && (
@@ -152,22 +177,13 @@ const LimitEditorSheet = ({ limit, initialScope, onRequestDelete }: Props) => {
             />
           )}
         </View>
+
+        {isKeyboardUp && actionRow}
       </BottomSheetScrollView>
 
-      <ActionRow
-        onDeletePress={
-          isEdit && limit && onRequestDelete
-            ? () => {
-                closeBottomSheet();
-                onRequestDelete(limit);
-              }
-            : undefined
-        }
-        canSubmit={canSubmit}
-        saveLabel={isEdit ? 'Save changes' : isTotal ? 'Set monthly total' : 'Create limit'}
-        onSubmit={onSubmit}
-        error={submitError}
-      />
+      {!isKeyboardUp && actionRow}
+
+      {isKeyboardUp && isAmountFocused && <KeyboardDoneButton />}
     </View>
   );
 };

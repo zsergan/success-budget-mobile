@@ -10,7 +10,6 @@ import { SpaceType } from '@shared/enums';
 import theme from '@shared/theme';
 
 import createStyles from './style';
-import { currencySymbol } from '@shared/utils/currency';
 
 interface Props {
   spaces: Space[];
@@ -70,7 +69,7 @@ const SpacesSheet = ({ spaces, currentSpaceId, onSelect, onCreateNew }: Props) =
               </View>
 
               <View style={styles.currencyBadge}>
-                <Text style={styles.currencyBadgeText}>{currencySymbol(space.currency.code)}</Text>
+                <Text style={styles.currencyBadgeText}>{space.currency.code}</Text>
               </View>
 
               {isCurrent && <Icon name="check" size={16} color={colors.accent} strokeWidth={2.6} />}

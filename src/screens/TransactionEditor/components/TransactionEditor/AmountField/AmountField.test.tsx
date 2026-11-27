@@ -86,13 +86,19 @@ describe('AmountField', () => {
     expect(amountInputHeight(2)).toBeGreaterThan(amountInputHeight(1));
   });
 
-  it('passes the typed text to onChange unchanged, with no sign in it', () => {
+  it('passes on only digits and one decimal point, with no sign in it', () => {
     const onChange = jest.fn();
     render(field({ onChange }));
 
-    fireEvent.changeText(screen.getByLabelText('Amount'), ' 1,5 ');
+    fireEvent.changeText(screen.getByLabelText('Amount'), ' 1 234,5x6 ');
 
-    expect(onChange).toHaveBeenCalledWith(' 1,5 ');
+    expect(onChange).toHaveBeenCalledWith('1234.56');
+  });
+
+  it('shows the thousands apart', () => {
+    render(field({ value: '1234567.5' }));
+
+    expect(screen.getByLabelText('Amount').props.value).toBe('1 234 567.5');
   });
 
   it('keeps the sign out of the accessibility tree', () => {

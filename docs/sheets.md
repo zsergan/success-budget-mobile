@@ -87,9 +87,14 @@ do: it dismisses the keyboard and shows the sheet once it has gone.
   still creates the category but changes neither the draft, the stack nor
   a sheet opened since.
 - Every way out of the editor (header Back, Android Back, the back swipe)
-  is held by `usePreventRemove` and asks the flow (`useFlowClose`), so it
-  never leaves a draft behind or closes during a write. With the category
-  sheet open, Back closes that sheet alone and its screen stays.
+  goes through the flow (`useFlowClose`), so it never leaves a draft
+  behind or closes during a write. iOS cannot hold a back swipe, it snaps
+  the screen back after it has gone, so while there is something to ask
+  (changes, an open save, a write, the date picker, a sheet or
+  confirmation over the form) the swipe is off and `usePreventRemove`
+  sends Back to the flow. An untouched form leaves with the swipe and
+  closes its flow on `beforeRemove`. With the category sheet open, Back
+  closes that sheet alone and its screen stays.
 - A result that ends the flow from the editor (a delete, a create found
   deleted) is a toast handed to the next screen with `showAfterNavigation`,
   before the flow ends.
