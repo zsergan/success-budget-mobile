@@ -45,6 +45,7 @@ const CATEGORY: CategoryModel = {
   color: AppColor.EVERGREEN,
   isActive: true,
   transactionCount: 0,
+  ownRecentCount: 0,
   limit: null,
   archivedAt: null,
 };
