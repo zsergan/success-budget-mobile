@@ -1,9 +1,10 @@
+import { useRef } from 'react';
 import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DraggableFlatList from 'react-native-draggable-flatlist';
 
 import { BottomSheetModal as BottomModal, CategoryEditorSheet, EmptyState, Icon } from '@components';
-import { useConfirmAction, useSpaceRefresh, useTheme, useThemedStyles } from '@hooks';
+import { useConfirmAction, useScreenRefresh, useSpaceRefresh, useTheme, useThemedStyles } from '@hooks';
 import type { CategoryModel } from '@api/models';
 import type { RootStackScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
@@ -43,6 +44,7 @@ const CategoriesScreen = ({ navigation }: Props) => {
     isLoading,
     hasError,
     retry,
+    isRefreshing,
     handleReorder,
     handleRestore,
     defaultTransactionType,
@@ -51,6 +53,8 @@ const CategoriesScreen = ({ navigation }: Props) => {
   const { editorRef, editingCategory, openCreate, openEdit } = useCategoryEditor();
 
   const isManual = sortMode === 'manual' && segment !== 'archived';
+  const listRef = useRef<FlatList<CategoryModel>>(null);
+  const { refreshControl } = useScreenRefresh({ scrollRef: listRef, refresh: retry, isBusy: isRefreshing });
 
   const handleRequestDelete = (category: CategoryModel) => {
     editorRef.current?.dismiss();
@@ -150,6 +154,7 @@ const CategoriesScreen = ({ navigation }: Props) => {
           <CategoriesEmptyState segment={segment} isSearching={isSearching} />
         ) : isManual ? (
           <DraggableFlatList
+            refreshControl={refreshControl}
             style={styles.body}
             contentContainerStyle={styles.listContent}
             data={list}
@@ -161,6 +166,8 @@ const CategoriesScreen = ({ navigation }: Props) => {
           />
         ) : (
           <FlatList
+            ref={listRef}
+            refreshControl={refreshControl}
             style={styles.body}
             contentContainerStyle={styles.listContent}
             data={list}

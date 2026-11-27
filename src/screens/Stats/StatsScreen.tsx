@@ -50,6 +50,7 @@ const StatsScreen = () => {
     summary,
     trend,
     breakdown,
+    refresh,
     refreshIfStale,
     isUpdating,
     failedUpdateAttempt,
@@ -202,6 +203,8 @@ const StatsScreen = () => {
             onModeChange={selection.changeMode}
             onToggleOther={selection.toggleOther}
             onOpenHistory={openTransactions}
+            refresh={refresh}
+            isRefreshing={isUpdating}
           />
         </View>
       </ScreenFrame>

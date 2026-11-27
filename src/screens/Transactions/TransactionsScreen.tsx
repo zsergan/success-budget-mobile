@@ -329,6 +329,11 @@ const TransactionsScreen = () => {
         </View>
 
         <TransactionsList
+          refresh={() => {
+            data.refresh();
+            if (!assigneesQuery.isUninitialized) assigneesQuery.refetch();
+          }}
+          isRefreshing={data.isReloading || assigneesQuery.isFetching}
           {...feedListProps(data)}
           onPressTransaction={openDetails}
           onDeleteTransaction={requestDelete}

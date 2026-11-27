@@ -126,6 +126,7 @@ const useCategoryList = () => {
     isLoading,
     hasError,
     retry: refetch,
+    isRefreshing: categoriesQuery.isFetching,
     handleReorder,
     handleRestore,
     defaultTransactionType: segment === 'archived' ? TransactionType.EXPENSE : SEGMENT_TO_TRANSACTION_TYPE[segment],

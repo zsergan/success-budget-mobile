@@ -169,6 +169,12 @@ const useTransactionsData = (props: UseTransactionsDataProps) => {
     refreshFailed: feed.hasRefreshError,
     retryRefresh: feed.retry,
     retry: feed.retry,
+    // Everything listed asked for again from the newest record, as a pull or a tab tap does.
+    refresh: () => {
+      feed.refresh();
+      if (!latestQuery.isUninitialized) latestQuery.refetch();
+    },
+    isReloading: feed.isReloading,
     retryLatest: () => {
       if (!latestQuery.isUninitialized) latestQuery.refetch();
     },

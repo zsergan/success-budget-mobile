@@ -8,6 +8,7 @@ import FrameScrollView from '@components/ScreenFrame/FrameScrollView';
 import ScreenFrame from '@components/ScreenFrame/ScreenFrame';
 import { FieldRevealProvider, useFieldRevealScroll } from './FieldReveal';
 
+import useScreenRefresh from '@hooks/useScreenRefresh';
 import useThemedStyles from '@hooks/useThemedStyles';
 
 import createStyles from './style';
@@ -22,14 +23,18 @@ interface Props {
   blurredStatusBar?: boolean;
   // Below the content, outside its scroll: it stays right above the keyboard however long the content is.
   footer?: ReactNode;
+  // Scrollable only: what a pull, or a tap on the tab with the screen at its top, asks for again.
+  refresh?: () => void;
+  isRefreshing?: boolean;
 }
 
-type ContainerProps = Pick<Props, 'children' | 'style' | 'contentContainerStyle'>;
+type ContainerProps = Pick<Props, 'children' | 'style' | 'contentContainerStyle' | 'refresh' | 'isRefreshing'>;
 
-const ScrollViewContainer = ({ children, style, contentContainerStyle }: ContainerProps) => {
+const ScrollViewContainer = ({ children, style, contentContainerStyle, refresh, isRefreshing }: ContainerProps) => {
   const styles = useThemedStyles(createStyles);
   const scrollRef = useRef<ScrollView>(null);
   const fieldReveal = useFieldRevealScroll(scrollRef);
+  const { onScroll: trackScroll, ...screenRefresh } = useScreenRefresh({ scrollRef, refresh, isBusy: isRefreshing });
 
   return (
     <FrameScrollView
@@ -39,8 +44,11 @@ const ScrollViewContainer = ({ children, style, contentContainerStyle }: Contain
       contentContainerStyle={[styles.scrollContent, contentContainerStyle]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
-      scrollEventThrottle={16}
-      onScroll={fieldReveal.onScroll}
+      {...screenRefresh}
+      onScroll={(event) => {
+        trackScroll(event);
+        fieldReveal.onScroll(event);
+      }}
       onLayout={fieldReveal.onLayout}
     >
       <FieldRevealProvider value={fieldReveal.value}>{children}</FieldRevealProvider>
@@ -58,14 +66,29 @@ const ViewContainer = ({ children, style }: ContainerProps) => {
   );
 };
 
-const RootLayout = ({ children, scrollable, style, contentContainerStyle, edges, blurredStatusBar, footer }: Props) => {
+const RootLayout = ({
+  children,
+  scrollable,
+  style,
+  contentContainerStyle,
+  edges,
+  blurredStatusBar,
+  footer,
+  refresh,
+  isRefreshing,
+}: Props) => {
   const styles = useThemedStyles(createStyles);
   const Container = scrollable ? ScrollViewContainer : ViewContainer;
 
   return (
     <ScreenFrame edges={edges} blurredStatusBar={blurredStatusBar && scrollable}>
       <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Container style={style} contentContainerStyle={contentContainerStyle}>
+        <Container
+          style={style}
+          contentContainerStyle={contentContainerStyle}
+          refresh={refresh}
+          isRefreshing={isRefreshing}
+        >
           {children}
         </Container>
 

@@ -1,8 +1,10 @@
+import { useRef } from 'react';
+import type { ScrollView } from 'react-native';
 import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
 
 import type { LimitModel } from '@api/models';
 import { BottomSheetModal as BottomModal, EmptyState, FrameScrollView, Icon, ScreenFrame } from '@components';
-import { useConfirmAction, useSpaceRefresh, useTheme, useThemedStyles } from '@hooks';
+import { useConfirmAction, useScreenRefresh, useSpaceRefresh, useTheme, useThemedStyles } from '@hooks';
 import { getLoadState } from '@redux/api/loadState';
 import { useAppSelector, useSpaceArg } from '@redux/hooks';
 import { useGetLimitsQuery } from '@redux/state/limit/api';
@@ -25,6 +27,8 @@ const LimitsScreen = () => {
   useSpaceRefresh();
   const limitsQuery = useGetLimitsQuery(useSpaceArg());
   const { currentData, refetch } = limitsQuery;
+  const scrollRef = useRef<ScrollView>(null);
+  const screenRefresh = useScreenRefresh({ scrollRef, refresh: refetch, isBusy: limitsQuery.isFetching });
   const { isLoading, hasError } = getLoadState(limitsQuery);
   const { total, categoryLimits, overAllocation } = currentData ?? EMPTY_LIMITS;
   const currencyCode = useAppSelector(selectCurrentSpaceCurrencyCode);
@@ -48,7 +52,7 @@ const LimitsScreen = () => {
       <DeleteLimitDialog deletion={limitDeletion} currencyCode={currencyCode} />
 
       <ScreenFrame edges={['top', 'left', 'right']} blurredStatusBar>
-        <FrameScrollView style={styles.body} showsVerticalScrollIndicator={false}>
+        <FrameScrollView ref={scrollRef} {...screenRefresh} style={styles.body} showsVerticalScrollIndicator={false}>
           <LimitsHeader />
 
           <View style={styles.container}>
