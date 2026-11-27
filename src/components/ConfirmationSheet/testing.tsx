@@ -1,6 +1,6 @@
 import type { ReactElement, ReactNode, Ref } from 'react';
 import { forwardRef, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
-import { ScrollView, TextInput, View } from 'react-native';
+import { FlatList, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { act } from '@testing-library/react-native';
 
@@ -77,6 +77,7 @@ export const bottomSheetMock = {
   BottomSheetBackdrop: () => null,
   BottomSheetView: View,
   BottomSheetScrollView: ScrollView,
+  BottomSheetFlatList: FlatList,
   BottomSheetTextInput: TextInput,
   useBottomSheet: () => ({ close: () => {} }),
 };

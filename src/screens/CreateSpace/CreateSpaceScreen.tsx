@@ -1,7 +1,8 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 
-import { Banner, Button, Icon, Input, InputPicker, RootLayout, SectionTitle, TextLink } from '@components';
+import { Banner, Button, Icon, Input, RootLayout, SectionTitle, TextLink } from '@components';
+import CurrencyField from '@components/Form/CurrencyField/CurrencyField';
 import { useCurrencyOptions, useTheme, useThemedStyles } from '@hooks';
 import type { IconType, RootStackScreenProps } from '@shared/types';
 import type { ScreenNames } from '@shared/enums';
@@ -84,17 +85,15 @@ const CreateSpaceScreen = ({ navigation }: Props) => {
             name="currency"
             control={control}
             render={({ field: { onChange, value }, fieldState: { error } }) => (
-              <InputPicker
-                variant="outlined"
+              <CurrencyField
                 label="Currency"
-                iconLeft="currency"
-                items={currencies.options}
-                selectedValue={value}
-                onValueChange={(v) => onChange(v as number)}
-                placeholder={currencies.isLoading ? 'Loading currencies…' : 'Pick a currency'}
+                currencies={currencies.currencies}
+                value={value}
+                defaultId={currencies.defaultId}
+                onChange={onChange}
                 isLoading={currencies.isLoading}
                 disabled={currencies.hasError}
-                hint="Chosen once, at creation — it cannot be changed later."
+                hint="The owner can change it later in Settings; amounts are not converted."
                 error={currencies.hasError ? 'Couldn’t load the currencies.' : error?.message}
               />
             )}

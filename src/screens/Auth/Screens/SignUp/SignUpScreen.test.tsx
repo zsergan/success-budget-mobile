@@ -1,9 +1,7 @@
-import { Children, isValidElement } from 'react';
 import { Provider } from 'react-redux';
 import { TextInput } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Picker } from '@react-native-picker/picker';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { register } from '@api/auth.api';
 import { createAppStore } from '@redux/Store';
@@ -87,8 +85,12 @@ const fillInValidForm = async () => {
 };
 
 const pickCurrency = async (id: number) => {
+  const currency = CURRENCIES.find((item) => item.id === id)!;
+
   fireEvent.press(screen.getByRole('button', { name: 'Currency of your space' }));
-  await act(async () => screen.UNSAFE_getByType(Picker).props.onValueChange(id, 0));
+  await act(
+    async () => void fireEvent.press(screen.getByRole('button', { name: `${currency.name}, ${currency.code}` })),
+  );
 };
 
 beforeEach(() => jest.clearAllMocks());
@@ -103,7 +105,9 @@ it('lays the fields out one per row, in the design’s order', async () => {
   expect(positions.every((position) => position >= 0)).toBe(true);
   expect([...positions].sort((a, b) => a - b)).toEqual(positions);
   expect(screen.getByText('At least 8 characters, with a letter and a digit.')).toBeTruthy();
-  expect(screen.getByText('Set once. Every amount in this space is kept in it.')).toBeTruthy();
+  expect(
+    screen.getByText('Every amount in this space is shown in it. You can change it later in Settings.'),
+  ).toBeTruthy();
 });
 
 it('reveals each password on its own', async () => {
@@ -125,8 +129,8 @@ it('shows a picked currency by its code and name, and sends its id as base_curre
 
   await fillInValidForm();
 
-  expect(screen.getByText('USD · US dollar')).toBeTruthy();
-  expect(currencyField().props.accessibilityValue).toEqual({ text: 'USD · US dollar' });
+  expect(screen.getByText('$  US dollar · USD')).toBeTruthy();
+  expect(currencyField().props.accessibilityValue).toEqual({ text: '$  US dollar · USD' });
 
   await act(async () => {
     fireEvent.press(createAccountButton());
@@ -233,38 +237,16 @@ describe('validation', () => {
     expect(checkMarks()).toHaveLength(1);
   });
 
-  it('opens the list on no currency, and asks for one when it closes there', async () => {
+  it('starts at the region’s currency, and keeps it when the list closes without a pick', async () => {
     answerCurrencies();
     await renderSignUp();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Currency of your space' }));
+    await waitFor(() => expect(currencyField().props.accessibilityValue).toEqual({ text: '$  US dollar · USD' }));
+    fireEvent.press(currencyField());
+    await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Euro, EUR' })));
 
-    const list = screen.UNSAFE_getByType(Picker);
-    const rows = Children.toArray(list.props.children).filter(isValidElement<{ label: string; value: unknown }>);
-
-    expect(rows.find((row) => row.props.value === list.props.selectedValue)?.props.label).toBe('Pick a currency');
-
-    await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Done' }));
-    });
-
-    expect(screen.getByText('Pick a currency.')).toBeTruthy();
-  });
-
-  it('drops the currency when the list is turned back to no currency', async () => {
-    answerCurrencies();
-    await renderSignUp();
-
-    await fillInValidForm();
-    const list = screen.UNSAFE_getByType(Picker);
-    const [emptyRow] = Children.toArray(list.props.children).filter(isValidElement<{ value: unknown }>);
-    await act(async () => list.props.onValueChange(emptyRow.props.value, 0));
-    await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Done' }));
-    });
-
-    expect(screen.getByText('Pick a currency.')).toBeTruthy();
-    expect(createAccountButton().props.accessibilityState).toMatchObject({ disabled: true });
+    expect(currencyField().props.accessibilityValue).toEqual({ text: '€  Euro · EUR' });
+    expect(screen.queryByText('Pick a currency.')).toBeNull();
   });
 
   it('turns Create account on for a valid form, and holds it while the account is created', async () => {
@@ -319,7 +301,7 @@ it('keeps what was typed when the server is unreachable, and lets the form be se
   expect(screen.getByLabelText('Email').props.value).toBe('anna@kovalenko.co');
   expect(screen.getByLabelText('Password').props.value).toBe('secret12');
   expect(screen.getByLabelText('Confirm password').props.value).toBe('secret12');
-  expect(screen.getByText('USD · US dollar')).toBeTruthy();
+  expect(screen.getByText('$  US dollar · USD')).toBeTruthy();
   expect(createAccountButton().props.accessibilityState).toMatchObject({ disabled: false, busy: false });
 
   mockedRegister.mockResolvedValueOnce({ email: 'anna@kovalenko.co' } as Awaited<ReturnType<typeof register>>);

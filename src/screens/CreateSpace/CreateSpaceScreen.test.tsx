@@ -1,6 +1,5 @@
 import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Picker } from '@react-native-picker/picker';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { withSheetHost } from '@components/ConfirmationSheet/testing';
@@ -89,7 +88,7 @@ const currencyField = () => screen.getByRole('button', { name: 'Currency' });
 const fillIn = async (name: string) => {
   fireEvent.changeText(screen.getByLabelText('Space name'), name);
   fireEvent.press(currencyField());
-  await act(async () => screen.UNSAFE_getByType(Picker).props.onValueChange(7, 0));
+  await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'US dollar, USD' })));
 };
 
 const invite = (email: string) => {
@@ -107,12 +106,15 @@ beforeEach(() => {
 });
 
 describe('the currency', () => {
-  it('is picked by code and name, with the reminder that it is set once', async () => {
+  it('starts at the region’s currency, is picked from the list, and says the owner can change it later', async () => {
     await renderCreateSpace();
-    await fillIn('Family');
+    await waitFor(() => expect(currencyField().props.accessibilityValue).toEqual({ text: '$  US dollar · USD' }));
 
-    expect(currencyField().props.accessibilityValue).toEqual({ text: 'USD · US dollar' });
-    expect(screen.getByText('Chosen once, at creation — it cannot be changed later.')).toBeTruthy();
+    fireEvent.press(currencyField());
+    await act(async () => void fireEvent.press(screen.getByRole('button', { name: 'Euro, EUR' })));
+
+    expect(currencyField().props.accessibilityValue).toEqual({ text: '€  Euro · EUR' });
+    expect(screen.getByText('The owner can change it later in Settings; amounts are not converted.')).toBeTruthy();
   });
 
   it('waits for the list, and offers a retry that keeps the name when it fails', async () => {
@@ -182,11 +184,12 @@ describe('creating', () => {
 
   it('names what is missing and sends nothing', async () => {
     await renderCreateSpace();
+    await waitFor(() => expect(currencyField().props.accessibilityValue).toEqual({ text: '$  US dollar · USD' }));
 
     await submit('Create space');
 
     expect(screen.getByText('Enter a space name')).toBeTruthy();
-    expect(screen.getByText('Choose a currency')).toBeTruthy();
+    expect(screen.queryByText('Choose a currency')).toBeNull();
     expect(created()).toEqual([]);
   });
 });
