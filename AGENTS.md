@@ -122,6 +122,11 @@ relying on or changing them.
   a new role is a token in `src/shared/theme.ts`. A category colour (a
   preset or a custom `#RRGGBB`) is drawn only through
   `useCategoryAppearance`. Details: `docs/theming.md`.
+- **Layout**: a style factory takes the `Layout` as its second argument
+  (`useLayout()` outside one); side insets use `inset`/`screenPadding`,
+  headings `textRole`, and a box around text `fitHeight` instead of a fixed
+  `height`. Checked on SE to Pro Max at the default, XXXL and AX3 text
+  sizes: `docs/layout.md`.
 - Known layout pitfalls (Plus Jakarta Sans clipping, nested safe areas):
   `docs/ui-pitfalls.md`.
 - Transactions (assignment, author, writes, pending writes, the upgrade
