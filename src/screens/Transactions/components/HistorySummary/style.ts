@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
 import theme from '@shared/theme';
 
@@ -8,18 +9,20 @@ const TOTAL_PLACEHOLDER_HEIGHT = 17;
 // The small spinner's size: the row keeps it once the spinner is gone.
 const SEARCH_ROW_HEIGHT = 20;
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
       paddingTop: theme.spacing.xs,
       rowGap: theme.spacing.sm,
     },
+    // Half a row each would break the amounts over several lines under large text; the cards stack instead.
     totalsRow: {
-      flexDirection: 'row',
+      flexDirection: layout.isLargeText ? 'column' : 'row',
       columnGap: theme.spacing.sm,
+      rowGap: theme.spacing.sm,
     },
     totalCard: {
-      flex: 1,
+      flex: layout.isLargeText ? undefined : 1,
       borderRadius: 14,
       paddingVertical: 11,
       paddingHorizontal: 13,

@@ -56,12 +56,14 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       lineHeight: capRole('display', theme.lineHeights.display + 4, layout),
       letterSpacing: theme.letterSpacing.display,
     },
+    // Side by side the two amounts are cut short under large text; they stack instead.
     split: {
-      flexDirection: 'row',
+      flexDirection: layout.isLargeText ? 'column' : 'row',
       columnGap: theme.spacing.md,
+      rowGap: theme.spacing.sm,
     },
     part: {
-      flex: 1,
+      flex: layout.isLargeText ? undefined : 1,
       rowGap: 2,
     },
     partLabel: {

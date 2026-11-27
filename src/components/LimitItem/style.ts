@@ -1,10 +1,11 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
 import theme from '@shared/theme';
 import { hexToRgba } from '@shared/utils';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     card: {
       borderRadius: theme.radius.lg - 4,
@@ -17,10 +18,13 @@ const createStyles = ({ colors }: ColorTheme) =>
     cardOver: {
       borderColor: hexToRgba(colors.danger, 0.32),
     },
+    // Under large text the amounts drop below the name, which would otherwise break mid-word.
     topRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       alignItems: 'center',
       columnGap: theme.spacing.sm + 2,
+      rowGap: theme.spacing.xs,
     },
     iconBox: {
       width: 42,
@@ -78,10 +82,9 @@ const createStyles = ({ colors }: ColorTheme) =>
       fontSize: theme.fontSizes.caption,
       color: colors.muted,
     },
-    amountBlock: {
-      alignItems: 'flex-end',
-      rowGap: 3,
-    },
+    amountBlock: layout.isLargeText
+      ? { width: '100%', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 6 }
+      : { alignItems: 'flex-end', rowGap: 3 },
     spent: {
       fontFamily: theme.fonts.semiBold,
       fontSize: theme.fontSizes.bodySm,
@@ -95,8 +98,11 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     bottomRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       alignItems: 'center',
       justifyContent: 'space-between',
+      columnGap: theme.spacing.md,
+      rowGap: theme.spacing.xs,
     },
     statusRow: {
       flexDirection: 'row',

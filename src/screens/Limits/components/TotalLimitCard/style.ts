@@ -20,6 +20,10 @@ const createStyles = ({ elevation }: ColorTheme, layout: Layout) =>
       flexDirection: 'row',
       alignItems: 'flex-start',
       justifyContent: 'space-between',
+      columnGap: theme.spacing.md,
+    },
+    summary: {
+      flex: 1,
     },
     label: {
       fontFamily: theme.fonts.semiBold,
@@ -29,6 +33,7 @@ const createStyles = ({ elevation }: ColorTheme, layout: Layout) =>
     amountRow: {
       marginTop: theme.spacing.xs + 2,
       flexDirection: 'row',
+      flexWrap: 'wrap',
       alignItems: 'baseline',
       columnGap: 7,
     },
@@ -57,10 +62,14 @@ const createStyles = ({ elevation }: ColorTheme, layout: Layout) =>
       height: 10,
       borderRadius: 6,
     },
+    // The two figures sit at either end, and share the width or stack once they no longer fit side by side.
     statsRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       alignItems: 'center',
       justifyContent: 'space-between',
+      columnGap: theme.spacing.md,
+      rowGap: theme.spacing.xs,
     },
     statText: {
       fontFamily: theme.fonts.semiBold,

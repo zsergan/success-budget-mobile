@@ -12,8 +12,11 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       paddingHorizontal: screenPadding(layout),
       paddingBottom: theme.spacing.md,
       flexDirection: 'row',
+      flexWrap: 'wrap',
       alignItems: 'center',
       justifyContent: 'space-between',
+      columnGap: theme.spacing.md,
+      rowGap: theme.spacing.sm,
     },
     title: {
       fontFamily: theme.fonts.semiBold,

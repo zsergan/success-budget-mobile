@@ -42,7 +42,7 @@ const TotalLimitCard = ({ total, currencyCode, onEdit }: Props) => {
       />
 
       <View style={styles.topRow}>
-        <View>
+        <View style={styles.summary}>
           <Text style={[styles.label, { color: dim }]}>All expenses this month</Text>
 
           <View style={styles.amountRow}>
