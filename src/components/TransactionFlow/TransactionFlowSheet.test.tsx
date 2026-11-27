@@ -507,6 +507,26 @@ describe('TransactionFlowSheet', () => {
     expect(routeNames()).toEqual(WITH_EDITOR);
   });
 
+  it('takes the back swipe only while nothing is entered, keyboard up or not', async () => {
+    const swipeEnabled = () =>
+      (navigationRef.getCurrentOptions() as { gestureEnabled?: boolean } | undefined)?.gestureEnabled;
+
+    const { open } = renderFlow();
+    open();
+    await settle();
+    expect(swipeEnabled()).toBe(true);
+
+    fireEvent.changeText(screen.getByLabelText('Amount'), '12');
+    expect(swipeEnabled()).toBe(false);
+
+    fireEvent.press(screen.getByLabelText('Back'));
+    expect(asked()).toEqual(['Discard transaction?']);
+    answer('Keep editing');
+
+    fireEvent.changeText(screen.getByLabelText('Amount'), '');
+    expect(swipeEnabled()).toBe(true);
+  });
+
   it('opens one confirmation at a time, whichever way it is asked for', async () => {
     const { open, flow } = renderFlow();
     open();

@@ -14,6 +14,7 @@ import TransactionEditor from '@screens/TransactionEditor/components/Transaction
 import useTransactionDelete from '@components/TransactionFlow/useTransactionDelete';
 import { useSheetPresence } from '@hooks';
 import { useAppDispatch } from '@redux/hooks';
+import { hasOpenSave, hasUnsavedChanges } from '@redux/state/transactionFlow/selectors';
 import { dateOpened, panelClosed, todayChanged } from '@redux/state/transactionFlow/slice';
 import { ScreenNames } from '@shared/enums';
 import type { RootStackScreenProps } from '@shared/types';
@@ -65,12 +66,31 @@ const TransactionEditorScreen = ({ navigation, route }: Props) => {
   const category = useCategoryCreation({ getIdleFlow, runDelayed: delay.run });
   const getFreeFlow = () => (category.isOpen() ? null : getIdleFlow());
 
-  // Header Back, Android Back and the swipe all ask the flow, after the category sheet over the form; the route goes
-  // only once the flow has let the form go.
-  usePreventRemove(!!flow, () => {
+  // iOS cannot hold a back swipe, only snap the form back after it, so while there is something to ask the swipe is
+  // off and Back asks; otherwise both leave at once and tell the flow on the way out.
+  const mustAsk =
+    !!flow &&
+    (flow.isSaving ||
+      flow.view.name === 'date' ||
+      hasUnsavedChanges(flow) ||
+      hasOpenSave(flow) ||
+      category.opening !== null ||
+      confirmation !== null);
+  useEffect(() => {
+    navigation.setOptions({ gestureEnabled: !mustAsk });
+  }, [navigation, mustAsk]);
+
+  usePreventRemove(mustAsk, () => {
     if (category.isOpen()) category.close();
     else back();
   });
+  useEffect(
+    () =>
+      navigation.addListener('beforeRemove', () => {
+        if (!mustAsk && getOwnFlow()) back();
+      }),
+    [navigation, mustAsk, getOwnFlow, back],
+  );
 
   // A new transaction dated today by default stays on today past midnight and after a return to the app.
   const today = useToday();
@@ -81,7 +101,7 @@ const TransactionEditorScreen = ({ navigation, route }: Props) => {
   // After the guard above has let go: a flow that ended or left the form takes this route with it, also when that
   // was not the user's doing (a space switch, lost access). Whatever else is on the stack stays, in focus if it was.
   useEffect(() => {
-    if (!flow) removeRoute(navigation, route.key);
+    if (!flow && navigation.getState().routes.some(({ key }) => key === route.key)) removeRoute(navigation, route.key);
   }, [flow, navigation, route.key]);
 
   // The full list goes with the keyboard closed, so the form comes back without it.
