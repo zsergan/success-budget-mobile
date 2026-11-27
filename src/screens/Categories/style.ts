@@ -37,7 +37,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       color: colors.text,
     },
     sortChip: {
-      height: 32,
+      minHeight: 32,
       paddingHorizontal: theme.spacing.sm + 2,
       borderRadius: theme.radius.md - 2,
       flexDirection: 'row',
@@ -59,7 +59,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
     searchRow: {
       marginHorizontal: theme.spacing.xl,
       marginBottom: theme.spacing.sm,
-      height: 44,
+      minHeight: 44,
       borderRadius: theme.radius.md,
       paddingHorizontal: theme.spacing.md,
       flexDirection: 'row',

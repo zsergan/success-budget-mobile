@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 import type { ColorTheme } from '@shared/theme';
+import { fitHeight } from '@shared/layout';
 import theme from '@shared/theme';
 
 const LARGE_BUTTON_MIN_HEIGHT = 56;
@@ -9,7 +10,8 @@ const OUTLINE_WIDTH = 1;
 const createStyles = ({ colors, elevation }: ColorTheme) =>
   StyleSheet.create({
     button: {
-      height: 52,
+      // The outline sits inside the height, so every variant is 52 tall at the default text size.
+      ...fitHeight(52, theme.lineHeights.bodyLg, OUTLINE_WIDTH),
       flexDirection: 'row',
       columnGap: theme.spacing.sm,
       justifyContent: 'center',
@@ -37,7 +39,6 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
     // Grows with its label under large system text instead of clipping it. At the default size it stays 56 tall,
     // the outlined one included: its border sits outside the padding.
     largeButton: {
-      height: 'auto',
       minHeight: LARGE_BUTTON_MIN_HEIGHT,
       paddingVertical: (LARGE_BUTTON_MIN_HEIGHT - theme.lineHeights.bodyLg) / 2 - OUTLINE_WIDTH,
       borderRadius: 18,

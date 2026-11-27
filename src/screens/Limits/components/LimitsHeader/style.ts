@@ -21,7 +21,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       color: colors.text,
     },
     periodPill: {
-      height: 32,
+      minHeight: 32,
       paddingHorizontal: theme.spacing.md - 1,
       borderRadius: 11,
       flexDirection: 'row',

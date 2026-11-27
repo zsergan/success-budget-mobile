@@ -26,7 +26,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       color: colors.muted,
     },
     themeSwitch: {
-      height: 44,
+      minHeight: 44,
       borderRadius: 15,
       padding: 4,
       flexDirection: 'row',

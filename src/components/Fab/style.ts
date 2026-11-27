@@ -29,7 +29,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       alignItems: 'flex-end',
     },
     menuItem: {
-      height: 44,
+      minHeight: 44,
       borderRadius: theme.radius.md,
       paddingHorizontal: theme.spacing.lg,
       flexDirection: 'row',

@@ -6,7 +6,7 @@ import theme from '@shared/theme';
 const createStyles = ({ colors }: ColorTheme) =>
   StyleSheet.create({
     root: {
-      height: 40,
+      minHeight: 40,
       borderRadius: theme.radius.md,
       padding: 4,
       flexDirection: 'row',

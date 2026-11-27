@@ -19,7 +19,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       color: colors.text,
     },
     addButton: {
-      height: 30,
+      minHeight: 30,
       paddingHorizontal: theme.spacing.md - 2,
       borderRadius: 10,
       flexDirection: 'row',

@@ -14,7 +14,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     segment: {
       flex: 1,
-      height: 38,
+      minHeight: 38,
       borderRadius: 11,
       flexDirection: 'row',
       alignItems: 'center',

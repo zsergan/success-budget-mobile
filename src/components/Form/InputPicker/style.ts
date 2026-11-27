@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { ColorTheme } from '@shared/theme';
 import { FITTED_SHEET_HANDLE_HEIGHT } from '@components/Modals/BottomSheetModal/BottomSheetModal';
+import { fitHeight } from '@shared/layout';
 import theme, { horizontalScreenPadding } from '@shared/theme';
 
 const createStyles = ({ colors, elevation }: ColorTheme) =>
@@ -10,7 +11,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       rowGap: theme.spacing.xs,
     },
     inputContainer: {
-      height: 52,
+      ...fitHeight(52, theme.lineHeights.bodyLg),
       justifyContent: 'center',
       paddingHorizontal: theme.spacing.lg,
       borderRadius: theme.radius.md,

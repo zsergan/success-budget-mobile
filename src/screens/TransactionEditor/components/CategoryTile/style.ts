@@ -60,7 +60,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     badge: {
       position: 'absolute',
       bottom: -7,
-      height: 14,
+      minHeight: 14,
       borderRadius: 5,
       paddingHorizontal: 5,
       justifyContent: 'center',

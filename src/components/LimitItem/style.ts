@@ -60,7 +60,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       color: colors.text,
     },
     groupBadge: {
-      height: 18,
+      minHeight: 18,
       paddingHorizontal: 6,
       borderRadius: 6,
       alignItems: 'center',

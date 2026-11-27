@@ -28,7 +28,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     badge: {
       marginLeft: 'auto',
-      height: 22,
+      minHeight: 22,
       borderRadius: 11,
       paddingHorizontal: 9,
       justifyContent: 'center',

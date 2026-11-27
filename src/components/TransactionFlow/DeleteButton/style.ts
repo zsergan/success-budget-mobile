@@ -6,14 +6,14 @@ import theme from '@shared/theme';
 const createStyles = ({ colors }: ColorTheme) =>
   StyleSheet.create({
     button: {
-      height: 44,
+      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       columnGap: theme.spacing.sm,
     },
     outlined: {
-      height: 48,
+      minHeight: 48,
       borderRadius: theme.radius.md,
       borderWidth: 1,
       borderColor: colors.hairline,

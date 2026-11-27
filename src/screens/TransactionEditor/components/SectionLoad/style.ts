@@ -47,7 +47,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       color: colors.muted,
     },
     retryButton: {
-      height: 34,
+      minHeight: 34,
       borderRadius: 11,
       paddingHorizontal: theme.spacing.md + 1,
       justifyContent: 'center',

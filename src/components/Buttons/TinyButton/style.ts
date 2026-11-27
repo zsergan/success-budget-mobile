@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 import type { ColorTheme } from '@shared/theme';
+import { fitHeight } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme) =>
@@ -15,16 +16,19 @@ const createStyles = ({ colors }: ColorTheme) =>
       backgroundColor: colors.track,
       borderRadius: 11,
     },
+    // Sized by the taller of the label and the icon circle, so an icon-only button keeps its height too.
     smButton: {
-      height: 32,
+      ...fitHeight(32, Math.max(theme.lineHeights.caption, 16)),
     },
     mdButton: {
-      height: 40,
+      ...fitHeight(40, Math.max(theme.lineHeights.label, 24)),
     },
     lgButton: {
       width: 34,
       height: 34,
+      minHeight: 0,
       paddingHorizontal: 0,
+      paddingVertical: 0,
       borderRadius: 12,
       justifyContent: 'center',
     },

@@ -78,7 +78,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       alignItems: 'center',
       columnGap: 6,
       minWidth: 44,
-      height: 32,
+      minHeight: 32,
       paddingHorizontal: 13,
       justifyContent: 'center',
       borderRadius: 11,

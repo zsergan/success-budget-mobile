@@ -9,7 +9,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       rowGap: theme.spacing.sm - 2,
     },
     nameBox: {
-      height: 50,
+      minHeight: 50,
       borderRadius: theme.radius.md,
       paddingHorizontal: theme.spacing.md + 2,
       flexDirection: 'row',
