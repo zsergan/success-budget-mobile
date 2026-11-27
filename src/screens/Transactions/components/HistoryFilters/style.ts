@@ -1,15 +1,17 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     row: {
-      marginTop: theme.spacing.sm,
+      marginTop: scaleSpace(theme.spacing.sm, layout),
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: theme.spacing.sm,
+      gap: scaleSpace(theme.spacing.sm, layout),
     },
     chip: {
       maxWidth: '100%',
@@ -27,11 +29,11 @@ const createStyles = ({ colors }: ColorTheme) =>
     chipBody: {
       flexShrink: 1,
       minHeight: 34,
-      paddingLeft: 10,
-      paddingRight: 10,
+      paddingLeft: scaleSpace(10, layout),
+      paddingRight: scaleSpace(10, layout),
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 6,
+      columnGap: scaleSpace(6, layout),
     },
     // Plus Jakarta Sans under-measures its own width and clips the last glyph (see cde3346).
     chipText: {
@@ -39,7 +41,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       maxWidth: 180,
       paddingRight: 2,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       color: colors.text,
     },
     chipTextSet: {
@@ -47,7 +49,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     clear: {
       alignSelf: 'stretch',
-      paddingRight: 12,
+      paddingRight: scaleSpace(12, layout),
       justifyContent: 'center',
     },
   });

@@ -51,6 +51,21 @@ export const inset = (designValue: number, { sizeClass }: Pick<Layout, 'sizeClas
 
 export const screenPadding = (layout: Pick<Layout, 'sizeClass'>) => inset(theme.spacing.xl, layout);
 
+// The width the design is drawn at (the base and Pro models).
+export const DESIGN_WIDTH = 393;
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const toHalf = (value: number) => Math.round(value * 2) / 2;
+
+// Text follows half the width difference from the design, as react-native-size-matters' moderateScale does: an SE
+// draws it about 2.5% smaller, a Pro Max about 6% larger. `factor` 1 follows the width fully, for hero figures.
+export const scaleFont = (size: number, { width }: Pick<Layout, 'width'>, factor = 0.5) =>
+  toHalf(size * clamp(1 + (width / DESIGN_WIDTH - 1) * factor, 0.9, 1.12));
+
+// Gaps between elements follow the width: about 5% tighter on an SE, up to 10% looser on a Pro Max.
+export const scaleSpace = (size: number, { width }: Pick<Layout, 'width'>) =>
+  toHalf(size * clamp(width / DESIGN_WIDTH, 0.9, 1.1));
+
 export type FontRole = keyof typeof theme.fontSizes;
 
 // Headings would push everything else off the screen at accessibility sizes; body text keeps the system's scale.
@@ -69,9 +84,9 @@ export const cappedSize = (size: number, cap: number, { fontScale }: Pick<Layout
 export const capRole = (role: FontRole, size: number, layout: Pick<Layout, 'fontScale'>) =>
   cappedSize(size, FONT_SCALE_CAPS[role] ?? Infinity, layout);
 
-export const textRole = (role: FontRole, layout: Pick<Layout, 'fontScale'>) => ({
-  fontSize: capRole(role, theme.fontSizes[role], layout),
-  lineHeight: capRole(role, theme.lineHeights[role], layout),
+export const textRole = (role: FontRole, layout: Pick<Layout, 'fontScale' | 'width'>) => ({
+  fontSize: capRole(role, scaleFont(theme.fontSizes[role], layout), layout),
+  lineHeight: capRole(role, scaleFont(theme.lineHeights[role], layout), layout),
 });
 
 // A one-line control `height` tall at the default text size that grows with its label instead of clipping it.

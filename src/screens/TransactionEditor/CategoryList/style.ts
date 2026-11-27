@@ -2,18 +2,18 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { screenPadding, textRole } from '@shared/layout';
+import { scaleFont, scaleSpace, screenPadding, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     header: {
       paddingHorizontal: screenPadding(layout),
-      paddingTop: theme.spacing.sm,
-      paddingBottom: 10,
+      paddingTop: scaleSpace(theme.spacing.sm, layout),
+      paddingBottom: scaleSpace(10, layout),
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.md,
+      columnGap: scaleSpace(theme.spacing.md, layout),
     },
     headerButton: {
       width: 34,
@@ -35,23 +35,23 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     count: {
       paddingRight: 2,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
-      lineHeight: theme.lineHeights.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodySm, layout),
       color: colors.muted,
     },
     body: {
       paddingHorizontal: screenPadding(layout),
-      paddingTop: 6,
-      paddingBottom: theme.spacing.xxl,
-      rowGap: theme.spacing.lg,
+      paddingTop: scaleSpace(6, layout),
+      paddingBottom: scaleSpace(theme.spacing.xxl, layout),
+      rowGap: scaleSpace(theme.spacing.lg, layout),
     },
     search: {
       minHeight: 42,
       borderRadius: 13,
-      paddingHorizontal: theme.spacing.md,
+      paddingHorizontal: scaleSpace(theme.spacing.md, layout),
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
       backgroundColor: colors.track,
     },
     searchInput: {
@@ -59,26 +59,26 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       minWidth: 0,
       padding: 0,
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
       color: colors.text,
     },
     grid: {
-      marginHorizontal: -theme.spacing.xs,
+      marginHorizontal: -scaleSpace(theme.spacing.xs, layout),
       flexDirection: 'row',
       flexWrap: 'wrap',
     },
     note: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: 17,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(17, layout),
       color: colors.muted,
     },
     noMatches: {
-      paddingVertical: theme.spacing.xl,
+      paddingVertical: scaleSpace(theme.spacing.xl, layout),
       textAlign: 'center',
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodySm,
-      lineHeight: theme.lineHeights.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodySm, layout),
       color: colors.muted,
     },
   });

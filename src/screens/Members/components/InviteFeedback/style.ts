@@ -1,15 +1,17 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     card: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.md,
-      padding: theme.spacing.md,
+      columnGap: scaleSpace(theme.spacing.md, layout),
+      padding: scaleSpace(theme.spacing.md, layout),
       borderRadius: theme.radius.md,
       backgroundColor: colors.surface,
       borderWidth: 1,
@@ -25,8 +27,8 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     title: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.label,
-      lineHeight: theme.lineHeights.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
+      lineHeight: scaleFont(theme.lineHeights.label, layout),
       color: colors.text,
     },
     titleFailed: {
@@ -34,17 +36,17 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     detail: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.muted,
     },
     actions: {
       alignItems: 'flex-end',
-      rowGap: theme.spacing.xs,
+      rowGap: scaleSpace(theme.spacing.xs, layout),
     },
     link: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
       color: colors.accent,
       // Plus Jakarta Sans under-measures its own width and clips the last glyph (see cde3346).
       paddingRight: 2,

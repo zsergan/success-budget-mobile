@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { capRole } from '@shared/layout';
+import { capRole, scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 import { hexToRgba } from '@shared/utils';
 
@@ -16,60 +16,60 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) => {
 
   return StyleSheet.create({
     root: {
-      rowGap: 10,
+      rowGap: scaleSpace(10, layout),
     },
     totalsRow: {
       flexDirection: 'row',
-      columnGap: 10,
+      columnGap: scaleSpace(10, layout),
     },
     totalCard: {
       ...card,
       flex: 1,
       minWidth: 0,
-      paddingVertical: 11,
-      paddingHorizontal: 13,
-      rowGap: 3,
+      paddingVertical: scaleSpace(11, layout),
+      paddingHorizontal: scaleSpace(13, layout),
+      rowGap: scaleSpace(3, layout),
     },
     totalLabelRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 5,
+      columnGap: scaleSpace(5, layout),
     },
     label: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
       color: colors.muted,
     },
     totalValue: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: 17,
+      fontSize: scaleFont(17, layout),
       letterSpacing: -0.4,
       color: colors.text,
     },
     comparison: {
       minHeight: 28,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.micro,
-      lineHeight: theme.lineHeights.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
+      lineHeight: scaleFont(theme.lineHeights.micro, layout),
     },
     netCard: {
       ...card,
-      paddingVertical: 13,
-      paddingHorizontal: 14,
+      paddingVertical: scaleSpace(13, layout),
+      paddingHorizontal: scaleSpace(14, layout),
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      columnGap: theme.spacing.md,
+      columnGap: scaleSpace(theme.spacing.md, layout),
     },
     netText: {
       flex: 1,
       minWidth: 0,
-      rowGap: 3,
+      rowGap: scaleSpace(3, layout),
     },
     netValue: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: capRole('titleLg', 24, layout),
-      lineHeight: capRole('titleLg', 28, layout),
+      fontSize: capRole('titleLg', scaleFont(24, layout), layout),
+      lineHeight: capRole('titleLg', scaleFont(28, layout), layout),
       letterSpacing: -0.7,
       color: colors.text,
     },
@@ -81,8 +81,8 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) => {
     },
     chip: {
       minHeight: 28,
-      paddingVertical: 4,
-      paddingHorizontal: 11,
+      paddingVertical: scaleSpace(4, layout),
+      paddingHorizontal: scaleSpace(11, layout),
       borderRadius: 9,
       justifyContent: 'center',
     },
@@ -97,7 +97,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) => {
     },
     chipText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
       color: colors.muted,
     },
     chipTextSurplus: {

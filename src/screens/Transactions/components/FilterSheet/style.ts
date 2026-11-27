@@ -2,16 +2,16 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { screenPadding, textRole } from '@shared/layout';
+import { scaleFont, scaleSpace, screenPadding, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     header: {
       paddingHorizontal: screenPadding(layout),
-      paddingTop: theme.spacing.sm,
-      paddingBottom: theme.spacing.md,
-      rowGap: 4,
+      paddingTop: scaleSpace(theme.spacing.sm, layout),
+      paddingBottom: scaleSpace(theme.spacing.md, layout),
+      rowGap: scaleSpace(4, layout),
     },
     title: {
       fontFamily: theme.fonts.bold,
@@ -20,17 +20,17 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     description: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodySm,
-      lineHeight: theme.lineHeights.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodySm, layout),
       color: colors.muted,
     },
     section: {
       paddingHorizontal: screenPadding(layout),
-      paddingTop: theme.spacing.md,
-      paddingBottom: 4,
+      paddingTop: scaleSpace(theme.spacing.md, layout),
+      paddingBottom: scaleSpace(4, layout),
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.micro,
-      lineHeight: theme.lineHeights.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
+      lineHeight: scaleFont(theme.lineHeights.micro, layout),
       letterSpacing: 0.8,
       textTransform: 'uppercase',
       color: colors.muted,
@@ -38,10 +38,10 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     row: {
       minHeight: 56,
       paddingHorizontal: screenPadding(layout),
-      paddingVertical: theme.spacing.sm,
+      paddingVertical: scaleSpace(theme.spacing.sm, layout),
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.md,
+      columnGap: scaleSpace(theme.spacing.md, layout),
     },
     iconBox: {
       width: 32,
@@ -58,14 +58,14 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     label: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.label,
-      lineHeight: theme.lineHeights.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
+      lineHeight: scaleFont(theme.lineHeights.label, layout),
       color: colors.text,
     },
     sub: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.muted,
     },
   });

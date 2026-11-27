@@ -2,16 +2,16 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { capRole } from '@shared/layout';
+import { capRole, scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     card: {
-      marginTop: theme.spacing.md,
+      marginTop: scaleSpace(theme.spacing.md, layout),
       borderRadius: 22,
-      padding: theme.spacing.lg,
-      rowGap: theme.spacing.sm,
+      padding: scaleSpace(theme.spacing.lg, layout),
+      rowGap: scaleSpace(theme.spacing.sm, layout),
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.hairline,
@@ -19,12 +19,12 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     labelRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
     },
     label: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       letterSpacing: 0.3,
       color: colors.muted,
     },
@@ -32,7 +32,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       marginLeft: 'auto',
       minHeight: 22,
       borderRadius: 11,
-      paddingHorizontal: 9,
+      paddingHorizontal: scaleSpace(9, layout),
       justifyContent: 'center',
     },
     badgeOk: {
@@ -48,19 +48,20 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     badgeText: {
       paddingRight: 2,
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
     },
+    // The month's figure follows the width fully, so it keeps its room in the card on an SE.
     net: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: capRole('display', theme.fontSizes.display, layout),
-      lineHeight: capRole('display', theme.lineHeights.display + 4, layout),
+      fontSize: capRole('display', scaleFont(theme.fontSizes.display, layout, 1), layout),
+      lineHeight: capRole('display', scaleFont(theme.lineHeights.display + 4, layout, 1), layout),
       letterSpacing: theme.letterSpacing.display,
     },
     // Side by side the two amounts are cut short under large text; they stack instead.
     split: {
       flexDirection: layout.isLargeText ? 'column' : 'row',
-      columnGap: theme.spacing.md,
-      rowGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.md, layout),
+      rowGap: scaleSpace(theme.spacing.sm, layout),
     },
     part: {
       flex: layout.isLargeText ? undefined : 1,
@@ -68,14 +69,14 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     partLabel: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.muted,
     },
     partValue: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
-      lineHeight: theme.lineHeights.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodyLg, layout),
       color: colors.text,
     },
     income: {
@@ -85,17 +86,17 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       minHeight: 92,
       alignItems: 'center',
       justifyContent: 'center',
-      rowGap: theme.spacing.sm,
+      rowGap: scaleSpace(theme.spacing.sm, layout),
     },
     error: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       color: colors.muted,
     },
     retry: {
       paddingRight: 2,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       color: colors.text,
       textDecorationLine: 'underline',
     },

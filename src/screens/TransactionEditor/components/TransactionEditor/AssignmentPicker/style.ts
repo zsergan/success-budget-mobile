@@ -1,33 +1,35 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 import { sectionLabel, sectionNote } from '../sectionStyle';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     section: {
-      rowGap: 10,
+      rowGap: scaleSpace(10, layout),
     },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      columnGap: theme.spacing.md,
+      columnGap: scaleSpace(theme.spacing.md, layout),
     },
     label: sectionLabel(colors),
     author: {
       flexShrink: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.muted,
     },
     // Chips wrap onto new lines, so every choice is in view without scrolling sideways.
     chips: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: theme.spacing.sm,
+      gap: scaleSpace(theme.spacing.sm, layout),
     },
     expanded: {
       maxHeight: 220,
@@ -36,12 +38,12 @@ const createStyles = ({ colors }: ColorTheme) =>
       maxWidth: 200,
       minHeight: 40,
       borderRadius: 13,
-      paddingLeft: 7,
-      paddingRight: 12,
-      paddingVertical: 5,
+      paddingLeft: scaleSpace(7, layout),
+      paddingRight: scaleSpace(12, layout),
+      paddingVertical: scaleSpace(5, layout),
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 7,
+      columnGap: scaleSpace(7, layout),
       backgroundColor: colors.surface,
       borderWidth: 1.5,
       borderColor: colors.hairline,
@@ -51,7 +53,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       borderColor: colors.faint,
     },
     moreChip: {
-      paddingLeft: 12,
+      paddingLeft: scaleSpace(12, layout),
       backgroundColor: 'transparent',
       borderStyle: 'dashed',
     },
@@ -63,14 +65,14 @@ const createStyles = ({ colors }: ColorTheme) =>
     chipText: {
       paddingRight: 2,
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       color: colors.text,
     },
     chipDetail: {
       paddingRight: 2,
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.micro,
-      lineHeight: theme.lineHeights.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
+      lineHeight: scaleFont(theme.lineHeights.micro, layout),
       color: colors.muted,
     },
     mutedText: {
@@ -78,7 +80,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     ghostRow: {
       flexDirection: 'row',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
     },
     ghostChip: {
       height: 40,
@@ -87,12 +89,12 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     compact: {
       minHeight: 56,
-      borderRadius: theme.spacing.lg,
-      paddingHorizontal: theme.spacing.md,
-      paddingVertical: theme.spacing.sm,
+      borderRadius: scaleSpace(theme.spacing.lg, layout),
+      paddingHorizontal: scaleSpace(theme.spacing.md, layout),
+      paddingVertical: scaleSpace(theme.spacing.sm, layout),
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.md,
+      columnGap: scaleSpace(theme.spacing.md, layout),
       borderWidth: 1.5,
     },
     compactTexts: {
@@ -102,14 +104,14 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     compactHint: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.muted,
     },
     loadError: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.md,
+      columnGap: scaleSpace(theme.spacing.md, layout),
     },
     loadErrorText: {
       ...sectionNote(colors),
@@ -117,20 +119,20 @@ const createStyles = ({ colors }: ColorTheme) =>
     retryText: {
       paddingRight: 2,
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       color: colors.text,
       textDecorationLine: 'underline',
     },
     spelled: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.text,
     },
     noteRow: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
     },
     note: sectionNote(colors),
     errorText: {

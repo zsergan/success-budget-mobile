@@ -2,14 +2,14 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { screenPadding, textRole } from '@shared/layout';
+import { scaleFont, scaleSpace, screenPadding, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     title: {
       paddingHorizontal: screenPadding(layout),
-      paddingTop: theme.spacing.sm,
+      paddingTop: scaleSpace(theme.spacing.sm, layout),
       fontFamily: theme.fonts.bold,
       ...textRole('titleSm', layout),
       letterSpacing: theme.letterSpacing.titleSm,
@@ -17,18 +17,18 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     body: {
       paddingHorizontal: screenPadding(layout),
-      paddingBottom: theme.spacing.lg,
-      rowGap: theme.spacing.md,
+      paddingBottom: scaleSpace(theme.spacing.lg, layout),
+      rowGap: scaleSpace(theme.spacing.md, layout),
     },
     quickRow: {
-      marginTop: theme.spacing.lg,
+      marginTop: scaleSpace(theme.spacing.lg, layout),
       flexDirection: 'row',
-      columnGap: 7,
+      columnGap: scaleSpace(7, layout),
     },
     quickChip: {
       minHeight: 34,
-      paddingHorizontal: 14,
-      paddingVertical: theme.spacing.xs,
+      paddingHorizontal: scaleSpace(14, layout),
+      paddingVertical: scaleSpace(theme.spacing.xs, layout),
       borderRadius: 11,
       alignItems: 'center',
       justifyContent: 'center',
@@ -44,7 +44,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     quickText: {
       paddingRight: 2,
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
       color: colors.muted,
     },
     quickTextActive: {
@@ -52,14 +52,14 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     note: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.muted,
     },
     footer: {
-      paddingTop: theme.spacing.md,
+      paddingTop: scaleSpace(theme.spacing.md, layout),
       paddingHorizontal: screenPadding(layout),
-      rowGap: theme.spacing.xs,
+      rowGap: scaleSpace(theme.spacing.xs, layout),
     },
   });
 

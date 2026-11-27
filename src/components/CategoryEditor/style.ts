@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { screenPadding, textRole } from '@shared/layout';
+import { scaleFont, scaleSpace, screenPadding, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
@@ -11,8 +11,8 @@ const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
       width: '100%',
     },
     topBlock: {
-      paddingTop: theme.spacing.sm,
-      rowGap: theme.spacing.md + 2,
+      paddingTop: scaleSpace(theme.spacing.sm, layout),
+      rowGap: scaleSpace(theme.spacing.md, layout) + 2,
     },
     header: {
       paddingHorizontal: screenPadding(layout),
@@ -36,12 +36,12 @@ const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
       backgroundColor: colors.track,
     },
     preview: {
-      marginHorizontal: theme.spacing.xl,
+      marginHorizontal: scaleSpace(theme.spacing.xl, layout),
       borderRadius: theme.radius.lg - 2,
-      padding: theme.spacing.md + 2,
+      padding: scaleSpace(theme.spacing.md, layout) + 2,
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.md + 2,
+      columnGap: scaleSpace(theme.spacing.md, layout) + 2,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.hairline,
@@ -49,54 +49,54 @@ const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
     previewText: {
       flex: 1,
       minWidth: 0,
-      rowGap: 4,
+      rowGap: scaleSpace(4, layout),
     },
     previewName: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg + 2,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout) + 2,
       letterSpacing: -0.2,
       color: colors.text,
     },
     previewSub: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
       color: colors.muted,
     },
     body: {
       flex: 1,
-      marginTop: theme.spacing.lg,
+      marginTop: scaleSpace(theme.spacing.lg, layout),
     },
     container: {
-      marginHorizontal: theme.spacing.xl,
-      rowGap: theme.spacing.xl,
-      paddingBottom: theme.spacing.xl,
+      marginHorizontal: scaleSpace(theme.spacing.xl, layout),
+      rowGap: scaleSpace(theme.spacing.xl, layout),
+      paddingBottom: scaleSpace(theme.spacing.xl, layout),
     },
     section: {
-      rowGap: theme.spacing.sm - 1,
+      rowGap: scaleSpace(theme.spacing.sm, layout) - 1,
     },
     sectionLabel: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.muted,
     },
     sectionLabelRow: {
       flexDirection: 'row',
       alignItems: 'baseline',
       justifyContent: 'space-between',
-      columnGap: theme.spacing.md,
+      columnGap: scaleSpace(theme.spacing.md, layout),
     },
     colorName: {
       flexShrink: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.text,
     },
     nameField: {
       minHeight: 52,
       borderRadius: theme.radius.md,
-      paddingHorizontal: theme.spacing.lg,
+      paddingHorizontal: scaleSpace(theme.spacing.lg, layout),
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: colors.surface,
@@ -110,7 +110,7 @@ const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
     nameInput: {
       flex: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
       color: colors.text,
       padding: 0,
     },
@@ -118,23 +118,23 @@ const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
       borderColor: colors.danger,
     },
     nameError: {
-      marginTop: theme.spacing.xs + 2,
+      marginTop: scaleSpace(theme.spacing.xs, layout) + 2,
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.danger,
     },
     nameCount: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
       color: colors.muted,
     },
     typeSwitch: {
       minHeight: 46,
       borderRadius: theme.radius.md,
-      padding: 4,
+      padding: scaleSpace(4, layout),
       flexDirection: 'row',
-      columnGap: 4,
+      columnGap: scaleSpace(4, layout),
       backgroundColor: colors.track,
     },
     typeTab: {
@@ -143,7 +143,7 @@ const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      columnGap: 7,
+      columnGap: scaleSpace(7, layout),
     },
     typeTabActive: {
       backgroundColor: colors.elevated,
@@ -151,30 +151,30 @@ const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
     },
     typeTabText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.label,
-      lineHeight: theme.lineHeights.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
+      lineHeight: scaleFont(theme.lineHeights.label, layout),
     },
     typeHint: {
       marginTop: 2,
       flexDirection: 'row',
       alignItems: 'flex-start',
-      columnGap: 8,
+      columnGap: scaleSpace(8, layout),
     },
     typeHintText: {
       flex: 1,
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.muted,
     },
     lockedLabelRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 7,
+      columnGap: scaleSpace(7, layout),
     },
     lockedBadge: {
       minHeight: 17,
-      paddingHorizontal: 6,
+      paddingHorizontal: scaleSpace(6, layout),
       borderRadius: 5,
       alignItems: 'center',
       justifyContent: 'center',
@@ -182,7 +182,7 @@ const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
     },
     lockedBadgeText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: 9,
+      fontSize: scaleFont(9, layout),
       letterSpacing: 0.6,
       color: colors.muted,
     },
@@ -191,8 +191,8 @@ const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
       borderRadius: theme.radius.md,
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 11,
-      paddingHorizontal: theme.spacing.lg,
+      columnGap: scaleSpace(11, layout),
+      paddingHorizontal: scaleSpace(theme.spacing.lg, layout),
       backgroundColor: colors.track,
       borderWidth: 1,
       borderStyle: 'dashed',
@@ -201,12 +201,12 @@ const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
     lockedBoxText: {
       flex: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
       color: colors.muted,
     },
     iconNote: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
       color: colors.muted,
     },
     deleteButton: {
@@ -215,19 +215,19 @@ const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      columnGap: 8,
+      columnGap: scaleSpace(8, layout),
       backgroundColor: colors.dangerTint,
     },
     deleteButtonText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg - 1,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout) - 1,
       color: colors.danger,
     },
     footer: {
-      marginTop: theme.spacing.md,
-      marginHorizontal: theme.spacing.xl,
-      marginBottom: theme.spacing.xl,
-      rowGap: theme.spacing.sm,
+      marginTop: scaleSpace(theme.spacing.md, layout),
+      marginHorizontal: scaleSpace(theme.spacing.xl, layout),
+      marginBottom: scaleSpace(theme.spacing.xl, layout),
+      rowGap: scaleSpace(theme.spacing.sm, layout),
     },
     saveButton: {
       minHeight: 52,
@@ -241,7 +241,7 @@ const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
     },
     saveButtonText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
       color: colors.onAccent,
     },
     saveButtonTextDisabled: {

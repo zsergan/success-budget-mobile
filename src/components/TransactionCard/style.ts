@@ -1,15 +1,17 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 import { hexToRgba } from '@shared/utils';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
       borderRadius: theme.radius.sm,
     },
     rootPressed: {
@@ -27,7 +29,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     deleteAction: {
       width: 92,
-      marginLeft: theme.spacing.sm,
+      marginLeft: scaleSpace(theme.spacing.sm, layout),
       borderRadius: theme.radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
@@ -36,7 +38,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     deleteActionText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
       color: colors.onDanger,
     },
     iconBox: {
@@ -53,12 +55,12 @@ const createStyles = ({ colors }: ColorTheme) =>
     textColumn: {
       flex: 1,
       minWidth: 0,
-      rowGap: 3,
+      rowGap: scaleSpace(3, layout),
     },
     topLine: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
     },
     lineStacked: {
       flexDirection: 'column',
@@ -76,31 +78,31 @@ const createStyles = ({ colors }: ColorTheme) =>
       minWidth: 0,
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 6,
+      columnGap: scaleSpace(6, layout),
     },
     tag: {
       flexShrink: 0,
-      paddingHorizontal: 6,
+      paddingHorizontal: scaleSpace(6, layout),
       paddingVertical: 1,
       borderRadius: 6,
       overflow: 'hidden',
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.micro,
-      lineHeight: theme.lineHeights.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
+      lineHeight: scaleFont(theme.lineHeights.micro, layout),
       color: colors.muted,
       backgroundColor: colors.track,
     },
     category: {
       flexShrink: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
-      lineHeight: theme.lineHeights.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodyLg, layout),
       color: colors.text,
     },
     meta: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.muted,
     },
     metaFaint: {
@@ -124,8 +126,8 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     amount: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
-      lineHeight: theme.lineHeights.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodyLg, layout),
       color: colors.text,
     },
     income: {

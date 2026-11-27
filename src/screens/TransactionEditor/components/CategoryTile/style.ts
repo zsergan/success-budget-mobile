@@ -1,15 +1,17 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     cell: {
-      paddingHorizontal: theme.spacing.xs,
-      marginBottom: theme.spacing.md,
+      paddingHorizontal: scaleSpace(theme.spacing.xs, layout),
+      marginBottom: scaleSpace(theme.spacing.md, layout),
       alignItems: 'center',
-      rowGap: 6,
+      rowGap: scaleSpace(6, layout),
     },
     box: {
       width: 54,
@@ -49,8 +51,8 @@ const createStyles = ({ colors }: ColorTheme) =>
       width: '100%',
       textAlign: 'center',
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: 15,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(15, layout),
       color: colors.muted,
     },
     nameSelected: {
@@ -62,7 +64,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       bottom: -7,
       minHeight: 14,
       borderRadius: 5,
-      paddingHorizontal: 5,
+      paddingHorizontal: scaleSpace(5, layout),
       justifyContent: 'center',
       backgroundColor: colors.elevated,
       borderWidth: 1,
@@ -72,8 +74,8 @@ const createStyles = ({ colors }: ColorTheme) =>
     badgeText: {
       paddingRight: 1,
       fontFamily: theme.fonts.bold,
-      fontSize: 8,
-      lineHeight: 11,
+      fontSize: scaleFont(8, layout),
+      lineHeight: scaleFont(11, layout),
       letterSpacing: 0.3,
       textTransform: 'uppercase',
       color: colors.muted,

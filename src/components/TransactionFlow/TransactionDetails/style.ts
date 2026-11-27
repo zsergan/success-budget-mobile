@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { screenPadding, textRole } from '@shared/layout';
+import { scaleFont, scaleSpace, screenPadding, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
@@ -10,9 +10,9 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     // Shrinks under the sheet's maximum height; only the body scrolls, the header and actions stay.
     root: {
       flexShrink: 1,
-      paddingTop: theme.spacing.sm,
+      paddingTop: scaleSpace(theme.spacing.sm, layout),
       paddingHorizontal: screenPadding(layout),
-      rowGap: theme.spacing.md,
+      rowGap: scaleSpace(theme.spacing.md, layout),
     },
     header: {
       flexDirection: 'row',
@@ -31,11 +31,11 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       flexShrink: 1,
     },
     body: {
-      rowGap: theme.spacing.lg,
+      rowGap: scaleSpace(theme.spacing.lg, layout),
     },
     hero: {
       alignItems: 'center',
-      rowGap: theme.spacing.sm,
+      rowGap: scaleSpace(theme.spacing.sm, layout),
     },
     heroIcon: {
       width: 60,
@@ -46,8 +46,8 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     category: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
-      lineHeight: theme.lineHeights.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodyLg, layout),
       textAlign: 'center',
       color: colors.text,
     },
@@ -59,43 +59,43 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     typeChip: {
       minHeight: 26,
       borderRadius: 9,
-      paddingHorizontal: theme.spacing.md,
+      paddingHorizontal: scaleSpace(theme.spacing.md, layout),
       justifyContent: 'center',
     },
     // SemiBold under-measures its width in a content-sized chip (see cde3346).
     typeChipText: {
       paddingRight: 2,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
     },
     card: {
       borderRadius: theme.radius.md,
-      padding: theme.spacing.md + 2,
+      padding: scaleSpace(theme.spacing.md, layout) + 2,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.hairline,
     },
     description: {
       fontFamily: theme.fonts.medium,
-      fontSize: 15,
-      lineHeight: 22,
+      fontSize: scaleFont(15, layout),
+      lineHeight: scaleFont(22, layout),
       color: colors.text,
     },
     property: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      columnGap: theme.spacing.md,
+      columnGap: scaleSpace(theme.spacing.md, layout),
     },
     propertyLabel: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       color: colors.muted,
     },
     propertyValue: {
       flexShrink: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       textAlign: 'right',
       color: colors.text,
     },
@@ -106,7 +106,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       flexShrink: 1,
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
     },
     personTexts: {
       flexShrink: 1,
@@ -114,30 +114,30 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     propertySub: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       textAlign: 'right',
       color: colors.muted,
     },
     importNote: {
       borderRadius: theme.radius.md,
-      paddingHorizontal: theme.spacing.md,
-      paddingVertical: 10,
+      paddingHorizontal: scaleSpace(theme.spacing.md, layout),
+      paddingVertical: scaleSpace(10, layout),
       flexDirection: 'row',
       alignItems: 'flex-start',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
       backgroundColor: colors.track,
     },
     importNoteText: {
       flex: 1,
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: 17,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(17, layout),
       color: colors.muted,
     },
     divider: {
       height: 1,
-      marginVertical: theme.spacing.md,
+      marginVertical: scaleSpace(theme.spacing.md, layout),
       backgroundColor: colors.hairline,
     },
     editButton: {
@@ -146,7 +146,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
       backgroundColor: colors.track,
     },
     buttonLocked: {
@@ -154,13 +154,13 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     editButtonText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
       color: colors.text,
     },
     systemNote: {
-      paddingVertical: theme.spacing.md,
+      paddingVertical: scaleSpace(theme.spacing.md, layout),
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       textAlign: 'center',
       color: colors.muted,
     },

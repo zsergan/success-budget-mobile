@@ -1,25 +1,27 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     row: {
-      paddingTop: 9,
-      paddingBottom: 10,
-      paddingHorizontal: theme.spacing.sm,
+      paddingTop: scaleSpace(9, layout),
+      paddingBottom: scaleSpace(10, layout),
+      paddingHorizontal: scaleSpace(theme.spacing.sm, layout),
       borderRadius: theme.radius.sm,
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 11,
+      columnGap: scaleSpace(11, layout),
     },
     rowSeparated: {
       borderTopWidth: 1,
       borderTopColor: colors.hairline,
     },
     rowChild: {
-      paddingLeft: 26,
+      paddingLeft: scaleSpace(26, layout),
     },
     rowPressed: {
       backgroundColor: colors.track,
@@ -40,24 +42,24 @@ const createStyles = ({ colors }: ColorTheme) =>
     body: {
       flex: 1,
       minWidth: 0,
-      rowGap: 5,
+      rowGap: scaleSpace(5, layout),
     },
     titleRow: {
       flexDirection: 'row',
       alignItems: 'baseline',
-      columnGap: 10,
+      columnGap: scaleSpace(10, layout),
     },
     nameRow: {
       flex: 1,
       minWidth: 0,
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 6,
+      columnGap: scaleSpace(6, layout),
     },
     name: {
       flexShrink: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
       letterSpacing: -0.1,
       color: colors.text,
     },
@@ -66,26 +68,26 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     archived: {
       minHeight: 18,
-      paddingHorizontal: 6,
+      paddingHorizontal: scaleSpace(6, layout),
       borderRadius: 6,
       overflow: 'hidden',
       fontFamily: theme.fonts.semiBold,
-      fontSize: 10,
-      lineHeight: 18,
+      fontSize: scaleFont(10, layout),
+      lineHeight: scaleFont(18, layout),
       letterSpacing: 0.2,
       color: colors.muted,
       backgroundColor: colors.track,
     },
     amount: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
       letterSpacing: -0.2,
       color: colors.text,
     },
     shareRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 9,
+      columnGap: scaleSpace(9, layout),
     },
     track: {
       flex: 1,
@@ -102,7 +104,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       minWidth: 40,
       textAlign: 'right',
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
       color: colors.muted,
     },
     chevron: {

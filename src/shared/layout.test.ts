@@ -1,4 +1,14 @@
-import { capRole, cappedSize, fitHeight, getLayout, inset, screenPadding, textRole } from './layout';
+import {
+  capRole,
+  cappedSize,
+  fitHeight,
+  getLayout,
+  inset,
+  scaleFont,
+  scaleSpace,
+  screenPadding,
+  textRole,
+} from './layout';
 import theme from './theme';
 
 const phone = (width: number, height: number, fontScale = 1) => getLayout({ width, height, fontScale });
@@ -42,7 +52,7 @@ describe('text scaling', () => {
   });
 
   it('caps headings but lets body text follow the system size', () => {
-    const huge = { fontScale: 3 };
+    const huge = { fontScale: 3, width: 393 };
 
     expect(textRole('display', huge).fontSize * huge.fontScale).toBeCloseTo(theme.fontSizes.display * 1.3);
     expect(textRole('display', huge).lineHeight * huge.fontScale).toBeCloseTo(theme.lineHeights.display * 1.3);
@@ -52,7 +62,7 @@ describe('text scaling', () => {
     });
     expect(capRole('display', 40, huge) * huge.fontScale).toBeCloseTo(52);
     expect(capRole('bodyLg', 40, huge)).toBe(40);
-    expect(textRole('titleLg', { fontScale: 1 })).toEqual({
+    expect(textRole('titleLg', { fontScale: 1, width: 393 })).toEqual({
       fontSize: theme.fontSizes.titleLg,
       lineHeight: theme.lineHeights.titleLg,
     });
@@ -69,5 +79,28 @@ describe('fitHeight', () => {
 
   it('counts the border inside the height', () => {
     expect(fitHeight(40, 20, 1)).toEqual({ minHeight: 40, paddingVertical: 9 });
+  });
+});
+
+describe('scaling with the width', () => {
+  it('keeps design sizes on the design width', () => {
+    expect(scaleFont(16, { width: 393 })).toBe(16);
+    expect(scaleSpace(20, { width: 393 })).toBe(20);
+  });
+
+  it('draws text a little smaller on an SE and a little larger on a Pro Max', () => {
+    expect(scaleFont(16, { width: 375 })).toBe(15.5);
+    expect(scaleFont(38, { width: 440 })).toBe(40.5);
+  });
+
+  it('follows the width fully for hero figures, within bounds', () => {
+    expect(scaleFont(38, { width: 375 }, 1)).toBe(36.5);
+    expect(scaleFont(38, { width: 1000 }, 1)).toBe(42.5);
+  });
+
+  it('tightens gaps on an SE and loosens them on a Pro Max, within bounds', () => {
+    expect(scaleSpace(20, { width: 375 })).toBe(19);
+    expect(scaleSpace(20, { width: 440 })).toBe(22);
+    expect(scaleSpace(20, { width: 1000 })).toBe(22);
   });
 });

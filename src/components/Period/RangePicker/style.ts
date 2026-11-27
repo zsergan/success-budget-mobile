@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { screenPadding, textRole } from '@shared/layout';
+import { scaleFont, scaleSpace, screenPadding, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
@@ -11,7 +11,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     // natural content height, which flex: 1 would override.
     root: {
       paddingHorizontal: screenPadding(layout),
-      paddingTop: theme.spacing.lg,
+      paddingTop: scaleSpace(theme.spacing.lg, layout),
     },
     handle: {
       width: 44,
@@ -21,7 +21,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       backgroundColor: colors.track,
     },
     header: {
-      marginTop: theme.spacing.md + 2,
+      marginTop: scaleSpace(theme.spacing.md, layout) + 2,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -41,9 +41,9 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       backgroundColor: colors.track,
     },
     quickRow: {
-      marginTop: theme.spacing.lg,
+      marginTop: scaleSpace(theme.spacing.lg, layout),
       flexDirection: 'row',
-      columnGap: 7,
+      columnGap: scaleSpace(7, layout),
     },
     quickChip: {
       flex: 1,
@@ -61,22 +61,22 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     quickText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
       color: colors.muted,
     },
     quickTextActive: {
       color: colors.bg,
     },
     fromToRow: {
-      marginTop: theme.spacing.lg,
+      marginTop: scaleSpace(theme.spacing.lg, layout),
       flexDirection: 'row',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
     },
     fromToChip: {
       flex: 1,
       borderRadius: 14,
-      paddingVertical: 10,
-      paddingHorizontal: 13,
+      paddingVertical: scaleSpace(10, layout),
+      paddingHorizontal: scaleSpace(13, layout),
       rowGap: 2,
       backgroundColor: colors.surface,
       borderWidth: 1,
@@ -88,21 +88,21 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     fromToLabel: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
       color: colors.muted,
     },
     fromToValue: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
       color: colors.text,
     },
     stepper: {
-      marginTop: theme.spacing.lg,
+      marginTop: scaleSpace(theme.spacing.lg, layout),
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
       borderRadius: 14,
-      padding: 9,
+      padding: scaleSpace(9, layout),
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.hairline,
@@ -121,7 +121,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       color: colors.accent,
     },
     calendarRoot: {
-      marginTop: theme.spacing.lg,
+      marginTop: scaleSpace(theme.spacing.lg, layout),
     },
     navRow: {
       flexDirection: 'row',
@@ -141,11 +141,11 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     monthLabel: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
       color: colors.text,
     },
     dowRow: {
-      marginTop: theme.spacing.md,
+      marginTop: scaleSpace(theme.spacing.md, layout),
       flexDirection: 'row',
     },
     dowCell: {
@@ -156,7 +156,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     dowLabel: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
       color: colors.muted,
     },
     weekRow: {
@@ -186,7 +186,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     dayText: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       color: colors.text,
     },
     dayTextMuted: {
@@ -197,18 +197,18 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       color: colors.onAccent,
     },
     summary: {
-      marginTop: theme.spacing.md,
+      marginTop: scaleSpace(theme.spacing.md, layout),
       textAlign: 'center',
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       color: colors.muted,
     },
     summaryError: {
       color: colors.danger,
     },
     applyButton: {
-      marginTop: theme.spacing.md,
-      marginBottom: theme.spacing.xl,
+      marginTop: scaleSpace(theme.spacing.md, layout),
+      marginBottom: scaleSpace(theme.spacing.xl, layout),
       minHeight: 52,
       borderRadius: 15,
       alignItems: 'center',
@@ -220,7 +220,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     applyButtonText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
       color: colors.onAccent,
     },
   });

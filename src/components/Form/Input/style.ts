@@ -1,23 +1,24 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { fitHeight } from '@shared/layout';
+import { fitHeight, scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
 // The focused and error borders are the widest; the field stays 52 tall with either.
 const WIDEST_BORDER = 1.5;
 
-const createStyles = ({ colors, elevation }: ColorTheme) =>
+const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
-      rowGap: theme.spacing.xs,
+      rowGap: scaleSpace(theme.spacing.xs, layout),
     },
     input: {
-      ...fitHeight(52, theme.lineHeights.bodyLg, WIDEST_BORDER),
-      paddingHorizontal: theme.spacing.lg,
+      ...fitHeight(52, scaleFont(theme.lineHeights.bodyLg, layout), WIDEST_BORDER),
+      paddingHorizontal: scaleSpace(theme.spacing.lg, layout),
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodyLg,
-      lineHeight: theme.lineHeights.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodyLg, layout),
       // Plus Jakarta Sans Medium collapses the space between words here; see cde3346.
       letterSpacing: 0.2,
       color: colors.text,
@@ -39,10 +40,10 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       color: colors.muted,
     },
     inputWithLeftIcon: {
-      paddingLeft: theme.spacing.lg + 32 + theme.spacing.md,
+      paddingLeft: scaleSpace(theme.spacing.lg, layout) + 32 + scaleSpace(theme.spacing.md, layout),
     },
     inputWithRightIcon: {
-      paddingRight: theme.spacing.lg + 32 + theme.spacing.md,
+      paddingRight: scaleSpace(theme.spacing.lg, layout) + 32 + scaleSpace(theme.spacing.md, layout),
     },
     inputWithShadow: { ...elevation.card },
     // Fills the box's height so a tap anywhere in it focuses the field.
@@ -59,21 +60,21 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       zIndex: 1,
     },
     iconLeft: {
-      left: theme.spacing.xl,
+      left: scaleSpace(theme.spacing.xl, layout),
     },
     iconRight: {
-      right: theme.spacing.xl,
+      right: scaleSpace(theme.spacing.xl, layout),
     },
     label: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.text,
     },
     error: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.danger,
     },
   });

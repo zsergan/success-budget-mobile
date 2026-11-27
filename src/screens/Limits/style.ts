@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { screenPadding } from '@shared/layout';
+import { scaleSpace, screenPadding } from '@shared/layout';
 import theme from '@shared/theme';
 import { FAB_SCROLL_CLEARANCE } from '@shared/constants';
 
@@ -14,7 +14,7 @@ const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
     container: {
       paddingHorizontal: screenPadding(layout),
       paddingBottom: FAB_SCROLL_CLEARANCE,
-      rowGap: theme.spacing.lg,
+      rowGap: scaleSpace(theme.spacing.lg, layout),
     },
     loadingContainer: {
       height: 200,
@@ -23,8 +23,8 @@ const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
     },
     fab: {
       position: 'absolute',
-      right: theme.spacing.xl,
-      bottom: theme.spacing.xxl,
+      right: scaleSpace(theme.spacing.xl, layout),
+      bottom: scaleSpace(theme.spacing.xxl, layout),
       width: 58,
       height: 58,
       borderRadius: theme.radius.lg,

@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 import { hexToRgba } from '@shared/utils';
 
@@ -9,8 +10,8 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     card: {
       borderRadius: theme.radius.lg - 4,
-      padding: theme.spacing.md + 2,
-      rowGap: theme.spacing.sm + 2,
+      padding: scaleSpace(theme.spacing.md, layout) + 2,
+      rowGap: scaleSpace(theme.spacing.sm, layout) + 2,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.hairline,
@@ -23,8 +24,8 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       flexDirection: 'row',
       flexWrap: 'wrap',
       alignItems: 'center',
-      columnGap: theme.spacing.sm + 2,
-      rowGap: theme.spacing.xs,
+      columnGap: scaleSpace(theme.spacing.sm, layout) + 2,
+      rowGap: scaleSpace(theme.spacing.xs, layout),
     },
     iconBox: {
       width: 42,
@@ -49,23 +50,23 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     textBlock: {
       flex: 1,
       minWidth: 0,
-      rowGap: 3,
+      rowGap: scaleSpace(3, layout),
     },
     nameRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.xs + 3,
+      columnGap: scaleSpace(theme.spacing.xs, layout) + 3,
     },
     name: {
       flexShrink: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       letterSpacing: -0.1,
       color: colors.text,
     },
     groupBadge: {
       minHeight: 18,
-      paddingHorizontal: 6,
+      paddingHorizontal: scaleSpace(6, layout),
       borderRadius: 6,
       alignItems: 'center',
       justifyContent: 'center',
@@ -73,13 +74,13 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     groupBadgeText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: 10,
+      fontSize: scaleFont(10, layout),
       letterSpacing: 0.3,
       color: colors.muted,
     },
     sub: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
       color: colors.muted,
     },
     amountBlock: layout.isLargeText
@@ -87,13 +88,13 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       : { alignItems: 'flex-end', rowGap: 3 },
     spent: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       letterSpacing: -0.2,
       color: colors.text,
     },
     cap: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
       color: colors.muted,
     },
     bottomRow: {
@@ -101,21 +102,21 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       flexWrap: 'wrap',
       alignItems: 'center',
       justifyContent: 'space-between',
-      columnGap: theme.spacing.md,
-      rowGap: theme.spacing.xs,
+      columnGap: scaleSpace(theme.spacing.md, layout),
+      rowGap: scaleSpace(theme.spacing.xs, layout),
     },
     statusRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 6,
+      columnGap: scaleSpace(6, layout),
     },
     statusText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
     },
     paceText: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
       color: colors.muted,
     },
   });

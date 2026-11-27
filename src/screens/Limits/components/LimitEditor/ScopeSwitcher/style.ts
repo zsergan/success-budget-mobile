@@ -1,17 +1,19 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors, elevation }: ColorTheme) =>
+const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     scopeSwitch: {
-      marginHorizontal: theme.spacing.xl,
+      marginHorizontal: scaleSpace(theme.spacing.xl, layout),
       minHeight: 46,
       borderRadius: 15,
-      padding: 4,
+      padding: scaleSpace(4, layout),
       flexDirection: 'row',
-      columnGap: 4,
+      columnGap: scaleSpace(4, layout),
       backgroundColor: colors.track,
     },
     scopeTab: {
@@ -26,7 +28,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
     },
     scopeTabText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
       color: colors.muted,
     },
     scopeTabTextActive: {

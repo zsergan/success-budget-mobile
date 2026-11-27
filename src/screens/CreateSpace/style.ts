@@ -1,31 +1,33 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors, elevation }: ColorTheme) =>
+const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
       flex: 1,
       justifyContent: 'space-between',
     },
     sectionsContainer: {
-      rowGap: theme.spacing.xl,
+      rowGap: scaleSpace(theme.spacing.xl, layout),
     },
     section: {
-      rowGap: theme.spacing.sm,
+      rowGap: scaleSpace(theme.spacing.sm, layout),
     },
     label: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
       color: colors.muted,
     },
     typeSwitch: {
       minHeight: 46,
       borderRadius: 15,
-      padding: 4,
+      padding: scaleSpace(4, layout),
       flexDirection: 'row',
-      columnGap: 4,
+      columnGap: scaleSpace(4, layout),
       backgroundColor: colors.track,
     },
     typeTab: {
@@ -34,7 +36,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      columnGap: theme.spacing.xs + 3,
+      columnGap: scaleSpace(theme.spacing.xs, layout) + 3,
     },
     typeTabActive: {
       backgroundColor: colors.elevated,
@@ -42,7 +44,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
     },
     typeTabText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       color: colors.muted,
     },
     typeTabTextActive: {
@@ -54,8 +56,8 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
     },
     hint: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.muted,
     },
     inviteInputRowError: {
@@ -63,20 +65,20 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
     },
     inviteError: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.danger,
     },
     invitesContainer: {
-      rowGap: theme.spacing.sm,
+      rowGap: scaleSpace(theme.spacing.sm, layout),
     },
     inviteRow: {
       minHeight: 48,
       borderRadius: 14,
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.sm + 2,
-      paddingHorizontal: theme.spacing.md + 2,
+      columnGap: scaleSpace(theme.spacing.sm, layout) + 2,
+      paddingHorizontal: scaleSpace(theme.spacing.md, layout) + 2,
       backgroundColor: colors.surface,
       borderWidth: 1.5,
       borderColor: colors.hairline,
@@ -84,7 +86,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
     inviteEmail: {
       flex: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
       color: colors.text,
     },
     inviteRemove: {
@@ -100,8 +102,8 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       borderRadius: 14,
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.sm + 2,
-      paddingHorizontal: theme.spacing.md + 2,
+      columnGap: scaleSpace(theme.spacing.sm, layout) + 2,
+      paddingHorizontal: scaleSpace(theme.spacing.md, layout) + 2,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.hairline,
@@ -109,7 +111,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
     inviteInput: {
       flex: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
       color: colors.text,
       padding: 0,
     },

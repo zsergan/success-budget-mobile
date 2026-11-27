@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { screenPadding, textRole } from '@shared/layout';
+import { scaleFont, scaleSpace, screenPadding, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
@@ -13,9 +13,9 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       alignItems: 'center',
       minHeight: 42,
       borderRadius: 15,
-      paddingLeft: 7,
-      paddingRight: theme.spacing.md,
-      columnGap: 9,
+      paddingLeft: scaleSpace(7, layout),
+      paddingRight: scaleSpace(theme.spacing.md, layout),
+      columnGap: scaleSpace(9, layout),
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.hairline,
@@ -30,13 +30,13 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     name: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
       color: colors.text,
       maxWidth: 160,
     },
     currencyBadge: {
       minHeight: 21,
-      paddingHorizontal: 7,
+      paddingHorizontal: scaleSpace(7, layout),
       borderRadius: 7,
       alignItems: 'center',
       justifyContent: 'center',
@@ -44,14 +44,14 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     currencyBadgeText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.micro,
+      fontSize: scaleFont(theme.fontSizes.micro, layout),
       letterSpacing: theme.letterSpacing.micro,
       color: colors.text,
     },
     sheetContent: {
       paddingHorizontal: screenPadding(layout),
-      paddingTop: theme.spacing.lg,
-      rowGap: theme.spacing.md,
+      paddingTop: scaleSpace(theme.spacing.lg, layout),
+      rowGap: scaleSpace(theme.spacing.md, layout),
     },
     handle: {
       width: 38,
@@ -61,7 +61,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       backgroundColor: colors.track,
     },
     sheetHeader: {
-      rowGap: theme.spacing.xs,
+      rowGap: scaleSpace(theme.spacing.xs, layout),
     },
     sheetTitle: {
       fontFamily: theme.fonts.semiBold,
@@ -71,18 +71,18 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     sheetSubtitle: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodySm,
-      lineHeight: theme.lineHeights.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodySm, layout),
       color: colors.muted,
     },
     rows: {
-      rowGap: theme.spacing.sm,
+      rowGap: scaleSpace(theme.spacing.sm, layout),
     },
     row: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.md,
-      padding: theme.spacing.sm + 2,
+      columnGap: scaleSpace(theme.spacing.md, layout),
+      padding: scaleSpace(theme.spacing.sm, layout) + 2,
       borderRadius: 16,
       backgroundColor: colors.surface,
       borderWidth: 1,
@@ -102,16 +102,16 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     rowText: {
       flex: 1,
-      rowGap: 3,
+      rowGap: scaleSpace(3, layout),
     },
     rowName: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
       color: colors.text,
     },
     rowMeta: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
       color: colors.muted,
     },
     createRow: {
@@ -120,7 +120,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      columnGap: theme.spacing.sm + 1,
+      columnGap: scaleSpace(theme.spacing.sm, layout) + 1,
       borderWidth: 1.5,
       borderStyle: 'dashed',
       borderColor: colors.hairline,
@@ -128,7 +128,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     createRowText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
       color: colors.text,
     },
   });

@@ -1,6 +1,8 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 import { sectionLabel } from '../sectionStyle';
 
@@ -19,17 +21,17 @@ const CARET_ROOM = 2;
 export const amountInputHeight = (fontScale: number) =>
   Math.ceil(LINE_HEIGHT_EM * LARGEST_AMOUNT_FONT_SIZE * fontScale) + CARET_ROOM;
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
-      rowGap: theme.spacing.xs,
+      rowGap: scaleSpace(theme.spacing.xs, layout),
     },
     label: sectionLabel(colors),
     row: {
       minHeight: 64,
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 3,
+      columnGap: scaleSpace(3, layout),
       borderBottomWidth: 1,
     },
     rowActive: {
@@ -50,15 +52,15 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     currency: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: 17,
+      fontSize: scaleFont(17, layout),
       letterSpacing: 0.2,
       color: colors.muted,
       paddingRight: 2,
     },
     error: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.danger,
     },
   });

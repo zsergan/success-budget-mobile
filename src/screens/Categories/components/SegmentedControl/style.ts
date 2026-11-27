@@ -1,14 +1,16 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
       flexDirection: 'row',
-      columnGap: 4,
-      padding: 4,
+      columnGap: scaleSpace(4, layout),
+      padding: scaleSpace(4, layout),
       borderRadius: theme.radius.md,
       backgroundColor: colors.track,
     },
@@ -19,7 +21,7 @@ const createStyles = ({ colors }: ColorTheme) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      columnGap: 5,
+      columnGap: scaleSpace(5, layout),
     },
     segmentActive: {
       backgroundColor: colors.elevated,
@@ -30,7 +32,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     label: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       color: colors.muted,
     },
     labelActive: {
@@ -38,7 +40,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     count: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       color: colors.muted,
     },
   });

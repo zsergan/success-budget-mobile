@@ -1,23 +1,24 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { fitHeight } from '@shared/layout';
+import { fitHeight, scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
 const LARGE_BUTTON_MIN_HEIGHT = 56;
 const OUTLINE_WIDTH = 1;
 
-const createStyles = ({ colors, elevation }: ColorTheme) =>
+const createStyles = ({ colors, elevation }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     button: {
       // The outline sits inside the height, so every variant is 52 tall at the default text size.
-      ...fitHeight(52, theme.lineHeights.bodyLg, OUTLINE_WIDTH),
+      ...fitHeight(52, scaleFont(theme.lineHeights.bodyLg, layout), OUTLINE_WIDTH),
       flexDirection: 'row',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
       justifyContent: 'center',
       alignItems: 'center',
       borderRadius: theme.radius.md,
-      paddingHorizontal: theme.spacing.lg,
+      paddingHorizontal: scaleSpace(theme.spacing.lg, layout),
     },
     primaryButton: {
       backgroundColor: colors.accent,
@@ -40,7 +41,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
     // the outlined one included: its border sits outside the padding.
     largeButton: {
       minHeight: LARGE_BUTTON_MIN_HEIGHT,
-      paddingVertical: (LARGE_BUTTON_MIN_HEIGHT - theme.lineHeights.bodyLg) / 2 - OUTLINE_WIDTH,
+      paddingVertical: (LARGE_BUTTON_MIN_HEIGHT - scaleFont(theme.lineHeights.bodyLg, layout)) / 2 - OUTLINE_WIDTH,
       borderRadius: 18,
     },
     primaryButtonDisabled: {
@@ -51,8 +52,8 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
       flex: 1,
       textAlign: 'center',
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodyLg,
-      lineHeight: theme.lineHeights.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
+      lineHeight: scaleFont(theme.lineHeights.bodyLg, layout),
     },
     primaryButtonText: {
       color: colors.onAccent,
@@ -71,7 +72,7 @@ const createStyles = ({ colors, elevation }: ColorTheme) =>
     },
     largeButtonText: {
       fontFamily: theme.fonts.bold,
-      fontSize: 15.5,
+      fontSize: scaleFont(15.5, layout),
       letterSpacing: -0.1,
     },
     primaryButtonTextDisabled: {

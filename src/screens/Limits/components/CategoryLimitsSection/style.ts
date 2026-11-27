@@ -1,12 +1,14 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     section: {
-      rowGap: theme.spacing.md - 2,
+      rowGap: scaleSpace(theme.spacing.md, layout) - 2,
     },
     sectionHeader: {
       flexDirection: 'row',
@@ -15,25 +17,25 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     sectionTitle: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.label,
+      fontSize: scaleFont(theme.fontSizes.label, layout),
       color: colors.text,
     },
     addButton: {
       minHeight: 30,
-      paddingHorizontal: theme.spacing.md - 2,
+      paddingHorizontal: scaleSpace(theme.spacing.md, layout) - 2,
       borderRadius: 10,
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 6,
+      columnGap: scaleSpace(6, layout),
       backgroundColor: colors.track,
     },
     addButtonText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
       color: colors.text,
     },
     list: {
-      rowGap: theme.spacing.sm + 2,
+      rowGap: scaleSpace(theme.spacing.sm, layout) + 2,
     },
   });
 

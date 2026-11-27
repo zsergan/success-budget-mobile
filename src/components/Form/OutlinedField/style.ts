@@ -1,17 +1,19 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
-      rowGap: 7,
+      rowGap: scaleSpace(7, layout),
     },
     label: {
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       letterSpacing: 0.3,
       textTransform: 'uppercase',
       color: colors.muted,
@@ -23,8 +25,8 @@ const createStyles = ({ colors }: ColorTheme) =>
       minHeight: 54,
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 10,
-      paddingHorizontal: 14,
+      columnGap: scaleSpace(10, layout),
+      paddingHorizontal: scaleSpace(14, layout),
       borderRadius: 16,
       borderWidth: 1.5,
       borderColor: colors.hairline,
@@ -42,7 +44,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     value: {
       flex: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: 15,
+      fontSize: scaleFont(15, layout),
       letterSpacing: -0.1,
       color: colors.text,
     },
@@ -52,7 +54,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     error: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      columnGap: 6,
+      columnGap: scaleSpace(6, layout),
       paddingLeft: 2,
     },
     errorIcon: {
@@ -61,15 +63,15 @@ const createStyles = ({ colors }: ColorTheme) =>
     errorText: {
       flex: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: 17,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(17, layout),
       color: colors.danger,
     },
     hint: {
       paddingLeft: 2,
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: 17,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(17, layout),
       color: colors.muted,
     },
   });

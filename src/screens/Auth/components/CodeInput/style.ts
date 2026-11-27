@@ -1,13 +1,15 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
       marginTop: 2,
-      rowGap: 8,
+      rowGap: scaleSpace(8, layout),
     },
     labelRow: {
       flexDirection: 'row',
@@ -16,8 +18,8 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     label: {
       fontFamily: theme.fonts.bold,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       letterSpacing: 0.3,
       textTransform: 'uppercase',
       color: colors.muted,
@@ -28,7 +30,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     paste: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 5,
+      columnGap: scaleSpace(5, layout),
     },
     pasteUnderline: {
       paddingBottom: 1,
@@ -39,8 +41,8 @@ const createStyles = ({ colors }: ColorTheme) =>
       // Plus Jakarta Sans under-measures its own width and clips the last glyph (see cde3346).
       paddingRight: 2,
       fontFamily: theme.fonts.bold,
-      fontSize: 12.5,
-      lineHeight: 17,
+      fontSize: scaleFont(12.5, layout),
+      lineHeight: scaleFont(17, layout),
       color: colors.text,
     },
     mutedText: {
@@ -48,7 +50,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     cells: {
       flexDirection: 'row',
-      columnGap: 8,
+      columnGap: scaleSpace(8, layout),
     },
     cell: {
       flex: 1,
@@ -79,7 +81,7 @@ const createStyles = ({ colors }: ColorTheme) =>
     },
     digit: {
       fontFamily: theme.fonts.bold,
-      fontSize: 25,
+      fontSize: scaleFont(25, layout),
       letterSpacing: -0.3,
       fontVariant: ['tabular-nums'],
       color: colors.text,
@@ -98,13 +100,13 @@ const createStyles = ({ colors }: ColorTheme) =>
       opacity: 0.02,
       backgroundColor: 'transparent',
       color: 'transparent',
-      fontSize: 16,
+      fontSize: scaleFont(16, layout),
     },
     message: {
       minHeight: 17,
       flexDirection: 'row',
       alignItems: 'flex-start',
-      columnGap: 6,
+      columnGap: scaleSpace(6, layout),
       paddingLeft: 2,
     },
     errorIcon: {
@@ -113,15 +115,15 @@ const createStyles = ({ colors }: ColorTheme) =>
     errorText: {
       flex: 1,
       fontFamily: theme.fonts.semiBold,
-      fontSize: 12,
-      lineHeight: 17,
+      fontSize: scaleFont(12, layout),
+      lineHeight: scaleFont(17, layout),
       color: colors.danger,
     },
     hintText: {
       flex: 1,
       fontFamily: theme.fonts.medium,
-      fontSize: 12,
-      lineHeight: 17,
+      fontSize: scaleFont(12, layout),
+      lineHeight: scaleFont(17, layout),
       color: colors.muted,
     },
   });

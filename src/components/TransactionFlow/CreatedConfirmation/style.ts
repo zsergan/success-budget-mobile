@@ -2,16 +2,16 @@ import { StyleSheet } from 'react-native';
 
 import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
-import { screenPadding, textRole } from '@shared/layout';
+import { scaleFont, scaleSpace, screenPadding, textRole } from '@shared/layout';
 import theme from '@shared/theme';
 
 const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
       flexShrink: 1,
-      paddingTop: theme.spacing.sm,
+      paddingTop: scaleSpace(theme.spacing.sm, layout),
       paddingHorizontal: screenPadding(layout),
-      rowGap: theme.spacing.sm,
+      rowGap: scaleSpace(theme.spacing.sm, layout),
     },
     scroll: {
       flexGrow: 0,
@@ -19,7 +19,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     body: {
       alignItems: 'center',
-      rowGap: theme.spacing.sm,
+      rowGap: scaleSpace(theme.spacing.sm, layout),
     },
     timerTrack: {
       alignSelf: 'stretch',
@@ -41,7 +41,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       justifyContent: 'center',
     },
     title: {
-      marginTop: theme.spacing.sm,
+      marginTop: scaleSpace(theme.spacing.sm, layout),
       fontFamily: theme.fonts.semiBold,
       ...textRole('titleSm', layout),
       color: colors.text,
@@ -53,9 +53,9 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     facts: {
       alignSelf: 'stretch',
-      marginTop: theme.spacing.sm,
+      marginTop: scaleSpace(theme.spacing.sm, layout),
       borderRadius: theme.radius.md,
-      paddingHorizontal: theme.spacing.md + 2,
+      paddingHorizontal: scaleSpace(theme.spacing.md, layout) + 2,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.hairline,
@@ -65,7 +65,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      columnGap: theme.spacing.md,
+      columnGap: scaleSpace(theme.spacing.md, layout),
     },
     factSeparated: {
       borderTopWidth: 1,
@@ -73,20 +73,20 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     factLabel: {
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       color: colors.muted,
     },
     factPerson: {
       flexShrink: 1,
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
     },
     factValue: {
       flexShrink: 1,
       paddingRight: 2,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       textAlign: 'right',
       color: colors.text,
     },
@@ -94,29 +94,29 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       alignSelf: 'stretch',
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: theme.spacing.sm,
-      marginTop: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
+      marginTop: scaleSpace(theme.spacing.sm, layout),
       borderRadius: theme.radius.md,
-      paddingVertical: theme.spacing.sm,
-      paddingHorizontal: theme.spacing.md,
+      paddingVertical: scaleSpace(theme.spacing.sm, layout),
+      paddingHorizontal: scaleSpace(theme.spacing.md, layout),
       backgroundColor: colors.track,
     },
     hiddenText: {
       flex: 1,
       fontFamily: theme.fonts.medium,
-      fontSize: theme.fontSizes.caption,
-      lineHeight: theme.lineHeights.caption,
+      fontSize: scaleFont(theme.fontSizes.caption, layout),
+      lineHeight: scaleFont(theme.lineHeights.caption, layout),
       color: colors.text,
     },
     // SemiBold under-measures its width in a content-sized label (see cde3346).
     banner: {
       alignSelf: 'stretch',
-      marginTop: theme.spacing.sm,
+      marginTop: scaleSpace(theme.spacing.sm, layout),
     },
     undoText: {
       paddingRight: 2,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodySm,
+      fontSize: scaleFont(theme.fontSizes.bodySm, layout),
       color: colors.text,
     },
     undoButton: {
@@ -126,7 +126,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      columnGap: theme.spacing.xs,
+      columnGap: scaleSpace(theme.spacing.xs, layout),
       borderWidth: 1,
       borderColor: colors.hairline,
     },
@@ -137,13 +137,13 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      columnGap: theme.spacing.xs,
+      columnGap: scaleSpace(theme.spacing.xs, layout),
       backgroundColor: colors.accent,
     },
     accentButtonText: {
       paddingRight: 2,
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
       color: colors.onAccent,
     },
     doneButton: {
@@ -160,15 +160,15 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     },
     actions: {
       alignSelf: 'stretch',
-      marginTop: theme.spacing.sm,
+      marginTop: scaleSpace(theme.spacing.sm, layout),
       flexDirection: 'row',
-      columnGap: theme.spacing.sm,
+      columnGap: scaleSpace(theme.spacing.sm, layout),
     },
     secondaryButton: {
       flex: 1,
       minHeight: 52,
-      paddingVertical: theme.spacing.sm,
-      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: scaleSpace(theme.spacing.sm, layout),
+      paddingHorizontal: scaleSpace(theme.spacing.sm, layout),
       borderRadius: theme.radius.md,
       alignItems: 'center',
       justifyContent: 'center',
@@ -177,14 +177,14 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     secondaryButtonText: {
       textAlign: 'center',
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
       color: colors.text,
     },
     primaryButton: {
       flex: 1,
       minHeight: 52,
-      paddingVertical: theme.spacing.sm,
-      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: scaleSpace(theme.spacing.sm, layout),
+      paddingHorizontal: scaleSpace(theme.spacing.sm, layout),
       borderRadius: theme.radius.md,
       alignItems: 'center',
       justifyContent: 'center',
@@ -193,7 +193,7 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
     primaryButtonText: {
       textAlign: 'center',
       fontFamily: theme.fonts.semiBold,
-      fontSize: theme.fontSizes.bodyLg,
+      fontSize: scaleFont(theme.fontSizes.bodyLg, layout),
       color: colors.bg,
     },
   });

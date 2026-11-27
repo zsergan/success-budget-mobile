@@ -1,15 +1,17 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
-      paddingTop: 70,
-      paddingHorizontal: 12,
+      paddingTop: scaleSpace(70, layout),
+      paddingHorizontal: scaleSpace(12, layout),
       alignItems: 'center',
-      rowGap: theme.spacing.lg,
+      rowGap: scaleSpace(theme.spacing.lg, layout),
     },
     iconBox: {
       width: 64,
@@ -22,41 +24,41 @@ const createStyles = ({ colors }: ColorTheme) =>
     texts: {
       alignSelf: 'stretch',
       alignItems: 'center',
-      rowGap: theme.spacing.sm,
+      rowGap: scaleSpace(theme.spacing.sm, layout),
     },
     title: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: 19,
+      fontSize: scaleFont(19, layout),
       letterSpacing: -0.3,
       color: colors.text,
       textAlign: 'center',
     },
     text: {
       fontFamily: theme.fonts.medium,
-      fontSize: 13.5,
-      lineHeight: 20,
+      fontSize: scaleFont(13.5, layout),
+      lineHeight: scaleFont(20, layout),
       color: colors.muted,
       textAlign: 'center',
     },
     action: {
       minHeight: 52,
-      paddingHorizontal: 22,
+      paddingHorizontal: scaleSpace(22, layout),
       borderRadius: 16,
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 9,
+      columnGap: scaleSpace(9, layout),
       backgroundColor: colors.accent,
     },
     actionText: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: 15,
+      fontSize: scaleFont(15, layout),
       color: colors.onAccent,
       // Plus Jakarta Sans under-measures its own width and clips the last glyph (see cde3346).
       paddingRight: 2,
     },
     note: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: 12,
+      fontSize: scaleFont(12, layout),
       color: colors.muted,
     },
   });

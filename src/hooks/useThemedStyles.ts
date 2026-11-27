@@ -9,8 +9,8 @@ export type ThemedStyleFactory<T> = (theme: ColorTheme, layout: Layout) => T;
 const cache = new WeakMap<ThemedStyleFactory<unknown>, Map<ColorTheme, Map<string, unknown>>>();
 
 // A factory that ignores the layout is built once per theme, whatever the screen and text size.
-const layoutKey = (factory: ThemedStyleFactory<unknown>, { sizeClass, isShort, fontScale }: Layout) =>
-  factory.length < 2 ? '' : `${sizeClass}|${isShort}|${fontScale}`;
+const layoutKey = (factory: ThemedStyleFactory<unknown>, { width, height, fontScale }: Layout) =>
+  factory.length < 2 ? '' : `${width}|${height}|${fontScale}`;
 
 // A factory runs once per theme and layout; every component using it shares the result until either changes.
 export const getThemedStyles = <T>(factory: ThemedStyleFactory<T>, theme: ColorTheme, layout: Layout): T => {

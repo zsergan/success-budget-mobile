@@ -1,11 +1,13 @@
 import { StyleSheet } from 'react-native';
 
+import type { Layout } from '@shared/layout';
 import type { ColorTheme } from '@shared/theme';
+import { scaleFont, scaleSpace } from '@shared/layout';
 import theme from '@shared/theme';
 
 import { DONUT_SIZE } from './donutGeometry';
 
-const createStyles = ({ colors }: ColorTheme) =>
+const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
   StyleSheet.create({
     root: {
       width: DONUT_SIZE,
@@ -20,21 +22,21 @@ const createStyles = ({ colors }: ColorTheme) =>
       alignItems: 'center',
       justifyContent: 'center',
       gap: 2,
-      paddingHorizontal: 30,
+      paddingHorizontal: scaleSpace(30, layout),
     },
     centerHead: {
       maxWidth: 96,
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 4,
+      columnGap: scaleSpace(4, layout),
     },
     centerLabel: {
       flexShrink: 1,
       // Plus Jakarta Sans under-measures its own width and clips the last glyph (see cde3346).
       paddingRight: 2,
       fontFamily: theme.fonts.semiBold,
-      fontSize: 10,
-      lineHeight: 13,
+      fontSize: scaleFont(10, layout),
+      lineHeight: scaleFont(13, layout),
       letterSpacing: 0.6,
       textTransform: 'uppercase',
       color: colors.muted,
@@ -43,16 +45,16 @@ const createStyles = ({ colors }: ColorTheme) =>
       alignSelf: 'stretch',
       textAlign: 'center',
       fontFamily: theme.fonts.semiBold,
-      fontSize: 19,
-      lineHeight: 24,
+      fontSize: scaleFont(19, layout),
+      lineHeight: scaleFont(24, layout),
       letterSpacing: -0.5,
       color: colors.text,
       fontVariant: ['tabular-nums'],
     },
     centerSub: {
       fontFamily: theme.fonts.semiBold,
-      fontSize: 10,
-      lineHeight: 13,
+      fontSize: scaleFont(10, layout),
+      lineHeight: scaleFont(13, layout),
       color: colors.muted,
       fontVariant: ['tabular-nums'],
     },
