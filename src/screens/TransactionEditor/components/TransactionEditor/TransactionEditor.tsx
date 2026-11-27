@@ -25,6 +25,7 @@ import { authorLabel, deviceToday, formatCalendarDate, isWithinDates } from '@sh
 import DeleteButton from '@components/TransactionFlow/DeleteButton/DeleteButton';
 import { deleteFailureAction, deleteFailureText } from '@components/TransactionFlow/deleteMessage';
 import Banner from '@components/Banner/Banner';
+import KeyboardDoneButton from '@components/Form/KeyboardDoneButton/KeyboardDoneButton';
 import type { ListLoad } from '../SectionLoad/SectionLoad';
 import { listLoad } from '../SectionLoad/SectionLoad';
 import ActionRow from './ActionRow/ActionRow';
@@ -65,6 +66,8 @@ const TransactionEditor = ({
   const styles = useThemedStyles(createStyles);
   const dispatch = useAppDispatch();
   const keyboardHeight = useKeyboardHeight();
+  const isKeyboardUp = keyboardHeight > 0;
+  const [isAmountFocused, setAmountFocused] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const fieldReveal = useFieldRevealScroll(scrollRef);
   const [isScrolled, setScrolled] = useState(false);
@@ -203,6 +206,111 @@ const TransactionEditor = ({
         ? 'Save income'
         : 'Save expense';
 
+  // Pinned under the fields while the keyboard is down; with it up, it ends the form instead of riding on it.
+  const actionRow = (
+    <ActionRow
+      label={saveLabel}
+      helperText={helperText}
+      ready={ready}
+      isSaving={isSaving && !isDeleting}
+      isInline={isKeyboardUp}
+      banner={
+        hasConflict ? (
+          <Banner
+            tone="warn"
+            title="This transaction was changed"
+            text={
+              hasLatestFailed
+                ? 'Couldn’t load the latest version. Check your connection and try again; your edits are still here.'
+                : 'Someone saved it after you opened it. Your edits are still here; loading the latest version replaces them.'
+            }
+            actionLabel="Load latest"
+            isBusy={isLoadingLatest}
+            onAction={loadLatest}
+          />
+        ) : flow.notice === 'saveUnknown' ? (
+          <Banner
+            tone="warn"
+            title="Not confirmed yet"
+            text="The server didn’t answer, so it may already be saved. Trying again never saves it twice."
+            actionLabel="Try again"
+            onAction={onSave}
+          />
+        ) : flow.notice === 'saveRecovered' ? (
+          <Banner
+            tone="warn"
+            title="Your earlier save went through"
+            text={
+              isChanged
+                ? 'The form now edits that saved transaction. Changes made after it aren’t saved yet: review them and save again.'
+                : 'It was saved as shown here; nothing else is waiting to be saved.'
+            }
+          />
+        ) : flow.notice === 'recordChanged' ? (
+          <Banner
+            tone="warn"
+            title="This transaction changed"
+            text={
+              isChanged
+                ? 'An earlier change reached the server first, so the form now shows the latest version. Your edits are still here: review them and save again.'
+                : 'An earlier change reached the server first, so the form now shows the latest version.'
+            }
+          />
+        ) : flow.notice === 'saveUnverified' ? (
+          <Banner
+            tone="warn"
+            title="Couldn’t load the latest version"
+            text="An earlier change of this transaction reached the server, but its latest version couldn’t be loaded to save against. Your edits are still here; trying again loads it first."
+            actionLabel="Try again"
+            onAction={onSave}
+          />
+        ) : flow.notice === 'saveRestored' ? (
+          <Banner
+            tone="warn"
+            title="This transaction wasn’t saved"
+            text="We restored your draft. Check it and retry: it’s sent under its original operation, so it can’t be added twice."
+          />
+        ) : flow.notice === 'saveRefused' ? (
+          <Banner tone="danger" title="The server refused this save" text={flow.refusal ?? ''} />
+        ) : flow.notice === 'saveNotSent' ? (
+          <Banner
+            tone="danger"
+            title="Not saved"
+            text="It couldn’t be stored on this device first, so nothing was sent."
+            actionLabel="Try again"
+            onAction={onSave}
+          />
+        ) : flow.notice === 'saveBlocked' ? (
+          <Banner
+            tone="warn"
+            title="An earlier change isn’t confirmed yet"
+            text="It must reach the server before this one can be saved. Your edits are still here; trying again checks it first."
+            actionLabel="Try again"
+            onAction={onSave}
+          />
+        ) : flow.notice === 'saveExpired' ? (
+          <Banner
+            tone="danger"
+            title="Not saved"
+            text="The server never got it, and a day has passed. Send it now to add it as new."
+            actionLabel="Send now"
+            onAction={onSave}
+          />
+        ) : (
+          (flow.notice === 'deleteFailed' || flow.notice === 'deleteUncertain') && (
+            <Banner
+              tone="danger"
+              text={deleteFailureText(flow.notice, 'delete')}
+              actionLabel={deleteFailureAction(flow.notice)}
+              onAction={onRetryDelete}
+            />
+          )
+        )
+      }
+      onPress={onSave}
+    />
+  );
+
   return (
     <View style={styles.root}>
       <View style={[styles.header, isScrolled && styles.headerScrolled]}>
@@ -248,6 +356,7 @@ const TransactionEditor = ({
               isIncome={isIncome}
               currencyCode={currencyCode}
               error={amountError}
+              onFocusChange={setAmountFocused}
             />
 
             <View style={styles.categoryBlock}>
@@ -306,110 +415,14 @@ const TransactionEditor = ({
               <DeleteButton isOutlined isDeleting={isDeleting} disabled={isSaving || hasConflict} onPress={onDelete} />
             )}
           </FieldRevealProvider>
+
+          {isKeyboardUp && actionRow}
         </ScrollView>
       </View>
 
-      <ActionRow
-        label={saveLabel}
-        helperText={helperText}
-        ready={ready}
-        isSaving={isSaving && !isDeleting}
-        isAboveKeyboard={keyboardHeight > 0}
-        banner={
-          hasConflict ? (
-            <Banner
-              tone="warn"
-              title="This transaction was changed"
-              text={
-                hasLatestFailed
-                  ? 'Couldn’t load the latest version. Check your connection and try again; your edits are still here.'
-                  : 'Someone saved it after you opened it. Your edits are still here; loading the latest version replaces them.'
-              }
-              actionLabel="Load latest"
-              isBusy={isLoadingLatest}
-              onAction={loadLatest}
-            />
-          ) : flow.notice === 'saveUnknown' ? (
-            <Banner
-              tone="warn"
-              title="Not confirmed yet"
-              text="The server didn’t answer, so it may already be saved. Trying again never saves it twice."
-              actionLabel="Try again"
-              onAction={onSave}
-            />
-          ) : flow.notice === 'saveRecovered' ? (
-            <Banner
-              tone="warn"
-              title="Your earlier save went through"
-              text={
-                isChanged
-                  ? 'The form now edits that saved transaction. Changes made after it aren’t saved yet: review them and save again.'
-                  : 'It was saved as shown here; nothing else is waiting to be saved.'
-              }
-            />
-          ) : flow.notice === 'recordChanged' ? (
-            <Banner
-              tone="warn"
-              title="This transaction changed"
-              text={
-                isChanged
-                  ? 'An earlier change reached the server first, so the form now shows the latest version. Your edits are still here: review them and save again.'
-                  : 'An earlier change reached the server first, so the form now shows the latest version.'
-              }
-            />
-          ) : flow.notice === 'saveUnverified' ? (
-            <Banner
-              tone="warn"
-              title="Couldn’t load the latest version"
-              text="An earlier change of this transaction reached the server, but its latest version couldn’t be loaded to save against. Your edits are still here; trying again loads it first."
-              actionLabel="Try again"
-              onAction={onSave}
-            />
-          ) : flow.notice === 'saveRestored' ? (
-            <Banner
-              tone="warn"
-              title="This transaction wasn’t saved"
-              text="We restored your draft. Check it and retry: it’s sent under its original operation, so it can’t be added twice."
-            />
-          ) : flow.notice === 'saveRefused' ? (
-            <Banner tone="danger" title="The server refused this save" text={flow.refusal ?? ''} />
-          ) : flow.notice === 'saveNotSent' ? (
-            <Banner
-              tone="danger"
-              title="Not saved"
-              text="It couldn’t be stored on this device first, so nothing was sent."
-              actionLabel="Try again"
-              onAction={onSave}
-            />
-          ) : flow.notice === 'saveBlocked' ? (
-            <Banner
-              tone="warn"
-              title="An earlier change isn’t confirmed yet"
-              text="It must reach the server before this one can be saved. Your edits are still here; trying again checks it first."
-              actionLabel="Try again"
-              onAction={onSave}
-            />
-          ) : flow.notice === 'saveExpired' ? (
-            <Banner
-              tone="danger"
-              title="Not saved"
-              text="The server never got it, and a day has passed. Send it now to add it as new."
-              actionLabel="Send now"
-              onAction={onSave}
-            />
-          ) : (
-            (flow.notice === 'deleteFailed' || flow.notice === 'deleteUncertain') && (
-              <Banner
-                tone="danger"
-                text={deleteFailureText(flow.notice, 'delete')}
-                actionLabel={deleteFailureAction(flow.notice)}
-                onAction={onRetryDelete}
-              />
-            )
-          )
-        }
-        onPress={onSave}
-      />
+      {!isKeyboardUp && actionRow}
+
+      {isKeyboardUp && isAmountFocused && <KeyboardDoneButton />}
     </View>
   );
 };

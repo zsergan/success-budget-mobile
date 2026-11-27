@@ -15,6 +15,12 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.hairline,
     },
+    // Room under it for the Done that floats above the keyboard.
+    inline: {
+      paddingTop: scaleSpace(theme.spacing.xl, layout),
+      paddingBottom: scaleSpace(theme.spacing.xxl * 2, layout),
+      rowGap: scaleSpace(theme.spacing.sm, layout),
+    },
     helperText: {
       textAlign: 'center',
       fontFamily: theme.fonts.semiBold,

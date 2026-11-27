@@ -13,6 +13,12 @@ const createStyles = ({ colors }: ColorTheme, layout: Layout) =>
       marginHorizontal: scaleSpace(theme.spacing.xl, layout),
       rowGap: scaleSpace(theme.spacing.sm, layout),
     },
+    // Inside the form's scroll view, with room under it for the Done that floats above the keyboard.
+    inline: {
+      marginHorizontal: 0,
+      marginTop: scaleSpace(theme.spacing.xl, layout),
+      marginBottom: scaleSpace(theme.spacing.xxl * 2, layout),
+    },
     resetNote: {
       borderRadius: theme.radius.sm,
       padding: scaleSpace(theme.spacing.sm, layout) + 2,

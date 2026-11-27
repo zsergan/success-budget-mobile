@@ -1,3 +1,4 @@
+import { StyleSheet } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -20,22 +21,28 @@ const renderRow = (props: Partial<Parameters<typeof ActionRow>[0]> = {}) =>
   );
 
 describe('ActionRow', () => {
-  it('is pinned under the fields while the keyboard is down', () => {
+  it('is pinned under the fields, clear of the home indicator, while the keyboard is down', () => {
     renderRow();
 
     expect(screen.getByText('Save expense')).toBeTruthy();
     expect(screen.getByText('Enter an amount')).toBeTruthy();
+    expect(
+      StyleSheet.flatten(screen.getByText('Enter an amount').parent?.parent?.props.style).paddingBottom,
+    ).toBeGreaterThan(34);
   });
 
-  it('steps aside while the keyboard is up', () => {
-    renderRow({ isAboveKeyboard: true });
+  it('stays in the form while the keyboard is up, without the home indicator inset', () => {
+    renderRow({ isInline: true });
 
-    expect(screen.queryByText('Save expense')).toBeNull();
-    expect(screen.queryByText('Enter an amount')).toBeNull();
+    expect(screen.getByText('Save expense')).toBeTruthy();
+    expect(screen.getByText('Enter an amount')).toBeTruthy();
+    expect(
+      StyleSheet.flatten(screen.getByText('Enter an amount').parent?.parent?.props.style).backgroundColor,
+    ).toBeUndefined();
   });
 
-  it('stays while a save is in progress, even with the keyboard up', () => {
-    renderRow({ isAboveKeyboard: true, isSaving: true, ready: true });
+  it('shows the save under way', () => {
+    renderRow({ isInline: true, isSaving: true, ready: true });
 
     expect(screen.getByRole('button', { name: 'Saving…' })).toBeTruthy();
   });

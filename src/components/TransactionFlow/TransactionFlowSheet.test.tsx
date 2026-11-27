@@ -2413,7 +2413,7 @@ describe('TransactionFlowSheet', () => {
     expect(routeNames()).toEqual(HOME_ONLY);
   });
 
-  it('explains a typed or pasted amount that is not one and keeps it as entered', async () => {
+  it('keeps only an amount out of what is typed or pasted, and shows its thousands apart', async () => {
     const { open, flow } = renderFlow();
 
     open();
@@ -2421,13 +2421,13 @@ describe('TransactionFlowSheet', () => {
     fireEvent.press(screen.getByText('Food'));
     fireEvent.changeText(screen.getByLabelText('Amount'), '12.345');
 
-    expect(screen.getByText('Use at most two decimal places')).toBeTruthy();
-    expect(screen.getByText('Save expense')).toBeDisabled();
-    expect(flow()?.draft?.amount).toBe('12.345');
+    expect(flow()?.draft?.amount).toBe('12.34');
+    expect(screen.queryByText('Use at most two decimal places')).toBeNull();
 
     fireEvent.changeText(screen.getByLabelText('Amount'), '1 234,50');
 
-    expect(screen.queryByText('Use at most two decimal places')).toBeNull();
+    expect(flow()?.draft?.amount).toBe('1234.50');
+    expect(screen.getByLabelText('Amount').props.value).toBe('1 234.50');
     expect(screen.getByText('Save expense')).toBeEnabled();
     expect(screen.getByText('−', { includeHiddenElements: true })).toBeTruthy();
   });
@@ -2585,8 +2585,8 @@ describe('TransactionFlowSheet', () => {
     const lastPatch = () => mockedRequest.mock.calls.filter(([config]) => config.method === 'PATCH').at(-1)?.[0];
 
     it.each([
-      [SpaceType.GROUP, 'New expense', { kind: 'space' }],
-      [SpaceType.GROUP, 'New income', { kind: 'space' }],
+      [SpaceType.GROUP, 'New expense', { kind: 'member', userId: 1 }],
+      [SpaceType.GROUP, 'New income', { kind: 'member', userId: 1 }],
       [SpaceType.PERSONAL, 'New expense', { kind: 'member', userId: 1 }],
       [SpaceType.PERSONAL, 'New income', { kind: 'member', userId: 1 }],
     ])('starts a new transaction in a %s space (%s) on its default', async (spaceType, action, assignment) => {
@@ -2599,16 +2599,16 @@ describe('TransactionFlowSheet', () => {
       expect(flow()?.draft?.assignment).toEqual(assignment);
     });
 
-    it('starts on the whole space, listed first, in a group space with only the user', async () => {
+    it('starts on the user, with the whole space listed first, in a group space with only the user', async () => {
       membersResponse = [memberRow(1, 'Anna')];
       const { flow } = renderFlow(SpaceType.GROUP);
 
       fireEvent.press(screen.getByText('New expense'));
       await settle();
 
-      expect(flow()?.draft?.assignment).toEqual({ kind: 'space' });
-      expect(screen.queryByText('Tap to assign to Whole space or No member assigned')).toBeNull();
-      expect(screen.getByRole('button', { name: 'Whole space' }).props.accessibilityState).toMatchObject({
+      expect(flow()?.draft?.assignment).toEqual({ kind: 'member', userId: 1 });
+      fireEvent.press(screen.getByText('Tap to assign to Whole space or No member assigned'));
+      expect(screen.getByRole('button', { name: 'You (Anna)' }).props.accessibilityState).toMatchObject({
         selected: true,
       });
       const chips = screen.getAllByRole('button', { name: /^(Whole space|You \(Anna\)|No member assigned)$/ });
@@ -2645,7 +2645,7 @@ describe('TransactionFlowSheet', () => {
       fireEvent.press(screen.getByText('New expense'));
       await settle();
       fireEvent.press(screen.getByText('Income'));
-      expect(flow()?.draft?.assignment).toEqual({ kind: 'space' });
+      expect(flow()?.draft?.assignment).toEqual({ kind: 'member', userId: 1 });
 
       fireEvent.press(screen.getByRole('button', { name: 'Lena' }));
       fireEvent.press(screen.getByText('Expense'));
@@ -2653,7 +2653,7 @@ describe('TransactionFlowSheet', () => {
     });
 
     it.each([
-      [SpaceType.GROUP, { kind: 'space' }],
+      [SpaceType.GROUP, { kind: 'member', userId: 1 }],
       [SpaceType.PERSONAL, { kind: 'member', userId: 1 }],
     ])('starts another in a %s space on its default once the last member has left', async (spaceType, fallback) => {
       membersResponse = team;

@@ -1,4 +1,4 @@
-import KeyboardDoneBar from '@components/Form/KeyboardDoneBar/KeyboardDoneBar';
+import { NO_KEYBOARD_TOOLBAR } from '@components/Form/KeyboardDoneButton/KeyboardDoneButton';
 import useTheme from '@hooks/useTheme';
 import useThemedStyles from '@hooks/useThemedStyles';
 import { useEffect, useRef, useState } from 'react';
@@ -6,8 +6,7 @@ import { Text, TextInput, useWindowDimensions, View } from 'react-native';
 
 import createStyles, { amountFontSize, amountInputHeight, signSlotWidth } from './style';
 import { currencySymbol } from '@shared/utils/currency';
-
-const AMOUNT_DONE_BAR = 'transaction-amount-done';
+import { groupAmountInput, sanitizeAmountInput } from '@shared/utils/amountInput';
 
 interface Props {
   value: string;
@@ -18,10 +17,22 @@ interface Props {
   currencyCode?: string;
   // Why a typed or pasted value is not an amount; empty input is not an error here.
   error?: string;
+  // The screen shows its Done above the number pad while the amount has focus.
+  onFocusChange?: (isFocused: boolean) => void;
 }
 
-// The typed text stays exactly as entered, so the caret never jumps and nothing is cut; the sign comes from the type.
-const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currencyCode, error }: Props) => {
+// Only digits and one decimal point get in, and the thousands show apart as they are typed; the draft keeps the
+// plain amount. The sign comes from the type.
+const AmountField = ({
+  value,
+  onChange,
+  autoFocus,
+  typeColor,
+  isIncome,
+  currencyCode,
+  error,
+  onFocusChange,
+}: Props) => {
   const { scheme, colorTheme } = useTheme();
   const { colors } = colorTheme;
   const styles = useThemedStyles(createStyles);
@@ -35,7 +46,8 @@ const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currency
   }, [autoFocus]);
 
   const hasValue = value.trim() !== '';
-  const fontSize = amountFontSize(value.trim());
+  const shown = groupAmountInput(value.trim());
+  const fontSize = amountFontSize(shown);
   const lineColor = error ? colors.danger : isFocused ? typeColor : colors.hairline;
 
   return (
@@ -57,17 +69,23 @@ const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currency
         <TextInput
           keyboardAppearance={scheme}
           ref={inputRef}
-          value={value}
-          onChangeText={onChange}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          value={shown}
+          onChangeText={(text) => onChange(sanitizeAmountInput(text))}
+          onFocus={() => {
+            setFocused(true);
+            onFocusChange?.(true);
+          }}
+          onBlur={() => {
+            setFocused(false);
+            onFocusChange?.(false);
+          }}
           placeholder="0"
           placeholderTextColor={colors.muted}
           inputMode="decimal"
           style={[styles.input, { color: typeColor, fontSize, height: amountInputHeight(fontScale) }]}
           selectionColor={typeColor}
           returnKeyType="done"
-          inputAccessoryViewID={AMOUNT_DONE_BAR}
+          inputAccessoryViewID={NO_KEYBOARD_TOOLBAR}
           accessibilityLabel="Amount"
         />
 
@@ -75,8 +93,6 @@ const AmountField = ({ value, onChange, autoFocus, typeColor, isIncome, currency
       </View>
 
       {error && <Text style={styles.error}>{error}</Text>}
-
-      <KeyboardDoneBar nativeID={AMOUNT_DONE_BAR} />
     </View>
   );
 };
