@@ -2,10 +2,13 @@ import { Text, TextInput, View } from 'react-native';
 import { Controller, type Control } from 'react-hook-form';
 
 import { Icon } from '@components';
+import KeyboardDoneBar from '@components/Form/KeyboardDoneBar/KeyboardDoneBar';
 import { useTheme, useThemedStyles } from '@hooks';
 import type { LimitFormValues } from '../limitSchema';
 
 import createStyles from './style';
+
+const AMOUNT_DONE_BAR = 'limit-amount-done';
 
 interface Props {
   control: Control<LimitFormValues>;
@@ -67,7 +70,10 @@ const NameAmountFields = ({ control, isGroup, isTotal, currencyCode, onNameChang
                 inputMode="decimal"
                 style={styles.heroAmount}
                 returnKeyType="done"
+                inputAccessoryViewID={AMOUNT_DONE_BAR}
               />
+
+              <KeyboardDoneBar nativeID={AMOUNT_DONE_BAR} />
 
               {currencyCode && <Text style={styles.heroCurrency}>{currencyCode}</Text>}
             </View>
